@@ -1,51 +1,66 @@
 /* ────────────────────────────────────────────────────────────────────────────
-   FLOODDASH design core — Rams × NYC transit × Thai command.
-   Warm paper ground, Thai-flag navy chrome, red reserved for real emergency.
-   Radius 0. No shadows. 4px grid. Mono for every number that changes.
+   AIRDASH design core — clean-air instrument panel, not a flood warning board.
+   Light sky ground, deep teal ink, AQI gradient as the only colored stripe.
+   Sharp corners. No shadows. Manrope for the wordmark, JetBrains Mono for
+   the numbers, Sarabun still owns the Thai glyphs.
    ──────────────────────────────────────────────────────────────────────────── */
 @import url('/fonts/fonts.css');
 
 :root {
-  /* Ground */
-  --paper:       #F6F4EF;   /* warm paper — the ground everywhere */
+  /* Ground — soft sky gradient (top brighter, bottom cooler). The page never
+     feels heavy the way a dark navy chrome does. */
+  --paper:       #F4F8FB;   /* cool paper — the ground everywhere */
+  --paper-warm:  #FAFCFF;   /* the topmost band, almost white */
   --well:        #FFFFFF;   /* panel wells */
-  --well-dim:    #EFECE4;   /* recessed strips */
-  --rule:        #E2DFD4;   /* hairlines */
-  --rule-strong: #241E4E;
+  --well-dim:    #E8EFF4;   /* recessed strips */
+  --rule:        #D6DEE5;   /* hairlines */
+  --rule-strong: #0E4A5E;   /* deep teal — used for input borders / heavy rules */
 
-  /* Ink — Thai-flag navy, not black */
-  --ink:      #241E4E;
-  --ink-mid:  #5E5A6E;
-  --ink-low:  #908C9C;
-  --ink-inv:  #F6F4EF;
+  /* Ink — deep teal, not Thai-flag navy. Carries the AirDash identity. */
+  --ink:      #0E4A5E;
+  --ink-mid:  #4A6273;
+  --ink-low:  #7E8E9A;
+  --ink-inv:  #FFFFFF;
 
-  /* Thai flag accents */
-  --th-red:  #A51931;
-  --th-navy: #241E4E;
+  /* Air accents — sage green for "good air", terracotta for "watch",
+     a single brick red for "severe". Distinct from FloodDash's
+     Thai-flag navy / saffron / red triad. */
+  --th-red:  #C8453A;   /* "severe" — brick, not blood red */
+  --th-sage: #3A8A6E;   /* "good air" — clean-air sage */
+  --th-deep: #0E4A5E;   /* primary chrome / hover */
 
-  /* HII situation levels: 1–2 low water (drought), 3 normal, 4 high, 5 overflow */
-  --lv1: #B7AFA3;
-  --lv2: #948C7F;
-  --lv3: #00933C;
-  --lv4: #E86A10;
-  --lv5: #A51931;
+  /* Legacy aliases — components.css still references --th-navy and the
+     page never accidentally paints the old FloodDash navy. */
+  --th-navy: #0E4A5E;   /* now points to the AirDash teal */
+  --th-amber: #D8893A;  /* AQI watch colour, also a tertiary accent */
 
-  /* Risk bands */
-  --band-normal:   #00933C;
-  --band-watch:    #F0B400;
-  --band-elevated: #E86A10;
-  --band-high:     #A51931;
+  /* Thai AQI bands (PM2.5) — used as the top-stripe gradient, the badge
+     fill on the national plate, and the map marker colors. Anchored at
+     the 2023 PCD standard. */
+  --aqi-good:      #2E8B57;   /* 0–15  */
+  --aqi-moderate:  #C8B560;   /* 15–25 */
+  --aqi-watch:     #D8893A;   /* 25–37.5 */
+  --aqi-unhealthy: #C8453A;   /* 37.5–75 */
+  --aqi-hazardous: #6B2D5C;   /* 75+ */
 
-  /* Data hues */
-  --rain: #0039A6;   /* NYC A/C/E blue for rainfall */
-  --dam:  #0E7C7B;   /* reservoir teal */
-  --aqi:  #7C7287;
+  /* Risk bands (used by the Air Watch Score) */
+  --band-normal:   var(--aqi-good);
+  --band-watch:    var(--aqi-watch);
+  --band-elevated: var(--aqi-unhealthy);
+  --band-high:     var(--aqi-hazardous);
 
-  --font-ui: 'Sarabun', 'Thonburi', 'Helvetica Neue', sans-serif;
-  --font-num: 'IBM Plex Mono', ui-monospace, monospace;
+  /* Data hues — distinct from FloodDash's transport-blue/teal. */
+  --rain: #2D7A8C;   /* deep teal for rainfall / washout */
+  --dam:  #7B96A0;   /* neutral slate for reservoirs (kept for legacy data) */
+  --aqi:  #0E4A5E;   /* primary brand teal */
 
-  --header-h: 110px;  /* brand row (~64px) + ASK AI bar (~46px) */
-  --ticker-h: 34px;
+  /* Fonts */
+  --font-ui:    'Sarabun', 'Thonburi', 'Helvetica Neue', sans-serif;
+  --font-num:   'JetBrains Mono', ui-monospace, 'IBM Plex Mono', monospace;
+  --font-display: 'Manrope', 'Sarabun', system-ui, sans-serif;
+
+  --header-h: 96px;   /* was 110px (navy) — slimmer, breathable */
+  --ticker-h: 30px;
   --rail-l: 324px;
   --rail-r: 392px;
 }
@@ -65,6 +80,12 @@ html, body {
 .num, .mono {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.005em;
 }
 
 /* Machine label — uppercase mono eyebrow used on every panel */
@@ -87,7 +108,8 @@ html, body {
   color: var(--ink-mid);
 }
 
-/* Square status badge — FloodDash's "subway bullet" is a SQUARE */
+/* Square status badge — AirDash's "subway bullet" stays a square so the
+   left rail reads as a column of AQI levels. */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -99,19 +121,19 @@ html, body {
   color: #fff;
   flex: none;
 }
-.badge.lv1 { background: var(--lv1); }
-.badge.lv2 { background: var(--lv2); }
-.badge.lv3 { background: var(--lv3); }
-.badge.lv4 { background: var(--lv4); }
-.badge.lv5 { background: var(--lv5); }
+.badge.lv1 { background: var(--aqi-good); }
+.badge.lv2 { background: var(--aqi-moderate); color: #2A2A2A; }
+.badge.lv3 { background: var(--aqi-watch); }
+.badge.lv4 { background: var(--aqi-unhealthy); }
+.badge.lv5 { background: var(--aqi-hazardous); }
 .badge.b-normal   { background: var(--band-normal); }
-.badge.b-watch    { background: var(--band-watch); color: var(--ink); }
+.badge.b-watch    { background: var(--band-watch); color: #2A2A2A; }
 .badge.b-elevated { background: var(--band-elevated); }
 .badge.b-high     { background: var(--band-high); }
 
 .sev0 { color: var(--ink-mid); }
 .sev1 { color: var(--rain); }
-.sev2 { color: var(--lv4); }
+.sev2 { color: var(--aqi-watch); }
 .sev3 { color: var(--th-red); }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -121,7 +143,7 @@ html, body {
 
 button {
   font-family: inherit;
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--rule);
   background: var(--well);
   color: var(--ink);
   cursor: pointer;
@@ -133,23 +155,23 @@ button {
    both — overriding only `background` leaves the cream text from here on a
    light surface (invisible label; this exact bug shipped once on the right-
    rail tabs), and vice versa. */
-button:hover { background: var(--ink); color: var(--ink-inv); }
-button.active { background: var(--ink); color: var(--ink-inv); }
+button:hover { background: var(--th-deep); color: var(--ink-inv); border-color: var(--th-deep); }
+button.active { background: var(--th-deep); color: var(--ink-inv); border-color: var(--th-deep); }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
 [tabindex]:focus-visible {
-  outline: 3px solid #E8B33C;
+  outline: 3px solid var(--th-sage);
   outline-offset: 2px;
 }
 
 input, textarea {
   font-family: inherit;
   font-size: 14px;
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--rule);
   background: var(--well);
   color: var(--ink);
   padding: 6px 8px;
 }
-input:focus, textarea:focus { outline: 2px solid var(--th-navy); outline-offset: -1px; }
+input:focus, textarea:focus { outline: 2px solid var(--th-deep); outline-offset: -1px; }
 
 a { color: var(--ink); }
 

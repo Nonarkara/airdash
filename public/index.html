@@ -13,13 +13,13 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="AIRDASH — Thailand Air Quality & Dust Watch">
 <meta name="twitter:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23241E4E'/%3E%3Ccircle cx='11.5' cy='4.5' r='2.5' fill='%23F0B400'/%3E%3Cpath d='M2 8h12M2 10.5h9M2 13h12' stroke='%23F6F4EF' stroke-width='1.4' stroke-linecap='round' opacity='0.9'/%3E%3Ccircle cx='13' cy='10.5' r='1' fill='%23E86A10'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230E4A5E'/%3E%3Ccircle cx='11.5' cy='4.5' r='2.5' fill='%233A8A6E'/%3E%3Cpath d='M2 8h12M2 10.5h9M2 13h12' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round' opacity='0.9'/%3E%3Ccircle cx='13' cy='10.5' r='1' fill='%23C8453A'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/css/tokens.css?v=2.0.0-final">
 <link rel="stylesheet" href="/css/layout.css?v=2.0.0-final">
 <link rel="stylesheet" href="/css/components.css?v=2.0.0-final">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#241E4E">
+<meta name="theme-color" content="#0E4A5E">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebSite","name":"AirDash","url":"https://air.nonarkara.org/","description":"Live Thailand air quality and dust watch — PM2.5, local risk and rain-washout outlook."}
 </script>
@@ -28,7 +28,7 @@
 
 <div id="boot" role="status" aria-live="polite" aria-busy="true" aria-label="กำลังโหลดข้อมูลสด · Loading live data">
   <div class="sign" style="text-align:center">
-    <div class="th" style="font-size:24px;font-weight:800;letter-spacing:0.04em">AIR<span style="color:#E8B33C">DASH</span></div>
+    <div class="th" style="font-size:26px;font-weight:800;letter-spacing:-0.01em;font-family:Manrope,'Sarabun',sans-serif">AIR<span style="color:#3A8A6E">·</span><span style="color:#0E4A5E">DASH</span></div>
     <div class="en" data-i18n="กำลังเชื่อมต่อข้อมูลสด…|Connecting live pipelines…">connecting live pipelines · กำลังเชื่อมต่อข้อมูลสด</div>
   </div>
   <div class="bar"><div></div></div>
@@ -98,23 +98,11 @@
 
 <div id="app">
   <header>
-    <div class="flagband"></div>
+    <div class="aqistripe"></div>
 
     <div class="brand">
-      <h1 class="name">AIR<span class="accent">DASH</span></h1>
-      <div class="sub" data-i18n="เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย|Thailand Air Quality & Dust Watch · 24/7 live data">เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · THAILAND AIR QUALITY &amp; DUST WATCH</div>
-    </div>
-
-    <div class="header-partners" aria-label="Project partners">
-      <a href="https://depa.or.th" target="_blank" rel="noopener" title="สำนักงานส่งเสริมเศรษฐกิจดิจิทัล · Digital Economy Promotion Agency">
-        <img src="/img/depa-mark.png" alt="depa" class="header-partner-logo header-partner-depa" width="56" height="18">
-      </a>
-      <a href="https://smartcitythailand.or.th" target="_blank" rel="noopener" title="สำนักงานเมืองอัจฉริยะประเทศไทย · Smart City Thailand Office">
-        <img src="/img/smart-city-th-icon.png" alt="Smart City Thailand Office" class="header-partner-logo header-partner-sct" width="24" height="24">
-      </a>
-      <img src="/img/axiom-retl.png" alt="Axiom + ReTL — The Reason To Live Company" class="header-partner-logo header-partner-axiom-retl" width="68" height="36" title="Axiom + ReTL — The Reason To Live Company">
-      <img src="/img/slic.webp" alt="SLIC" class="header-partner-logo header-partner-slic" width="22" height="22" title="SLIC">
-      <img src="/img/rcad-mark.svg" alt="RCAD" class="header-partner-logo header-partner-rcad" width="90" height="24" title="RCAD — Research and Innovation Acceleration Agency for Competitiveness and Area Development">
+      <h1 class="name">AIR<span class="dot">·</span><span class="accent">DASH</span></h1>
+      <div class="sub" data-i18n="เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย|Thailand Air Quality & Dust Watch · 24/7 live data">เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · 24/7 LIVE DATA</div>
     </div>
 
     <div class="national" id="national">

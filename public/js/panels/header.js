@@ -13,15 +13,15 @@ import { openInsightsPane } from '../sensorHealth.js?v=2.0.0-final'
 import { riskCi } from '../confidence.js?v=2.0.0-final'
 
 // JMA-inspired 5-level palette. Distinct enough that the eye catches the
-// level in <500ms even at the small plate size. L5 (highest) uses deep
-// red to convey "danger to life" — JMA uses solid black for the same
-// reason; we keep red so the brand stays warm.
+// level in <500ms even at the small plate size. AirDash's colours are
+// the AQI palette itself — the same gradient on the top stripe, so the
+// page's only saturated color band tells one consistent story.
 const BAND_BG = {
-  normal:   '#00933C',  // L1 green  — good air
-  low:      '#5BA8C7',  // L2 teal   — stay informed (dust season)
-  watch:    '#F0B400',  // L3 yellow — stay informed
-  elevated: '#E86A10',  // L4 orange — limit outdoor time
-  high:     '#7A1F2B',  // L5 deep red — protect now
+  normal:   '#2E8B57',  // L1 AQI good      — good air
+  low:      '#5BA8C7',  // L2 teal           — stay informed (dust season)
+  watch:    '#C8B560',  // L3 AQI moderate  — stay informed
+  elevated: '#C8453A',  // L4 AQI unhealthy — limit outdoor time
+  high:     '#6B2D5C',  // L5 AQI hazardous — protect now
 }
 const BAND_ICON = {
   normal: '✓', low: 'i', watch: '!', elevated: '!!', high: '!!!',
@@ -94,7 +94,8 @@ function renderStatus(snap) {
   const band = NATIONAL_BAND[displayBand] ?? NATIONAL_BAND[n.band] ?? BAND[displayBand] ?? BAND[n.band]
   const plate = document.getElementById('national-plate')
   plate.style.background = BAND_BG[displayBand] ?? BAND_BG[n.band]
-  plate.style.color = displayBand === 'watch' || displayBand === 'low' ? '#241E4E' : '#fff'
+  // Watch + low use a yellow / light teal — keep dark text for contrast.
+  plate.style.color = (displayBand === 'watch' || displayBand === 'low') ? '#2A2A2A' : '#fff'
   plate.textContent = BAND_ICON[displayBand] ?? '·'
 
   // The verb is the headline. JMA pattern: one verb per level, no

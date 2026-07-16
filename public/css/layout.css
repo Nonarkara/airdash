@@ -19,97 +19,91 @@
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
-/* ── Header — navy command band with the Thai-flag pentaband on top ─────── */
+/* ── Header — light sky instrument panel, NOT a navy command band ─────────
+   AQI gradient stripe (4px) is the only saturated color up here. The rest
+   is paper-warm white with a teal wordmark. Two rows:
+     row 1 (60px): wordmark + subtitle ........ national plate
+     row 2 (32px): focus + search ........................ lang + mode + about + clock
+   Partner logos, data-quality button, and the "pipes" status row were
+   dropped from the header — the partner team now lives inside the About
+   overlay, the data-quality indicator is a single small dot, and the
+   pipeline status is a hover tooltip on the same dot. */
 header {
   grid-area: header;
-  background: var(--th-navy);
-  color: var(--ink-inv);
+  background: linear-gradient(180deg, var(--paper-warm) 0%, var(--paper) 100%);
+  color: var(--ink);
   display: flex;
   align-items: stretch;
   gap: 0;
-  border-top: 6px solid;
-  border-image: linear-gradient(
-    to bottom,
-    var(--th-red) 0 16.6%, #fff 16.6% 33.3%, var(--th-navy) 33.3% 66.6%,
-    #fff 66.6% 83.3%, var(--th-red) 83.3% 100%) 1;
-  /* pentaband fallback is painted by .flagband below for cross-browser safety */
-  border-top: none;
   position: relative;
-  overflow: hidden;         /* brand row must not spill — kills the landing aha */
+  overflow: hidden;
   min-width: 0;
+  border-bottom: 1px solid var(--rule);
 }
-.flagband {
+
+/* AQI gradient stripe — the only saturated color band on the page. The
+   AQI palette itself becomes the AirDash signature: clean air at the
+   left edge, severe at the right. */
+.aqistripe {
   position: absolute; top: 0; left: 0; right: 0; height: 6px;
   background: linear-gradient(
-    to bottom,
-    var(--th-red) 0 16.6%, #F6F4EF 16.6% 33.3%, #3D3663 33.3% 66.6%,
-    #F6F4EF 66.6% 83.3%, var(--th-red) 83.3% 100%);
+    to right,
+    var(--aqi-good) 0%, var(--aqi-good) 20%,
+    var(--aqi-moderate) 20%, var(--aqi-moderate) 40%,
+    var(--aqi-watch) 40%, var(--aqi-watch) 60%,
+    var(--aqi-unhealthy) 60%, var(--aqi-unhealthy) 80%,
+    var(--aqi-hazardous) 80%, var(--aqi-hazardous) 100%);
+  z-index: 2;
 }
+
 .brand {
   display: flex; flex-direction: column; justify-content: center;
-  padding: 6px 16px 0 16px;
-  border-right: 1px solid rgba(246,244,239,0.25);
+  padding: 12px 18px 0 18px;
   flex: none; min-width: 0;
+  border-right: 1px solid var(--rule);
 }
 .brand .name {
-  font-family: var(--font-num);
-  font-weight: 700; font-size: 19px; letter-spacing: 0.04em;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--th-deep);
+  line-height: 1.05;
 }
-.brand .name .accent { color: #E8B33C; }
-.brand .sub { font-size: 11px; opacity: 0.85; font-weight: 500; }
-
-/* One continuous SOLID WHITE plate for the whole partner row. Solid (not the
-   cream rgba) on purpose: several partner marks ship with a baked-in white
-   background, and on pure white those boxes melt invisibly into the plate —
-   one team of logos standing together instead of cropped boxes pasted on.
-   flex: 0 0 auto is critical: the default `0 1 auto` lets the header
-   squeeze the plate below its content width, and the logos then overflow
-   into the JMA-hero area — exactly the "stray white box at the top" bug
-   we hit on wide viewports. */
-.header-partners {
-  display: flex; align-items: center; gap: 14px;
-  padding: 0 14px;
-  margin-top: 6px;
-  align-self: stretch;
-  flex: 0 0 auto;          /* never shrink below the partner-row content size */
-  background: #FFFFFF;
-  border-right: 1px solid rgba(246,244,239,0.25);
+/* "AIR · DASH" — the center dot is the AirDash signature mark, not a
+   FloodDash orange highlight. */
+.brand .name .dot { color: var(--th-sage); padding: 0 1px; }
+.brand .name .accent { color: var(--th-deep); }
+.brand .sub {
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ink-mid);
+  margin-top: 3px;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
 }
-.header-partners a {
-  display: flex; align-items: center;
-  line-height: 0;
-}
-.header-partner-logo {
-  display: block;
-  object-fit: contain;
-  flex: 0 0 auto;
-}
-.header-partner-depa { height: 18px; width: auto; max-width: 64px; }
-.header-partner-sct { height: 24px; width: 24px; }
-.header-partner-axiom-retl { height: 26px; width: auto; max-width: 88px; }
-.header-partner-slic { height: 22px; width: 22px; }
-.header-partner-rcad { height: 18px; width: auto; max-width: 72px; }
 
 .national {
   display: flex; align-items: center; gap: 12px;
-  padding: 6px 16px;
-  border-right: 1px solid rgba(246,244,239,0.25);
-  height: 64px;             /* brand row only — ASK bar lives below */
-  flex: none;
-  overflow: hidden;         /* never spill into ASK bar (kills the aha) */
+  padding: 12px 16px 0 16px;
+  flex: 1 1 auto;
+  overflow: hidden;
   min-width: 0;
+  border-right: 1px solid var(--rule);
 }
-/* HERO — JMA-style action verb at the top of the page. The plate now
-   matches the JMA 5-level palette (white→yellow→red→purple→black-ish for
-   the highest level). Sized large enough to read at a glance — this is
-   the single most important thing the page should communicate. */
+/* HERO — the national Air Watch Score plate. Background now follows the
+   AQI palette so it harmonises with the top stripe. */
 .national .plate {
-  width: 46px; height: 46px;
+  width: 44px; height: 44px;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-num); font-weight: 700; font-size: 19px; color: #fff;
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
   flex: none;
   align-self: center;
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.25) inset;
+  letter-spacing: -0.02em;
 }
 .national .label {
   display: flex; flex-direction: column; justify-content: center;
@@ -117,46 +111,50 @@ header {
   overflow: hidden;
 }
 .mobile-brand { display: none; }
-/* The verb (TH/EN) is the headline — big, bold, impossible to miss. */
+/* The verb (TH/EN) is the headline — bigger, in the display font, deep teal. */
 .national .label .verb-th {
-  font-weight: 800; font-size: 17px; line-height: 1.15;
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 18px; line-height: 1.1;
   letter-spacing: -0.01em;
+  color: var(--th-deep);
   white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
 }
 .national .label .verb-en {
-  font-family: var(--font-num); font-weight: 700;
+  font-family: var(--font-num); font-weight: 600;
   font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
-  opacity: 0.85;
+  color: var(--ink-mid);
   white-space: nowrap;
   line-height: 1.2;
+  margin-top: 1px;
 }
 /* One-line "why" so the user gets the cause without leaving the hero. */
 .national .label .why {
-  font-size: 9.5px; opacity: 0.75;
-  margin-top: 1px;
-  max-width: 220px;
+  font-size: 10px;
+  color: var(--ink-mid);
+  margin-top: 2px;
+  max-width: 320px;
   line-height: 1.2;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* Flood-season micro-badge. Same role as before: explains why the verb
+/* Dust-season micro-badge. Same role as before: explains why the verb
    isn't "ALL CLEAR" even when the data is calm. */
 .national .label .season {
-  margin-top: 2px;
+  margin-top: 3px;
   font-family: var(--font-num);
   font-size: 8.5px; letter-spacing: 0.04em;
-  color: #F0B400;
-  background: rgba(240,180,0,0.14);
+  color: var(--aqi-unhealthy);
+  background: rgba(200,69,58,0.10);
   padding: 1px 5px;
-  border-left: 2px solid #F0B400;
+  border-left: 2px solid var(--aqi-unhealthy);
   align-self: flex-start;
   line-height: 1.3;
 }
 /* Hotline / CI / TTS share one horizontal row so they never stack past
-   the 64px brand row and force a zoom-out. */
+   the 60px brand row and force a zoom-out. */
 .national-actions {
   display: flex; align-items: center; gap: 4px;
-  margin-top: 2px; flex-wrap: nowrap; min-width: 0;
+  margin-top: 3px; flex-wrap: nowrap; min-width: 0;
 }
 /* Hero CTA — one-tap hotline. The number is the only thing on the
    button; JMA puts hotlines in the action card because under stress the
@@ -164,179 +162,232 @@ header {
 .national .hotline-btn {
   display: inline-flex; align-items: center; gap: 4px;
   margin-top: 0;
-  padding: 2px 6px;
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.35);
+  padding: 2px 7px;
+  background: var(--th-red);
+  border: 1px solid var(--th-red);
   color: #fff;
   font-family: var(--font-num);
-  font-size: 10px; font-weight: 700;
+  font-size: 10.5px; font-weight: 700;
   text-decoration: none;
   cursor: pointer;
   align-self: auto;
   white-space: nowrap;
   line-height: 1.3;
 }
-.national .hotline-btn:hover { background: rgba(255,255,255,0.3); }
+.national .hotline-btn:hover { background: #B13B30; border-color: #B13B30; }
 .national .hotline-btn .icon { font-size: 11px; }
 
-/* Trust signals under stress: confidence interval and TTS read-aloud.
-   The CI badge is a tiny "±5" so the citizen knows the score is
-   approximate; the TTS button reads the JMA verb aloud in Thai so
-   elderly / low-literacy users can hear the action without reading. */
+/* Trust signals under stress: confidence interval and TTS read-aloud. */
 .national .ci-badge {
   display: inline-block;
   margin-top: 0;
-  padding: 1px 4px;
-  background: rgba(255,255,255,0.18);
-  border: 1px dashed rgba(255,255,255,0.4);
+  padding: 1px 5px;
+  background: var(--well-dim);
+  border: 1px dashed var(--ink-low);
   font-family: var(--font-num);
   font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em;
-  color: #fff;
+  color: var(--ink-mid);
   cursor: help;
   align-self: auto;
 }
 .national .tts-btn {
   display: inline-flex; align-items: center; gap: 3px;
   margin-top: 0; margin-left: 0;
-  padding: 2px 6px;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.3);
-  color: #fff;
+  padding: 2px 7px;
+  background: var(--well);
+  border: 1px solid var(--rule);
+  color: var(--ink);
   font-size: 9.5px; font-weight: 700;
-  font-family: var(--font-en);
   cursor: pointer;
   align-self: auto;
 }
-.national .tts-btn:hover { background: rgba(255,255,255,0.25); }
-.national .tts-btn.speaking { background: var(--th-navy); border-color: #fff; }
+.national .tts-btn:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+.national .tts-btn.speaking { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 
-.levelcounts { display: flex; align-items: center; gap: 6px; padding: 6px 14px 0 14px; }
+/* AQI station-level counts (lv1..lv5) — small chips of AQI-colored
+   numbers next to the brand. Each chip is the band icon + the count
+   rendered in the AQI colour. The badge and number are siblings; we
+   use the adjacent-sibling combinator to colour the number from the
+   badge's lvN class. */
+.levelcounts { display: flex; align-items: center; gap: 4px; padding: 12px 12px 0 12px; flex: none; }
+.levelcounts .lc { display: inline-flex; align-items: center; gap: 0; }
+.levelcounts .lc .n {
+  font-family: var(--font-num);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--aqi-good);
+  padding: 3px 6px;
+  line-height: 1;
+  min-width: 22px;
+  text-align: center;
+}
+.levelcounts .lc .badge.lv1 { background: var(--aqi-good); }
+.levelcounts .lc .badge.lv2 { background: var(--aqi-moderate); color: #2A2A2A; }
+.levelcounts .lc .badge.lv3 { background: var(--aqi-watch); }
+.levelcounts .lc .badge.lv4 { background: var(--aqi-unhealthy); }
+.levelcounts .lc .badge.lv5 { background: var(--aqi-hazardous); }
+.levelcounts .lc .badge.lv1 ~ .n { background: var(--aqi-good); }
+.levelcounts .lc .badge.lv2 ~ .n { background: var(--aqi-moderate); color: #2A2A2A; }
+.levelcounts .lc .badge.lv3 ~ .n { background: var(--aqi-watch); }
+.levelcounts .lc .badge.lv4 ~ .n { background: var(--aqi-unhealthy); }
+.levelcounts .lc .badge.lv5 ~ .n { background: var(--aqi-hazardous); }
 
-/* ── ASK AI hero bar ─────────────────────────────────────────────────
-   The most distinctive feature of the dashboard (Qwen3 80B, real-data
-   only — no other flood dashboard in the benchmark has it) was buried
-   in a right-rail tab nobody could find. Promoting it to a bar that
-   sits at the bottom of the header (second row, full width) means a
-   non-technical user can ask a question in their own words without
-   learning the dashboard's tab structure. The bar is intentionally
-   minimal — one input, one button — so it reads as a search bar, not
-   as another "thing" competing for attention with the JMA verb.
+/* Search box — light theme */
+.searchbox {
+  position: relative;
+  display: flex; align-items: center;
+  padding: 12px 8px 0 0;
+  flex: 1 1 auto;
+  min-width: 160px;
+  max-width: 320px;
+}
+.searchbox input {
+  width: 100%;
+  font-family: var(--font-ui); font-size: 12.5px;
+  padding: 5px 26px 5px 9px;
+  background: var(--well);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+}
+.searchbox input::placeholder { color: var(--ink-low); }
+.searchbox input:focus { outline: 2px solid var(--th-sage); outline-offset: -1px; }
+.searchbox #search-clear {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-25%);
+  background: transparent; border: 0; padding: 0 4px;
+  color: var(--ink-low); cursor: pointer; font-size: 12px;
+}
+.searchbox #search-clear:hover { color: var(--th-deep); }
+.searchbox .search-results { position: absolute; top: 100%; left: 0; right: 14px; z-index: 100; }
 
-   Implementation: the bar is a child of <header> (so it inherits the
-   navy backdrop and lives next to the brand row). It uses position:
-   absolute so it doesn't disturb the brand row's flex layout. The
-   header's --header-h token includes the ASK bar height so the rest
-   of the grid (map, rails, ticker) reserves the right space. */
+/* Mode toggle (EASY / FULL) — pill style */
+#modetoggle {
+  display: flex; align-items: center; padding: 12px 6px 0 6px; gap: 0; flex: none;
+}
+#modetoggle button {
+  border: 1px solid var(--rule);
+  background: var(--well); color: var(--ink-mid);
+  font-size: 11.5px; font-weight: 700; padding: 4px 9px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+#modetoggle button:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+#modetoggle button.active { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+
+/* ASK AI bar — second row of the header. Light theme now. */
 .ask-hero {
   position: absolute;
   left: 0; right: 0; bottom: 0;
   display: flex; align-items: center; gap: 8px;
   padding: 6px 16px;
-  background: var(--th-navy);
-  color: #fff;
-  border-top: 1px solid rgba(255,255,255,0.12);
+  background: var(--well);
+  color: var(--ink);
+  border-top: 1px solid var(--rule);
   z-index: 5;
 }
-.ask-hero-icon {
-  font-size: 16px; opacity: 0.85; flex: none;
-}
+.ask-hero-icon { font-size: 14px; opacity: 0.7; flex: none; color: var(--th-sage); }
 .ask-hero input {
   flex: 1; min-width: 0;
-  padding: 6px 10px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: #fff;
+  padding: 5px 10px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  color: var(--ink);
   font: inherit; font-size: 13px;
-  border-radius: 0;
 }
-.ask-hero input::placeholder { color: rgba(255,255,255,0.6); }
+.ask-hero input::placeholder { color: var(--ink-low); }
 .ask-hero input:focus {
   outline: none;
-  background: rgba(255,255,255,0.18);
-  border-color: rgba(255,255,255,0.45);
+  background: var(--well);
+  border-color: var(--th-sage);
 }
 .ask-hero button {
-  padding: 6px 14px;
-  background: #fff; color: var(--th-navy);
-  border: 0;
+  padding: 5px 14px;
+  background: var(--th-sage); color: #fff;
+  border: 1px solid var(--th-sage);
   font-weight: 700; font-size: 12.5px;
-  font-family: var(--font-en);
   cursor: pointer;
   flex: none;
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
 }
-.ask-hero button:hover { background: var(--th-navy); color: #fff; outline: 1px solid #fff; }
+.ask-hero button:hover { background: #2E7A5E; border-color: #2E7A5E; }
 @media (max-width: 700px) {
   .ask-hero { padding: 5px 10px; }
   .ask-hero button { padding: 6px 10px; font-size: 11px; }
 }
-.levelcounts .lc { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.levelcounts .lc .n { font-family: var(--font-num); font-size: 11px; font-weight: 500; color: var(--ink-inv); }
 
 header .spacer { flex: 1; }
 
-.pipes { display: flex; align-items: center; gap: 7px; padding: 6px 14px 0 0; }
+/* Pipeline status — collapsed to a single dot with hover tooltip. The
+   old `.pipes` row was 7 dots + 6 status labels; the dot conveys the
+   same information at a glance. */
+.pipes { display: flex; align-items: center; gap: 4px; padding: 12px 6px 0 6px; flex: none; }
+.pipes .dot { width: 10px; height: 10px; background: var(--ink-low); flex: none; }
+.pipes .dot.ok { background: var(--th-sage); }
+.pipes .dot.bad { background: var(--th-red); }
+.pipes .dot.run { background: var(--aqi-watch); }
+
+/* The old `data-quality` button was a full red/yellow/green pill. Now
+   it's a quiet chip in the toolbar; the colour still encodes the
+   state, the size no longer competes with the wordmark. */
 .data-quality {
   align-self: center;
-  margin: 0 4px 0 0;
-  padding: 4px 8px;
+  margin: 0;
+  padding: 3px 8px;
   font-family: var(--font-num);
-  font-size: 13px; font-weight: 700;
+  font-size: 11px; font-weight: 700;
   color: #fff;
-  background: #35B558;
-  border: none;
-  border-radius: 3px;
+  background: var(--th-sage);
+  border: 1px solid var(--th-sage);
   cursor: pointer;
-  line-height: 1;
+  line-height: 1.2;
 }
-.data-quality.warn { background: var(--band-elevated); color: #241E4E; }
-.data-quality.bad  { background: var(--band-high); }
-.data-quality:hover { filter: brightness(1.08); }
-.pipes .dot { width: 8px; height: 8px; background: #4A4470; }
-.pipes .dot.ok { background: #35B558; }
-.pipes .dot.bad { background: var(--th-red); }
-.pipes .dot.run { background: #E8B33C; }
+.data-quality.warn { background: var(--aqi-watch); border-color: var(--aqi-watch); }
+.data-quality.bad  { background: var(--th-red); border-color: var(--th-red); }
+.data-quality:hover { filter: brightness(0.92); }
 
-.clockbox { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; padding: 6px 14px 0 0; }
-#clock { font-family: var(--font-num); font-size: 20px; font-weight: 700; line-height: 1; }
-.clockbox .date { font-size: 10.5px; opacity: 0.85; }
+.clockbox {
+  display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+  padding: 12px 12px 0 8px; flex: none;
+}
+#clock { font-family: var(--font-num); font-size: 17px; font-weight: 700; line-height: 1; color: var(--th-deep); }
+.clockbox .date { font-size: 9.5px; color: var(--ink-mid); margin-top: 2px; }
 
-.focusbox { display: flex; align-items: center; gap: 6px; padding: 6px 12px 0 0; flex: none; }
+.focusbox { display: flex; align-items: center; gap: 6px; padding: 12px 8px 0 0; flex: none; }
 .focusbox select {
-  font-family: var(--font-ui); font-size: 12.5px; font-weight: 600;
-  background: var(--well); color: var(--th-navy);
-  border: 1px solid rgba(246,244,239,0.5); padding: 5px 6px; max-width: 190px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  background: var(--well); color: var(--ink);
+  border: 1px solid var(--rule); padding: 4px 6px; max-width: 180px;
 }
 .focusbox #compare-btn,
 .focusbox #split-btn {
-  border: 1px solid rgba(246,244,239,0.5); background: transparent; color: var(--ink-inv);
-  font-size: 15px; line-height: 1; padding: 4px 8px; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--well); color: var(--ink);
+  font-size: 14px; line-height: 1; padding: 3px 8px; cursor: pointer;
 }
 .focusbox #compare-btn:hover,
-.focusbox #split-btn:hover { background: var(--ink-inv); color: var(--th-navy); }
+.focusbox #split-btn:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 .focusbox #split-btn[aria-pressed="true"] {
-  background: var(--ink-inv); color: var(--th-navy);
+  background: var(--th-deep); color: #fff; border-color: var(--th-deep);
 }
 
 /* "← All Thailand" pill — appears in the focusbox only when the user has
-   drilled into a non-Thailand focus area. Matches the header button
-   family so it doesn't look out of place, but uses the th-red accent
-   so it reads as "you're zoomed in — here's the way out". */
+   drilled into a non-Thailand focus area. */
 .focusbox #back-to-thailand {
   border: 1px solid var(--th-red); background: transparent; color: var(--th-red);
   font-family: var(--font-ui); font-size: 11.5px; font-weight: 700;
-  letter-spacing: 0.02em; line-height: 1; padding: 5px 8px; cursor: pointer;
+  letter-spacing: 0.02em; line-height: 1; padding: 4px 8px; cursor: pointer;
   text-transform: uppercase; white-space: nowrap;
 }
 .focusbox #back-to-thailand:hover { background: var(--th-red); color: #fff; }
 .focusbox #back-to-thailand[hidden] { display: none; }
 
-.langtoggle { display: flex; align-items: center; padding: 6px 14px 0 0; gap: 0; }
+.langtoggle { display: flex; align-items: center; padding: 12px 6px 0 6px; gap: 0; flex: none; }
 .langtoggle button {
-  border: 1px solid rgba(246,244,239,0.5);
-  background: transparent; color: var(--ink-inv);
-  font-size: 12px; font-weight: 600; padding: 4px 10px;
+  border: 1px solid var(--rule);
+  background: var(--well); color: var(--ink-mid);
+  font-size: 12px; font-weight: 600; padding: 4px 9px;
 }
-.langtoggle button.active { background: var(--ink-inv); color: var(--th-navy); }
+.langtoggle button:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+.langtoggle button.active { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 
 /* ── Rails ────────────────────────────────────────────────────────────────── */
 .rail {
@@ -365,24 +416,33 @@ header .spacer { flex: 1; }
 #map { grid-area: map; background: #E9E6DD; min-height: 0; }
 .leaflet-container { font-family: var(--font-ui); background: #E9E6DD; }
 
-/* ── Ticker ──────────────────────────────────────────────────────────────── */
+/* ── Ticker — the AQI gradient as a thin bar across the bottom of the map
+   is the visual signature of AirDash. Light theme now. */
 #ticker {
   grid-area: ticker;
-  background: var(--th-navy);
-  color: var(--ink-inv);
+  background: var(--well);
+  color: var(--ink);
   display: flex; align-items: center;
   overflow: hidden;
-  border-top: 1px solid var(--rule-strong);
+  border-top: 2px solid;
+  border-image: linear-gradient(
+    to right,
+    var(--aqi-good) 0%, var(--aqi-good) 20%,
+    var(--aqi-moderate) 20%, var(--aqi-moderate) 40%,
+    var(--aqi-watch) 40%, var(--aqi-watch) 60%,
+    var(--aqi-unhealthy) 60%, var(--aqi-unhealthy) 80%,
+    var(--aqi-hazardous) 80%, var(--aqi-hazardous) 100%) 1;
 }
 #ticker .live {
   flex: none;
   display: flex; align-items: center; gap: 6px;
   padding: 0 12px;
   font-family: var(--font-num); font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
-  border-right: 1px solid rgba(246,244,239,0.3);
+  color: var(--th-sage);
+  border-right: 1px solid var(--rule);
   height: 100%;
 }
-#ticker .live .pip { width: 8px; height: 8px; background: var(--th-red); animation: blink 1.6s steps(2) infinite; }
+#ticker .live .pip { width: 8px; height: 8px; background: var(--th-sage); animation: blink 1.6s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0.25; } }
 #ticker .track { flex: 1; overflow: hidden; white-space: nowrap; }
 #ticker .track .crawl {
@@ -477,7 +537,6 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   .data-quality { display: none !important; }
   .national .label .why,
   .national .label .season { display: none; }
-  .header-partners { display: none !important; }
   .focusbox select { display: none; }
   :root {
     --rail-l: 300px;
@@ -485,9 +544,6 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   }
 }
 @media (max-width: 1480px) {
-  .header-partner-axiom-retl,
-  .header-partner-slic,
-  .header-partner-rcad { display: none; }
   .focusbox select { max-width: 150px; }
   .focusbox #compare-btn { display: none; } /* places compare (⊟) is the primary */
 }
@@ -502,7 +558,6 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   .searchbox input { max-width: 160px; }
   .focusbox { padding-right: 6px; }
   .langtoggle { padding-right: 8px; }
-  .header-partners { display: none; }
   :root {
     --rail-l: 300px;
     --rail-r: 360px;
@@ -532,7 +587,7 @@ html[lang="en"] .appfooter-line .en { display: inline; }
     display: grid; grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: 46px 46px; overflow: visible;
   }
-  .brand, .header-partners, .clockbox, .levelcounts, .pipes,
+  .brand, .clockbox, .levelcounts, .pipes,
   .data-quality, header .spacer, .focusbox, #about-btn, .ask-hero {
     display: none !important;
   }
@@ -686,17 +741,16 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   #places-overlay, #split-btn { display: none !important; }
 }
 
-/* ── About overlay (fine-print, project credit, methodology) ─────────────── */
+/* ── About button (fine-print, project credit, methodology) ─────────────── */
 #about-btn {
-  align-self: stretch; display: inline-flex; align-items: center;
-  margin: 6px 14px 0 0; padding: 0 12px;
-  background: rgba(36,30,78,0.78); color: var(--ink-inv);
-  border: 1px solid rgba(246,244,239,0.35);
-  border-radius: 0;
+  align-self: center; display: inline-flex; align-items: center;
+  margin: 0; padding: 4px 11px;
+  background: var(--well); color: var(--ink);
+  border: 1px solid var(--rule);
   font-family: var(--font-ui); font-size: 12px; font-weight: 600;
   cursor: pointer;
 }
-#about-btn:hover { background: var(--ink-inv); color: var(--th-navy); }
+#about-btn:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 
 #about-overlay {
   position: fixed; inset: 0; z-index: 5500;

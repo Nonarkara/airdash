@@ -6,7 +6,7 @@
  * Live data integrity is non-negotiable.
  */
 
-const CACHE = 'airdash-v1';
+const CACHE = 'airdash-v2';
 
 const PRECACHE_URLS = [
   '/',
