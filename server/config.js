@@ -24,12 +24,13 @@ export const CONFIG = {
   // Poll cadences follow each upstream's native update rhythm.
   intervals: {
     air4thai: 1 * HOUR,      // PCD publishes hourly
-    openmeteo: 3 * HOUR,     // weather forecast (rain probability, wind)
+    openmeteo: 3 * HOUR,     // weather forecast (rain probability, wind, temp, RH)
     openmeteo_aq: 3 * HOUR,  // CAMS air-quality forecast (12-hourly cycles upstream)
     thaiwater_rain: 10 * MINUTE,
     enso: 12 * HOUR,         // ONI revises monthly; cheap to recheck
     news: 30 * MINUTE,
     imerg: 30 * MINUTE,      // IMERG Early publishes half-hourly (~4h latency)
+    gistda_pm25: 1 * HOUR,   // GISTDA satellite+ground PM2.5 fusion
   },
 
   // Thai AQI 2023 PM2.5 breakpoints (µg/m³): ≤15 very good, ≤25 good,
@@ -54,6 +55,13 @@ export const CONFIG = {
     weights: { pm25: 0.40, pollutants: 0.10, trend: 0.15, forecast: 0.20, stagnation: 0.15 },
     bands: { watch: 20, elevated: 45, high: 70 }, // score >= band
     trendGapMs: 30 * MINUTE, // min age of a stored snapshot before it's refreshed
+  },
+
+  // Danger Score — separate composite, narrower scope than the Air Watch
+  // Score. Capped bands so the verb is always interpretable: 0–19 safe,
+  // 20–44 cautious, 45–69 dangerous, 70+ very dangerous. See danger.js.
+  danger: {
+    bands: { watch: 20, elevated: 45, high: 70 },
   },
 
   // Dust/burning season window (northern haze peaks Feb–Apr).

@@ -22,8 +22,14 @@ export default {
 
     const lats = provinces.map((p) => p.lat.toFixed(3)).join(',')
     const lngs = provinces.map((p) => p.lng.toFixed(3)).join(',')
+    // daily[]: rain, rain probability, wind — used by stagnation/washout.
+    // current[]: temperature, relative humidity, apparent temperature — used
+    // by the Danger Score to capture heat + hygroscopic-growth modulation of
+    // the live PM2.5 reading. Open-Meteo returns the current-hour value
+    // alongside the daily rollups, no extra cost.
     const daily = 'precipitation_sum,precipitation_probability_max,wind_speed_10m_max'
-    const url = `${BASE}?latitude=${lats}&longitude=${lngs}&daily=${daily}&forecast_days=3&timezone=Asia%2FBangkok`
+    const current = 'temperature_2m,relative_humidity_2m,apparent_temperature'
+    const url = `${BASE}?latitude=${lats}&longitude=${lngs}&current=${current}&daily=${daily}&forecast_days=3&timezone=Asia%2FBangkok`
     // 77 province centroids in one call can exceed 20s; allow headroom before backoff.
     const json = await fetchJson(url, { timeoutMs: 45_000 })
     const results = Array.isArray(json) ? json : [json]
@@ -40,12 +46,23 @@ export default {
     db.tx(() => {
       provinces.forEach((p, i) => {
         const d = results[i]?.daily
+        const c = results[i]?.current
         if (!d) return
         const val = (arr, idx) => (Array.isArray(arr) && Number.isFinite(arr[idx]) ? arr[idx] : null)
+        const num = (v) => (Number.isFinite(v) ? v : null)
 
         const sums = [0, 1, 2].map((k) => val(d.precipitation_sum, k))
         const probs = [0, 1, 2].map((k) => val(d.precipitation_probability_max, k))
         const winds = [0, 1, 2].map((k) => val(d.wind_speed_10m_max, k))
+
+        // Live temperature / humidity / apparent temperature — used by the
+        // Danger Score to capture heat-amplification and hygroscopic-growth
+        // effects on the same air mass. Open-Meteo's `current` is the
+        // model-time at request, which for our 3-hourly poll cadence is
+        // fresh enough for the daily-mean score the Danger Score reports.
+        const tempC = c ? num(c.temperature_2m) : null
+        const rh = c ? num(c.relative_humidity_2m) : null
+        const apparentC = c ? num(c.apparent_temperature) : null
 
         const next48 = sums[0] !== null && sums[1] !== null ? sums[0] + sums[1] : null
         const prob48 = probs[0] !== null && probs[1] !== null ? Math.max(probs[0], probs[1]) : (probs[0] ?? probs[1])
@@ -75,6 +92,7 @@ export default {
             precip_prob_d0: probs[0], precip_prob_d1: probs[1], precip_prob_d2: probs[2],
             precip_prob_24h: probs[0], precip_prob_48h: prob48,
             wind_fc_kmh: winds[0], wind_fc_d1: winds[1],
+            temp_c: tempC, rh_pct: rh, apparent_c: apparentC,
           },
           obs_time, fetched_at, now,
         })

@@ -288,77 +288,23 @@ function initAbout() {
   paint()
 }
 
-// ASK AI hero bar — wires the persistent navy bar between the header
-// and the rest of the page to the existing chat panel. The previous
-// placement (right-rail tab #10) made the only-true-moat feature
-// invisible to non-technical users. Submission here does three things:
-//   1. Copy the typed question into the chat input
-//   2. Switch the right rail to the chat tab (selectPane('chat'))
-//   3. Submit the chat form so the existing RAG pipeline runs
-// The chat form's existing submit handler is reused — no duplication of
-// fetch / streaming / feedback logic.
-function initAskHero() {
-  const form = document.getElementById('ask-hero')
-  const input = document.getElementById('ask-hero-input')
-  if (!form || !input) return
-  form.addEventListener('submit', (e) => {
-    e.preventDefault()
-    const q = (input.value ?? '').trim()
-    if (!q) return
-    // The chat tab lives in the right rail. Open the rail and switch
-    // to it so the answer is visible after the user submits.
-    const chatInput = document.getElementById('chat-input')
-    const chatForm = document.getElementById('chat-form')
-    if (chatInput && chatForm) {
-      chatInput.value = q
-      // selectPane is defined in this file. It also re-applies ARIA.
-      try { selectPane('chat') } catch {}
-      // Re-submit the chat form — its own handler streams the answer.
-      chatForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
-    }
-    // Clear the hero input once the question has been handed off so
-    // the user can ask a follow-up without the old text lingering.
-    input.value = ''
-  })
-}
-
-// TTS read-aloud of the national hero — built for elderly and low-literacy
-// users in a panic, where hearing the current area-scoped action is faster
-// and more reliable than reading the screen. Uses the browser's
-// built-in speechSynthesis so there's no extra dependency and no
-// network round-trip.
-function initTts() {
-  const btn = document.getElementById('national-tts')
-  if (!btn || !('speechSynthesis' in window)) return
+// ASK AI button — v2 of the header collapses the full hero form into a
+// single chip. Tap → opens the chat tab. The user can then type into
+// the existing chat input. We removed the form entirely (it took up a
+// second row of the header) — the chat tab is the same input surface
+// just relocated, and one click is faster than form + submit.
+function initAskBtn() {
+  const btn = document.getElementById('ask-btn')
+  if (!btn) return
   btn.addEventListener('click', () => {
-    const synth = window.speechSynthesis
-    if (synth.speaking) {
-      synth.cancel()
-      btn.classList.remove('speaking')
-      return
-    }
-    const verb = document.getElementById('national-th')?.textContent ?? ''
-    const en = document.getElementById('national-en')?.textContent ?? ''
-    const why = document.getElementById('national-why')?.textContent ?? ''
-    const lang = store.lang === 'th' ? 'th-TH' : 'en-US'
-    const text = store.lang === 'th'
-      ? `สถานการณ์ปัจจุบัน: ${verb}. ${why || ''} สายด่วนกรมควบคุมมลพิษ 1650`
-      : `Current situation: ${en}. ${why || ''} PCD pollution hotline 1650.`
-    const u = new SpeechSynthesisUtterance(text)
-    u.lang = lang
-    u.rate = store.lang === 'th' ? 0.9 : 1.0
-    u.pitch = 1.0
-    u.volume = 1.0
-    u.onstart = () => btn.classList.add('speaking')
-    u.onend = () => btn.classList.remove('speaking')
-    u.onerror = () => btn.classList.remove('speaking')
-    try { synth.speak(u) } catch (e) { console.warn('tts failed', e) }
+    try { selectPane('chat') } catch {}
   })
 }
 
 async function boot() {
   paintChrome()
   initHeader()
+  initAskBtn()
   initMode()
   const map = initMap()
   initRanking()
@@ -383,8 +329,7 @@ async function boot() {
   initTabs()
   initSheet()
   initAbout()
-  initAskHero()
-  initTts()
+  initAskBtn()
 
   // Place search → fly the map
   on('place-select', ({ lat, lng, zoom }) => {

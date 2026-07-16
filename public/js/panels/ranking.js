@@ -143,6 +143,22 @@ function render(snap) {
         onclick: (e) => { e.stopPropagation(); flyToProvince(p); showProvinceDetail(p) },
       }, tr('ดูสถานี/กราฟ →', 'See stations/chart →')))
     }
+    // Danger chip — the headline composite for "is it safe to be outside
+    // RIGHT NOW". Shows the worst-case band's number + label so a glance
+    // at the ranking tells you both the watch indicator and the
+    // acute-risk number. Tooltip breaks out every modifier for audit.
+    const danger = p.danger
+    const dangerChip = danger ? el('div', {
+      class: `danger-chip b-${danger.band}`,
+      title: tr(
+        `ดัชนีอันตราย: PM2.5 ${danger.pm25_live != null ? danger.pm25_live.toFixed(0) : '–'} · ความร้อน ${danger.temp_c != null ? danger.temp_c.toFixed(0) : '–'}°C · ความชื้น ${danger.rh_pct != null ? danger.rh_pct.toFixed(0) : '–'}% · ลดฝน ${(danger.rain_relief * 100).toFixed(0)}%`,
+        `Danger: PM2.5 ${danger.pm25_live != null ? danger.pm25_live.toFixed(0) : '–'} · T ${danger.temp_c != null ? danger.temp_c.toFixed(0) : '–'}°C · RH ${danger.rh_pct != null ? danger.rh_pct.toFixed(0) : '–'}% · rain −${(danger.rain_relief * 100).toFixed(0)}%`,
+      ),
+    },
+      el('span', { class: 'dc-num' }, String(danger.score)),
+      el('span', { class: 'dc-band' }, tr(danger.label_th, danger.label_en)),
+    ) : null
+
     const row = el('div', {
       class: `rank-row b-${p.band}`,
       onclick: () => {
@@ -162,6 +178,7 @@ function render(snap) {
       el('div', { class: 'who' },
         el('div', { class: 'th' }, tr(p.province_th, p.province_en) || '—'),
         el('div', { class: 'en' }, `${store.lang === 'th' ? (p.province_en ?? '') : (p.province_th ?? '')} · ${BAND[p.band][store.lang]}`, trendArrow(p.delta))),
+      dangerChip,
       el('div', { class: 'stats' }, ...stats),
     )
     if (expand) row.append(expand)

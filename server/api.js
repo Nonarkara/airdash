@@ -89,7 +89,7 @@ function pivotLatest(db, source, metrics) {
   return [...byStation.values()]
 }
 
-export function buildRoutes({ db, bus, scheduler, riskEngine, washout, rag, faq, startedAt }) {
+export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, rag, faq, startedAt }) {
   return {
     'GET /api/sensors/health': (req, res) => {
       json(res, 200, sensorHealth(db))
@@ -206,7 +206,35 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, rag, faq,
       sendPrebuilt(res, 200, built)
     },
 
-    'GET /api/risk': (req, res) => json(res, 200, riskEngine.get()),
+    'GET /api/risk': (req, res) => {
+      const r = riskEngine.get()
+      // Augment the per-province risk payload with the Danger Score for
+      // free. The UI shows the Danger chip next to the Air Watch Score so
+      // a parent, a coach, or a hospital triage officer can read the
+      // "is it safe to go outside RIGHT NOW" number alongside the
+      // long-horizon watch indicator.
+      if (danger) {
+        const dangerByCode = new Map(danger.get().map((d) => [d.province_code, d]))
+        for (const p of r.provinces) {
+          const d = dangerByCode.get(p.province_code)
+          if (d) p.danger = {
+            score: d.score, band: d.band, score_forecast: d.score_forecast, trend_24h: d.trend_24h,
+            pm25_live: d.pm25_live, temp_c: d.temp_c, rh_pct: d.rh_pct,
+            pm_base: d.pm_base, heat_amp: d.heat_amp, hum_amp: d.hum_amp, rain_relief: d.rain_relief,
+            label_th: d.label_th, label_en: d.label_en, band_color: d.band_color,
+          }
+        }
+      }
+      return json(res, 200, r)
+    },
+
+    // Standalone Danger Score endpoint — used by the focus detail panel
+    // and the research paper infographic. Returns the full per-province
+    // breakdown so the UI can render every modifier.
+    'GET /api/danger': (req, res) => {
+      if (!danger) return json(res, 200, { updated: new Date().toISOString(), provinces: [] })
+      return json(res, 200, { updated: new Date().toISOString(), provinces: danger.get() })
+    },
 
     // National daily aggregates — feeds the ANALYTICS (default OVERVIEW) tab.
     // Each of these three GROUP BYs scans the recent slice of the multi-million

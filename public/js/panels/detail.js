@@ -90,12 +90,58 @@ export function showProvinceDetail(p) {
         ))
     : null
 
+  // Danger breakdown block — surfaces the composite's four modifiers so the
+  // user can see WHY the Danger Score is what it is. PM, heat, humidity,
+  // rain are all named with their actual numeric contribution. Research
+  // paper Section 2 has the full citation trail.
+  const d = p.danger
+  const dangerBlock = d ? el('div', { class: 'detail-block detail-danger' },
+    el('div', { class: 'eyebrow' }, tr('ดัชนีอันตราย · Danger Score', 'DANGER SCORE · COMPOSITE')),
+    el('div', { class: 'danger-big-row' },
+      el('div', { class: `danger-big b-${d.band}` },
+        el('span', { class: 'db-num' }, String(d.score)),
+        el('span', { class: 'db-band' }, tr(d.label_th, d.label_en)),
+      ),
+      d.trend_24h != null && Math.abs(d.trend_24h) >= 5
+        ? el('div', { class: `danger-trend ${d.trend_24h > 0 ? 'up' : 'down'}` },
+            d.trend_24h > 0
+              ? `↑ +${d.trend_24h} ${tr('ใน 24 ชม. ข้างหน้า', 'in next 24h')}`
+              : `↓ ${d.trend_24h} ${tr('ใน 24 ชม. ข้างหน้า', 'in next 24h')}`)
+        : null),
+    el('div', { class: 'danger-mods' },
+      el('div', { class: 'dm-row' },
+        el('span', { class: 'dm-k' }, tr('PM2.5 ฐาน', 'PM2.5 base')),
+        el('span', { class: 'dm-v' }, `${d.pm25_live != null ? d.pm25_live.toFixed(0) : '–'} µg/m³ → ${d.pm_base}`)),
+      el('div', { class: 'dm-row' },
+        el('span', { class: 'dm-k' }, tr('ความร้อน (heat amp)', 'Heat amp')),
+        el('span', { class: 'dm-v' },
+          d.temp_c != null ? `${d.temp_c.toFixed(0)}°C` : '–',
+          ` ×(1+${(d.heat_amp).toFixed(2)})`)),
+      el('div', { class: 'dm-row' },
+        el('span', { class: 'dm-k' }, tr('ความชื้น (hygroscopic)', 'RH amp')),
+        el('span', { class: 'dm-v' },
+          d.rh_pct != null ? `${d.rh_pct.toFixed(0)}%` : '–',
+          ` ×(1+${(d.hum_amp).toFixed(2)})`)),
+      el('div', { class: 'dm-row' },
+        el('span', { class: 'dm-k' }, tr('ฝน (relief)', 'Rain relief')),
+        el('span', { class: 'dm-v' },
+          d.rain_obs_24 != null ? `${d.rain_obs_24.toFixed(0)} มม. สังเกต` :
+            (d.rain_fc_24 != null ? `${d.rain_fc_24.toFixed(0)} มม. คาด` : '–'),
+          ` −${(d.rain_relief * 100).toFixed(0)}%`)),
+    ),
+    el('div', { class: 'danger-method' },
+      tr(
+        `สูตร: PM × (1+heat) × (1+RH) − rain — ดูวิธีคำนวณในงานวิจัยข้อ 2`,
+        `formula: PM × (1+heat) × (1+RH) − rain — see research paper §2 for citations`)),
+  ) : null
+
   box().replaceChildren(
     backButton(),
     el('div', { class: 'detail-block' },
       el('h3', {}, `${tr('จ.', 'Prov. ')}${tr(p.province_th, p.province_en)}`),
       el('div', { class: 'eyebrow' }, `${store.lang === 'th' ? (p.province_en ?? '') : (p.province_th ?? '')} · ${tr('คะแนน', 'score')} ${p.score}/100`),
       qualityNote),
+    dangerBlock,
     el('div', { class: 'detail-block' },
       el('div', { class: 'eyebrow' }, tr('สถานีวัดคุณภาพอากาศ', 'AIR-QUALITY STATIONS')),
       stations.length === 0 ? el('div', { class: 'detail-kv' }, tr('ไม่มีสถานีในจังหวัดนี้', 'no stations here')) :

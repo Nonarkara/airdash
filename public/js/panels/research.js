@@ -343,6 +343,237 @@ function sectionWhy() {
     </section>`
 }
 
+function sectionDanger() {
+  // Section 2 — The Danger Score. The peer-reviewed science behind
+  // the "is it safe to be outside RIGHT NOW" composite that lives in
+  // the top-bar hero chip. Four modifiers — PM2.5, heat, relative
+  // humidity, rain — each anchored in a published coefficient range.
+  return `
+    <section class="rp-section rp-section-danger">
+      <h2 data-th="2. ดัชนีอันตราย — The Danger Score: เหตุผลทางวิทยาศาสตร์" data-en="2. The Danger Score — Why PM2.5 Alone Misleads">
+        ${tr('2. ดัชนีอันตราย — The Danger Score: เหตุผลทางวิทยาศาสตร์', '2. The Danger Score — Why PM2.5 Alone Misleads')}
+      </h2>
+
+      <p data-th="ดัชนีเฝ้าระวังในข้อ 3 ตอบคำถามว่า 'อากาศมีแนวโน้มเป็นอย่างไร' แต่คำถามที่ผู้ปกครอง ผู้สูงอายุ และโค้ชถามจริงๆ คือ 'ตอนนี้ออกไปข้างนอกปลอดภัยไหม' คำตอบขึ้นกับปัจจัยสี่ตัว — ไม่ใช่แค่ฝุ่น — และเมื่อรวมเข้าด้วยกัน ผลที่ได้ต่างจากการอ่านค่า PM2.5 ตรงๆ อย่างมาก" data-en="The watch score in §3 answers the question 'where is the air headed?'. The question a parent, an elderly neighbour, or a coach actually has is 'is it safe to be outside right now?'. The answer depends on four factors — not just dust — and the combined number is materially different from reading the PM2.5 reading alone.">
+        ${tr(
+          'ดัชนีเฝ้าระวังในข้อ 3 ตอบคำถามว่า "อากาศมีแนวโน้มเป็นอย่างไร" แต่คำถามที่ผู้ปกครอง ผู้สูงอายุ และโค้ชถามจริงๆ คือ "ตอนนี้ออกไปข้างนอกปลอดภัยไหม"',
+          'The watch score in §3 answers the question "where is the air headed?". The question a parent, an elderly neighbour, or a coach actually has is "is it safe to be outside right now?".'
+        )}
+      </p>
+
+      <h3 data-th="2.1 สูตร" data-en="2.1 The formula">
+        ${tr('2.1 สูตร', '2.1 The formula')}
+      </h3>
+      ${svgDangerFormula()}
+
+      <p data-th="โดยที่ pm_base เป็นค่า 0–100 จากค่า PM2.5 ตามเกณฑ์ Thai AQI 2023 (เส้นโค้งเดียวกับดัชนีเฝ้าระวัง), heat_amp และ hum_amp เป็นตัวคูณที่มาจาก synergy ทางระบาดวิทยา, และ rain_relief คือเปอร์เซ็นต์ PM2.5 ที่ถูกชะล้างโดยฝนที่กำลังจะตกหรือตกอยู่แล้ว" data-en="pm_base is a 0–100 score from the PM2.5 reading against the Thai AQI 2023 breakpoints (the same curve as the watch score); heat_amp and hum_amp are multiplicative factors with epidemiological grounding; rain_relief is the percent of PM2.5 being washed out by rain that is either already falling or forecast.">
+        ${tr(
+          'โดยที่ pm_base เป็นค่า 0–100 จากค่า PM2.5 ตามเกณฑ์ Thai AQI 2023, heat_amp และ hum_amp เป็นตัวคูณที่มาจาก synergy ทางระบาดวิทยา, และ rain_relief คือเปอร์เซ็นต์ PM2.5 ที่ถูกชะล้างโดยฝน',
+          'pm_base is a 0–100 score from the PM2.5 reading against the Thai AQI 2023 breakpoints; heat_amp and hum_amp are multiplicative factors with epidemiological grounding; rain_relief is the percent of PM2.5 being washed out by rain.'
+        )}
+      </p>
+
+      <h3 data-th="2.2 PM2.5 + ความร้อน = synergy ทางระบาดวิทยา" data-en="2.2 PM2.5 + heat = synergistic mortality">
+        ${tr('2.2 PM2.5 + ความร้อน = synergy ทางระบาดวิทยา', '2.2 PM2.5 + heat = synergistic mortality')}
+      </h3>
+
+      <p data-th="การศึกษา 620 เมืองใน 36 ประเทศ (Scortichini et al., Lancet Planetary Health, 2022) พบว่า 'ความร้อน' กับ 'ฝุ่น' ไม่ได้มีผลแยกกัน เมื่ออุณหภูมิเพิ่มจากเปอร์เซ็นไทล์ที่ 75 เป็น 99 อัตราการเสียชีวิตเพิ่มขึ้นเฉลี่ย 8.9% — แต่ถ้าวันนั้น PM10 สูงด้วย (≥90 µg/m³) อัตราการเสียชีวิตจะเพิ่มขึ้น 12.8% เทียบกับวันที่ PM10 ต่ำ (≤10 µg/m³) ที่เพิ่มเพียง 5.3% — เป็น synergy 2.4 เท่า" data-en="The 620-city, 36-country study by Scortichini et al. (Lancet Planetary Health, 2022) found that heat and PM do not act independently. When mean temperature rose from the 75th to the 99th percentile, mortality rose 8.9% on average — but on days with high PM10 (≥90 µg/m³) the increase was 12.8%, versus only 5.3% on low-PM10 days. That is a 2.4× synergy.">
+        ${tr(
+          'การศึกษา 620 เมืองใน 36 ประเทศ (Scortichini et al., Lancet Planetary Health, 2022) พบว่าเมื่อ PM10 สูง ผลของความร้อนต่อการเสียชีวิตเพิ่มขึ้น 2.4 เท่า',
+          'The 620-city, 36-country study by Scortichini et al. (Lancet Planetary Health, 2022) found that on high-PM10 days the mortality effect of heat was 2.4× larger than on low-PM10 days.'
+        )}
+      </p>
+
+      ${svgHeatAmp()}
+
+      <p data-th="ในทางกลับกัน การศึกษาที่อุณหภูมิต่ำกว่า 28°C ไม่พบ amplification ที่มีนัยสำคัญ ดังนั้น AirDash จึงตั้ง heat_amp = 0 ที่ T ≤ 28°C และเพิ่มเป็น 0.30 เมื่อ T ≥ 35°C (linear ramp) — เป็นค่าสูงสุดที่ conservative เพราะเป็น 2.4 เท่าของ synergy ที่วัดได้ แต่เราคูณ ไม่ใช่บวก เพื่อไม่ให้ค่าเกินจริง" data-en="Below 28°C no significant amplification is found in the literature. AirDash therefore sets heat_amp = 0 at T ≤ 28°C, ramping to 0.30 at T ≥ 35°C. The 0.30 cap is deliberately conservative — it represents the upper end of the 2.4× observed amplification, and we apply it as a multiplier (so a cool morning at 22°C carries zero penalty even with bad air).">
+        ${tr(
+          'AirDash ตั้ง heat_amp = 0 ที่ T ≤ 28°C และเพิ่มเป็น 0.30 ที่ T ≥ 35°C — เป็นค่าที่ conservative และใช้การคูณ ไม่ใช่บวก',
+          'AirDash sets heat_amp = 0 at T ≤ 28°C, ramping to 0.30 at T ≥ 35°C — conservative and multiplicative.'
+        )}
+      </p>
+
+      <h3 data-th="2.3 ความชื้นสัมพัทธ์: hygroscopic growth" data-en="2.3 Relative humidity: hygroscopic growth of PM2.5">
+        ${tr('2.3 ความชื้นสัมพัทธ์: hygroscopic growth', '2.3 Relative humidity: hygroscopic growth of PM2.5')}
+      </h3>
+
+      <p data-th="ฝุ่น PM2.5 ที่มีองค์ประกอบของเกลืออนินทรีย์ (เช่น ammonium sulfate, ammonium nitrate) และสารอินทรีย์ที่ละลายน้ำได้ จะดูดซับไอน้ำเมื่อความชื้นสัมพัทธ์สูงขึ้น (Seinfeld & Pandis, 2016) Liu et al. (2023) วัด growth factor ของ PM0.5–20 ที่จีน พบว่าที่ RH 20% → 90% ขนาดอนุภาคเพิ่มขึ้น 1.76 เท่า และการเพิ่มจะเร่งตัวขึ้นอย่างมากเมื่อ RH > 80% — นั่นคือ มวลฝุ่นเท่าเดิมจะกระเจิงแสงได้มากขึ้น และทางสรีรวิทยา อนุภาคที่ใหญ่ขึ้นจะเคลื่อนที่ลึกลงไปในปอดมากขึ้น" data-en="PM2.5 that contains water-soluble inorganic salts (ammonium sulfate, ammonium nitrate) and soluble organic matter absorbs water as relative humidity rises (Seinfeld & Pandis, 2016). Liu et al. (2023) measured the hygroscopic growth factor of PM0.5–20 in China and found a 1.76× mass increase from 20% to 90% RH, with the growth accelerating sharply above 80% RH. The same dry mass scatters more light and, physiologically, the swollen particles penetrate deeper into the lungs.">
+        ${tr(
+          'Liu et al. (2023) วัด hygroscopic growth factor ที่จีน พบว่าฝุ่นเพิ่มขนาด 1.76 เท่าเมื่อ RH 20% → 90% และเร่งตัวเมื่อ RH > 80%',
+          'Liu et al. (2023) measured the hygroscopic growth factor in China and found PM mass increases 1.76× from RH 20% to 90%, with growth accelerating above 80% RH.'
+        )}
+      </p>
+
+      ${svgHumAmp()}
+
+      <p data-th="AirDash ตั้ง hum_amp = 0 ที่ RH ≤ 60% (เกณฑ์ deliquescence ของเกลือทั่วไป) และเพิ่มเป็น 0.25 ที่ RH ≥ 90% เราเลือกใช้ hygroscopic amp เป็นตัวคูณแยกจาก rain_relief เพื่อรักษาความโปร่งใส — RH สูงทำให้ฝุ่นหนักขึ้นจริงๆ แต่ก็มักหมายถึงฝนใกล้จะมา ซึ่ง rain_relief จะหักออกให้ในส่วนถัดไป" data-en="AirDash sets hum_amp = 0 at RH ≤ 60% (below the deliquescence threshold of common salts) and ramps to 0.25 at RH ≥ 90%. We deliberately apply the hygroscopic amplifier and the rain relief as separate, auditable terms: high RH genuinely makes the same particles more harmful, but it also usually means rain is imminent — and the rain relief then nets it out in the next term.">
+        ${tr(
+          'AirDash ตั้ง hum_amp = 0 ที่ RH ≤ 60% และเพิ่มเป็น 0.25 ที่ RH ≥ 90% แยกจาก rain_relief เพื่อความโปร่งใส',
+          'AirDash sets hum_amp = 0 at RH ≤ 60% and ramps to 0.25 at RH ≥ 90%, kept separate from rain_relief for auditability.'
+        )}
+      </p>
+
+      <h3 data-th="2.4 ฝน: wet scavenging" data-en="2.4 Rain: wet deposition and below-cloud scavenging">
+        ${tr('2.4 ฝน: wet scavenging', '2.4 Rain: wet deposition and below-cloud scavenging')}
+      </h3>
+
+      <p data-th='ฝนเป็น "ตัวลด" ตัวเดียวในสูตร เมื่อเม็ดฝนตกผ่านชั้นอากาศที่มีฝุ่น ฝุ่นจะถูกจับโดยกระบวนการ Brownian diffusion, interception, และ impaction — เรียกรวมว่า "below-cloud scavenging" อัตราการกำจัดเป็น exponential: C(t) = C₀ · exp(−Λ·t) โดยที่ Λ คือ scavenging coefficient ที่ขึ้นกับความเข้มฝน R (mm/h) ตามกฎ Λ = a·R^b' data-en="Rain is the only subtractive term. When raindrops fall through a dusty air column they capture particles by Brownian diffusion, interception, and impaction — collectively called below-cloud scavenging. The removal is exponential: C(t) = C₀ · exp(−Λ·t), with Λ a power-law function of rainfall rate R (mm/h): Λ = a·R^b.">
+        ${tr(
+          'เมื่อเม็ดฝนตกผ่านชั้นอากาศที่มีฝุ่น ฝุ่นจะถูกจับโดยกระบวนการ below-cloud scavenging — C(t) = C₀ · exp(−Λ·t), Λ = a·R^b',
+          'Raindrops capture particles by below-cloud scavenging — C(t) = C₀ · exp(−Λ·t), with Λ = a·R^b.'
+        )}
+      </p>
+
+      ${svgRainRelief()}
+
+      <p data-th='สำหรับ PM2.5 ในช่วง accumulation mode (~0.1–1 µm) ค่า a และ b ที่วัดได้ในสนามจริงอยู่ที่ a ≈ 10⁻⁵ ถึง 10⁻² s⁻¹, b ≈ 0.6–0.9 (Henzing et al. 2006; Wang et al. 2010; parameterised ใน GEOS-Chem ที่ a = 0.00106, b = 0.61) — แปลว่าที่ R = 1 mm/h ค่า Λ ≈ 10⁻⁵ s⁻¹ ครึ่งชีวิตของฝุ่น ≈ 19 ชั่วโมง; แต่ที่ R = 10 mm/h (ฝนหนัก) Λ ≈ 10⁻⁴ s⁻¹ ครึ่งชีวิตเหลือเพียง 1.9 ชั่วโมง — นั่นคือ ฝนหนัก 5 มม. ใน 1 ชม. ลด PM2.5 ได้ราว 20% และ 35 มม. ใน 24 ชม. ลดได้ราว 40%' data-en="For PM2.5 in the accumulation mode (~0.1–1 µm) the field-measured a and b sit in the range a ≈ 10⁻⁵ to 10⁻² s⁻¹, b ≈ 0.6–0.9 (Henzing et al. 2006; Wang et al. 2010; GEOS-Chem's parameterisation is a = 0.00106, b = 0.61). At R = 1 mm/h, Λ ≈ 10⁻⁵ s⁻¹ and the PM2.5 half-life is ~19 hours. At R = 10 mm/h (heavy rain), Λ ≈ 10⁻⁴ s⁻¹ and the half-life is 1.9 hours. Practically: 5 mm of rain in an hour cuts PM2.5 by ~20%, and 35 mm in 24 h cuts it by ~40%.">
+        ${tr(
+          'ฝน 5 มม. ลด PM2.5 ได้ ~20% · ฝน 35 มม. ใน 24 ชม. ลดได้ ~40% — สอดคล้องกับการศึกษาในเอเชีย',
+          '5 mm of rain cuts PM2.5 ~20%, 35 mm in 24 h cuts it ~40% — consistent with field studies across Asian cities.'
+        )}
+      </p>
+
+      <h3 data-th="2.5 แหล่งข้อมูลอินพุต" data-en="2.5 Inputs and provenance">
+        ${tr('2.5 แหล่งข้อมูลอินพุต', '2.5 Inputs and provenance')}
+      </h3>
+
+      <p data-th="ตัวเศษ PM2.5 ใช้ค่าที่สูงที่สุดระหว่าง (ก) ค่าที่สถานีภาคพื้นดิน Air4Thai ของกรมควบคุมมลพิษ (PCD) วัดได้ในชั่วโมงล่าสุด และ (ข) ค่าจาก GISTDA PM2.5 (satellite + ground fusion, https://pm25.gistda.or.th/) ตัวคูณความร้อนและความชื้นดึงจาก Open-Meteo current-hour fields (temperature_2m, relative_humidity_2m) ตัวลดฝนดึงจาก (ก) เรดาร์ฝน HII ~4,200 สถานี (rain_24h) และ (ข) Open-Meteo forecast 24 ชม. × probability — ใช้ค่าที่มากกว่า" data-en="The PM2.5 numerator takes the worst of (a) the freshest Air4Thai ground station (PCD) reading per province and (b) the GISTDA PM2.5 satellite+ground fusion value (https://pm25.gistda.or.th/). The heat and humidity multipliers come from Open-Meteo current-hour fields. The rain relief uses the maximum of (a) observed 24h rain from ~4,200 HII gauges and (b) Open-Meteo forecast 24h rain × probability.">
+        ${tr(
+          'ใช้ค่า PM2.5 ที่สูงสุดระหว่างสถานีภาคพื้นดิน PCD และ GISTDA satellite fusion; ตัวลดฝนใช้ค่าที่มากกว่าระหว่างเรดาร์ฝน HII และ Open-Meteo forecast',
+          'Uses the higher of PCD ground station and GISTDA satellite fusion; rain relief uses the larger of HII gauge and Open-Meteo forecast.'
+        )}
+      </p>
+
+      <h3 data-th="2.6 ขอบเขตของข้อสรุป" data-en="2.6 What this number is, and what it isn't">
+        ${tr('2.6 ขอบเขตของข้อสรุป', '2.6 What this number is, and what it isn\'t')}
+      </h3>
+
+      <p data-th="ดัชนีอันตรายเป็น heuristic ที่รวมหลายปัจจัย ไม่ใช่แบบจำลองระบาดวิทยา ไม่ใช่การพยากรณ์ และไม่ได้ทดแทนคำแนะนำจากกรมควบคุมมลพิษหรือกรมอนามัย เราเปิดเผยสูตร เปิดเผยค่าตัวคูณ และเปิดเผยแหล่งข้อมูล เพื่อให้ผู้ใช้ตรวจสอบและปรับเปลี่ยนได้" data-en="The Danger Score is a transparent heuristic, not an epidemiological model, not a forecast, and not a substitute for guidance from the Pollution Control Department (PCD) or the Department of Disease Control (DDC). We publish the formula, the multipliers, and the inputs so a curious user can audit and a downstream system can re-use them.">
+        ${tr(
+          'ดัชนีอันตรายเป็น heuristic ที่โปร่งใส ไม่ใช่แบบจำลอง ไม่ใช่การพยากรณ์ ไม่ได้ทดแทนคำแนะนำจาก คพ. หรือ กรมอนามัย',
+          'The Danger Score is a transparent heuristic, not a model, not a forecast, and not a substitute for guidance from PCD or the DDC.'
+        )}
+      </p>
+    </section>
+  `
+}
+
+function svgDangerFormula() {
+  const w = 720, h = 90
+  let svg = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg">`
+  // Main formula box
+  svg += `<rect x="20" y="20" width="680" height="50" fill="var(--aqi-unhealthy)" opacity="0.08" stroke="var(--aqi-unhealthy)" stroke-width="1.5"/>`
+  svg += `<text x="360" y="46" text-anchor="middle" font-family="var(--font-num)" font-size="14" font-weight="700" fill="var(--ink)">`
+  svg += `danger = pm_base × (1 + heat_amp) × (1 + hum_amp) × (1 − rain_relief)`
+  svg += `</text>`
+  svg += `<text x="360" y="62" text-anchor="middle" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">clamped 0–100 · 4 modifiers, each peer-reviewed, each capped so no single dimension can dominate</text>`
+  svg += `</svg>`
+  return svg
+}
+
+function svgHeatAmp() {
+  const w = 600, h = 200
+  let svg = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg">`
+  // X axis: temperature
+  svg += `<line x1="50" y1="160" x2="560" y2="160" stroke="var(--ink-low)" stroke-width="1"/>`
+  // Ticks at 0, 10, 20, 28, 32, 35, 40
+  const temps = [0, 10, 20, 28, 32, 35, 40]
+  for (const t of temps) {
+    const x = 50 + (t / 40) * 510
+    svg += `<line x1="${x}" y1="160" x2="${x}" y2="165" stroke="var(--ink-low)" stroke-width="0.8"/>`
+    svg += `<text x="${x}" y="178" text-anchor="middle" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">${t}°C</text>`
+  }
+  // Y axis
+  svg += `<line x1="50" y1="20" x2="50" y2="160" stroke="var(--ink-low)" stroke-width="1"/>`
+  svg += `<text x="42" y="30" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">+30%</text>`
+  svg += `<text x="42" y="92" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">+15%</text>`
+  svg += `<text x="42" y="156" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">0%</text>`
+  // Flat region 0-28
+  svg += `<line x1="50" y1="160" x2="${50 + (28 / 40) * 510}" y2="160" stroke="var(--aqi-good)" stroke-width="3"/>`
+  // Ramp 28-35
+  svg += `<line x1="${50 + (28 / 40) * 510}" y1="160" x2="${50 + (35 / 40) * 510}" y2="20" stroke="var(--aqi-unhealthy)" stroke-width="3"/>`
+  // Cap 35-40
+  svg += `<line x1="${50 + (35 / 40) * 510}" y1="20" x2="${50 + (40 / 40) * 510}" y2="20" stroke="var(--aqi-hazardous)" stroke-width="3"/>`
+  // Annotation
+  svg += `<text x="${50 + (14 / 40) * 510}" y="148" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-good)">amp = 0 (cool)</text>`
+  svg += `<text x="${50 + (31.5 / 40) * 510}" y="80" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-unhealthy)">linear ramp</text>`
+  svg += `<text x="${50 + (37.5 / 40) * 510}" y="14" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-hazardous)">cap +30%</text>`
+  // Title
+  svg += `<text x="300" y="10" text-anchor="middle" font-family="var(--font-num)" font-size="10" font-weight="700" fill="var(--th-navy)">heat_amp(T) — 0 below 28°C · 0.30 cap above 35°C</text>`
+  svg += `</svg>`
+  return svg
+}
+
+function svgHumAmp() {
+  const w = 600, h = 200
+  let svg = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg">`
+  // X axis: relative humidity
+  svg += `<line x1="50" y1="160" x2="560" y2="160" stroke="var(--ink-low)" stroke-width="1"/>`
+  const rhs = [0, 30, 60, 75, 85, 90, 100]
+  for (const r of rhs) {
+    const x = 50 + (r / 100) * 510
+    svg += `<line x1="${x}" y1="160" x2="${x}" y2="165" stroke="var(--ink-low)" stroke-width="0.8"/>`
+    svg += `<text x="${x}" y="178" text-anchor="middle" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">${r}%</text>`
+  }
+  // Y axis
+  svg += `<line x1="50" y1="20" x2="50" y2="160" stroke="var(--ink-low)" stroke-width="1"/>`
+  svg += `<text x="42" y="30" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">+25%</text>`
+  svg += `<text x="42" y="92" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">+12%</text>`
+  svg += `<text x="42" y="156" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">0%</text>`
+  // Flat 0-60
+  svg += `<line x1="50" y1="160" x2="${50 + (60 / 100) * 510}" y2="160" stroke="var(--aqi-good)" stroke-width="3"/>`
+  // Ramp 60-90
+  svg += `<line x1="${50 + (60 / 100) * 510}" y1="160" x2="${50 + (90 / 100) * 510}" y2="20" stroke="var(--aqi-unhealthy)" stroke-width="3"/>`
+  // Cap 90-100
+  svg += `<line x1="${50 + (90 / 100) * 510}" y1="20" x2="${50 + (100 / 100) * 510}" y2="20" stroke="var(--aqi-hazardous)" stroke-width="3"/>`
+  // Title
+  svg += `<text x="300" y="10" text-anchor="middle" font-family="var(--font-num)" font-size="10" font-weight="700" fill="var(--th-navy)">hum_amp(RH) — 0 below 60% · 0.25 cap above 90%</text>`
+  svg += `<text x="${50 + (30 / 100) * 510}" y="148" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-good)">below DRH (deliquescence)</text>`
+  svg += `<text x="${50 + (75 / 100) * 510}" y="80" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-unhealthy)">hygroscopic growth</text>`
+  svg += `</svg>`
+  return svg
+}
+
+function svgRainRelief() {
+  const w = 600, h = 200
+  let svg = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg">`
+  // X axis: mm of rain in 24h
+  svg += `<line x1="50" y1="160" x2="560" y2="160" stroke="var(--ink-low)" stroke-width="1"/>`
+  const mms = [0, 1, 5, 15, 35, 50]
+  for (const m of mms) {
+    const x = 50 + (m / 50) * 510
+    svg += `<line x1="${x}" y1="160" x2="${x}" y2="165" stroke="var(--ink-low)" stroke-width="0.8"/>`
+    svg += `<text x="${x}" y="178" text-anchor="middle" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">${m}</text>`
+  }
+  svg += `<text x="565" y="178" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">mm</text>`
+  // Y axis
+  svg += `<line x1="50" y1="20" x2="50" y2="160" stroke="var(--ink-low)" stroke-width="1"/>`
+  svg += `<text x="42" y="30" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">40%</text>`
+  svg += `<text x="42" y="92" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">20%</text>`
+  svg += `<text x="42" y="156" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">0%</text>`
+  // Stepwise curve
+  const points = [
+    { x: 50, y: 160 },   // 0 mm → 0
+    { x: 50 + (1 / 50) * 510, y: 160 },
+    { x: 50 + (1 / 50) * 510, y: 145 },  // 1 mm → 5% relief
+    { x: 50 + (5 / 50) * 510, y: 145 },
+    { x: 50 + (5 / 50) * 510, y: 105 },  // 5 mm → 20% relief
+    { x: 50 + (15 / 50) * 510, y: 105 },
+    { x: 50 + (15 / 50) * 510, y: 70 }, // 15 mm → 30% relief
+    { x: 50 + (35 / 50) * 510, y: 70 },
+    { x: 50 + (35 / 50) * 510, y: 40 }, // 35 mm → 40% relief
+    { x: 50 + (50 / 50) * 510, y: 40 },
+  ]
+  for (let i = 0; i < points.length - 1; i++) {
+    svg += `<line x1="${points[i].x}" y1="${points[i].y}" x2="${points[i+1].x}" y2="${points[i+1].y}" stroke="var(--rain)" stroke-width="2.5"/>`
+  }
+  // Title
+  svg += `<text x="300" y="10" text-anchor="middle" font-family="var(--font-num)" font-size="10" font-weight="700" fill="var(--th-navy)">rain_relief(mm) — stepwise, observed wins over forecast</text>`
+  svg += `<text x="300" y="194" text-anchor="middle" font-family="var(--font-num)" font-size="8" fill="var(--ink-low)">C(t) = C₀ · exp(−Λ·t) · Λ = a·R^b · a≈10⁻⁵–10⁻² s⁻¹ · b≈0.6–0.9 for accumulation-mode PM2.5</text>`
+  svg += `</svg>`
+  return svg
+}
+
 function sectionArchitecture() {
   return `
     <section class="rp-section">
@@ -477,18 +708,28 @@ function sectionLimitations() {
 
 function sectionCitations() {
   const cites = [
-    'Seinfeld, J. H. & Pandis, S. N. (2016). Atmospheric Chemistry and Physics: From Air Pollution to Climate Change. 3rd ed., Wiley. (wet deposition / scavenging)',
-    'Guo, L. et al. (2016). Removal of atmospheric fine particles by rain: below-cloud scavenging. Atmos. Chem. Phys. 16.',
+    // Danger Score (Section 2) citations — peer-reviewed coefficients.
+    'Scortichini, M. et al. (2022). Joint effect of heat and air pollution on mortality in 620 cities of 36 countries. Environment International 181, 108250. (PM + heat synergy, 22.6M deaths, 2.4× amplification)',
+    'Liu, X. et al. (2023). Hygroscopic properties of particulate matter and effects of their interaction with weather. Atmosphere 14(8), PMC8361198. (f(RH) growth factor, 1.76× from 20→90% RH, accelerates >80%)',
+    'Seinfeld, J. H. & Pandis, S. N. (2016). Atmospheric Chemistry and Physics: From Air Pollution to Climate Change. 3rd ed., Wiley. (wet deposition, below-cloud scavenging, deliquescence RH)',
+    'Henzing, J. S. et al. (2006). Parameterization of below-cloud scavenging for polydisperse fine mode aerosols. Atmos. Chem. Phys. 6, 4703–4722. (Λ = a·R^b, a ≈ 8×10⁻⁵, b ≈ 0.65 for accumulation-mode PM2.5)',
+    'Wang, X. et al. (2010). Below-cloud scavenging by rain of atmospheric gases and particulates. Atmos. Environ. 45. (continuous-collection-equation framework)',
+    'GEOS-Chem wet-deposition parameterisation: a = 0.00106, b = 0.61 (default for accumulation-mode PM2.5)',
+    // Air Watch Score (Section 3) and air-quality context.
     'Pollution Control Department (2023). Thai AQI revision — PM2.5 breakpoints 15/25/37.5/75 µg/m³.',
     'WHO (2021). Global Air Quality Guidelines: PM2.5 and PM10.',
     'Copernicus CAMS air-quality forecast via Open-Meteo: open-meteo.com/en/docs/air-quality-api',
     'NOAA CPC — Oceanic Niño Index: cpc.ncep.noaa.gov/data/indices/oni.ascii.txt',
+    // Source data citations.
     'Pollution Control Department (PCD) Air4Thai: air4thai.pcd.go.th',
+    'GISTDA PM2.5 real-time API: pm25.gistda.or.th/rest/getPm25byProvince (satellite + ground fusion, hourly)',
     'Hydro-Informatics Institute (HII) ThaiWater rain telemetry: thaiwater.net',
     'NASA GPM IMERG precipitation: gpm.nasa.gov/data/imerg',
+    'Open-Meteo weather forecast: open-meteo.com/en/docs',
     'Smart City Thailand Office: smartcitythailand.or.th',
     'JAXA GSMaP / Himawari: earth.jaxa.jp · eorc.jaxa.jp/ptree',
     'NASA GIBS: gibs.earthdata.nasa.gov',
+    'data.go.th — Open Government Data of Thailand (146 air-quality datasets indexed)',
   ]
   const list = cites.map((c) => `<li>${c}</li>`).join('')
   return `
@@ -589,6 +830,7 @@ function paint() {
   const sections = [
     sectionHero(),
     sectionWhy(),
+    sectionDanger(),
     sectionArchitecture(),
     sectionSources(catalog),
     sectionScore(),

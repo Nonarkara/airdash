@@ -1,33 +1,33 @@
-// Header: national status HERO (JMA-style 5-level), level counters,
-// pipeline dots, clock, lang toggle.
+// Header: national status HERO (JMA-style 5-level verb) + Danger Score
+// chip + minimal toolbar (search / lang / mode / about / ask).
 //
-// The header is the most visually privileged spot on the page. The
-// previous design hid the most important thing — the action verb — in a
-// tiny 34×34 plate. This redesign makes the verb the first thing the
-// user reads, with the JMA 5-level color palette (green→teal→yellow
-// →orange→deep red). The verb maps to ONE action; the body of the page
-// shows the rest.
+// The header is the most visually privileged spot on the page. v2 of the
+// header keeps ONE thing loud (the national verb), adds the Danger Score
+// (the composite "is it safe to be outside RIGHT NOW") next to it, and
+// drops the dozen secondary elements (levelcounts, pipeline dots,
+// clockbox, focusbox, hotline chips, TTS button, full-width ask form)
+// to a quieter right side. The ask form became a single button that
+// opens the existing chat tab — one click, not a typing + clicking flow.
+//
+// All coloring follows the AQI palette so the only saturated color band
+// on the page tells one consistent story.
 import { on, store, setLang } from '../state.js?v=2.0.0-final'
-import { BAND, tr } from '../i18n.js?v=2.0.0-final'
+import { tr } from '../i18n.js?v=2.0.0-final'
 import { openInsightsPane } from '../sensorHealth.js?v=2.0.0-final'
 import { riskCi } from '../confidence.js?v=2.0.0-final'
+import { selectPane } from '../main.js?v=2.0.0-final'
 
-// JMA-inspired 5-level palette. Distinct enough that the eye catches the
-// level in <500ms even at the small plate size. AirDash's colours are
-// the AQI palette itself — the same gradient on the top stripe, so the
-// page's only saturated color band tells one consistent story.
+// AQI-derived 5-level palette — the same gradient the top stripe uses.
+// Watch (yellow) keeps dark text for contrast.
 const BAND_BG = {
-  normal:   '#2E8B57',  // L1 AQI good      — good air
-  low:      '#5BA8C7',  // L2 teal           — stay informed (dust season)
-  watch:    '#C8B560',  // L3 AQI moderate  — stay informed
-  elevated: '#C8453A',  // L4 AQI unhealthy — limit outdoor time
-  high:     '#6B2D5C',  // L5 AQI hazardous — protect now
+  normal:   '#2E8B57',
+  low:      '#5BA8C7',
+  watch:    '#C8B560',
+  elevated: '#C8453A',
+  high:     '#6B2D5C',
 }
-const BAND_ICON = {
-  normal: '✓', low: 'i', watch: '!', elevated: '!!', high: '!!!',
-}
+const BAND_ICON = { normal: '✓', low: 'i', watch: '!', elevated: '!!', high: '!!!' }
 
-// The header is a NATIONAL roll-up, not a local instruction.
 // One JMA-style verb per band (design contract): the verb IS the headline.
 const NATIONAL_BAND = {
   normal:   { th: 'อากาศดี',            en: 'GOOD AIR' },
@@ -37,98 +37,55 @@ const NATIONAL_BAND = {
   high:     { th: 'ป้องกันทันที',         en: 'PROTECT NOW' },
 }
 
-// Ask-bar placeholder — first-time visitors don't know what's possible to
-// ask; a concrete dust question teaches by example.
-const ASK_PLACEHOLDER = {
-  th: 'ถามอะไรก็ได้… เช่น "จังหวัดไหนฝุ่นสูงสุดตอนนี้"',
-  en: 'Ask anything… e.g. "Which province has the worst dust right now?"',
-}
-
 export function initHeader() {
-  const clock = document.getElementById('clock')
-  const dateEl = document.getElementById('clock-date')
-  setInterval(() => {
-    const now = new Date()
-    clock.textContent = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Asia/Bangkok' })
-    dateEl.textContent = now.toLocaleDateString(store.lang === 'th' ? 'th-TH' : 'en-GB',
-      { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' })
-  }, 1000)
-
   const toggle = document.getElementById('langtoggle')
-  const paint = () => toggle.querySelectorAll('button').forEach((b) => {
-    const active = b.dataset.lang === store.lang
-    b.classList.toggle('active', active)
-    b.setAttribute('aria-pressed', active ? 'true' : 'false')
-  })
-  toggle.addEventListener('click', (e) => {
-    const lang = e.target?.dataset?.lang
-    if (lang) { setLang(lang); paint() }
-  })
-  paint()
+  if (toggle) {
+    const paint = () => toggle.querySelectorAll('button').forEach((b) => {
+      const active = b.dataset.lang === store.lang
+      b.classList.toggle('active', active)
+      b.setAttribute('aria-pressed', active ? 'true' : 'false')
+    })
+    toggle.addEventListener('click', (e) => {
+      const lang = e.target?.dataset?.lang
+      if (lang) { setLang(lang); paint() }
+    })
+    paint()
+  }
+
+  // Single ASK AI button — opens the chat tab. The user can type
+  // inside the chat input; the old hero form is gone.
+  const askBtn = document.getElementById('ask-btn')
+  if (askBtn) {
+    askBtn.addEventListener('click', () => {
+      try { selectPane('chat') } catch {}
+    })
+  }
 
   on('snapshot', renderStatus)
-  on('sensor-health', renderQuality)
-  on('lang', () => { renderStatus(store.snapshot); renderQuality(store.sensorHealth); paintAskBar() })
-  paintAskBar()
-
-  const qBtn = document.getElementById('data-quality')
-  if (qBtn) qBtn.addEventListener('click', openInsightsPane)
-  // Also paint the method note before the first snapshot lands (server is bilingual).
-  const note = document.getElementById('risk-method-note')
-  if (note && store.snapshot?.risk) note.textContent =
-    store.lang === 'th' ? store.snapshot.risk.method_th : store.snapshot.risk.method_en
-}
-
-function paintAskBar() {
-  const ask = document.getElementById('ask-hero-input')
-  if (ask) ask.placeholder = tr(ASK_PLACEHOLDER.th, ASK_PLACEHOLDER.en)
+  on('sensor-health', () => { /* quiet: pain in v1 was the data-quality pill. Now hidden. */ })
+  on('lang', () => { renderStatus(store.snapshot) })
 }
 
 function renderStatus(snap) {
   if (!snap?.risk) return
   const n = snap.risk.national
-  // effective_band flips "normal" → "low" during dust season so the
-  // "GOOD AIR" verb (misleading when 30%+ of provinces already exceed the
-  // moderate PM2.5 line) is replaced with "STAY INFORMED".
   const displayBand = n.effective_band ?? n.band
-  const band = NATIONAL_BAND[displayBand] ?? NATIONAL_BAND[n.band] ?? BAND[displayBand] ?? BAND[n.band]
+  const band = NATIONAL_BAND[displayBand] ?? NATIONAL_BAND[n.band] ?? { th: '—', en: '—' }
+
+  // National plate — the headline verb.
   const plate = document.getElementById('national-plate')
-  plate.style.background = BAND_BG[displayBand] ?? BAND_BG[n.band]
-  // Watch + low use a yellow / light teal — keep dark text for contrast.
-  plate.style.color = (displayBand === 'watch' || displayBand === 'low') ? '#2A2A2A' : '#fff'
-  plate.textContent = BAND_ICON[displayBand] ?? '·'
-
-  // The verb is the headline. JMA pattern: one verb per level, no
-  // translation needed. Bilingual rendering keeps Thai dominant
-  // (audience is Thai) and adds English uppercase as a label.
-  document.getElementById('national-th').textContent = band.th
-  document.getElementById('national-en').textContent = band.en
-
-  // Confidence interval on the score — the "76 (±5)" trust signal.
-  // Computed from the worst-case province score so the verb always
-  // carries a visible uncertainty. Tap on the number reveals the range.
-  const score = n.max_province_score
-  const ciEl = document.getElementById('national-ci')
-  if (score != null && ciEl) {
-    const c = riskCi(score)
-    ciEl.textContent = `±${c.sigma}`
-    ciEl.title = tr(`ช่วงคะแนนที่เป็นไปได้: ${c.range}`,
-                    `likely score range: ${c.range}`)
-    ciEl.hidden = false
-  } else if (ciEl) {
-    ciEl.hidden = true
+  if (plate) {
+    plate.style.background = BAND_BG[displayBand] ?? BAND_BG[n.band]
+    plate.style.color = (displayBand === 'watch' || displayBand === 'low') ? '#2A2A2A' : '#fff'
+    plate.textContent = BAND_ICON[displayBand] ?? '·'
   }
-
-  // TTS read-aloud — shows only if the browser supports speechSynthesis.
-  // The button reads the area-scoped status + the "why" line aloud in the
-  // active language. Designed for elderly / low-literacy / panic cases.
-  const ttsEl = document.getElementById('national-tts')
-  if (ttsEl) {
-    ttsEl.hidden = !('speechSynthesis' in window) || !window.speechSynthesis
-  }
+  const thEl = document.getElementById('national-th')
+  const enEl = document.getElementById('national-en')
+  if (thEl) thEl.textContent = band.th
+  if (enEl) enEl.textContent = band.en
 
   // "Why" — top 1 reason from the action card so the user gets the cause
-  // without leaving the hero. If there are no reasons, blank out the line.
+  // without leaving the hero.
   const nv = snap.risk.national_verdict
   const whyEl = document.getElementById('national-why')
   if (whyEl) {
@@ -136,8 +93,9 @@ function renderStatus(snap) {
     whyEl.textContent = r ? `· ${tr(r.th, r.en)}` : ''
   }
 
-  // Dust-season micro-badge — same UI treatment as the old seasonal badge
-  // ("LOW — STAY INFORMED" pseudo-band).
+  // Dust-season micro-badge — when the data is calm but a third of the
+  // country is already past the moderate PM2.5 line, swap the verb to
+  // "STAY INFORMED" so a clean morning doesn't read as "season over".
   const seasonEl = document.getElementById('national-season')
   if (seasonEl) {
     if (n.dustSeason && displayBand === 'low') {
@@ -151,62 +109,51 @@ function renderStatus(snap) {
     }
   }
 
-  // Hotline button — color matches the band. For elevated/high, the
-  // hotline becomes a one-tap call to the PCD pollution hotline 1650 with
-  // a clear emergency tint. For safer levels, it stays visible but the
-  // label downplays urgency.
-  const hotlineEl = document.getElementById('national-hotline')
-  if (hotlineEl) {
-    hotlineEl.href = 'tel:1650'
-    const isUrgent = displayBand === 'elevated' || displayBand === 'high'
-    hotlineEl.style.background = isUrgent ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.18)'
-    hotlineEl.style.color = isUrgent ? '#7A1F2B' : '#fff'
-    hotlineEl.style.borderColor = isUrgent ? '#7A1F2B' : 'rgba(255,255,255,0.35)'
-  }
-
-  // Risk method note — comes from the server (which has both languages).
+  // Risk method note — the technical citation that travels with the
+  // ranking's eyebrow. Bilingual server-side.
   const note = document.getElementById('risk-method-note')
   if (note && snap.risk.method_th) {
     note.textContent = store.lang === 'th' ? snap.risk.method_th : snap.risk.method_en
   }
 
-  // Band counters — provinces per watch band (worst first).
-  const lc = document.getElementById('levelcounts')
-  lc.replaceChildren()
-  const BAND_LV = [['high', 5], ['elevated', 4], ['watch', 3], ['normal', 1]]
-  for (const [b, lv] of BAND_LV) {
-    const wrap = document.createElement('div')
-    wrap.className = 'lc'
-    wrap.innerHTML = `<span class="badge lv${lv}">${BAND_ICON[b]}</span><span class="n">${n.bandCounts?.[b] ?? 0}</span>`
-    wrap.title = b
-    lc.append(wrap)
+  // DANGER SCORE — paint the hero chip from the worst province in the
+  // ranking. Same `danger` block was added to /api/risk alongside the
+  // Air Watch Score, so we don't need a separate fetch.
+  const dangerEl = document.getElementById('danger-hero')
+  const dangerNum = document.getElementById('danger-num')
+  const dangerBand = document.getElementById('danger-band')
+  if (dangerEl && dangerNum && dangerBand) {
+    // Find the worst Danger score in the ranking. We use the highest
+    // (most dangerous) province, not the average, because the headline
+    // answer to "is it dangerous outside right now?" is worst-case.
+    let worst = null
+    for (const p of snap.risk.provinces) {
+      const d = p.danger
+      if (!d) continue
+      if (!worst || d.score > worst.score) worst = d
+    }
+    if (worst) {
+      // Smooth transition between bands via a class, not an inline color
+      dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high')
+      dangerEl.classList.add(`band-${worst.band}`)
+      dangerNum.textContent = worst.score
+      const label = tr(worst.label_th, worst.label_en)
+      dangerBand.textContent = label
+      // Build the audit-trail tooltip — every modifier, in one place.
+      // Lets a curious reader see what drove the number without leaving
+      // the top bar.
+      const parts = []
+      parts.push(`PM2.5 ${worst.pm25_live != null ? worst.pm25_live.toFixed(0) : '–'} µg/m³ (base ${worst.pm_base})`)
+      if (worst.temp_c != null) parts.push(`T ${worst.temp_c.toFixed(0)}°C (heat amp ${(worst.heat_amp * 100).toFixed(0)}%)`)
+      if (worst.rh_pct != null) parts.push(`RH ${worst.rh_pct.toFixed(0)}% (hygroscopic amp ${(worst.hum_amp * 100).toFixed(0)}%)`)
+      if (worst.rain_relief > 0) parts.push(`rain relief ${(worst.rain_relief * 100).toFixed(0)}% (${worst.rain_source ?? 'forecast'})`)
+      const provinceName = tr(worst.province_th, worst.province_en)
+      dangerEl.title = `${label} · ${provinceName} (${worst.score}/100)\n${parts.join(' · ')}`
+    } else {
+      dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high')
+      dangerEl.classList.add('band-normal')
+      dangerNum.textContent = '–'
+      dangerBand.textContent = tr('กำลังโหลด', 'loading')
+    }
   }
-
-  renderQuality(store.sensorHealth)
-
-  const pipes = document.getElementById('pipes')
-  pipes.replaceChildren()
-  for (const [name, s] of Object.entries(snap.sources ?? {})) {
-    const dot = document.createElement('span')
-    const state = s.running ? 'run' : s.failures > 0 ? 'bad' : s.lastOk ? 'ok' : ''
-    dot.className = `dot ${state}`
-    dot.title = `${s.label_th} / ${s.label_en} — ${s.lastOk ? `OK ${s.lastOk.slice(11, 16)}Z` : 'pending'}${s.lastError ? ` · ${s.lastError}` : ''}`
-    pipes.append(dot)
-  }
-}
-
-function renderQuality(health) {
-  const btn = document.getElementById('data-quality')
-  if (!btn || !health) return
-  const score = health.quality_score ?? 0
-  const s = health.summary ?? {}
-  const issues = (s.stale ?? 0) + (s.flatline ?? 0) + (s.outlier ?? 0) + (s.mismatch ?? 0)
-  const band = score >= 90 ? 'ok' : score >= 70 ? 'warn' : 'bad'
-  btn.hidden = false
-  btn.className = `data-quality ${band}`
-  btn.textContent = `${score}`
-  btn.title = tr(
-    `คุณภาพข้อมูล ${score}/100 — สถานีน่าสงสัย ${issues} แห่ง (เงียบ ${s.stale ?? 0} · ค้าง ${s.flatline ?? 0} · ผิดปกติ ${s.outlier ?? 0} · ไม่สอดคล้อง ${s.mismatch ?? 0}) · แตะเพื่อดูสัญญาลาย`,
-    `Data quality ${score}/100 — ${issues} suspicious stations (stale ${s.stale ?? 0} · flatline ${s.flatline ?? 0} · outlier ${s.outlier ?? 0} · mismatch ${s.mismatch ?? 0}) · tap for signals`,
-  )
 }

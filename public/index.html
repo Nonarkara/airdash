@@ -108,55 +108,45 @@
     <div class="national" id="national">
       <div class="plate" id="national-plate">–</div>
       <div class="label">
-        <div class="mobile-brand" aria-hidden="true">AIRDASH</div>
         <div class="verb-th" id="national-th">กำลังโหลด…</div>
         <div class="verb-en" id="national-en">LOADING…</div>
-        <div class="why" id="national-why"></div>
-        <div class="season" id="national-season" hidden></div>
-        <div class="national-actions">
-          <span class="ci-badge" id="national-ci" hidden></span>
-          <a class="hotline-btn" id="national-hotline" href="tel:1650"
-             data-i18n-title="สายด่วนมลพิษ คพ. 1650 (โทรฟรี) — กดเพื่อโทร|PCD pollution hotline 1650 (toll free) — tap to call">
-            <span class="icon">📞</span><span>1650</span>
-            <span class="hotline-lbl-th" data-i18n="สายด่วน|hotline">สายด่วน</span>
-            <span class="hotline-lbl-en" data-i18n="คพ.|PCD" hidden>PCD</span>
-          </a>
-          <button class="tts-btn" id="national-tts" type="button"
-            data-i18n-title="ฟังสถานการณ์ (เสียงอ่านออกเสียง)|read the situation aloud (text-to-speech)"
-            hidden>🔊 <span data-i18n="ฟัง|Read">ฟัง</span></button>
-        </div>
+      </div>
+      <div class="national-secondary">
+        <div class="national-why" id="national-why"></div>
+        <div class="national-season" id="national-season" hidden></div>
       </div>
     </div>
 
-    <div class="levelcounts" id="levelcounts" data-i18n-title="สถานีวัดฝุ่นตามระดับ PM2.5|AQ stations by Thai AQI PM2.5 level"></div>
-
-    <div class="spacer"></div>
-
-    <button type="button" class="data-quality" id="data-quality" hidden
-      data-i18n-title="คุณภาพข้อมูลเซ็นเซอร์ · แตะเพื่อดูสัญญาณ|sensor data quality · tap for signals"></button>
-
-    <div class="pipes" id="pipes" data-i18n-title="สถานะแหล่งข้อมูล|pipeline health"></div>
-
-    <div class="clockbox">
-      <div id="clock" class="num">--:--:--</div>
-      <div class="date" id="clock-date"></div>
+    <!-- DANGER SCORE — the headline number for "is it safe to be outside
+         RIGHT NOW". Lives in the top bar because it answers the question
+         every parent, coach and elderly reader actually has. Color follows
+         the AQI palette; number is the 0–100 composite (PM + heat amp +
+         humidity amp − rain relief). -->
+    <div class="danger" id="danger-hero"
+         data-i18n-title="Danger Score: PM2.5 + heat amp + humidity amp − rain relief — research-backed composite, 0-100">
+      <div class="danger-label">
+        <span class="th" data-i18n="ดัชนีอันตราย|DANGER">ดัชนีอันตราย</span>
+        <span class="en">DANGER</span>
+      </div>
+      <div class="danger-num" id="danger-num">–</div>
+      <div class="danger-band" id="danger-band">–</div>
     </div>
 
-    <div class="focusbox">
-      <select id="focus-select" aria-label="โฟกัสพื้นที่ · Focus area" data-i18n-title="โฟกัสพื้นที่|focus area"></select>
-      <!-- "Back to All Thailand" — the visible way out of any city view.
-           Hidden by default; shown by panels/focus.js when the user has
-           drilled into a non-Thailand focus area. Clicking it resets the
-           focus-select and flies the map back to the country overview. -->
-      <button id="back-to-thailand" type="button" hidden
-        data-i18n-title="กลับสู่ภาพรวมทั้งประเทศ|back to All Thailand view"
-        data-i18n="← ทั้งประเทศ|← All Thailand">← ทั้งประเทศ</button>
-      <button id="compare-btn" aria-label="เทียบพื้นที่ · Compare areas" data-i18n-title="เทียบพื้นที่ · compare areas">⊞</button>
-      <button id="split-btn" aria-label="เปรียบเทียบตำแหน่ง · Compare places" data-i18n-title="เปรียบเทียบตำแหน่ง · compare places" aria-pressed="false">⊟</button>
-    </div>
+    <!-- Single ASK AI icon button (was a full-width hero form). Tapping
+         opens the chat overlay directly, no second click. -->
+    <button id="ask-btn" type="button"
+            data-i18n-title="ถาม AI · Ask AI anything|Ask AI anything about the air"
+            aria-label="ถาม AI · Ask AI anything">
+      <span class="ask-icon" aria-hidden="true">💬</span>
+      <span class="ask-lbl th" data-i18n="ถาม AI|Ask AI">ถาม AI</span>
+      <span class="ask-lbl en">ASK AI</span>
+    </button>
 
     <div class="searchbox" id="place-search-container">
-      <input id="place-search" type="search" autocomplete="off" aria-label="ค้นหาสถานที่ · Search places" aria-controls="search-results" aria-autocomplete="list" aria-expanded="false">
+      <input id="place-search" type="search" autocomplete="off"
+             aria-label="ค้นหาสถานที่ · Search places" aria-controls="search-results" aria-autocomplete="list" aria-expanded="false"
+             data-i18n-ph="ค้นหาสถานที่ จังหวัด อำเภอ…|Search places, provinces, districts…"
+             placeholder="ค้นหาสถานที่ จังหวัด อำเภอ…">
       <button id="search-clear" type="button" aria-label="ล้างการค้นหา · Clear search" title="ล้างการค้นหา / clear search">✕</button>
       <div class="search-results" id="search-results" role="listbox" aria-label="ผลการค้นหา · Search results" style="display:none"></div>
     </div>
@@ -172,20 +162,6 @@
     </div>
 
     <button id="about-btn" data-i18n-title="เกี่ยวกับโครงการ|about this project">ⓘ <span class="lbl" data-i18n="เกี่ยวกับ|About">เกี่ยวกับ</span></button>
-
-    <!-- ASK AI hero bar — promotes the chat from a buried right-rail tab
-         (panel 10) to a persistent, always-visible input. The audit
-         correctly identified this as the dashboard's only true moat; the
-         previous placement meant non-technical users never found it.
-         Submitting switches the right rail to the chat pane. -->
-    <form id="ask-hero" class="ask-hero" autocomplete="off" novalidate>
-      <span class="ask-hero-icon" aria-hidden="true">💬</span>
-      <input id="ask-hero-input" type="search" autocomplete="off"
-        data-i18n-ph="ถามอะไรก็ได้… เช่น 'ฝุ่นที่เชียงใหม่ตอนนี้' · 'จังหวัดไหนฝุ่นเยอะสุด'|Ask anything… e.g. 'PM2.5 in Chiang Mai now' · 'which province is dustiest?'"
-        placeholder="ถามอะไรก็ได้… เช่น 'ฝุ่นที่เชียงใหม่ตอนนี้'">
-      <button id="ask-hero-send" type="submit"
-        data-i18n="ถาม|Ask">ถาม</button>
-    </form>
   </header>
 
   <aside class="rail" id="rail-left">

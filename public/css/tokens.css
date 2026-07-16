@@ -59,7 +59,7 @@
   --font-num:   'JetBrains Mono', ui-monospace, 'IBM Plex Mono', monospace;
   --font-display: 'Manrope', 'Sarabun', system-ui, sans-serif;
 
-  --header-h: 96px;   /* was 110px (navy) — slimmer, breathable */
+  --header-h: 80px;   /* v2 single-row instrument panel — was 96px (two rows) */
   --ticker-h: 30px;
   --rail-l: 324px;
   --rail-r: 392px;
