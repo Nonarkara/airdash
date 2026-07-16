@@ -61,24 +61,27 @@ export function paintRisk(layers, risk) {
 export function paintAir(layers, stations, { getZoom } = {}) {
   layers.air.clearLayers()
   if (!stations) return
-  const detailed = getZoom ? getZoom() >= 8 : true
   for (const s of stations) {
     if (s.lat === null || s.lng === null) continue
     const lv = pm25Level(s.pm25)
     const color = lv === null ? PM_NONE : PM_COLOR[lv]
-    const marker = lv >= 4 && detailed
+    // Severity owns the visual hierarchy: stations past the health line
+    // (level ≥4) always render as numeric badges — at EVERY zoom, level 5
+    // pulsing — while good-air dots recede. A wall of green must never
+    // drown the one red reading that matters.
+    const marker = lv >= 4
       ? L.marker([s.lat, s.lng], {
           icon: L.divIcon({
             className: '', iconSize: [22, 18],
-            html: `<div class="stn-badge" style="width:22px;height:18px;background:${color}">${Math.round(s.pm25)}</div>`,
+            html: `<div class="stn-badge lv${lv}" style="width:22px;height:18px;background:${color}">${Math.round(s.pm25)}</div>`,
           }),
           zIndexOffset: lv * 100,
           pane: 'data',
         })
       : L.circleMarker([s.lat, s.lng], {
-          radius: lv >= 5 ? 5.5 : lv >= 4 ? 4.5 : 3.5,
-          color: '#fff', weight: lv >= 4 ? 1 : 0.6,
-          fillColor: color, fillOpacity: lv >= 4 ? 1 : 0.85,
+          radius: 3.5,
+          color: '#fff', weight: 0.6,
+          fillColor: color, fillOpacity: lv >= 3 ? 0.85 : 0.55,
           pane: 'data',
         })
     marker.bindTooltip(() => `<b>${escapeHtml(tr(s.name_th, s.name_en))}</b><br>` +

@@ -1742,6 +1742,38 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 }
 .ana-sub { font-size: 11.5px; color: var(--ink-mid); margin-top: 2px; }
 
+/* SEVERE NOW strip — the worst stations lead the page. Red is earned here:
+   only readings past the Thai health line (37.5 µg/m³) appear. */
+.ana-severe {
+  background: var(--well); border: 1px solid var(--rule);
+  border-left: 3px solid var(--th-red);
+  padding: 6px 10px 8px;
+}
+.ana-severe--clear { border-left-color: var(--lv1, #1A7A4A); }
+.ana-severe-head {
+  font-family: var(--font-num); font-size: 8.5px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-mid); margin-bottom: 5px;
+}
+.ana-severe-empty { font-size: 11.5px; color: var(--ink-mid); }
+.ana-severe-chip {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  margin: 0 6px 4px 0; padding: 3px 8px;
+  background: var(--paper); border: 1px solid var(--th-red);
+  font: inherit; cursor: pointer;
+}
+.ana-severe-chip:hover { background: var(--th-red); }
+.ana-severe-chip:hover .ana-severe-ug,
+.ana-severe-chip:hover .ana-severe-name { color: #fff; }
+.ana-severe-chip--critical { background: var(--th-red); }
+.ana-severe-chip--critical .ana-severe-ug,
+.ana-severe-chip--critical .ana-severe-name { color: #fff; }
+.ana-severe-ug {
+  font-family: var(--font-num); font-size: 13px; font-weight: 700;
+  color: var(--th-red);
+}
+.ana-severe-name { font-size: 10.5px; color: var(--ink); }
+
 /* KPI row — three big numbers */
 .ana-kpis {
   display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;

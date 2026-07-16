@@ -3,7 +3,7 @@
 // rain (washout) chart · one regional donut. Same shape as the GISTDA
 // สรุปสถานการณ์ panel but pulled from our richer pipeline (real-time PM2.5,
 // rain, forecast, washout) and bilingual.
-import { on, store } from '../state.js?v=2.0.0-final'
+import { on, emit, store } from '../state.js?v=2.0.0-final'
 import { tr } from '../i18n.js?v=2.0.0-final'
 import { fmtNum } from '../fmt.js?v=2.0.0-final'
 import { getJson } from '../cache.js?v=2.0.0-final'
@@ -95,19 +95,23 @@ async function render(snap) {
   host.replaceChildren(
     headerRow(snap, L),
 
+    // Severity leads: the reader's first question is "where is it bad?",
+    // not "where is it fine?" — worst number first, averages last.
+    severeRow(snap, L),
+
     kpiRow([
-      { th: 'คะแนนเฉลี่ยทั้งประเทศ', en: 'NATIONAL AVG RISK',
-        value: fmtNum(avgRisk, 0) + '/100',
-        sub: L(`${elevatedCount} จังหวัด ≥ เสี่ยงสูง`, `${elevatedCount} provinces at elevated+`),
-        color: bandColor(avgRisk < 20 ? 'normal' : avgRisk < 45 ? 'watch' : avgRisk < 70 ? 'elevated' : 'high') },
-      { th: 'จังหวัดฝุ่นเกินเกณฑ์', en: 'DUST LOAD',
-        value: dustLoadPct + '%',
-        sub: L(`${dustyCount} / ${dustSampled} จังหวัด ≥ 25 µg/m³`, `${dustyCount} / ${dustSampled} provinces ≥ 25 µg/m³`),
-        color: '#5C6BC0' },
       { th: 'PM2.5 สูงสุดตอนนี้', en: 'WORST PM2.5 NOW',
         value: worst?.ug != null ? fmtNum(worst.ug, 0) + ' µg' : '—',
         sub: worst ? L(worst.province_th ?? '', worst.province_en ?? worst.province_th ?? '') : L('ไม่มีข้อมูล', 'no data'),
         color: '#A51931' },
+      { th: 'จังหวัดฝุ่นเกินเกณฑ์', en: 'DUST LOAD',
+        value: dustLoadPct + '%',
+        sub: L(`${dustyCount} / ${dustSampled} จังหวัด ≥ 25 µg/m³`, `${dustyCount} / ${dustSampled} provinces ≥ 25 µg/m³`),
+        color: '#5C6BC0' },
+      { th: 'คะแนนเฉลี่ยทั้งประเทศ', en: 'NATIONAL AVG RISK',
+        value: fmtNum(avgRisk, 0) + '/100',
+        sub: L(`${elevatedCount} จังหวัด ≥ เสี่ยงสูง`, `${elevatedCount} provinces at elevated+`),
+        color: bandColor(avgRisk < 20 ? 'normal' : avgRisk < 45 ? 'watch' : avgRisk < 70 ? 'elevated' : 'high') },
     ]),
 
     listsRow(topRisk, topPm, topRain, L),
@@ -184,6 +188,45 @@ function headerRow(snap, L) {
     // Plain-language national one-liner — the "so what" for the whole country.
     v ? el('div', { class: `ana-verdict pv-${v.level}` }, L(v.th, v.en)) : null,
   )
+}
+
+// "SEVERE NOW" strip — the stations past the Thai health line (≥37.5 µg/m³),
+// worst first, each clickable to fly the map there. When nothing is severe
+// the strip says so honestly instead of hiding (absence of red IS the news
+// during the wet season).
+const SEVERE_UG = 37.5
+const VERY_SEVERE_UG = 75
+
+function severeRow(snap, L) {
+  const severe = (snap?.air ?? [])
+    .filter((s) => (s.pm25 ?? 0) >= SEVERE_UG)
+    .sort((a, b) => b.pm25 - a.pm25)
+    .slice(0, 6)
+
+  const head = el('div', { class: 'ana-severe-head' },
+    L('จุดฝุ่นรุนแรงตอนนี้ · SEVERE NOW', 'SEVERE NOW · จุดฝุ่นรุนแรง'))
+
+  if (!severe.length) {
+    return el('div', { class: 'ana-severe ana-severe--clear' }, head,
+      el('div', { class: 'ana-severe-empty' },
+        L('ไม่มีสถานีใดเกินเกณฑ์กระทบสุขภาพ (37.5 µg/m³) ในขณะนี้',
+          'No station above the health line (37.5 µg/m³) right now')))
+  }
+
+  return el('div', { class: 'ana-severe' }, head,
+    ...severe.map((s) => {
+      const isVery = s.pm25 >= VERY_SEVERE_UG
+      const chip = el('button', {
+        class: 'ana-severe-chip' + (isVery ? ' ana-severe-chip--critical' : ''),
+        type: 'button',
+        title: L('คลิกเพื่อดูบนแผนที่', 'Click to view on the map'),
+      },
+        el('span', { class: 'ana-severe-ug' }, `${fmtNum(s.pm25, 0)} µg`),
+        el('span', { class: 'ana-severe-name' },
+          `${L(s.name_th, s.name_en ?? s.name_th)} · ${L(s.province_th ?? '', s.province_en ?? s.province_th ?? '')}`))
+      chip.addEventListener('click', () => emit('station-select', { source: 'air4thai', station: s }))
+      return chip
+    }))
 }
 
 function kpiRow(cards) {
