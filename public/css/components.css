@@ -1333,6 +1333,106 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
   border: 1px solid var(--rule); overflow-x: auto;
 }
 
+/* ── Research paper: Section 1 (Why AirDash Exists) — the design contract.
+   Same visual language as the About pane's personal section, but a touch
+   more compact (the paper is information-dense). Blockquote in the
+   display font; three commitments with display numerals. */
+.rp-section-why {
+  background: var(--well);
+  border: 1px solid var(--rule);
+  border-left: 4px solid;
+  border-image: linear-gradient(180deg,
+    var(--aqi-good) 0%, var(--aqi-good) 20%,
+    var(--aqi-moderate) 20%, var(--aqi-moderate) 40%,
+    var(--aqi-watch) 40%, var(--aqi-watch) 60%,
+    var(--aqi-unhealthy) 60%, var(--aqi-unhealthy) 80%,
+    var(--aqi-hazardous) 80%, var(--aqi-hazardous) 100%) 1;
+  padding: 22px 24px 24px;
+  margin-bottom: 28px;
+}
+.rp-section-why h2 {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 10px;
+}
+.rp-blockquote {
+  margin: 8px 0 18px;
+  padding: 6px 0 12px 18px;
+  border-left: 3px solid var(--th-sage);
+}
+.rp-blockquote p {
+  font-family: var(--font-display);
+  font-size: 22px; line-height: 1.4; font-weight: 700;
+  color: var(--th-deep);
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+
+.rp-design-contract {
+  margin: 22px 0 0;
+  padding: 18px 20px;
+  background: var(--well-dim);
+  border: 1px solid var(--rule);
+}
+.rp-contract-head {
+  font-family: var(--font-num);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--th-deep);
+  margin-bottom: 12px;
+}
+.rp-contract-list {
+  list-style: none; padding: 0; margin: 0 0 14px;
+  display: grid; gap: 10px;
+}
+.rp-contract-list li {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 14px; align-items: start;
+  padding: 10px 12px;
+  background: var(--well);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--th-sage);
+}
+.rp-contract-list li:nth-child(2) { border-left-color: var(--aqi-watch); }
+.rp-contract-list li:nth-child(3) { border-left-color: var(--th-red); }
+.rp-contract-list .rp-contract-num {
+  font-family: var(--font-num);
+  font-size: 24px; font-weight: 700; line-height: 1;
+  color: var(--th-deep);
+  letter-spacing: -0.02em;
+}
+.rp-contract-list li:nth-child(2) .rp-contract-num { color: var(--aqi-watch); }
+.rp-contract-list li:nth-child(3) .rp-contract-num { color: var(--th-red); }
+.rp-contract-list .rp-contract-title {
+  font-family: var(--font-display);
+  font-size: 14px; font-weight: 700;
+  color: var(--th-deep);
+  letter-spacing: -0.005em;
+  margin-bottom: 3px;
+}
+.rp-contract-list .rp-contract-body p {
+  font-size: 13px; line-height: 1.55;
+  color: var(--ink);
+  margin: 0;
+}
+.rp-contract-closing {
+  font-family: var(--font-display);
+  font-size: 14.5px; font-weight: 700;
+  line-height: 1.45;
+  color: var(--th-deep);
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--th-deep);
+  background: var(--well);
+}
+
+@media (max-width: 720px) {
+  .rp-blockquote p { font-size: 18px; }
+  .rp-contract-list li { grid-template-columns: 44px 1fr; gap: 10px; padding: 10px; }
+  .rp-contract-list .rp-contract-num { font-size: 20px; }
+}
+
 /* Pipeline cards */
 .rp-pipeline-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

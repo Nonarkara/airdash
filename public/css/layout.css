@@ -850,6 +850,194 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   border-top: 1px solid var(--rule);
 }
 
+/* ── About — "Why this is personal" section ─────────────────────────────
+   The most important block on the About overlay. The visual treatment
+   has to honour the weight of the story: a hero quote up top, generous
+   prose spacing, large display-numerals on the three philosophy
+   points, an AQI-accent vertical bar on the FloodDash callout.
+   No stock images, no decorative noise — the words and the numbers do
+   the work. The display font (Manrope) is reserved for this section so
+   it reads as a different voice from the bio and the papers. */
+.about-personal {
+  /* Distinguish from the cream bio / paper cards: white paper with a
+     coloured AQI vertical bar on the left. */
+  background: var(--well);
+  border: 1px solid var(--rule);
+  border-left: 4px solid;
+  border-image: linear-gradient(180deg,
+    var(--aqi-good) 0%, var(--aqi-good) 20%,
+    var(--aqi-moderate) 20%, var(--aqi-moderate) 40%,
+    var(--aqi-watch) 40%, var(--aqi-watch) 60%,
+    var(--aqi-unhealthy) 60%, var(--aqi-unhealthy) 80%,
+    var(--aqi-hazardous) 80%, var(--aqi-hazardous) 100%) 1;
+  padding: 24px 28px 26px;
+}
+
+/* Hero quote — the reason the project was started. */
+.about-hero-quote {
+  position: relative;
+  margin: 0 0 22px;
+  padding: 8px 0 12px 56px;
+  border-bottom: 1px dashed var(--rule);
+}
+.about-hero-quote .quote-mark {
+  position: absolute; left: 0; top: -8px;
+  font-family: var(--font-display);
+  font-size: 64px; line-height: 1; font-weight: 800;
+  color: var(--th-sage);
+  letter-spacing: -0.04em;
+}
+.about-hero-quote .quote-text {
+  font-family: var(--font-display);
+  font-size: 24px; line-height: 1.35; font-weight: 700;
+  color: var(--th-deep);
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+.about-hero-quote .quote-attr {
+  font-family: var(--font-num);
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-mid);
+}
+
+/* Photos inside the personal story. Optional: if the file is missing
+   the figure is hidden via the onerror handler on the img. */
+.about-photo {
+  margin: 18px 0;
+  text-align: center;
+}
+.about-photo img {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  width: auto;
+  margin: 0 auto;
+  object-fit: cover;
+  border: 1px solid var(--rule);
+}
+.about-photo figcaption {
+  font-family: var(--font-ui);
+  font-size: 12px; line-height: 1.45;
+  color: var(--ink-mid);
+  margin-top: 8px;
+  font-style: italic;
+  padding: 0 12px;
+}
+
+/* The story prose — generous line-height and a paragraph rhythm. */
+.about-story { margin: 0 0 22px; }
+.about-story .eyebrow {
+  margin: 0 0 14px;
+  color: var(--th-red);
+}
+.about-story p {
+  font-size: 14.5px; line-height: 1.75;
+  color: var(--ink);
+  margin: 0 0 16px;
+}
+.about-story p:last-child { margin-bottom: 0; }
+
+/* Three philosophy points — display numerals + body, side by side. */
+.about-philosophy { margin: 0 0 22px; }
+.about-philosophy .eyebrow {
+  margin: 0 0 12px;
+  color: var(--th-deep);
+}
+.philosophy-list {
+  list-style: none; padding: 0; margin: 0;
+  display: grid; gap: 14px;
+}
+.phil-item {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 18px; align-items: start;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--th-sage);
+}
+.phil-item:nth-child(2) { border-left-color: var(--aqi-watch); }
+.phil-item:nth-child(3) { border-left-color: var(--th-red); }
+.phil-item .phil-num {
+  font-family: var(--font-num);
+  font-size: 32px; font-weight: 700; line-height: 1;
+  color: var(--th-deep);
+  letter-spacing: -0.02em;
+}
+.phil-item:nth-child(2) .phil-num { color: var(--aqi-watch); }
+.phil-item:nth-child(3) .phil-num { color: var(--th-red); }
+.phil-item .phil-body h4 {
+  font-family: var(--font-display);
+  font-size: 16px; font-weight: 700;
+  color: var(--th-deep);
+  letter-spacing: -0.005em;
+  margin: 0 0 6px;
+}
+.phil-item .phil-body p {
+  font-size: 13.5px; line-height: 1.6;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* FloodDash → AirDash callout. Two tag-pills and an arrow, in a
+   callout frame. */
+.about-flooddash {
+  margin: 0 0 22px;
+  padding: 14px 18px;
+  background: var(--well-dim);
+  border: 1px solid var(--rule);
+}
+.about-flooddash .flooddash-mark {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+  font-family: var(--font-num);
+}
+.about-flooddash .fd-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--well);
+  border: 1px solid var(--rule-strong);
+  color: var(--ink);
+}
+.about-flooddash .fd-tag-air {
+  background: var(--th-sage);
+  border-color: var(--th-sage);
+  color: #fff;
+}
+.about-flooddash .fd-arrow {
+  font-size: 18px; font-weight: 700; color: var(--ink-mid);
+}
+.about-flooddash p {
+  font-size: 13px; line-height: 1.6;
+  color: var(--ink-mid);
+  margin: 0;
+}
+.about-flooddash p a { color: var(--th-deep); text-decoration: underline dotted; }
+
+/* Closing line — the personal contract. */
+.about-closing {
+  margin: 6px 0 0;
+  padding: 14px 18px;
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: 700;
+  line-height: 1.45;
+  color: var(--th-deep);
+  background: var(--well-dim);
+  border-left: 3px solid var(--th-deep);
+  letter-spacing: -0.005em;
+}
+
+@media (max-width: 720px) {
+  .about-personal { padding: 20px 18px 22px; }
+  .about-hero-quote { padding-left: 42px; }
+  .about-hero-quote .quote-mark { font-size: 48px; top: -4px; }
+  .about-hero-quote .quote-text { font-size: 19px; }
+  .phil-item { grid-template-columns: 56px 1fr; gap: 12px; padding: 12px 12px; }
+  .phil-item .phil-num { font-size: 24px; }
+}
+
 /* ── About — Dr Non bio + selected papers ─────────────────────────────── */
 .about-bio .eyebrow,
 .about-papers .eyebrow { margin-bottom: 10px; }

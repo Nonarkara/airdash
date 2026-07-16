@@ -251,6 +251,84 @@ function sectionHero() {
     </div>`
 }
 
+function sectionWhy() {
+  // Section 1 — Why AirDash exists. The academic framing of the same
+  // personal story that lives in the About pane's "Why this is personal"
+  // block. Kept here as the paper's Introduction so the methodology
+  // that follows is anchored in the design contract.
+  return `
+    <section class="rp-section rp-section-why">
+      <h2 data-th="1. ทำไมจึงเกิด AirDash — บทนำ" data-en="1. Why AirDash Exists — Introduction">
+        ${tr('1. ทำไมจึงเกิด AirDash — บทนำ', '1. Why AirDash Exists — Introduction')}
+      </h2>
+
+      <blockquote class="rp-blockquote">
+        <p data-th="ถ้าหายใจไม่ออก แล้วจะทำอะไรได้" data-en="If you can't breathe, what else can you do?">
+          ${tr('ถ้าหายใจไม่ออก แล้วจะทำอะไรได้', 'If you can\'t breathe, what else can you do?')}
+        </p>
+      </blockquote>
+
+      <p data-th="AirDash เกิดจากความสูญเสียส่วนตัว — บิดาของผู้เขียนสูบบุหรี่ตอนหนุ่ม และมีปัญหาปอดตั้งแต่เด็ก ในยุคที่การแพทย์ยังไม่ก้าวหน้า ท่านอยู่กับอากาศที่ไม่ดีในกรุงเทพฯ ตลอดช่วงชีวิตทำงาน ท่านเสียชีวิตก่อนวัยอันควรในช่วงต้นของวัยหกสิบ เพื่อนร่วมงานและเพื่อนฝูงหลายคนก็เจ็บป่วยหนักหรือเสียชีวิตด้วยปัญหาที่เริ่มต้นจากคุณภาพอากาศที่แย่ ผู้เขียนเศร้าทุกครั้งที่เห็นข่าวคนที่ไม่เคยสูบบุหรี่เสียชีวิตเพราะฝุ่น" data-en="AirDash was born from a personal loss. The author's father smoked when he was young, and had lung problems from a young age — in an era when medicine wasn't advanced. He lived with bad air in Bangkok his entire working life. He passed away prematurely, in his early sixties. Many of his friends and colleagues also fell seriously ill, or died, from problems that started with bad air quality. The author was saddened every time he saw news of someone who never smoked dying from the particles.">
+        ${tr(
+          'AirDash เกิดจากความสูญเสียส่วนตัว — บิดาของผู้เขียนสูบบุหรี่ตอนหนุ่ม และมีปัญหาปอดตั้งแต่เด็ก ในยุคที่การแพทย์ยังไม่ก้าวหน้า ท่านอยู่กับอากาศที่ไม่ดีในกรุงเทพฯ ตลอดช่วงชีวิตทำงาน ท่านเสียชีวิตก่อนวัยอันควรในช่วงต้นของวัยหกสิบ เพื่อนร่วมงานและเพื่อนฝูงหลายคนก็เจ็บป่วยหนักหรือเสียชีวิตด้วยปัญหาที่เริ่มต้นจากคุณภาพอากาศที่แย่ ผู้เขียนเศร้าทุกครั้งที่เห็นข่าวคนที่ไม่เคยสูบบุหรี่เสียชีวิตเพราะฝุ่น',
+          'AirDash was born from a personal loss. The author\'s father smoked when he was young, and had lung problems from a young age — in an era when medicine wasn\'t advanced. He lived with bad air in Bangkok his entire working life. He passed away prematurely, in his early sixties. Many of his friends and colleagues also fell seriously ill, or died, from problems that started with bad air quality. The author was saddened every time he saw news of someone who never smoked dying from the particles.'
+        )}
+      </p>
+
+      <p data-th="ขณะที่ผู้เขียนอาศัยอยู่ในเซี่ยงไฮ้ตั้งแต่ปี 2013 ถึง 2016 ได้เกิดวิกฤตคุณภาพอากาศครั้งรุนแรงที่สุดในประวัติศาสตร์เมือง เมื่อ Shanghai Daily รายงานค่า PM2.5 เกิน 200 µg/m³ ในตัวเมือง ท้องฟ้าเต็มไปด้วยฝุ่นราวกับโลกกำลังจะแตก ประสบการณ์นี้ทำให้ผู้เขียนตระหนักว่าอากาศที่หายใจได้เป็นสิทธิขั้นพื้นฐานที่สุด — และถ้าหน่วยงานท้องถิ่น เช่น กรุงเทพมหานคร (BMA) ไม่ดำเนินการ ผู้อยู่อาศัยก็ต้องเสีย 2–3 ปีของอายุขัยโดยไม่จำเป็น" data-en="While the author was living in Shanghai from 2013 to 2016, the city experienced its worst air quality crisis in history — Shanghai Daily reported PM2.5 above 200 µg/m³ in the city centre, and the sky was so dusty it felt like the world was ending. This experience crystallised the author's belief that breathable air is the most basic of rights — and that when local authorities, like Bangkok Metropolitan Administration (BMA), fail to act, residents lose 2–3 years of life expectancy unnecessarily.">
+        ${tr(
+          'ขณะที่ผู้เขียนอาศัยอยู่ในเซี่ยงไฮ้ตั้งแต่ปี 2013 ถึง 2016 ได้เกิดวิกฤตคุณภาพอากาศครั้งรุนแรงที่สุดในประวัติศาสตร์เมือง เมื่อ Shanghai Daily รายงานค่า PM2.5 เกิน 200 µg/m³ ในตัวเมือง',
+          'While the author was living in Shanghai from 2013 to 2016, the city experienced its worst air quality crisis in history — Shanghai Daily reported PM2.5 above 200 µg/m³ in the city centre.'
+        )}
+      </p>
+
+      <p data-th="ดังนั้นระบบนี้จึงถูกสร้างขึ้นบนสถาปัตยกรรมเดียวกับ FloodDash (flood.nonarkara.org) แต่ออกแบบใหม่ให้ดูดีกว่า เพราะถ้าเครื่องมือนี้ดูไม่น่าเชื่อถือ คนก็จะไม่ใช้ และถ้าไม่มีใครใช้ ข้อมูลก็ไม่มีความหมาย" data-en="The system is therefore built on the same architecture as FloodDash (flood.nonarkara.org) — but redesigned to be more stylish. Because if the tool doesn't look credible, people won't use it. And if nobody uses it, the data has no meaning.">
+        ${tr(
+          'ดังนั้นระบบนี้จึงถูกสร้างขึ้นบนสถาปัตยกรรมเดียวกับ FloodDash (flood.nonarkara.org) แต่ออกแบบใหม่ให้ดูดีกว่า เพราะถ้าเครื่องมือนี้ดูไม่น่าเชื่อถือ คนก็จะไม่ใช้',
+          'The system is therefore built on the same architecture as FloodDash (flood.nonarkara.org) — but redesigned to be more stylish. Because if the tool doesn\'t look credible, people won\'t use it.'
+        )}
+      </p>
+
+      <div class="rp-design-contract">
+        <div class="rp-contract-head" data-th="สัญญาการออกแบบ · 3 ข้อ" data-en="THE DESIGN CONTRACT · THREE COMMITMENTS">
+          ${tr('สัญญาการออกแบบ · 3 ข้อ', 'The Design Contract · Three Commitments')}
+        </div>
+        <ol class="rp-contract-list">
+          <li>
+            <div class="rp-contract-num">01</div>
+            <div class="rp-contract-body">
+              <div class="rp-contract-title" data-th="ลงมือทำเอง" data-en="TAKING IT INTO MY OWN HANDS">${tr('ลงมือทำเอง', 'TAKING IT INTO MY OWN HANDS')}</div>
+              <p data-th="นักการเมืองและรัฐบาลช้าเกินไป และชีวิตของเราถูกเกินไปสำหรับพวกเขาที่จะสนใจ — ผมจะลองด้วยวิธีที่ถูกที่สุดและได้ผลที่สุด: ระบบดิจิทัล" data-en="Politicians and governments are too slow, and our lives are too cheap for them to consider. I'll try the cheapest and most effective way: a digital system.">
+                ${tr('นักการเมืองและรัฐบาลช้าเกินไป และชีวิตของเราถูกเกินไปสำหรับพวกเขาที่จะสนใจ — ผมจะลองด้วยวิธีที่ถูกที่สุดและได้ผลที่สุด: ระบบดิจิทัล', 'Politicians and governments are too slow, and our lives are too cheap for them to consider. I\'ll try the cheapest and most effective way: a digital system.')}
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="rp-contract-num">02</div>
+            <div class="rp-contract-body">
+              <div class="rp-contract-title" data-th="อากาศเป็นสิทธิขั้นพื้นฐาน" data-en="AIR IS A BASIC RIGHT">${tr('อากาศเป็นสิทธิขั้นพื้นฐาน', 'AIR IS A BASIC RIGHT')}</div>
+              <p data-th="เราต้องปกป้องมัน และข้อมูลนี้จะพิสูจน์ทุกอย่างที่เราต้องการจะพิสูจน์" data-en="We have to protect it. And this data will prove everything we need to prove.">
+                ${tr('เราต้องปกป้องมัน และข้อมูลนี้จะพิสูจน์ทุกอย่างที่เราต้องการจะพิสูจน์', 'We have to protect it. And this data will prove everything we need to prove.')}
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="rp-contract-num">03</div>
+            <div class="rp-contract-body">
+              <div class="rp-contract-title" data-th="เร่งด่วนกว่าโลกร้อน — คุณตายได้" data-en="MORE IMMEDIATE THAN GLOBAL WARMING — YOU CAN DIE">${tr('เร่งด่วนกว่าโลกร้อน — คุณตายได้', 'MORE IMMEDIATE THAN GLOBAL WARMING — YOU CAN DIE')}</div>
+              <p data-th="เราควรจะเดินทางและทำสิ่งต่าง ๆ โดยสร้างปัญหาให้ปอดน้อยลง — เรื่องนี้เร่งด่วนกว่าโลกร้อนเสียอีก เพราะคุณตายได้" data-en="We should be able to travel and do things while creating fewer problems for our lungs — this is more immediate than global warming. You can die.">
+                ${tr('เราควรจะเดินทางและทำสิ่งต่าง ๆ โดยสร้างปัญหาให้ปอดน้อยลง — เรื่องนี้เร่งด่วนกว่าโลกร้อนเสียอีก เพราะคุณตายได้', 'We should be able to travel and do things while creating fewer problems for our lungs — this is more immediate than global warming. You can die.')}
+              </p>
+            </div>
+          </li>
+        </ol>
+        <p class="rp-contract-closing" data-th="นี่คือเรื่องส่วนตัว ผมอยากพิสูจน์ว่าคนเพียงหนึ่งคนสามารถแก้ปัญหาที่รัฐบาลทำไม่ได้" data-en="This is personal. I want to prove that one person can solve a problem an administration cannot.">
+          ${tr('นี่คือเรื่องส่วนตัว ผมอยากพิสูจน์ว่าคนเพียงหนึ่งคนสามารถแก้ปัญหาที่รัฐบาลทำไม่ได้', 'This is personal. I want to prove that one person can solve a problem an administration cannot.')}
+        </p>
+      </div>
+    </section>`
+}
+
 function sectionArchitecture() {
   return `
     <section class="rp-section">
@@ -496,6 +574,7 @@ function paint() {
   const catalog = catalogCache
   const sections = [
     sectionHero(),
+    sectionWhy(),
     sectionArchitecture(),
     sectionSources(catalog),
     sectionScore(),
