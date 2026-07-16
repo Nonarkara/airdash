@@ -900,106 +900,89 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   color: var(--ink-mid);
 }
 
-/* Photos inside the personal story. Optional: if the file is missing
-   the figure is hidden via the onerror handler on the img. */
+/* Photos inside the personal story.
+   Design contract: the TEXT is the story; the photos are visual
+   punctuation. Every photo is constrained to magazine-size (~240px)
+   and floated so the surrounding prose wraps around it. Nothing
+   full-width, nothing dominant — the reader should see the text
+   first and encounter the photo as a moment of 'ah, this is what
+   that felt like', not as a hero image that pushes the words off
+   the page. */
 .about-photo {
-  margin: 18px 0;
-  text-align: center;
+  margin: 4px 0 12px;
+  text-align: left;
 }
 .about-photo img {
   display: block;
-  max-width: 100%;
-  max-height: 360px;
-  width: auto;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 240px;
+  max-height: 240px;
   object-fit: cover;
   border: 1px solid var(--rule);
 }
 .about-photo figcaption {
   font-family: var(--font-ui);
-  font-size: 12px; line-height: 1.45;
-  color: var(--ink-mid);
-  margin-top: 8px;
-  font-style: italic;
-  padding: 0 12px;
-}
-
-/* Photo variants. The base class centres a single image with caption.
-   --anchor: the lead photo of a section, slightly larger and visually
-   weighted. --hero: full-width dramatic shot — overrides the max-height
-   so the image can carry a skyline or a cityscape. --inset: smaller
-   portrait photo, floated or contained so it doesn't dominate. */
-.about-photo--anchor img {
-  max-height: 420px;
-  max-width: 92%;
-}
-.about-photo--hero img {
-  max-width: 100%;
-  max-height: 480px;
-  width: 100%;
-  object-fit: cover;
-}
-.about-photo--hero figcaption {
-  font-style: normal;
-  color: var(--ink);
-  font-size: 12.5px;
-}
-.about-photo--inset {
-  float: right;
-  width: 220px;
-  margin: 8px 0 8px 18px;
-}
-.about-photo--inset img {
-  max-height: 280px;
-  width: 100%;
-  object-fit: cover;
-}
-.about-photo--inset figcaption {
   font-size: 11.5px;
-  margin-top: 6px;
-  padding: 0;
-}
-
-/* Three-up photo strip. Used for the "father at three eras" and could
-   be reused for any sequence of related photos. Each item gets its
-   own caption; the strip as a whole reads as one block, separated
-   from the prose above and below by a thin rule. */
-.about-photo-strip {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin: 22px 0;
-  padding: 12px 0 16px;
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
-}
-.about-photo-strip-item {
-  margin: 0;
-  text-align: left;
-}
-.about-photo-strip-item img {
-  display: block;
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  border: 1px solid var(--rule);
-  background: var(--well-dim);
-}
-.about-photo-strip-item figcaption {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--ink-mid);
-  margin-top: 8px;
+  margin-top: 6px;
   font-style: italic;
   padding: 0 2px;
 }
 
+/* Float the figure so the surrounding paragraph text wraps around it.
+   --right: image on the right, text flows on the left.
+   --left: image on the left, text flows on the right.
+   The figure is always a narrow column (max-width 240px) so the
+   wrapped text has plenty of column width to stay readable. */
+.about-photo--right {
+  float: right;
+  margin: 4px 0 12px 18px;
+  shape-outside: margin-box;
+}
+.about-photo--left {
+  float: left;
+  margin: 4px 18px 12px 0;
+  shape-outside: margin-box;
+}
+
+/* A larger "feature" image, still constrained but allowed to take
+   more of the column — used for ONE image per section (the visual
+   climax), never for a strip. */
+.about-photo--feature {
+  float: none;
+  clear: both;
+  display: block;
+  margin: 16px auto;
+  text-align: center;
+  max-width: 100%;
+}
+.about-photo--feature img {
+  max-width: 100%;
+  max-height: 320px;
+  margin: 0 auto;
+}
+.about-photo--feature figcaption {
+  font-size: 12px;
+  margin-top: 8px;
+  font-style: normal;
+  color: var(--ink);
+}
+
+/* On narrow viewports the float breaks down — stack the figure
+   above the paragraph at full width with a sensible max. */
 @media (max-width: 720px) {
-  .about-photo-strip { grid-template-columns: 1fr; gap: 14px; }
-  .about-photo-strip-item img { height: 200px; }
-  .about-photo--inset { float: none; width: 100%; margin: 14px 0; }
-  .about-photo--hero img { max-height: 320px; }
+  .about-photo--right,
+  .about-photo--left {
+    float: none;
+    margin: 14px 0;
+    max-width: 100%;
+  }
+  .about-photo--right img,
+  .about-photo--left img {
+    max-width: 100%;
+    max-height: 280px;
+  }
 }
 
 /* The story prose — generous line-height and a paragraph rhythm. */
