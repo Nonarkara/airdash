@@ -1,8 +1,8 @@
-// Real-time insights panel — surfaces compound events, upstream surges,
-// basin escalation, sudden score jumps, dam spillways, sensor gaps.
-// Each card has a severity colour, a single-sentence title in both
-// languages, and a body with the supporting numbers. Clicking flies the
-// map to the relevant province.
+// Real-time insights panel — surfaces compound dust events, incoming
+// washout rain, regional escalation, sudden score jumps, worsening
+// forecasts, sensor gaps. Each card has a severity colour, a
+// single-sentence title in both languages, and a body with the supporting
+// numbers. Clicking flies the map to the relevant province.
 import { on, store } from '../state.js?v=2.0.0-final'
 import { tr, BAND } from '../i18n.js?v=2.0.0-final'
 import { el, fmtNum } from '../fmt.js?v=2.0.0-final'
@@ -11,14 +11,13 @@ import { flyToProvince } from '../map.js?v=2.0.0-final'
 import { refreshSensorHealth } from '../sensorHealth.js?v=2.0.0-final'
 
 const TYPE_LABEL = {
-  compound:           { th: 'เหตุการณ์ซ้อน',     en: 'COMPOUND EVENT'    },
-  cascade:            { th: 'คลื่นน้ำต้นน้ำ',     en: 'UPSTREAM SURGE'    },
-  basin_escalation:   { th: 'ลุ่มน้ำขยายตัว',     en: 'BASIN ESCALATION'  },
-  sudden_escalation:  { th: 'พุ่งขึ้น 30 นาที',   en: 'SUDDEN JUMP'       },
-  dam_spillway:       { th: 'เขื่อนระบาย',        en: 'DAM SPILLWAY'      },
-  sensor_gap:         { th: 'สถานีเงียบ',          en: 'SENSOR GAP'        },
-  flood_forecast:     { th: 'แนวโน้มน้ำท่วม 24-48 ชม.', en: 'FLOOD FORECAST 24-48h' },
-  data_quality:       { th: 'คุณภาพข้อมูล',       en: 'DATA QUALITY'      },
+  compound:            { th: 'เหตุการณ์ซ้อน',        en: 'COMPOUND EVENT'      },
+  washout_incoming:    { th: 'ฝนล้างฝุ่นกำลังมา',     en: 'WASHOUT INCOMING'    },
+  regional_escalation: { th: 'ฝุ่นขยายทั้งภูมิภาค',   en: 'REGIONAL ESCALATION' },
+  score_jump:          { th: 'คะแนนพุ่งขึ้นเร็ว',      en: 'SCORE JUMP'          },
+  forecast_worsening:  { th: 'พยากรณ์แย่ลง 24-48 ชม.', en: 'FORECAST WORSENING'  },
+  sensor_gap:          { th: 'สถานีเงียบ',             en: 'SENSOR GAP'          },
+  data_quality:        { th: 'คุณภาพข้อมูล',           en: 'DATA QUALITY'        },
 }
 
 const SEV_LABEL = {

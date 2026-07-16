@@ -25,8 +25,8 @@ export function initChat() {
   }
 
   log.append(el('div', { class: 'chat-msg bot' },
-    tr('สวัสดีครับ ถามสถานการณ์น้ำได้เลย เช่น "ระดับน้ำที่หาดใหญ่ตอนนี้" หรือ "จังหวัดไหนเสี่ยงสุด" — ผมตอบจากข้อมูลจริงในระบบเท่านั้น',
-       'Hello! Ask about the flood situation — e.g. "water level in Hat Yai now" or "which province is most at risk". I only answer from live system data.')))
+    tr('สวัสดีครับ ถามสถานการณ์ฝุ่นได้เลย เช่น "ค่าฝุ่นเชียงใหม่ตอนนี้เท่าไร" หรือ "จังหวัดไหนเสี่ยงสุด" — ผมตอบจากข้อมูลจริงในระบบเท่านั้น ฟังประกาศ คพ./กรมอุตุฯ เสมอ',
+       'Hello! Ask about the air situation — e.g. "PM2.5 in Chiang Mai now" or "which province is most at risk". I only answer from live system data — always follow official PCD / TMD guidance.')))
 
   // Example questions — shown as clickable chips below the welcome
   // message. Solves the "stuck at the empty chat box" problem: a first-
@@ -38,8 +38,8 @@ export function initChat() {
       tr('ลองถามแบบนี้ · Try asking', 'ลองถามแบบนี้ · Try asking')),
     ...[
       { th: 'จังหวัดไหนเสี่ยงสุดตอนนี้', en: 'Which province is at highest risk right now?' },
-      { th: 'น้ำที่เชียงใหม่ตอนนี้เป็นอย่างไร', en: 'How is the water level in Chiang Mai right now?' },
-      { th: 'ฝนจะตกหนักที่ไหนใน 24 ชม.', en: 'Where will it rain hardest in the next 24 hours?' },
+      { th: 'ค่าฝุ่นเชียงใหม่ตอนนี้เท่าไร', en: 'What is PM2.5 in Chiang Mai right now?' },
+      { th: 'ฝนจะช่วยล้างฝุ่นที่ไหนบ้าง', en: 'Where will rain wash out the dust?' },
       { th: 'อธิบายวิธีคำนวณคะแนนเสี่ยง', en: 'Explain how the risk score is calculated' },
     ].map((ex) => el('button', {
       class: 'chat-example-chip', type: 'button',

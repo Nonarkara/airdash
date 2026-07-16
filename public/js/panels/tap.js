@@ -7,8 +7,8 @@ import { el } from '../fmt.js?v=2.0.0-final'
 
 const MAX_ROWS = 300
 const SOURCE_LABEL = {
-  thaiwater_wl: 'HII·WL', thaiwater_rain: 'RAIN', thaiwater_dam: 'DAM',
-  rid_reservoir: 'RID', air4thai: 'AQI', openmeteo: 'FC', news: 'NEWS', null: 'SYS',
+  air4thai: 'AQ', thaiwater_rain: 'RAIN', openmeteo: 'FC',
+  openmeteo_aq: 'CAMS', imerg: 'SAT', enso: 'ENSO', news: 'NEWS', null: 'SYS',
 }
 let missed = 0
 

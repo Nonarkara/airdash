@@ -1,5 +1,5 @@
 // Data-source catalog panel — every pipeline, JAXA satellite layer, and export
-// endpoint for researchers who want to reuse FloodDash feeds.
+// endpoint for researchers who want to reuse AirDash feeds.
 import { getJson } from '../cache.js?v=2.0.0-final'
 import { on, store } from '../state.js?v=2.0.0-final'
 import { tr } from '../i18n.js?v=2.0.0-final'

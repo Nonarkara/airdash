@@ -135,8 +135,8 @@ function renderStatus(snap) {
     whyEl.textContent = r ? `· ${tr(r.th, r.en)}` : ''
   }
 
-  // Dust-season micro-badge — replaces the old flood-season badge, same
-  // UI treatment ("LOW — STAY INFORMED" pseudo-band).
+  // Dust-season micro-badge — same UI treatment as the old seasonal badge
+  // ("LOW — STAY INFORMED" pseudo-band).
   const seasonEl = document.getElementById('national-season')
   if (seasonEl) {
     if (n.dustSeason && displayBand === 'low') {

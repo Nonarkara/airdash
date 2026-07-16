@@ -1,4 +1,4 @@
-// The Flood Library — bilingual reference reader: the flood-bible sections and
+// The Air Library — bilingual reference reader: the air-bible sections and
 // the knowledge/ research notes, all searchable from one tab. TOC by default,
 // full-text search on 3+ chars, and a full-screen reader overlay for the docs.
 import { getJson } from '../cache.js?v=2.0.0-final'
@@ -58,7 +58,7 @@ async function renderToc(container) {
     const group = s.section.startsWith('bible/') ? 'bible' : (s.section.startsWith('knowledge/') ? 'knowledge' : null)
     if (group && group !== lastGroup) {
       rows.push(el('div', { class: 'lib-group-head' },
-        group === 'bible' ? tr('คู่มือน้ำท่วม (BIBLE)', 'FLOOD BIBLE') : tr('บันทึกความรู้ (NOTES)', 'KNOWLEDGE NOTES')))
+        group === 'bible' ? tr('คู่มือฝุ่น (BIBLE)', 'AIR BIBLE') : tr('บันทึกความรู้ (NOTES)', 'KNOWLEDGE NOTES')))
       lastGroup = group
     }
     rows.push(el('div', { class: 'lib-toc-row', onclick: () => openLibraryDoc(s.section) },
@@ -151,22 +151,19 @@ function initReader() {
 }
 
 // ── Geo-linkify: place names in Bible text become click-to-fly map links ────
-// The didactic loop: read about the 2011 Chao Phraya flood, click "อยุธยา",
-// watch the map fly there with today's live stations. Names come from the
-// province gazetteer (77 centroids) + the current dam snapshot.
+// The didactic loop: read about the northern burning-season haze, click
+// "เชียงใหม่", watch the map fly there with today's live stations. Names
+// come from the province gazetteer (77 centroids).
 let geoTargets = null
 async function getGeoTargets() {
   if (geoTargets) return geoTargets
   let provs = []
   try { provs = await getJson('/geo/provinces.json', 3600_000) } catch { /* optional */ }
-  const dams = (store.snapshot?.dams ?? []).filter((d) => d.lat && d.name_th)
-  geoTargets = [
-    ...provs.map((p) => ({ name: p.provinceNameTh, lat: p.lat, lng: p.lng, zoom: 9 })),
-    ...dams.map((d) => ({ name: `เขื่อน${d.name_th}`, lat: d.lat, lng: d.lng, zoom: 11 })),
-    ...dams.map((d) => ({ name: d.name_th, lat: d.lat, lng: d.lng, zoom: 11 })),
-  ].filter((t) => t.name && t.name.length >= 3)
-   // Longest first, so "เขื่อนภูมิพล" wins over a bare province substring.
-   .sort((a, b) => b.name.length - a.name.length)
+  geoTargets = provs
+    .map((p) => ({ name: p.provinceNameTh, lat: p.lat, lng: p.lng, zoom: 9 }))
+    .filter((t) => t.name && t.name.length >= 3)
+    // Longest first, so a long name wins over a bare substring.
+    .sort((a, b) => b.name.length - a.name.length)
   return geoTargets
 }
 
@@ -222,8 +219,8 @@ export async function openLibraryDoc(key) {
       const hint = document.createElement('div')
       hint.className = 'lib-geo-hint'
       hint.textContent = tr(
-        '💡 คลิกชื่อจังหวัด/เขื่อนที่ขีดเส้นใต้ เพื่อบินไปดูจุดนั้นบนแผนที่สด',
-        '💡 Click an underlined province/dam name to fly the live map there')
+        '💡 คลิกชื่อจังหวัดที่ขีดเส้นใต้ เพื่อบินไปดูจุดนั้นบนแผนที่สด',
+        '💡 Click an underlined province name to fly the live map there')
       article.prepend(hint)
     }
     article.scrollTop = 0

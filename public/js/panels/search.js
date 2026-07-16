@@ -1,8 +1,8 @@
 // Universal place search — search any place name (province, station, focus area)
 // and get autocomplete results. Select one → map flies there + place card opens
-// with live data: nearest stations, risk score, forecast, historical floods.
+// with live data: nearest AQ stations, watch score, rain-washout outlook.
 import { on, store, emit } from '../state.js?v=2.0.0-final'
-import { tr, pick, BAND, LEVEL_NAME } from '../i18n.js?v=2.0.0-final'
+import { tr, pick, BAND } from '../i18n.js?v=2.0.0-final'
 import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.0.0-final'
 import { getJson } from '../cache.js?v=2.0.0-final'
 
@@ -22,15 +22,14 @@ loadProvinceCentroids()
 
 const TYPE_ICON = {
   province: '🏛',
-  station: '💧',
+  station: '🌫',
   focus: '📍',
   district: '🏘',
   subdistrict: '🏡',
 }
 const SUBTYPE_ICON = {
-  water: '🔵',
-  rain: '🌧',
-  dam: '🟦',
+  air: '🌫',   // สถานีวัดฝุ่น
+  rain: '🌧',  // สถานีฝน
 }
 
 let searchInput = null
@@ -97,7 +96,7 @@ export function initSearch() {
     hideResults()
     hidePlaceCard()
     history.replaceState(null, '', location.pathname)
-    document.title = 'FLOODDASH — เฝ้าระวังน้ำท่วมประเทศไทย · Thailand Flood Watch'
+    document.title = 'AIRDASH — เฝ้าระวังฝุ่นประเทศไทย · Thailand Air Quality Watch'
     emit('search-clear')
   })
 
@@ -218,7 +217,7 @@ function selectResult(r) {
   // or bookmarking captures this exact city view.
   if (r.name_th || r.name_en) {
     history.replaceState(null, '', `?city=${encodeURIComponent(r.name_th ?? r.name_en)}`)
-    document.title = `${tr(r.name_th, r.name_en)} — FLOODDASH`
+    document.title = `${tr(r.name_th, r.name_en)} — AIRDASH`
   }
 }
 
@@ -334,22 +333,6 @@ function verdictHero(v) {
     </div>`
 }
 
-function upstreamStrip(eta) {
-  if (!eta) return ''
-  const up = eta.upstream
-  if (!up && !eta.local_rising) return ''
-  return `
-    <div class="place-section pc-eta">
-      <div class="eyebrow">${tr('คลื่นน้ำเหนือ', 'UPSTREAM WAVE')}</div>
-      ${up ? `
-        <div class="pc-eta-main">
-          <span class="pc-eta-days">~${up.days < 2 ? Math.max(6, Math.round(up.days * 24)) + ' ' + tr('ชม.', 'h') : Math.round(up.days) + ' ' + tr('วัน', 'days')}</span>
-          <span class="pc-eta-src">${tr('น้ำกำลังเพิ่มที่', 'water rising at')} ${escapeHtml(tr(up.name_th, up.name_en))} → ${tr('ถึงลำน้ำใกล้คุณ', 'reaches your river')}</span>
-        </div>` : ''}
-      ${eta.local_rising ? `<div class="pc-eta-local">▲ ${tr('ลำน้ำใกล้คุณ', 'Your reach')} (${escapeHtml(tr(eta.reach_th, eta.reach_en))}) ${tr('แนวโน้มเพิ่มขึ้น', 'is trending up')}</div>` : ''}
-    </div>`
-}
-
 function rainOutlook(fcObj, sat) {
   const days = fcObj ? [fcObj.d0, fcObj.d1, fcObj.d2] : []
   const hasDays = days.some((v) => v !== null && v !== undefined)
@@ -378,34 +361,35 @@ function rainOutlook(fcObj, sat) {
   }
   return `
     <div class="place-section">
-      <div class="eyebrow">${tr('ฝนที่กำลังมา (มม./วัน)', 'RAIN COMING (MM/DAY)')}</div>
+      <div class="eyebrow">${tr('ฝนที่กำลังมา — ช่วยล้างฝุ่น (มม./วัน)', 'RAIN COMING — WASHOUT (MM/DAY)')}</div>
       ${bars}${satChip}
     </div>`
 }
 
 function trendArrow(t) {
+  // 6h PM2.5 delta in µg/m³ — ±1 µg is the "moving" threshold.
   if (t === null || t === undefined) return ''
-  if (t >= 0.05) return `<span class="pc-trend pc-trend-up">▲ +${fmtNum(t, 2)}</span>`
-  if (t <= -0.05) return `<span class="pc-trend pc-trend-down">▼ ${fmtNum(t, 2)}</span>`
+  if (t >= 1) return `<span class="pc-trend pc-trend-up">▲ +${fmtNum(t, 1)}</span>`
+  if (t <= -1) return `<span class="pc-trend pc-trend-down">▼ ${fmtNum(t, 1)}</span>`
   return `<span class="pc-trend pc-trend-flat">—</span>`
 }
 
-function stationList(wl) {
-  if (!wl.length) {
-    return `<div class="place-section"><div class="eyebrow">${tr('สถานีระดับน้ำใกล้สุด', 'NEAREST WATER STATIONS')}</div>
+function stationList(aq) {
+  if (!aq.length) {
+    return `<div class="place-section"><div class="eyebrow">${tr('สถานีวัดฝุ่นใกล้สุด', 'NEAREST AQ STATIONS')}</div>
       <div class="place-empty">${tr('ไม่มีสถานีในรัศมี 30 กม.', 'No stations within 30 km')}</div></div>`
   }
   return `
     <div class="place-section">
-      <div class="eyebrow">${tr('สถานีระดับน้ำใกล้สุด · แนวโน้ม 6 ชม.', 'NEAREST WATER · 6H TREND')}</div>
-      ${wl.map((s) => {
-        const lv = Math.round(s.situation_level ?? 0)
-        const lvColor = lv >= 5 ? '#A51931' : lv >= 4 ? '#E86A10' : lv === 3 ? '#00933C' : '#B7AFA3'
+      <div class="eyebrow">${tr('สถานีวัดฝุ่นใกล้สุด · แนวโน้ม 6 ชม.', 'NEAREST AQ · 6H TREND')}</div>
+      ${aq.map((s) => {
+        const pm = s.pm25 ?? null
+        const pmColor = pm === null ? '#B7AFA3' : pm >= 75 ? '#A51931' : pm >= 37.5 ? '#E86A10' : pm >= 25 ? '#F0B400' : '#00933C'
         return `<div class="place-station" data-lat="${s.lat}" data-lng="${s.lng}">
-          <span class="badge lv${lv || 1}" style="background:${lvColor}">${lv || '·'}</span>
+          <span class="badge" style="background:${pmColor}">●</span>
           <span class="ps-name">${escapeHtml(tr(s.name_th, s.name_en))}<span class="ps-km">${Math.round(s.distance_km)} ${tr('กม.', 'km')}</span></span>
           ${trendArrow(s.trend_6h)}
-          <span class="ps-val">${s.wl_msl !== null ? fmtNum(s.wl_msl, 2) + ' ' + tr('ม.', 'm') : '—'}</span>
+          <span class="ps-val">${pm !== null ? fmtNum(pm, 0) + ' µg' : '—'}</span>
         </div>`
       }).join('')}
     </div>`
@@ -449,7 +433,6 @@ function renderPlaceCard(sel) {
 
   html += `<div class="pc-cols"><div class="pc-main">`
   html += verdictHero(v)
-  html += upstreamStrip(d.river_eta)
   html += rainOutlook(d.province_forecast, d.sat_rain)
 
   // Province context — where this city's province sits nationally, for every
@@ -467,21 +450,21 @@ function renderPlaceCard(sel) {
         <div class="place-score-detail">
           <b>${tr('ภาพรวมจังหวัด', 'Province picture')}: ${BAND[provRisk.band][store.lang]}</b><br>
           ${rank > 0 ? `${tr('อันดับเฝ้าระวัง', 'watch rank')} #${rank}/77 · ` : ''}
-          ${provRisk.stations_l4 + provRisk.stations_l5 > 0 ? `L4/L5: ${provRisk.stations_l4}/${provRisk.stations_l5} · ` : ''}
-          ${provRisk.max_rain_24h !== null ? `${tr('ฝนสูงสุด', 'max rain')} ${fmtNum(provRisk.max_rain_24h)} ${tr('มม.', 'mm')}` : ''}
+          ${provRisk.stations_unhealthy + provRisk.stations_very_unhealthy > 0 ? `${tr('สถานีเกินเกณฑ์/อันตราย', 'unhealthy/v.unhealthy stn')}: ${provRisk.stations_unhealthy}/${provRisk.stations_very_unhealthy} · ` : ''}
+          ${provRisk.pm25 !== null ? `${tr('ฝุ่นสูงสุด', 'worst PM2.5')} ${fmtNum(provRisk.pm25, 0)} µg/m³` : ''}
         </div>
       </div>`
   }
   html += `</div><div class="pc-side">`
 
-  html += stationList(d.nearest_water ?? [])
+  html += stationList(d.nearest_air ?? [])
 
-  // Nearest rain gauges (condensed)
+  // Nearest rain gauges (condensed) — observed washout nearby.
   const rain = d.nearest_rain ?? []
   if (rain.length > 0) {
     html += `
       <div class="place-section">
-        <div class="eyebrow">${tr('ฝนสะสม 24 ชม. ใกล้สุด', 'NEAREST RAIN (24H)')}</div>
+        <div class="eyebrow">${tr('ฝนสะสม 24 ชม. ใกล้สุด (ล้างฝุ่น)', 'NEAREST RAIN 24H (WASHOUT)')}</div>
         ${rain.slice(0, 3).map((s) => {
           const mm = s.rain_24h ?? 0
           return `<div class="place-station" data-lat="${s.lat}" data-lng="${s.lng}">
@@ -495,31 +478,15 @@ function renderPlaceCard(sel) {
 
   html += checklistBlock(sel, v)
 
-  // Historical context
-  const histFloods = findNearbyHistorical(sel.lat, sel.lng)
-  if (histFloods.length > 0) {
-    html += `
-      <div class="place-section">
-        <div class="eyebrow">${tr('น้ำท่วมในอดีตใกล้สุด', 'NEARBY HISTORICAL FLOODS')}</div>
-        ${histFloods.map((f) => {
-          const sevColor = f.severity === 'emergency' ? '#A51931' : f.severity === 'warning' ? '#E86A10' : '#F0B400'
-          return `<div class="place-hist">
-            <span class="hist-year" style="background:${sevColor}">${f.year}</span>
-            <span class="hist-name">${escapeHtml(tr(f.name_th, f.name_en))}</span>
-          </div>`
-        }).join('')}
-      </div>`
-  }
-
   if (sel.blurb_th || sel.blurb_en) {
     html += `<div class="place-section place-blurb">${escapeHtml(tr(sel.blurb_th, sel.blurb_en))}</div>`
   }
   html += `</div></div>` // .pc-side .pc-cols
 
   html += `<div class="place-warning">⚠ ${tr(
-    'ฟังประกาศทางการของ ปภ. / กรมอุตุฯ เสมอ — ข้อมูลนี้เพื่อจัดลำดับความสนใจ ไม่ใช่การเตือนภัย',
-    'Always follow official DDPM / TMD warnings — this data is for prioritisation, not alerts',
-  )} · ${tr('สายด่วน ปภ. 1784', 'DDPM hotline 1784')}</div>`
+    'ฟังประกาศทางการของ คพ. / กรมอุตุฯ เสมอ — ข้อมูลนี้เพื่อจัดลำดับความสนใจ ไม่ใช่การเตือนภัย',
+    'Always follow official PCD / TMD advisories — this data is for prioritisation, not alerts',
+  )} · ${tr('สายด่วนมลพิษ คพ. 1650', 'PCD pollution hotline 1650')}</div>`
 
   placeCard.innerHTML = html
 
@@ -611,33 +578,5 @@ function hidePlaceCard() {
   clearInterval(clockTimer)
   clearInterval(refreshTimer)
   history.replaceState(null, '', location.pathname)
-  document.title = 'FLOODDASH — เฝ้าระวังน้ำท่วมประเทศไทย · Thailand Flood Watch'
+  document.title = 'AIRDASH — เฝ้าระวังฝุ่นประเทศไทย · Thailand Air Quality Watch'
 }
-
-// Find historical flood events within ~100km of a point
-let histFloodsCache = null
-async function getHistFloods() {
-  if (histFloodsCache) return histFloodsCache
-  try {
-    histFloodsCache = await getJson('/geo/historical-floods.json', 3600_000)
-    return histFloodsCache
-  } catch {
-    return []
-  }
-}
-
-function findNearbyHistorical(lat, lng) {
-  // This is synchronous because getHistFloods is cached from the history layer
-  if (!histFloodsCache) return []
-  return histFloodsCache
-    .filter((f) => {
-      const dLat = (f.lat - lat) * 111 // ~km per degree
-      const dLng = (f.lng - lng) * 101 // ~km per degree at Thailand's latitude
-      return Math.sqrt(dLat * dLat + dLng * dLng) < 100
-    })
-    .sort((a, b) => b.year - a.year)
-    .slice(0, 3)
-}
-
-// Pre-load historical floods so the place card has them immediately
-getHistFloods()

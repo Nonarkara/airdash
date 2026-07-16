@@ -1,18 +1,25 @@
 // Multi-screen compare — up to 4 independent map panes, each a focus area.
-// Built for the connected-waterways question: put an upstream reach next to a
-// downstream one and read the lag directly (Nakhon Sawan peaks in 3d, Bangkok
-// in 5d). Each pane is its own Leaflet map + a readout of that area's reaches.
+// Built for the regional-haze question: put Chiang Mai's smoky valley next
+// to Bangkok's traffic smog and read the difference directly. Each pane is
+// its own Leaflet map of live AQ stations + a readout of that area's worst
+// PM2.5 and washout context.
 import { getJson } from '../cache.js?v=2.0.0-final'
 import { store, on } from '../state.js?v=2.0.0-final'
 import { tr, pick } from '../i18n.js?v=2.0.0-final'
 import { fmtNum, el } from '../fmt.js?v=2.0.0-final'
 import { focusAreas } from './focus.js?v=2.0.0-final'
 
-const BAND_COLOR = { normal: '#1D66A8', watch: '#F0B400', warning: '#E86A10', emergency: '#A51931', unknown: '#B7AFA3' }
-const LV_COLOR = { 1: '#B7AFA3', 2: '#948C7F', 3: '#00933C', 4: '#E86A10', 5: '#A51931' }
+// Thai AQI 2023 PM2.5 marker colours (15 / 25 / 37.5 / 75 µg/m³).
+function pm25Color(v) {
+  if (v === null || v === undefined) return '#B7AFA3'
+  if (v >= 75) return '#A51931'
+  if (v >= 37.5) return '#E86A10'
+  if (v >= 25) return '#F0B400'
+  if (v >= 15) return '#8BB174'
+  return '#00933C'
+}
 
-let panes = []       // { map, sel, readout, areaId }
-let riversData = null
+let panes = []       // { map, sel, readout, dataLayer, areaId }
 let geo = null
 let paneCount = 2
 
@@ -39,10 +46,7 @@ export function initCompare() {
 
 async function open() {
   document.getElementById('compare-overlay').hidden = false
-  ;[riversData, geo] = await Promise.all([
-    getJson('/api/rivers', 60_000).catch(() => null),
-    getJson('/geo/thai-rivers.geojson', 3600_000).catch(() => null),
-  ])
+  geo = await getJson('/geo/province-boundaries.geojson', 3600_000).catch(() => null)
   build()
 }
 
@@ -52,8 +56,9 @@ function close() {
   panes = []
 }
 
-// Sensible upstream→downstream default lineup so the lag is visible immediately.
-const DEFAULT_LINEUP = ['nakhonsawan', 'ayutthaya', 'bangkok', 'hatyai']
+// Sensible default lineup: the burning-season north next to the traffic
+// metropolis, then the stubble-burning northeast and the transboundary south.
+const DEFAULT_LINEUP = ['chiangmai', 'bangkok', 'khonkaen', 'hatyai']
 
 function build() {
   const grid = document.getElementById('compare-grid')
@@ -91,7 +96,7 @@ function buildPane(areaId, areas) {
     attributionControl: false, preferCanvas: true,
   })
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd' }).addTo(map)
-  if (geo) L.geoJSON(geo, { style: (f) => ({ color: '#3E7CB1', weight: f.properties.km > 45 ? 1.4 : 0.6, opacity: 0.4 }), interactive: false }).addTo(map)
+  if (geo) L.geoJSON(geo, { style: () => ({ color: '#948C7F', weight: 0.6, opacity: 0.35, fill: false }), interactive: false }).addTo(map)
   const dataLayer = L.layerGroup().addTo(map)
 
   const pane = { map, sel, readout, dataLayer, areaId: sel.value }
@@ -110,52 +115,43 @@ function paintPane(pane) {
   const area = focusAreas().find((a) => a.id === pane.areaId)
   pane.dataLayer.clearLayers()
 
-  // Water-level stations within the area bbox (from the shared snapshot).
+  // AQ stations within the area bbox (from the shared snapshot),
+  // PM2.5-colored — the primary markers.
   const [s, w, n, e] = area.bbox
-  const water = (store.snapshot?.water ?? []).filter((st) =>
+  const air = (store.snapshot?.air ?? []).filter((st) =>
     st.lat !== null && st.lat >= s && st.lat <= n && st.lng >= w && st.lng <= e)
-  for (const st of water) {
-    const lv = Math.round(st.situation_level ?? 0)
+  for (const st of air) {
+    const pm = st.pm25 ?? null
     L.circleMarker([st.lat, st.lng], {
-      radius: lv >= 4 ? 5 : 3, color: '#fff', weight: 0.8,
-      fillColor: LV_COLOR[lv] ?? '#B7AFA3', fillOpacity: 0.9,
+      radius: pm !== null && pm >= 37.5 ? 6 : 4, color: '#fff', weight: 0.8,
+      fillColor: pm25Color(pm), fillOpacity: 0.9,
     }).addTo(pane.dataLayer)
   }
 
-  // The area's river reaches (GloFAS) as cascade nodes.
-  const reaches = (riversData?.reaches ?? []).filter((r) => (area.reaches ?? []).includes(r.id))
-  for (const r of reaches) {
-    if (r.lat === null) continue
-    const band = r.peakBand === 'normal' ? r.band : r.peakBand
-    L.marker([r.lat, r.lng], {
-      icon: L.divIcon({ className: '', iconSize: [16, 16],
-        html: `<div class="reach-node" style="width:16px;height:16px;background:${BAND_COLOR[band ?? 'unknown']}"></div>` }),
-    }).addTo(pane.dataLayer)
-  }
-
-  // Readout — the numbers that make the lag legible side by side.
+  // Readout — the numbers that make the comparison legible side by side.
   const rows = [el('div', { class: 'wx-method' }, area && (store.lang === 'th' ? area.blurb_th : area.blurb_en))]
-  if (reaches.length === 0) {
-    rows.push(el('div', { class: 'wet-row' }, tr('ไม่มีจุดวัดแม่น้ำหลักในพื้นที่นี้', 'no major river gauge here')))
+  const worst = [...air].filter((st) => st.pm25 !== null && st.pm25 !== undefined)
+    .sort((a, b) => b.pm25 - a.pm25)
+    .slice(0, 3)
+  if (worst.length === 0) {
+    rows.push(el('div', { class: 'wet-row' }, tr('ไม่มีสถานีวัดฝุ่นในพื้นที่นี้', 'no AQ station here')))
   }
-  for (const r of reaches) {
-    const band = r.peakBand === 'normal' ? r.band : r.peakBand
+  for (const st of worst) {
     rows.push(el('div', { class: 'cascade-step', style: 'padding:6px 10px' },
-      el('div', { class: 'cascade-node-sq', style: `width:18px;height:18px;background:${BAND_COLOR[band ?? 'unknown']}` }),
+      el('div', { class: 'cascade-node-sq', style: `width:18px;height:18px;background:${pm25Color(st.pm25)}` }),
       el('div', { class: 'cascade-body' },
-        el('div', { class: 'nm', style: 'font-size:12.5px' }, pick(r, 'name')),
-        el('div', { class: 'q' }, tr('ไหล ', 'now '), el('b', {}, fmtNum(r.discharge, 0)),
-          ` → ${tr('สูงสุด', 'peak')} ${fmtNum(r.forecastPeak, 0)} ${tr('ลบ.ม./วิ', 'm³/s')}`)),
-      el('div', { class: 'cascade-lag' },
-        r.forecastPeakDay !== null ? el('div', { class: 'eta' }, `+${r.forecastPeakDay}${tr('ว', 'd')}`) : '—')))
+        el('div', { class: 'nm', style: 'font-size:12.5px' }, pick(st, 'name')),
+        el('div', { class: 'q' }, 'PM2.5 ', el('b', {}, fmtNum(st.pm25, 0)), ' µg/m³',
+          st.aqi !== null && st.aqi !== undefined ? ` · AQI ${fmtNum(st.aqi, 0)}` : '')),
+    ))
   }
-  // Local rain summary for the area.
+  // Local washout context — max observed rain across the area's gauges.
   const rain = (store.snapshot?.rain ?? []).filter((st) =>
     st.lat !== null && st.lat >= s && st.lat <= n && st.lng >= w && st.lng <= e)
   const maxRain = rain.reduce((m, st) => Math.max(m, st.rain_24h ?? 0), 0)
   rows.push(el('div', { class: 'wet-row' },
-    el('span', { class: 'nm' }, tr('ฝนสูงสุด 24ชม.', 'max rain 24h')),
+    el('span', { class: 'nm' }, tr('ฝนล้างฝุ่น 24ชม.', 'washout rain 24h')),
     el('span', { class: 'val', style: 'width:auto;flex:1;text-align:left;color:var(--ink)' },
-      `${fmtNum(maxRain, 0)} ${tr('มม. · สถานีน้ำ', 'mm · gauges')} ${water.length}`)))
+      `${fmtNum(maxRain, 0)} ${tr('มม. · สถานีฝุ่น', 'mm · AQ stations')} ${air.length}`)))
   pane.readout.replaceChildren(...rows)
 }

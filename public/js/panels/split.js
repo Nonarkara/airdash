@@ -15,7 +15,7 @@ import { getJson } from '../cache.js?v=2.0.0-final'
 
 const TYPE_ICON = {
   province: '🏛', district: '🏘', subdistrict: '🏡',
-  station: '💧', focus: '📍',
+  station: '🌫', focus: '📍',
 }
 
 // Fallback lineup when the snapshot hasn't arrived yet — geographic
@@ -565,30 +565,32 @@ function dataCard(pane, rank, topScore) {
     const ci = scoreCi()
     rows.append(numRow(tr('± ความเชื่อมั่น', '± CONFIDENCE'), `±${ci}`, ci > 5 ? 'warn' : ''))
   }
-  if (risk.water != null) {
-    const wl = `${risk.water}/100` + (risk.wl_stations ? ` · ${risk.wl_stations} ${tr('สถานี', 'stn')}` : '')
-    rows.append(numRow(tr('น้ำ', 'WATER'), wl))
+  if (risk.pm25 != null) {
+    const klass = risk.pm25 >= 75 ? 'warn' : ''
+    rows.append(numRow('PM2.5',
+      `${fmtNum(risk.pm25, 0)} µg/m³` +
+      (risk.aq_stations ? ` · ${risk.aq_stations} ${tr('สถานี', 'stn')}` : ''), klass))
   }
-  if (risk.max_rain_24h != null) {
+  if (risk.pm25_fc_48h != null) {
+    rows.append(numRow(tr('คาดฝุ่น 48 ชม.', 'PM2.5 FC 48H'),
+      `${fmtNum(risk.pm25_fc_48h, 0)} µg/m³`))
+  }
+  // Washout chip — rain expected to scrub this province's dust.
+  if (risk.washout_helps && risk.washout_relief_pct != null) {
+    rows.append(numRow(tr('ฝนล้างฝุ่น', 'WASHOUT'),
+      `🌧 −${fmtNum(risk.washout_relief_pct, 0)}%` +
+      (risk.projected_pm25 != null ? ` → ${fmtNum(risk.projected_pm25, 0)} µg` : '')))
+  }
+  if (risk.rain_obs_24h != null) {
     rows.append(numRow(tr('ฝน 24 ชม.', 'RAIN 24H'),
-      `${fmtNum(risk.max_rain_24h, 0)} ${tr('มม.', 'mm')}` +
+      `${fmtNum(risk.rain_obs_24h, 0)} ${tr('มม.', 'mm')}` +
       (risk.rain_stations ? ` · ${risk.rain_stations} ${tr('จุด', 'gauges')}` : '')))
   }
-  if (risk.fc_48h != null) {
-    rows.append(numRow(tr('พยากรณ์ 48 ชม.', 'FORECAST 48H'),
-      `${fmtNum(risk.fc_48h, 0)} ${tr('มม.', 'mm')}`))
-  }
-  if (risk.wetness_score != null) {
-    const klass = risk.wetness_band === 'saturated' ? 'warn' : ''
-    rows.append(numRow(tr('ดินอิ่มตัว', 'SOIL SAT.'),
-      `${risk.wetness_score}%${risk.wetness_band === 'saturated' ? ` · ${tr('อิ่มตัว', 'saturated')}` : ''}`,
-      klass))
-  }
-  if (risk.rise_6h_m != null && Math.abs(risk.rise_6h_m) > 0.01) {
-    const arrow = risk.rise_6h_m > 0 ? '▲' : '▼'
-    const klass = risk.rise_6h_m > 0 ? 'warn' : ''
-    rows.append(numRow(tr('น้ำขึ้น 6 ชม.', 'RISE 6H'),
-      `${arrow} ${Math.abs(risk.rise_6h_m).toFixed(2)} ${tr('ม.', 'm')}`, klass))
+  if (risk.rise_6h_ug != null && Math.abs(risk.rise_6h_ug) > 0.5) {
+    const arrow = risk.rise_6h_ug > 0 ? '▲' : '▼'
+    const klass = risk.rise_6h_ug > 0 ? 'warn' : ''
+    rows.append(numRow(tr('ฝุ่นขึ้น 6 ชม.', 'RISE 6H'),
+      `${arrow} ${Math.abs(risk.rise_6h_ug).toFixed(1)} µg`, klass))
   }
   card.append(rows)
 

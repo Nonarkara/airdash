@@ -14,16 +14,23 @@ import { CONFIG } from './config.js'
  * Hourly rollup days are unioned in so historical days survive raw retention.
  */
 export function listExportDays(db, limit = 365) {
+  // ENSO writes month-granularity obs_times ('2026-05'); those must be kept
+  // out of the skip-scan — a month-format anchor makes the next seek
+  // ('2026-05' || 'T99') jump past every real day in that month.
   return db.all(
     `WITH RECURSIVE d(day) AS (
        SELECT substr(MIN(obs_time), 1, 10) FROM readings
+        WHERE obs_time GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*'
        UNION ALL
-       SELECT (SELECT substr(MIN(obs_time), 1, 10) FROM readings WHERE obs_time > d.day || 'T99')
+       SELECT (SELECT substr(MIN(obs_time), 1, 10) FROM readings
+                WHERE obs_time > d.day || 'T99'
+                  AND obs_time GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*')
        FROM d WHERE d.day IS NOT NULL
      )
      SELECT day FROM d WHERE day IS NOT NULL
      UNION
      SELECT DISTINCT substr(hour, 1, 10) FROM readings_hourly
+      WHERE hour GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*'
      ORDER BY day DESC LIMIT ?`, limit,
   ).map((r) => r.day)
 }
