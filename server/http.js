@@ -125,7 +125,11 @@ export async function readBody(req, limit = 64 * 1024) {
 }
 
 async function serveStatic(req, res, pathname) {
-  const rel = pathname === '/' ? '/index.html' : pathname
+  // Decode percent-encoding so filenames with spaces (e.g. the personal
+  // photo library) resolve to disk. Without this, "Dad%20and%20me%201981.JPG"
+  // gets joined as a literal path with %20 in it, missing the actual file.
+  const decoded = (() => { try { return decodeURIComponent(pathname) } catch { return pathname } })()
+  const rel = decoded === '/' ? '/index.html' : decoded
   const filePath = normalize(join(CONFIG.publicDir, rel))
   // A bare startsWith(publicDir) would also match a sibling directory that
   // happens to share the prefix (e.g. "public-evil"); require a path
@@ -138,7 +142,7 @@ async function serveStatic(req, res, pathname) {
     const info = await stat(filePath)
     if (!info.isFile()) throw new Error('not a file')
     const ext = extname(filePath)
-    const longLived = rel.startsWith('/vendor/') || rel.startsWith('/fonts/') || rel.startsWith('/geo/')
+    const longLived = rel.startsWith('/vendor/') || rel.startsWith('/fonts/') || rel.startsWith('/geo/') || rel.startsWith('/photos/')
     const headers = {
       ...SECURITY_HEADERS,
       'content-type': MIME[ext] ?? 'application/octet-stream',

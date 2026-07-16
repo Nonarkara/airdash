@@ -1332,6 +1332,29 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
   margin: 16px 0; padding: 12px; background: var(--well-dim);
   border: 1px solid var(--rule); overflow-x: auto;
 }
+/* Photo variant of the figure — same paper-figure treatment but a
+   photograph (often landscape) with a figcaption that reads as a
+   proper academic figure label. */
+.rp-figure--photo {
+  padding: 8px;
+  background: var(--well);
+}
+.rp-figure--photo img {
+  display: block;
+  width: 100%;
+  max-height: 460px;
+  object-fit: cover;
+  border: 1px solid var(--rule);
+}
+.rp-figure--photo figcaption {
+  font-family: var(--font-num);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-mid);
+  margin-top: 8px;
+  padding: 6px 8px 0;
+  text-align: left;
+}
 
 /* ── Research paper: Section 1 (Why AirDash Exists) — the design contract.
    Same visual language as the About pane's personal section, but a touch

@@ -275,12 +275,26 @@ function sectionWhy() {
         )}
       </p>
 
+      <figure class="rp-figure rp-figure--photo">
+        <img src="/photos/Dad%20and%20me%201981.JPG" alt="Dad and me · 1981" loading="lazy">
+        <figcaption data-th="ภาพที่ 1: ผู้เขียน (เด็ก) กับบิดา · 1981" data-en="Figure 1: The author (as a child) with his father · 1981">
+          ${tr('ภาพที่ 1: ผู้เขียน (เด็ก) กับบิดา · 1981', 'Figure 1: The author (as a child) with his father · 1981')}
+        </figcaption>
+      </figure>
+
       <p data-th="ขณะที่ผู้เขียนอาศัยอยู่ในเซี่ยงไฮ้ตั้งแต่ปี 2013 ถึง 2016 ได้เกิดวิกฤตคุณภาพอากาศครั้งรุนแรงที่สุดในประวัติศาสตร์เมือง เมื่อ Shanghai Daily รายงานค่า PM2.5 เกิน 200 µg/m³ ในตัวเมือง ท้องฟ้าเต็มไปด้วยฝุ่นราวกับโลกกำลังจะแตก ประสบการณ์นี้ทำให้ผู้เขียนตระหนักว่าอากาศที่หายใจได้เป็นสิทธิขั้นพื้นฐานที่สุด — และถ้าหน่วยงานท้องถิ่น เช่น กรุงเทพมหานคร (BMA) ไม่ดำเนินการ ผู้อยู่อาศัยก็ต้องเสีย 2–3 ปีของอายุขัยโดยไม่จำเป็น" data-en="While the author was living in Shanghai from 2013 to 2016, the city experienced its worst air quality crisis in history — Shanghai Daily reported PM2.5 above 200 µg/m³ in the city centre, and the sky was so dusty it felt like the world was ending. This experience crystallised the author's belief that breathable air is the most basic of rights — and that when local authorities, like Bangkok Metropolitan Administration (BMA), fail to act, residents lose 2–3 years of life expectancy unnecessarily.">
         ${tr(
           'ขณะที่ผู้เขียนอาศัยอยู่ในเซี่ยงไฮ้ตั้งแต่ปี 2013 ถึง 2016 ได้เกิดวิกฤตคุณภาพอากาศครั้งรุนแรงที่สุดในประวัติศาสตร์เมือง เมื่อ Shanghai Daily รายงานค่า PM2.5 เกิน 200 µg/m³ ในตัวเมือง',
           'While the author was living in Shanghai from 2013 to 2016, the city experienced its worst air quality crisis in history — Shanghai Daily reported PM2.5 above 200 µg/m³ in the city centre.'
         )}
       </p>
+
+      <figure class="rp-figure rp-figure--photo">
+        <img src="/photos/From%20Dr%20Non%20Shanghai%20apartment%20window%20when%20red%20alert%20told%20people%20not%20to%20leabe%20home%20and%20close%20windows.JPG" alt="From Dr Non Shanghai apartment window when red alert told people not to leave home and close windows" loading="lazy">
+        <figcaption data-th="ภาพที่ 2: มุมมองจากหน้าต่างห้องพักผู้เขียนในเซี่ยงไฮ้ ขณะเมืองประกาศ 'แดง' — ท้องฟ้าแบนราบ ไม่เห็นขอบฟ้า" data-en="Figure 2: View from the author's apartment in Shanghai during the city's 'red alert' — the sky is a flat grey, the skyline disappears into the haze.">
+          ${tr('ภาพที่ 2: มุมมองจากหน้าต่างห้องพักผู้เขียนในเซี่ยงไฮ้ ขณะเมืองประกาศ "แดง" — ท้องฟ้าแบนราบ ไม่เห็นขอบฟ้า', 'Figure 2: View from the author\'s apartment in Shanghai during the city\'s "red alert" — the sky is a flat grey, the skyline disappears into the haze.')}
+        </figcaption>
+      </figure>
 
       <p data-th="ดังนั้นระบบนี้จึงถูกสร้างขึ้นบนสถาปัตยกรรมเดียวกับ FloodDash (flood.nonarkara.org) แต่ออกแบบใหม่ให้ดูดีกว่า เพราะถ้าเครื่องมือนี้ดูไม่น่าเชื่อถือ คนก็จะไม่ใช้ และถ้าไม่มีใครใช้ ข้อมูลก็ไม่มีความหมาย" data-en="The system is therefore built on the same architecture as FloodDash (flood.nonarkara.org) — but redesigned to be more stylish. Because if the tool doesn't look credible, people won't use it. And if nobody uses it, the data has no meaning.">
         ${tr(

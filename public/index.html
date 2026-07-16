@@ -430,12 +430,13 @@
         </div>
       </div>
 
-      <!-- Photo: the father. Optional — if /img/father.jpg is missing, the
-           figure collapses and the prose still reads cleanly. -->
-      <figure class="about-photo about-photo--father">
-        <img src="/img/father.jpg" alt="บิดาของผู้ก่อตั้ง · The founder's father" loading="lazy" onerror="this.closest('figure').hidden=true">
-        <figcaption data-th="บิดาของผู้ก่อตั้ง — เสียชีวิตก่อนวัยอันควรจากโรคปอด ท่านไม่เคยเห็น AirDash" data-en="The founder's father — died prematurely of lung disease. He never saw AirDash.">
-          บิดาของผู้ก่อตั้ง — เสียชีวิตก่อนวัยอันควรจากโรคปอด ท่านไม่เคยเห็น AirDash
+      <!-- Photo: the father. The 1981 photo is the emotional anchor — the
+           founder as a small child with his father, who would die of lung
+           disease in his early 60s. The filename is the caption. -->
+      <figure class="about-photo about-photo--anchor">
+        <img src="/photos/Dad%20and%20me%201981.JPG" alt="Dad and me · 1981" loading="lazy">
+        <figcaption data-th="พ่อกับผม · 1981 — เขาสูบบุหรี่ตอนหนุ่ม มีปัญหาปอดตั้งแต่เด็ก ท่านไม่เคยเห็น AirDash" data-en="Dad and me · 1981 — he smoked when young and had lung problems from childhood. He never saw AirDash.">
+          Dad and me · 1981 — เขาสูบบุหรี่ตอนหนุ่ม มีปัญหาปอดตั้งแต่เด็ก ท่านไม่เคยเห็น AirDash
         </figcaption>
       </figure>
 
@@ -449,15 +450,60 @@
           AirDash เกิดจากความสูญเสียส่วนตัว — พ่อผมสูบบุหรี่ตอนหนุ่ม และมีปัญหาปอดตั้งแต่เด็ก ในยุคที่การแพทย์ยังไม่ก้าวหน้า ท่านอยู่กับอากาศที่ไม่ดีในกรุงเทพฯ ตลอดช่วงชีวิตทำงาน ท่านเสียชีวิตก่อนวัยอันควรในช่วงต้นของวัยหกสิบ เพื่อนร่วมงานและเพื่อนฝูงหลายคนก็เจ็บป่วยหนักหรือเสียชีวิตด้วยปัญหาที่เริ่มต้นจากคุณภาพอากาศที่แย่ ผมเศร้าทุกครั้งที่เห็นข่าวคนที่ไม่เคยสูบบุหรี่เสียชีวิตเพราะฝุ่น
         </p>
 
+        <!-- Father photo strip — three eras of his father's life. The strip
+             shows him as a public servant in three different roles, and the
+             filenames already read as captions. -->
+        <div class="about-photo-strip" role="group" aria-label="บิดาของผู้ก่อตั้งในสามช่วงเวลา · The founder's father in three eras">
+          <figure class="about-photo-strip-item">
+            <img src="/photos/With%20Dad%20and%20Mom%20in%20Buriram%20where%20Dad%20was%20Governor%20and%20Mom%20ran%20Red%20Cross%202006.jpg" alt="With Dad and Mom in Buriram where Dad was Governor and Mom ran Red Cross · 2006" loading="lazy">
+            <figcaption data-th="กับพ่อและแม่ที่บุรีรัมย์ — พ่อเป็นผู้ว่าราชการ แม่ดูแลกิจการสภากาชาด · 2006" data-en="With Dad and Mom in Buriram where Dad was Governor and Mom ran Red Cross · 2006">
+              With Dad and Mom in Buriram where Dad was Governor and Mom ran Red Cross · 2006
+            </figcaption>
+          </figure>
+          <figure class="about-photo-strip-item">
+            <img src="/photos/With%20Dad%20at%20MIT%202006.jpg" alt="With Dad at MIT · 2006" loading="lazy">
+            <figcaption data-th="กับพ่อที่ MIT · 2006 — ตอนผมเรีนปริญญาโทที่สหรัฐอเมริกา" data-en="With Dad at MIT · 2006 — when I was doing my master's in the United States">
+              With Dad at MIT · 2006
+            </figcaption>
+          </figure>
+          <figure class="about-photo-strip-item">
+            <img src="/photos/With%20Dad%20in%20Minister%20of%20Interior%20Bangkok%202007.JPG" alt="With Dad in Minister of Interior Bangkok · 2007" loading="lazy">
+            <figcaption data-th="กับพ่อที่กระทรวงมหาดไทย · 2007 — ท่านยังรับใช้ประเทศ" data-en="With Dad in Minister of Interior Bangkok · 2007 — he was still serving the country">
+              With Dad in Minister of Interior Bangkok · 2007
+            </figcaption>
+          </figure>
+        </div>
+
         <p data-th="ผมอยู่เซี่ยงไฮ้ตั้งแต่ 2013 ถึง 2016 และได้เจอวิกฤตคุณภาพอากาศที่เลวร้ายที่สุดในประวัติศาสตร์เมือง เมื่อ Shanghai Daily รายงานค่า PM2.5 เกิน 200 ในตัวเมือง และข้างนอกก็เต็มไปด้วยฝุ่นราวกับโลกกำลังจะแตก มันทำให้ผมคิดเรื่องสิทธิขั้นพื้นฐานที่เราทุกคนควรมี — และผมหมายถึงขั้นพื้นฐานที่สุด ถ้าหายใจไม่ออก แล้วจะทำอะไรได้" data-en="I lived in Shanghai from 2013 to 2016, and I experienced the worst air quality crisis in the city's history — when Shanghai Daily reported PM2.5 above 200 in the city, and outside it was so dusty it felt like the world was coming to an end. It got me thinking about the basic rights we should all have — and I mean the most basic. If you can't breathe, what else can you do?">
           ผมอยู่เซี่ยงไฮ้ตั้งแต่ 2013 ถึง 2016 และได้เจอวิกฤตคุณภาพอากาศที่เลวร้ายที่สุดในประวัติศาสตร์เมือง เมื่อ Shanghai Daily รายงานค่า PM2.5 เกิน 200 ในตัวเมือง และข้างนอกก็เต็มไปด้วยฝุ่นราวกับโลกกำลังจะแตก มันทำให้ผมคิดเรื่องสิทธิขั้นพื้นฐานที่เราทุกคนควรมี — และผมหมายถึงขั้นพื้นฐานที่สุด ถ้าหายใจไม่ออก แล้วจะทำอะไรได้
         </p>
 
-        <!-- Photo: Shanghai 2013. Optional. -->
-        <figure class="about-photo about-photo--shanghai">
-          <img src="/img/shanghai-2013.jpg" alt="เซี่ยงไฮ้ 2013 — วันที่ฝุ่นเกิน 200 µg/m³ · Shanghai 2013 — a day over 200 µg/m³" loading="lazy" onerror="this.closest('figure').hidden=true">
-          <figcaption data-th="เซี่ยงไฮ้ ธ.ค. 2013 — ค่า PM2.5 ในตัวเมืองทะลุ 200 µg/m³ เมืองทั้งเมืองราวกับอยู่ในหมอกควัน" data-en="Shanghai, December 2013 — PM2.5 in the city centre topped 200 µg/m³. The whole city felt like it was inside a haze.">
-            เซี่ยงไฮ้ ธ.ค. 2013 — ค่า PM2.5 ในตัวเมืองทะลุ 200 µg/m³ เมืองทั้งเมืองราวกับอยู่ในหมอกควัน
+        <!-- Going out with a mask — the founder had to wear a respirator to
+             step outside. The caption is the filename. -->
+        <figure class="about-photo about-photo--inset">
+          <img src="/photos/Going%20out%20in%20Shanghai%202013.jpg" alt="Going out in Shanghai · 2013" loading="lazy">
+          <figcaption data-th="ออกไปข้างนอกในเซี่ยงไฮ้ · 2013 — ต้องใส่หน้ากากทุกครั้ง" data-en="Going out in Shanghai · 2013 — every step outside required a respirator">
+            Going out in Shanghai · 2013
+          </figcaption>
+        </figure>
+
+        <!-- The red alert day. The Shanghai government told everyone not to
+             leave home and to close windows. The skyline was a flat grey.
+             This is the photo the founder took from his apartment. -->
+        <figure class="about-photo about-photo--hero">
+          <img src="/photos/From%20Dr%20Non%20Shanghai%20apartment%20window%20when%20red%20alert%20told%20people%20not%20to%20leabe%20home%20and%20close%20windows.JPG" alt="From Dr Non Shanghai apartment window when red alert told people not to leave home and close windows" loading="lazy">
+          <figcaption data-th="จากหน้าต่างห้องเช่าที่เซี่ยงไฮ้ — วันที่ทางการเซี่ยงไฮ้ประกาศ 'แดง' ให้คนอยู่บ้าน ปิดหน้าต่าง" data-en="From my Shanghai apartment window — the day the city issued a 'red alert' telling people to stay home and close windows">
+            From my Shanghai apartment window when red alert told people not to leave home and close windows
+          </figcaption>
+        </figure>
+
+        <!-- Same view, two days apart. The two-image composite is built into
+             the file. Captions below name the dates so the reader sees
+             how the same skyline can disappear overnight. -->
+        <figure class="about-photo about-photo--hero">
+          <img src="/photos/From%20Dr.Non's%20Shanghai%20apartment%20window%202014.jpg" alt="From Dr.Non's Shanghai apartment window · 2014 — same view on two different days" loading="lazy">
+          <figcaption data-th="จากหน้าต่างเดียวกัน · 2014 — ภาพบนวันที่อากาศดี ภาพล่างวันที่ฝุ่นปกคลุม เป็นเมืองเดียวกัน เป็นมุมมองเดียวกัน" data-en="From the same window · 2014 — top: a clear day. Bottom: a day when the smog closed in. Same city, same view, hours apart.">
+            From my Shanghai apartment window · 2014 — same view, two different days
           </figcaption>
         </figure>
 
