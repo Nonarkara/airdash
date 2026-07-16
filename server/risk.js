@@ -1,47 +1,72 @@
-// Province flood-risk heuristic. Honest framing: this is a WATCH INDICATOR
+// Province air-watch heuristic. Honest framing: this is a WATCH INDICATOR
 // computed from live observations + forecast — not a prediction model.
 //
-// HII situation_level semantics matter here: 1–2 mean LOW water (drought side),
-// 3 normal, 4 high, 5 overflowing. Only 4–5 contribute flood risk.
+// score = 0.40·pm25 + 0.10·pollutants + 0.15·trend + 0.20·forecast + 0.15·stagnation
 //
-// v2 adds two factors on top of water/rain/forecast:
-//  - wetness: catchment saturation from the API-based wetness engine (own rain
-//    history) — wet ground turns the same rainfall into more runoff.
-//  - riseRate: how fast water levels are climbing right now (last 6h), a
-//    leading signal that precedes situation_level crossing a band.
+//  - pm25: worst fresh ground station (Thai AQI 2023 breakpoints 15/25/37.5/75)
+//  - pollutants: worst of PM10/O3/NO2/SO2/CO against Thai standards
+//  - trend: how fast PM2.5 is climbing right now (last 6h) — a leading signal
+//  - forecast: CAMS PM2.5 outlook (24–48h) through the same curve
+//  - stagnation: ventilation proxy — low wind + no rain coming = nothing
+//    disperses or washes the aerosol out
 // It also persists a snapshot in kv so the UI can show trend arrows.
 import { CONFIG } from './config.js'
 import { nationalVerdict, provinceVerdict } from './verdict.js'
 
-const FRESH_WL_HOURS = 24
-const FRESH_RAIN_HOURS = 26
+const FRESH_PM_HOURS = 6
 const FRESH_FC_HOURS = 13
+const FRESH_RAIN_HOURS = 26
 const RISE_WINDOW_HOURS = 6
-
-const WETNESS_SCORE = { dry: 0, moist: 25, wet: 60, saturated: 100 }
 
 const TREND_KV_KEY = 'risk_prev'
 
-function levelScore(level) {
-  if (level >= 5) return 100
-  if (level >= 4) return 60
+/** Piecewise-linear interpolation over [x, score] anchor points. */
+function curve(anchors, x) {
+  if (x === null || !Number.isFinite(x)) return 0
+  if (x <= anchors[0][0]) return anchors[0][1]
+  for (let i = 1; i < anchors.length; i++) {
+    const [x1, y1] = anchors[i]
+    if (x <= x1) {
+      const [x0, y0] = anchors[i - 1]
+      return Math.round(y0 + ((x - x0) / (x1 - x0)) * (y1 - y0))
+    }
+  }
+  return anchors.at(-1)[1]
+}
+
+const PM25_ANCHORS = [[0, 0], [15, 8], [25, 20], [37.5, 45], [50, 60], [75, 80], [100, 90], [150, 100]]
+const POLLUTANT_ANCHORS = {
+  pm10: [[0, 0], [50, 10], [80, 25], [120, 50], [180, 75], [250, 100]],
+  o3: [[0, 0], [70, 25], [100, 55], [120, 75], [150, 100]],
+  no2: [[0, 0], [100, 30], [170, 60], [250, 100]],
+  so2: [[0, 0], [100, 30], [200, 60], [300, 100]],
+  co: [[0, 0], [9, 30], [15, 60], [30, 100]],
+}
+
+export function pm25Score(ug) { return curve(PM25_ANCHORS, ug) }
+
+function trendScore(rise6h) {
+  if (rise6h === null || !Number.isFinite(rise6h)) return 0
+  if (rise6h >= 25) return 100
+  if (rise6h >= 15) return 70
+  if (rise6h >= 8) return 40
+  if (rise6h >= 4) return 15
   return 0
 }
 
-function rainScore(mm) {
-  if (mm > 135) return 95
-  if (mm > 90) return 80
-  if (mm > 35) return 45
-  if (mm > 10) return 15
-  return 0
-}
-
-function forecastScore(mm48) {
-  if (mm48 >= 150) return 90
-  if (mm48 >= 90) return 70
-  if (mm48 >= 35) return 40
-  if (mm48 >= 10) return 15
-  return 0
+function stagnationScore({ wind, prob24, rainObs24 }) {
+  if (rainObs24 !== null && rainObs24 > 10) return 0 // atmosphere actively washing
+  let s = 0
+  if (wind !== null) {
+    if (wind < 8) s = 70
+    else if (wind < 12) s = 45
+    else if (wind < 16) s = 20
+  }
+  if (prob24 !== null) {
+    if (prob24 < 20) s += 30
+    else if (prob24 < 40) s += 15
+  }
+  return Math.max(0, Math.min(100, s))
 }
 
 function band(score) {
@@ -63,14 +88,18 @@ function localCutoff(hoursAgo) {
   return new Date(Date.now() + 7 * 3600_000 - hoursAgo * 3600_000).toISOString().slice(0, 16)
 }
 
-function riseScore(m) {
-  if (m > 0.6) return 100
-  if (m > 0.35) return 80
-  if (m > 0.15) return 40
-  return 0
+/** Is `date` inside the dust/burning season window (Dec 1 – Apr 30)? */
+export function inDustSeasonWindow(date = new Date()) {
+  const { startMonth, startDay, endMonth, endDay } = CONFIG.dustSeason
+  const local = new Date(date.getTime() + 7 * 3600_000)
+  const m = local.getUTCMonth() + 1
+  const d = local.getUTCDate()
+  if (m > startMonth || (m === startMonth && d >= startDay)) return true
+  if (m < endMonth || (m === endMonth && d <= endDay)) return true
+  return false
 }
 
-export function createRisk(db, wetness) {
+export function createRisk(db, washout) {
   let cache = null
   let cacheAt = 0
 
@@ -105,13 +134,13 @@ export function createRisk(db, wetness) {
     )
   }
 
-  /** Max 6h rise of wl_msl per province: max over stations of (latest - earliest). */
+  /** Max 6h PM2.5 rise per province: max over stations of (latest - earliest). */
   function riseRateByProvince() {
     const rows = db.all(
       `SELECT s.province_code, r.station_key, r.obs_time, r.value
        FROM readings r
        JOIN stations s ON s.source = r.source AND s.station_key = r.station_key
-       WHERE r.source = 'thaiwater_wl' AND r.metric = 'wl_msl' AND r.obs_time >= ?
+       WHERE r.source = 'air4thai' AND r.metric = 'pm25' AND r.obs_time >= ?
        ORDER BY r.station_key, r.obs_time`,
       localCutoff(RISE_WINDOW_HOURS),
     )
@@ -134,11 +163,13 @@ export function createRisk(db, wetness) {
   }
 
   function compute() {
-    const wl = freshRows('thaiwater_wl', ['situation_level', 'storage_pct'], localCutoff(FRESH_WL_HOURS))
-    const rain = freshRows('thaiwater_rain', ['rain_24h', 'rain_1h'], localCutoff(FRESH_RAIN_HOURS))
-    const fc = freshRows('openmeteo', ['precip_fc_48h'], localCutoff(FRESH_FC_HOURS))
+    const air = freshRows('air4thai',
+      ['pm25', 'pm10', 'o3', 'no2', 'so2', 'co', 'aqi'], localCutoff(FRESH_PM_HOURS))
+    const fc = freshRows('openmeteo_aq', ['pm25_fc_24h', 'pm25_fc_48h', 'dust_fc_24h'], localCutoff(FRESH_FC_HOURS))
+    const wx = freshRows('openmeteo', ['wind_fc_kmh', 'precip_prob_24h', 'precip_fc_d0'], localCutoff(FRESH_FC_HOURS))
+    const rain = freshRows('thaiwater_rain', ['rain_24h'], localCutoff(FRESH_RAIN_HOURS))
     const riseByProvince = riseRateByProvince()
-    const wetnessAll = wetness?.all ? wetness.all() : new Map()
+    const washoutAll = washout?.all ? washout.all() : new Map()
 
     const provinces = new Map()
     const prov = (row) => {
@@ -150,90 +181,114 @@ export function createRisk(db, wetness) {
           province_code: row.province_code, province_th: row.province_th, province_en: row.province_en,
           region_th: row.region_th, region_en: row.region_en,
           lat: row.lat, lng: row.lng,
-          water: 0, rain: 0, forecast: 0,
-          stations_l4: 0, stations_l5: 0, storage_over: 0,
-          max_rain_24h: null, max_rain_station_th: null, max_rain_station_en: null,
-          fc_48h: null, wl_stations: 0, rain_stations: 0,
-          top_wl: [],
+          pm25: null, pm25_station_th: null, pm25_station_en: null,
+          aqi: null, pollutant_worst: null,
+          pm25_comp: 0, pollutants_comp: 0, forecast_comp: 0,
+          stations_unhealthy: 0, stations_very_unhealthy: 0,
+          aq_stations: 0, rain_stations: 0,
+          pm25_fc_24h: null, pm25_fc_48h: null, dust_fc_24h: null,
+          wind_fc_kmh: null, precip_prob_24h: null, precip_fc_24h: null,
+          rain_obs_24h: null,
+          top_stations: [],
         }
         provinces.set(key, p)
       }
       return p
     }
 
-    // Water level: level 4/5 counts + storage overflow.
-    const levelByStation = new Map()
-    for (const row of wl) {
+    // Ground truth: pollutant sub-scores + worst PM2.5 station per province.
+    const pmByStation = new Map()
+    for (const row of air) {
       const p = prov(row)
       if (!p) continue
-      if (row.metric === 'situation_level') {
-        p.wl_stations += 1
-        levelByStation.set(row.station_key, row)
-        const score = levelScore(row.value)
-        if (score > p.water) p.water = score
-        if (row.value >= 5) { p.stations_l5 += 1; p.top_wl.push({ th: row.name_th, en: row.name_en, level: row.value }) }
-        else if (row.value >= 4) { p.stations_l4 += 1; p.top_wl.push({ th: row.name_th, en: row.name_en, level: row.value }) }
-      } else if (row.metric === 'storage_pct' && row.value >= 100) {
-        p.storage_over += 1
+      if (row.metric === 'pm25') {
+        p.aq_stations += 1
+        pmByStation.set(row.station_key, row)
+        const s = pm25Score(row.value)
+        if (s > p.pm25_comp) p.pm25_comp = s
+        if (p.pm25 === null || row.value > p.pm25) {
+          p.pm25 = row.value
+          p.pm25_station_th = row.name_th
+          p.pm25_station_en = row.name_en
+        }
+        if (row.value >= CONFIG.thresholds.pm25VeryUnhealthy) {
+          p.stations_very_unhealthy += 1
+          p.top_stations.push({ th: row.name_th, en: row.name_en, pm25: row.value })
+        } else if (row.value >= CONFIG.thresholds.pm25Unhealthy) {
+          p.stations_unhealthy += 1
+          p.top_stations.push({ th: row.name_th, en: row.name_en, pm25: row.value })
+        }
+      } else if (row.metric === 'aqi') {
+        if (p.aqi === null || row.value > p.aqi) p.aqi = row.value
+      } else if (POLLUTANT_ANCHORS[row.metric]) {
+        const s = curve(POLLUTANT_ANCHORS[row.metric], row.value)
+        if (s > p.pollutants_comp) {
+          p.pollutants_comp = s
+          p.pollutant_worst = { metric: row.metric, value: row.value, score: s }
+        }
       }
     }
     for (const p of provinces.values()) {
-      if (p.storage_over > 0) p.water = Math.min(100, p.water + 10)
-      p.top_wl = p.top_wl.sort((a, b) => b.level - a.level).slice(0, 3)
+      p.top_stations = p.top_stations.sort((a, b) => b.pm25 - a.pm25).slice(0, 3)
     }
 
-    // Rain: worst 24h gauge per province; flash-rain bonus.
-    for (const row of rain) {
-      const p = prov(row)
-      if (!p) continue
-      if (row.metric === 'rain_24h') {
-        p.rain_stations += 1
-        if (p.max_rain_24h === null || row.value > p.max_rain_24h) {
-          p.max_rain_24h = row.value
-          p.max_rain_station_th = row.name_th
-          p.max_rain_station_en = row.name_en
-        }
-        const score = rainScore(row.value)
-        if (score > p.rain) p.rain = score
-      } else if (row.metric === 'rain_1h' && row.value >= CONFIG.thresholds.rainFlash1h) {
-        p.rain = Math.min(100, p.rain + 10)
-      }
-    }
-
-    // Forecast per province centroid.
+    // CAMS forecast per province centroid.
     for (const row of fc) {
       const p = prov(row)
       if (!p) continue
-      p.fc_48h = row.value
-      p.forecast = forecastScore(row.value)
+      if (row.metric === 'pm25_fc_24h') p.pm25_fc_24h = row.value
+      else if (row.metric === 'pm25_fc_48h') p.pm25_fc_48h = row.value
+      else if (row.metric === 'dust_fc_24h') p.dust_fc_24h = row.value
+    }
+    // Weather (ventilation + rain-chance) per province centroid.
+    for (const row of wx) {
+      const p = prov(row)
+      if (!p) continue
+      if (row.metric === 'wind_fc_kmh') p.wind_fc_kmh = row.value
+      else if (row.metric === 'precip_prob_24h') p.precip_prob_24h = row.value
+      else if (row.metric === 'precip_fc_d0') p.precip_fc_24h = row.value
+    }
+    // Observed rain (max gauge) — already-falling rain kills the stagnation term.
+    for (const row of rain) {
+      const p = prov(row)
+      if (!p) continue
+      p.rain_stations += 1
+      if (p.rain_obs_24h === null || row.value > p.rain_obs_24h) p.rain_obs_24h = row.value
     }
 
-    // Wetness (catchment saturation) + rise rate (leading signal from wl_msl trend).
+    // Trend (leading signal) + stagnation + washout join.
     for (const p of provinces.values()) {
-      const wEntry = p.province_code ? wetnessAll.get(p.province_code) : null
-      p.wetness_band = wEntry?.band ?? null
-      p.wetness_score = WETNESS_SCORE[wEntry?.band] ?? 0
+      const rise = p.province_code ? riseByProvince.get(p.province_code) : undefined
+      p.rise_6h_ug = rise !== undefined ? Math.round(rise * 10) / 10 : null
+      p.trend_comp = rise !== undefined ? trendScore(rise) : 0
 
-      const riseM = p.province_code ? riseByProvince.get(p.province_code) : undefined
-      p.rise_6h_m = riseM !== undefined ? Math.round(riseM * 100) / 100 : null
-      p.rise_score = riseM !== undefined ? riseScore(riseM) : 0
+      const fcWorst = Math.max(p.pm25_fc_24h ?? 0, p.pm25_fc_48h ?? 0)
+      p.forecast_comp = fcWorst > 0 ? pm25Score(fcWorst) : 0
+
+      p.stagnation_comp = stagnationScore({
+        wind: p.wind_fc_kmh, prob24: p.precip_prob_24h, rainObs24: p.rain_obs_24h,
+      })
+
+      const w = p.province_code ? washoutAll.get(p.province_code) : null
+      p.washout_band = w?.band ?? null
+      p.washout_relief_pct = w?.relief_if_rain_pct ?? null
+      p.washout_expected_pct = w?.expected_relief_pct ?? null
+      p.projected_pm25 = w?.projected_pm25 ?? null
+      p.washout_helps = w?.helps_dust ?? false
     }
 
     const w = CONFIG.risk.weights
     const prevSnapshot = readPrevSnapshot()
     const list = [...provinces.values()].map((p) => {
       const score = Math.round(
-        w.water * p.water + w.rain * p.rain + w.forecast * p.forecast +
-        w.wetness * p.wetness_score + w.riseRate * p.rise_score,
+        w.pm25 * p.pm25_comp + w.pollutants * p.pollutants_comp + w.trend * p.trend_comp +
+        w.forecast * p.forecast_comp + w.stagnation * p.stagnation_comp,
       )
       const key = p.province_code ?? p.province_th
       const prevScore = prevSnapshot?.scores?.[key]
       const delta = typeof prevScore === 'number' ? Math.round(score - prevScore) : null
       // Per-province "so what" card: action verb, time window, 3-4 step
-      // checklist. Drives the expandable action card inside each ranking
-      // row (audit Tier 1 #1 — "Dynamic Action Cards"). Skip the cross-
-      // border / cascade inputs here; the per-place card endpoint enriches
-      // those when the user drills into a specific city.
+      // checklist. Drives the expandable action card inside each ranking row.
       const v = provinceVerdict({ ...p, score, band: band(score), delta })
       const card = {
         level: v.level,
@@ -242,23 +297,16 @@ export function createRisk(db, wetness) {
         checklist: v.checklist,
         window: v.window,
         disclaimer_th: v.disclaimer_th, disclaimer_en: v.disclaimer_en,
-        // Truncate reasons to keep the per-province payload lean — the full
-        // reason list still lives in the place-card endpoint.
         reasons: v.reasons.slice(0, 2),
       }
       return { ...p, score, band: band(score), delta, card }
-    }).sort((a, b) => b.score - a.score || (b.max_rain_24h ?? 0) - (a.max_rain_24h ?? 0))
+    }).sort((a, b) => b.score - a.score || (b.pm25 ?? 0) - (a.pm25 ?? 0))
 
     persistTrendSnapshot(prevSnapshot, list)
 
     // National rollup.
-    const byLevel = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-    for (const row of levelByStation.values()) {
-      const lv = Math.round(row.value)
-      if (byLevel[lv] !== undefined) byLevel[lv] += 1
-    }
-    const worstRain = list.reduce((acc, p) =>
-      (p.max_rain_24h !== null && (acc === null || p.max_rain_24h > acc.max_rain_24h)) ? p : acc, null)
+    const worstPm25 = list.reduce((acc, p) =>
+      (p.pm25 !== null && (acc === null || p.pm25 > acc.pm25)) ? p : acc, null)
 
     const bandCounts = { normal: 0, watch: 0, elevated: 0, high: 0 }
     for (const p of list) bandCounts[p.band] += 1
@@ -266,40 +314,40 @@ export function createRisk(db, wetness) {
       : list.some((p) => p.band === 'elevated') ? 'elevated'
       : list.some((p) => p.band === 'watch') ? 'watch' : 'normal'
 
-    // Soil saturation: % of provinces with wetness in {wet, saturated}. The
-    // audit's "85% national soil saturation" framing uses this exact metric.
-    // When it crosses 70% we're in flood season — the "Normal" band label
-    // becomes lethal (normalcy bias). Frontend swaps it to "LOW — STAY
-    // INFORMED" so a low score today doesn't lull residents into thinking
-    // "all clear" while 2 in 3 provinces are already primed to flood.
-    const provincesWithWetness = list.filter((p) => p.wetness_band)
-    const wetSaturatedCount = provincesWithWetness
-      .filter((p) => p.wetness_band === 'wet' || p.wetness_band === 'saturated').length
-    const soilSaturationPct = provincesWithWetness.length > 0
-      ? Math.round((wetSaturatedCount / provincesWithWetness.length) * 100)
+    // Dust load: % of provinces whose worst PM2.5 is past the Thai "moderate"
+    // bound (25 µg/m³). When it crosses the trigger inside the burning-season
+    // window we're in dust season — the "Normal" band label becomes lulling
+    // (normalcy bias). Frontend swaps it to "LOW — STAY INFORMED" so a clean
+    // morning doesn't read as "season over" while a third of the country is
+    // already above the moderate line.
+    const provincesWithPm = list.filter((p) => p.pm25 !== null)
+    const dustyProvinceCount = provincesWithPm
+      .filter((p) => p.pm25 >= CONFIG.thresholds.pm25Moderate).length
+    const dustLoadPct = provincesWithPm.length > 0
+      ? Math.round((dustyProvinceCount / provincesWithPm.length) * 100)
       : 0
-    const floodSeason = soilSaturationPct >= 70
+    const dustSeason = inDustSeasonWindow() && dustLoadPct >= CONFIG.dustSeason.dustLoadPctTrigger
 
     // Effective national band: if the raw band says "normal" but we're in
-    // flood season, escalate to a "low" pseudo-band so the UI can render the
+    // dust season, escalate to a "low" pseudo-band so the UI can render the
     // "STAY INFORMED" treatment. The flag lets the UI swap the label.
-    const effectiveBand = (nationalBand === 'normal' && floodSeason) ? 'low' : nationalBand
+    const effectiveBand = (nationalBand === 'normal' && dustSeason) ? 'low' : nationalBand
 
     const result = {
       updated: new Date().toISOString(),
-      method_th: 'ดัชนีเฝ้าระวังจากข้อมูลจริง (ระดับน้ำ 40% · ฝนสะสม 25% · พยากรณ์ 15% · ความชุ่มน้ำ 10% · อัตราการเพิ่มระดับ 10%) — ไม่ใช่การพยากรณ์',
-      method_en: 'Watch indicator from live data (water 40% · rain 25% · forecast 15% · ground wetness 10% · rise rate 10%) — heuristic, not a forecast',
+      method_th: 'ดัชนีเฝ้าระวังจากข้อมูลจริง (PM2.5 40% · มลพิษอื่น 10% · แนวโน้ม 15% · พยากรณ์ 20% · การระบายอากาศ 15%) — ไม่ใช่การพยากรณ์',
+      method_en: 'Watch indicator from live data (PM2.5 40% · other pollutants 10% · trend 15% · forecast 20% · ventilation 15%) — heuristic, not a forecast',
       national: {
-        band: nationalBand,            // raw rollup (true risk picture)
-        effective_band: effectiveBand,  // display band (with flood-season override)
-        byLevel, bandCounts,
-        worstRain: worstRain && {
-          province_th: worstRain.province_th, province_en: worstRain.province_en, mm: worstRain.max_rain_24h,
+        band: nationalBand,            // raw rollup (true air picture)
+        effective_band: effectiveBand,  // display band (with dust-season override)
+        bandCounts,
+        worstPm25: worstPm25 && {
+          province_th: worstPm25.province_th, province_en: worstPm25.province_en, ug: worstPm25.pm25,
         },
-        soilSaturationPct,               // 0–100, % provinces wet/saturated
-        wetSaturatedCount,
-        soilSampledCount: provincesWithWetness.length,
-        floodSeason,                     // true ⇒ "Normal" → "LOW" UI override
+        dustLoadPct,                     // 0–100, % provinces ≥ 25 µg/m³
+        dustyProvinceCount,
+        dustSampledCount: provincesWithPm.length,
+        dustSeason,                      // true ⇒ "Normal" → "LOW" UI override
         // Worst-case province score — used by the hero to show
         // the national-scale confidence interval (±5 by default).
         max_province_score: list.length ? list[0].score : 0,
@@ -318,9 +366,8 @@ export function createRisk(db, wetness) {
         cache = compute()
         cacheAt = now
         // Mirror to kv so background jobs (line-push cron, dead-sensor
-        // scanner) can read the same risk picture without holding a
-        // reference to the in-process cache. The payload is gzipped on
-        // the wire but stored as JSON here; ~135 KB is fine for a kv row.
+        // scanner) can read the same picture without holding a reference
+        // to the in-process cache.
         try { db.kvSet('risk_snapshot_cache', JSON.stringify(cache)) } catch {}
       }
       return cache

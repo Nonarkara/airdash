@@ -1,18 +1,19 @@
-// Flood news: Google News RSS (Thai flood query) + Khaosod general feed
-// filtered to flood keywords. Tiny regex RSS parser — feeds are simple RSS 2.0.
+// Air-quality news: Google News RSS (Thai PM2.5/haze query) + Khaosod general
+// feed filtered to dust keywords. Tiny regex RSS parser — feeds are simple RSS 2.0.
 import { CONFIG } from '../config.js'
 import { fetchText, str } from '../util.js'
 
 const FEEDS = [
   {
-    id: 'gnews_flood',
-    url: 'https://news.google.com/rss/search?q=%E0%B8%99%E0%B9%89%E0%B8%B3%E0%B8%97%E0%B9%88%E0%B8%A7%E0%B8%A1%20OR%20%E0%B8%AD%E0%B8%B8%E0%B8%97%E0%B8%81%E0%B8%A0%E0%B8%B1%E0%B8%A2&hl=th&gl=TH&ceid=TH:th',
-    preFiltered: true, // query itself is น้ำท่วม OR อุทกภัย
+    id: 'gnews_air',
+    // Query: ฝุ่น PM2.5 OR หมอกควัน OR ค่าฝุ่น
+    url: 'https://news.google.com/rss/search?q=%E0%B8%9D%E0%B8%B8%E0%B9%88%E0%B8%99%20PM2.5%20OR%20%E0%B8%AB%E0%B8%A1%E0%B8%AD%E0%B8%81%E0%B8%84%E0%B8%A7%E0%B8%B1%E0%B8%99%20OR%20%E0%B8%84%E0%B9%88%E0%B8%B2%E0%B8%9D%E0%B8%B8%E0%B9%88%E0%B8%99&hl=th&gl=TH&ceid=TH:th',
+    preFiltered: true,
   },
   { id: 'khaosod', url: 'https://www.khaosod.co.th/feed', preFiltered: false },
 ]
 
-const FLOOD_KEYWORDS = ['น้ำท่วม', 'อุทกภัย', 'น้ำป่า', 'น้ำล้นตลิ่ง', 'ฝนตกหนัก', 'ดินถล่ม', 'ระบายน้ำ', 'มวลน้ำ', 'flood']
+const AIR_KEYWORDS = ['pm2.5', 'pm 2.5', 'pm10', 'ฝุ่น', 'หมอกควัน', 'ค่าฝุ่น', 'คุณภาพอากาศ', 'เผา', 'ไฟป่า', 'จุดความร้อน', 'haze', 'air quality', 'smog']
 
 function decodeEntities(s) {
   return s
@@ -41,8 +42,8 @@ export function parseRss(xml) {
 
 export default {
   name: 'news',
-  label_th: 'ข่าวน้ำท่วม',
-  label_en: 'Flood news',
+  label_th: 'ข่าวฝุ่น/คุณภาพอากาศ',
+  label_en: 'Air quality news',
   intervalMs: CONFIG.intervals.news,
   enabled: true,
 
@@ -61,7 +62,7 @@ export default {
       const items = parseRss(res.value)
 
       for (const item of items) {
-        if (!feed.preFiltered && !FLOOD_KEYWORDS.some((k) => item.title.toLowerCase().includes(k))) continue
+        if (!feed.preFiltered && !AIR_KEYWORDS.some((k) => item.title.toLowerCase().includes(k))) continue
         seen += 1
         const published = item.pubDate ? new Date(item.pubDate) : null
         const isNew = db.insertNews({

@@ -1,28 +1,20 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, emit, store } from './state.js?v=2.0.0-final'
-import { tr, pick, BAND, LEVEL_NAME } from './i18n.js?v=2.0.0-final'
-import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.0.0-final'
-import { createRiversLayer } from './layers/rivers.js?v=2.0.0-final'
-import { createWaterflowLayer } from './layers/waterflow.js?v=2.0.0-final'
-import { createHistoryLayer } from './layers/history.js?v=2.0.0-final'
+import { on, store } from './state.js?v=2.0.0-final'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.0.0-final'
 import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.0.0-final'
 import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.0.0-final'
-import { createSheltersLayer } from './layers/shelters.js?v=2.0.0-final'
 import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles } from './layers/satellite.js?v=2.0.0-final'
 import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.0.0-final'
-import { paintRisk, paintWater, paintRain, paintDams, paintAqi } from './paint.js?v=2.0.0-final'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.0.0-final'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
 const layers = {}
 let satLayers = null
-let riversApi = null
-let waterflowApi = null
-let historyApi = null
 let osmBuildingsApi = null
 let basemaps = null
-const BASEMAP_KEY = 'fd_basemap'
+const BASEMAP_KEY = 'ad_basemap'
 let currentBasemap = (() => {
   const saved = localStorage.getItem(BASEMAP_KEY)
   return BASEMAP_META.some((b) => b.id === saved) ? saved : 'street'
@@ -46,31 +38,17 @@ export function initMap() {
   layers.modis = satLayers.modis
 
   layers.risk = L.layerGroup([], { pane: 'data' })
-  layers.water = L.layerGroup([], { pane: 'data' })
+  layers.air = L.layerGroup([], { pane: 'data' })
   layers.rain = L.layerGroup([], { pane: 'data' })
-  layers.dams = L.layerGroup([], { pane: 'data' })
-  layers.aqi = L.layerGroup([], { pane: 'data' })
-  riversApi = createRiversLayer(map)
-  layers.rivers = L.layerGroup([riversApi.network, riversApi.cascade], { pane: 'vectors' })
-  waterflowApi = createWaterflowLayer()
-  layers.waterflow = L.layerGroup([waterflowApi.group], { pane: 'vectors' })
-  on('rivers', (data) => waterflowApi.draw(data))
-  historyApi = createHistoryLayer()
-  layers.history = historyApi.group
   osmBuildingsApi = createOsmBuildingsLayer({ getMap: () => map, getRisk: () => store.snapshot?.risk })
   layers.osmbuild = osmBuildingsApi.group
   const boundariesApi = createProvinceBoundariesLayer()
   layers.boundaries = boundariesApi.group
-  const sheltersApi = createSheltersLayer(map)
-  layers.shelters = sheltersApi.group
   initRadar()
 
   for (const t of allLayerToggles()) {
     if (t.on && layers[t.id]) {
       layers[t.id].addTo(map)
-      if (t.id === 'rivers') riversApi.onAdd()
-      if (t.id === 'waterflow') waterflowApi.onAdd()
-      if (t.id === 'history') historyApi.onAdd()
       if (t.id === 'osmbuild') osmBuildingsApi.onAdd()
     }
   }
@@ -78,7 +56,7 @@ export function initMap() {
   addLayerControl()
   addLegend()
   // Expose for testing/devtools — never used by app code.
-  window.__flooddash = { map, layers, osmBuildingsApi }
+  window.__airdash = { map, layers, osmBuildingsApi }
 
   on('snapshot', renderAll)
   on('lang', () => { addLegend(); addLayerControl(); renderAll(store.snapshot) })
@@ -89,29 +67,29 @@ export function initMap() {
 function renderAll(snap) {
   if (!snap) return
   paintRisk(layers, snap.risk)
-  paintWater(layers, snap.water, { getZoom: () => map.getZoom() })
+  renderAir(snap.air)
   paintRain(layers, snap.rain)
-  paintDams(layers, snap.dams)
-  paintAqi(layers, snap.aqi)
 }
 
-let waterStations = null
+let airStations = null
 let zoomHookInstalled = false
 
-function renderWater(stations) {
-  if (stations) waterStations = stations
+// AQ stations re-render on the zoom-detail boundary: at close zoom the worst
+// stations (Thai AQI level ≥4) swap from dots to numeric PM2.5 badges.
+function renderAir(stations) {
+  if (stations) airStations = stations
   if (!zoomHookInstalled) {
     zoomHookInstalled = true
     let wasDetailed = map.getZoom() >= 8
     map.on('zoomend', () => {
       const detailed = map.getZoom() >= 8
-      if (detailed !== wasDetailed) { wasDetailed = detailed; renderWater(null) }
+      if (detailed !== wasDetailed) { wasDetailed = detailed; renderAir(null) }
     })
   }
-  paintWater(layers, waterStations, { getZoom: () => map.getZoom() })
+  paintAir(layers, airStations, { getZoom: () => map.getZoom() })
 }
 
-// ── RainViewer radar with animation ────────────────────────────────────────
+// ── RainViewer radar with animation — rain = washout relief ────────────────
 const radar = { frames: [], idx: 0, playing: true, timer: null, layer: null }
 
 function initRadar() {
@@ -159,14 +137,10 @@ function toggleLayer(t) {
   if (!layer) return
   if (t.on) {
     layer.addTo(map)
-    if (t.id === 'rivers') riversApi.onAdd()
-    if (t.id === 'waterflow') waterflowApi.onAdd()
-    if (t.id === 'history') historyApi.onAdd()
     if (t.id === 'osmbuild') osmBuildingsApi.onAdd()
   } else {
     layer.remove()
-    if (t.id === 'rivers') riversApi.onRemove()
-    if (t.id === 'waterflow') waterflowApi.onRemove()
+    if (t.id === 'osmbuild') osmBuildingsApi.onRemove()
   }
 }
 
@@ -250,21 +224,18 @@ function addLegend() {
     head.textContent = tr('คำอธิบายแผนที่', 'Map legend')
     const body = L.DomUtil.create('div', 'legend-body', div)
     body.hidden = true
-    const LV_COLOR = { 1: '#B7AFA3', 2: '#948C7F', 3: '#00933C', 4: '#E86A10', 5: '#A51931' }
-    const lv = (n) => `<div class="lrow"><span class="lsw" style="background:${LV_COLOR[n]}"></span>${n} ${LEVEL_NAME[n].th} · ${LEVEL_NAME[n].en}</div>`
+    // Thai AQI 2023 PM2.5 breakpoints — sample µg/m³ per level for swatch colour.
+    const PM_SAMPLE = { 1: 10, 2: 20, 3: 30, 4: 50, 5: 90 }
+    const PM_RANGE = { 1: '≤15', 2: '15–25', 3: '25–37.5', 4: '37.5–75', 5: '>75' }
+    const lv = (n) => `<div class="lrow"><span class="lsw" style="background:${pm25Color(PM_SAMPLE[n])}"></span>${PM_RANGE[n]} ${tr('มคก./ลบ.ม.', 'µg/m³')} · ${LEVEL_NAME[n][store.lang]}</div>`
     body.innerHTML = `
-      <div class="eyebrow">${tr('ระดับน้ำ (สสน.)', 'WATER LEVEL (HII)')}</div>
+      <div class="eyebrow">${tr('PM2.5 (AQI ไทย 2566)', 'PM2.5 (THAI AQI 2023)')}</div>
       ${[5, 4, 3, 2, 1].map(lv).join('')}
-      <div class="lrow" style="margin-top:4px"><span class="lsw round" style="background:#0039A6;opacity:.5"></span>${tr('ฝนสะสม 24 ชม.', 'rain 24h')}</div>
+      <div class="lrow" style="margin-top:4px"><span class="lsw round" style="background:#0039A6;opacity:.5"></span>${tr('ฝนสะสม 24 ชม. (ช่วยล้างฝุ่น)', 'rain 24h (washout)')}</div>
       <div class="lrow"><span class="lsw round" style="background:#1565C0;opacity:.5"></span>${tr('GPM IMERG ฝนดาวเทียม', 'GPM IMERG satellite rain')}</div>
       <div class="lrow"><span class="lsw" style="background:#5C6BC0;opacity:.6"></span>${tr('Himawari-9 IR เมฆ', 'Himawari-9 IR clouds')}</div>
-      <div class="eyebrow" style="margin-top:6px">${tr('เส้นทางน้ำ', 'WATERWAYS')}</div>
-      <div class="lrow"><span class="lsw" style="background:#0039A6;height:3px"></span>${tr('แม่น้ำสายหลัก (มีสถานีวัด)', 'major river (gauged)')}</div>
-      <div class="lrow"><span class="lsw" style="background:#6FA8D8;height:1px;opacity:.6"></span>${tr('ลำน้ำ/คลองย่อย', 'streams / canals')}</div>
-      <div class="lrow"><span class="lsw round" style="background:#1D66A8"></span>${tr('จุดไหล — ตามทิศจริง', 'flow dots — real direction')}</div>
-      <div class="eyebrow" style="margin-top:6px">${tr('น้ำท่วมในอดีต', 'HISTORICAL FLOODS')}</div>
-      <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.18;border:1px dashed #A51931"></span>${tr('พื้นที่ท่วม (ประมาณ)', 'flood extent (approx.)')}</div>
-      <div class="lrow"><span class="lsw" style="background:#A51931"></span>${tr('ปีที่เกิด', 'year pin')}</div>`
+      <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
+      <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>`
     head.onclick = () => {
       body.hidden = !body.hidden
       head.setAttribute('aria-expanded', body.hidden ? 'false' : 'true')

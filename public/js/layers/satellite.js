@@ -1,6 +1,7 @@
 // JAXA / NASA GIBS satellite tile layers — Web Mercator (EPSG:3857) to match
-// the Carto basemap. Himawari-9 (JAXA/JMA) and GPM IMERG (JAXA/GPM mission)
-// are the flood-relevant layers; MODIS true colour for clear-sky context.
+// the Carto basemap. GPM IMERG rain (washout verification) and Himawari-9 IR
+// cloud are the air-relevant layers; MODIS true colour doubles as a smoke /
+// haze-plume view on burning-season days.
 //
 // References:
 //   https://earth.jaxa.jp/en/data/index.html  — JAXA data catalog
@@ -97,10 +98,8 @@ export const LAYER_GROUPS = [
     th: 'ข้อมูลภาคสนาม',
     en: 'GROUND OBSERVATIONS',
     layers: [
-      { id: 'water', th: 'สถานีระดับน้ำ', en: 'water level', on: true },
-      { id: 'rain', th: 'ฝนสะสม 24 ชม.', en: 'rain 24h', on: false },
-      { id: 'dams', th: 'เขื่อนขนาดใหญ่', en: 'major dams', on: false },
-      { id: 'aqi', th: 'คุณภาพอากาศ', en: 'air quality', on: false },
+      { id: 'air', th: 'สถานีคุณภาพอากาศ (Air4Thai)', en: 'AQ stations (Air4Thai)', on: true },
+      { id: 'rain', th: 'ฝนสะสม 24 ชม. (ล้างฝุ่น)', en: 'rain 24h (washout)', on: false },
     ],
   },
   {
@@ -110,11 +109,7 @@ export const LAYER_GROUPS = [
     layers: [
       { id: 'risk', th: 'ชั้นความเสี่ยงจังหวัด', en: 'province risk', on: true },
       { id: 'boundaries', th: 'ขอบเขตจังหวัด (data.go.th)', en: 'province boundaries (DOPA)', on: false },
-      { id: 'rivers', th: 'เส้นทางน้ำเชื่อมโยง', en: 'connected waterways', on: false },
-      { id: 'waterflow', th: 'ทิศทางการไหลของน้ำ', en: 'water flow direction', on: false },
-      { id: 'history', th: 'น้ำท่วมในอดีต', en: 'historical floods', on: false },
-      { id: 'osmbuild', th: 'อาคารเสี่ยง OSM', en: 'OSM at-risk buildings', on: false },
-      { id: 'shelters', th: 'ศูนย์พักพิง (DDPM, 11K)', en: 'shelters (DDPM, 11K)', on: false },
+      { id: 'osmbuild', th: 'อาคารพื้นที่เสี่ยง OSM', en: 'OSM buildings in risk areas', on: false },
     ],
   },
 ]

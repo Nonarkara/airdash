@@ -230,23 +230,23 @@ export function placeDetail(db, { lat, lng, province_th = null, radius_km = 30 }
   const distSelect = `${distExpr} AS distance_km`
   const distParams = [lat, lat, lng] // degrees — see distExpr note above
 
-  // Subselect pulls (station, latest wl_msl, latest storage_pct) from
-  // the `latest` table joined twice. The outer query computes the
-  // distance from the user's lat/lng and sorts by it.
-  const nearest_water = db.all(
+  // Subselect pulls (station, latest pm25, latest aqi) from the `latest`
+  // table joined twice. The outer query computes the distance from the
+  // user's lat/lng and sorts by it.
+  const nearest_air = db.all(
     `WITH w AS (
-       SELECT l.station_key, l.value AS wl_msl, l.obs_time,
+       SELECT l.station_key, l.value AS pm25, l.obs_time,
               s.source, s.name_th, s.name_en, s.province_th, s.province_en,
-              s.basin_th, s.basin_en, s.lat, s.lng,
-              sl.value AS situation_level, sp.value AS storage_pct
+              s.lat, s.lng,
+              sa.value AS aqi, sp.value AS pm10
          FROM latest l
          JOIN stations s
            ON s.source = l.source AND s.station_key = l.station_key
-         LEFT JOIN latest sl
-           ON sl.source = l.source AND sl.station_key = l.station_key AND sl.metric = 'situation_level'
+         LEFT JOIN latest sa
+           ON sa.source = l.source AND sa.station_key = l.station_key AND sa.metric = 'aqi'
          LEFT JOIN latest sp
-           ON sp.source = l.source AND sp.station_key = l.station_key AND sp.metric = 'storage_pct'
-         WHERE l.metric = 'wl_msl'
+           ON sp.source = l.source AND sp.station_key = l.station_key AND sp.metric = 'pm10'
+         WHERE l.source = 'air4thai' AND l.metric = 'pm25'
            AND s.lat IS NOT NULL AND s.lng IS NOT NULL
            AND s.lat BETWEEN ? AND ? AND s.lng BETWEEN ? AND ?
      )
@@ -270,25 +270,25 @@ export function placeDetail(db, { lat, lng, province_th = null, radius_km = 30 }
     latLo, latHi, lngLo, lngHi,
     ...distParams, ...distParams, radius_km)
 
-  // 6-hour trend per nearest water station — the arrow that turns a static
-  // number into "rising fast". At most 5 stations, each an indexed point
+  // 6-hour trend per nearest AQ station — the arrow that turns a static
+  // number into "climbing fast". At most 5 stations, each an indexed point
   // lookup on idx_readings_lookup, so this stays sub-ms.
   const trendCutoff = new Date(Date.now() + 7 * 3600_000 - 6 * 3600_000)
     .toISOString().slice(0, 16)
-  for (const s of nearest_water) {
+  for (const s of nearest_air) {
     const past = db.get(
       `SELECT value FROM readings
-        WHERE source = ? AND station_key = ? AND metric = 'wl_msl' AND obs_time <= ?
+        WHERE source = ? AND station_key = ? AND metric = 'pm25' AND obs_time <= ?
         ORDER BY obs_time DESC LIMIT 1`,
       s.source, s.station_key, trendCutoff)
-    s.trend_6h = (past?.value != null && s.wl_msl != null)
-      ? Math.round((s.wl_msl - past.value) * 100) / 100
+    s.trend_6h = (past?.value != null && s.pm25 != null)
+      ? Math.round((s.pm25 - past.value) * 10) / 10
       : null
   }
 
-  // Rain outlook for the parent province: 48h total plus the day-by-day
-  // breakdown (today / tomorrow / day after) so the city board can show
-  // WHEN the rain lands, not just how much.
+  // Rain + dust outlook for the parent province: rain chance and amounts
+  // (the washout inputs) plus the CAMS PM2.5 forecast, so the city board
+  // can show WHEN relief lands, not just how much.
   let province_forecast = null
   if (province_th) {
     const prov = loadProvinces().list.find((p) =>
@@ -296,22 +296,28 @@ export function placeDetail(db, { lat, lng, province_th = null, radius_km = 30 }
     const province_code = prov?.provinceCode ?? null
     if (province_code) {
       const rows = db.all(
-        `SELECT metric, value, obs_time FROM latest
-          WHERE source = 'openmeteo' AND station_key = ?
-            AND metric IN ('precip_fc_48h','precip_fc_d0','precip_fc_d1','precip_fc_d2')`,
+        `SELECT source, metric, value, obs_time FROM latest
+          WHERE station_key = ?
+            AND ((source = 'openmeteo' AND metric IN ('precip_fc_48h','precip_fc_d0','precip_fc_d1','precip_fc_d2','precip_prob_24h','precip_prob_48h','wind_fc_kmh'))
+              OR (source = 'openmeteo_aq' AND metric IN ('pm25_fc_24h','pm25_fc_48h','pm25_fc_72h','dust_fc_24h')))`,
         String(province_code))
       if (rows.length) {
         const m = Object.fromEntries(rows.map((r) => [r.metric, r.value]))
         province_forecast = {
           fc_48h: m.precip_fc_48h ?? null,
           d0: m.precip_fc_d0 ?? null, d1: m.precip_fc_d1 ?? null, d2: m.precip_fc_d2 ?? null,
+          prob_24h: m.precip_prob_24h ?? null, prob_48h: m.precip_prob_48h ?? null,
+          wind_kmh: m.wind_fc_kmh ?? null,
+          pm25_24h: m.pm25_fc_24h ?? null, pm25_48h: m.pm25_fc_48h ?? null, pm25_72h: m.pm25_fc_72h ?? null,
+          dust_24h: m.dust_fc_24h ?? null,
           obs_time: rows[0].obs_time,
         }
       }
     }
   }
 
-  return { nearest_water, nearest_rain, province_forecast }
+  // nearest_water kept as an alias so older clients don't blank out.
+  return { nearest_air, nearest_water: nearest_air, nearest_rain, province_forecast }
 }
 
 // Universal place search — combines DB-backed stations, focus areas, and
@@ -382,13 +388,11 @@ export function searchGazetteer(db, { q = '', limit = 20, lang = 'en' } = {}) {
        LIMIT 8`,
       like, like, like, like, like, like)
     for (const r of stationRows) {
-      const subtype = r.source === 'thaiwater_rain' ? 'rain'
-                    : r.source === 'thaiwater_dam'  ? 'dam'
-                    : 'water'
+      const subtype = r.source === 'thaiwater_rain' ? 'rain' : 'air'
       results.push({
         type: 'station', subtype,
-        type_th: 'สถานี' + (subtype === 'rain' ? 'ฝน' : subtype === 'dam' ? 'เขื่อน' : 'น้ำ'),
-        type_en: subtype === 'rain' ? 'Rain gauge' : subtype === 'dam' ? 'Dam' : 'Water level',
+        type_th: 'สถานี' + (subtype === 'rain' ? 'ฝน' : 'วัดฝุ่น'),
+        type_en: subtype === 'rain' ? 'Rain gauge' : 'Air quality',
         name_th: r.name_th, name_en: r.name_en,
         province_th: r.province_th, province_en: r.province_en,
         lat: r.lat, lng: r.lng,

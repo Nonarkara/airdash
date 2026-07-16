@@ -1,17 +1,18 @@
 // Sensor health / data-quality engine.
 //
-// Flood decisions are only as good as the data feeding them. This module scans
-// the live database for stations that look broken, stale, or suspicious, and
-// produces operator-readable signals. It is deliberately conservative:
+// Air-quality decisions are only as good as the data feeding them. This module
+// scans the live database for stations that look broken, stale, or suspicious,
+// and produces operator-readable signals. It is deliberately conservative:
 // it flags *indicators* of sensor problems so a human can verify, never
 // silently discards readings.
 //
 // Heuristics (all thresholds live in CONFIG.sensorHealth):
 //   - stale    : no new reading within the source's expected freshness window
 //   - flatline : value unchanged for many consecutive observations
-//   - outlier  : value far outside plausible physical bounds
-//   - mismatch : rain is falling nearby but the water level never moves,
-//                or water is rising fast without any recent rain
+//   - outlier  : value far outside plausible physical bounds, or a PM2.5
+//                spike at one station while the rest of the province is calm
+//   - mismatch : rain is scrubbing the province but a monitor's PM2.5 keeps
+//                climbing anyway (wet deposition should pull it down)
 import { CONFIG } from './config.js'
 import { num } from './util.js'
 
@@ -19,34 +20,38 @@ import { num } from './util.js'
 // These follow the native cadences in CONFIG.intervals with generous headroom
 // for upstream hiccups and seasonal maintenance windows.
 const FRESHNESS_MS = {
-  thaiwater_wl: 4 * 3600_000,     // 10-min cadence → 4 h grace
-  thaiwater_rain: 4 * 3600_000,
-  thaiwater_dam: 48 * 3600_000,   // daily dam bulletins, allow 2 days
-  rid_reservoir: 48 * 3600_000,   // reservoir bulletins are often daily
-  air4thai: 8 * 3600_000,
-  openmeteo: 12 * 3600_000,
-  glofas: 48 * 3600_000,          // GloFAS can lag on weekends/holidays
-  enso: 90 * 24 * 3600_000,       // monthly index
+  air4thai: 3 * 3600_000,        // hourly PCD publish → 3 h grace
+  thaiwater_rain: 4 * 3600_000,  // 10-min cadence → 4 h grace
+  openmeteo: 7 * 3600_000,       // 3-h forecast refresh → 7 h grace
+  openmeteo_aq: 7 * 3600_000,    // CAMS runs are 12-hourly upstream; poll is 3 h
+  enso: 48 * 3600_000,           // ONI revises monthly; the poll is 12-hourly
+  imerg: 6 * 3600_000,           // half-hourly with ~4 h upstream latency
 }
 
 // Recent window we scan for flatline detection. Wide enough to hold well over
-// the required identical-sample count for 10-min/hourly gauges, narrow enough
-// that the two set-based flatline queries stay index-bounded (~0.5s vs the ~3s
+// the required identical-sample count for hourly AQ monitors, narrow enough
+// that the set-based flatline query stays index-bounded (~0.5s vs the ~3s
 // per-station loop this replaced).
 const FLATLINE_WINDOW_H = 12
 
 // Physical plausibility bounds per metric.
 const BOUNDS = {
+  pm25:     { min: 0, max: 1000 },        // µg/m³ — >1000 is instrument failure
+  pm10:     { min: 0, max: 2000 },        // µg/m³
+  o3:       { min: 0, max: 500 },         // ppb
+  no2:      { min: 0, max: 500 },         // ppb
+  so2:      { min: 0, max: 500 },         // ppb
+  co:       { min: 0, max: 100 },         // ppm
+  aqi:      { min: 0, max: 1000 },
   rain_24h: { min: 0, max: 1500 },        // > 1.5 m/day is physically extreme
   rain_1h:  { min: 0, max: 300 },         // > 300 mm/h is world-record territory
-  wl_msl:   { min: -50, max: 5000 },      // m above MSL
-  situation_level: { min: 1, max: 5 },
-  storage_pct: { min: 0, max: 200 },
-  dam_storage_pct: { min: 0, max: 200 },
-  rsv_storage_pct: { min: 0, max: 200 },
-  aqi:      { min: 0, max: 1000 },
-  pm25:     { min: 0, max: 1000 },
 }
+
+// Spike detection: a localized PM2.5 jump is suspicious when the province
+// median barely moved — either a faulty sensor or a very local fire.
+const SPIKE_PROVINCE_MEDIAN_UG = 10
+// Mismatch detection: this much rain in 6 h should scrub PM, not let it rise.
+const MISMATCH_RAIN_6H_MM = 10
 
 function parseObsTime(iso) {
   if (!iso) return NaN
@@ -158,13 +163,15 @@ function computeSensorHealth(db) {
   // Classify stale/outlier.
   const classified = stations.map((s) => classifyStation(s, nowMs))
 
-  // Flatline detection: flag gauges that report the exact same value across
+  // Flatline detection: flag monitors that report the exact same value across
   // their recent readings. We are conservative:
+  //   - AQ monitors: only when the repeated PM2.5 is > 0 (a true zero is rare
+  //     but possible after heavy rain — still, a string of identical zeros on
+  //     an hourly monitor is far more likely a stuck firmware value)
   //   - rain gauges: only if the repeated value is > 0 (zeros are normal in dry weather)
-  //   - water level: require more samples because water can sit steady for hours
   //
-  // Two set-based queries over a recent window, NOT a per-station loop: the
-  // old loop ran one query per gauge (~5,300 queries, ~3s) and froze the
+  // Set-based queries over a recent window, NOT a per-station loop: the old
+  // loop ran one query per gauge (~5,300 queries, ~3s) and froze the
   // single-threaded event loop. A sparse or dark station is already caught by
   // the 'stale' flag, so "K identical samples within FLATLINE_WINDOW_H" is the
   // index-friendly equivalent of "the last K readings are identical".
@@ -173,28 +180,36 @@ function computeSensorHealth(db) {
     const since = localCutoff(FLATLINE_WINDOW_H)
     for (const r of db.all(
       `SELECT station_key FROM readings
+        WHERE source = 'air4thai' AND metric = 'pm25' AND obs_time >= ?
+        GROUP BY station_key
+        HAVING COUNT(*) >= ? AND MIN(value) = MAX(value) AND MIN(value) > 0`,
+      since, CONFIG.sensorHealth.flatlineSamples)) {
+      flatlineKeys.add(`air4thai:${r.station_key}`)
+    }
+    for (const r of db.all(
+      `SELECT station_key FROM readings
         WHERE source = 'thaiwater_rain' AND metric = 'rain_1h' AND obs_time >= ?
         GROUP BY station_key
         HAVING COUNT(*) >= ? AND MIN(value) = MAX(value) AND MIN(value) > 0`,
       since, CONFIG.sensorHealth.flatlineSamples)) {
       flatlineKeys.add(`thaiwater_rain:${r.station_key}`)
     }
-    for (const r of db.all(
-      `SELECT station_key FROM readings
-        WHERE source = 'thaiwater_wl' AND metric = 'wl_msl' AND obs_time >= ?
-        GROUP BY station_key
-        HAVING COUNT(*) >= ? AND MIN(value) = MAX(value) AND MIN(value) IS NOT NULL`,
-      since, Math.max(CONFIG.sensorHealth.flatlineSamples, 24))) {
-      flatlineKeys.add(`thaiwater_wl:${r.station_key}`)
-    }
   }
   for (const c of classified) {
     if (flatlineKeys.has(`${c.source}:${c.station_key}`)) c.flags.push('flatline')
   }
 
-  // Mismatch detection: provinces where it rained recently but no water rose,
-  // or water rose fast without rain.
-  const mismatches = findMismatches(db, byStation)
+  // Cross-checks: rain-vs-PM mismatches and localized PM2.5 spikes.
+  const { mismatches, spikes } = findAirAnomalies(db)
+  for (const c of classified) {
+    if (spikes.has(`${c.source}:${c.station_key}`) && !c.flags.includes('outlier')) {
+      const sp = spikes.get(`${c.source}:${c.station_key}`)
+      c.flags.push('outlier')
+      c.metric = 'pm25'
+      c.value = sp.value
+      c.spike = sp
+    }
+  }
 
   const byFlag = { stale: [], outlier: [], flatline: [], mismatch: [] }
   for (const c of classified) {
@@ -249,17 +264,21 @@ function computeSensorHealth(db) {
 }
 
 /**
- * Find provinces where recent rain and recent water-level behaviour disagree.
- *   - "rain_without_rise" : province got ≥ 20 mm in 6 h but no water station rose
- *   - "rise_without_rain" : at least one water station rose ≥ 0.3 m in 6 h
- *                            but province rain total was < 5 mm
+ * Cross-check air readings against physics over the last 6 hours:
+ *   - "rain_without_drop" : province got ≥ 10 mm rain in 6 h but a monitor's
+ *     PM2.5 ROSE ≥ CONFIG.sensorHealth.rainWithoutDropUg in the same window.
+ *     Wet deposition should scrub particles down — a rise under active rain
+ *     points at a stuck or drifting sensor (or hyper-local emissions).
+ *   - spike : one station's PM2.5 jumped ≥ CONFIG.sensorHealth.spikeUg6h in
+ *     6 h while the province median moved < 10 µg/m³. Either a sensor fault
+ *     or a real, very local fire — both deserve a human look.
  *
  * We estimate 6-hour rainfall from stored rain_1h values inside the window.
  */
-function findMismatches(db, byStation) {
+function findAirAnomalies(db) {
   const since = localCutoff(6)
 
-  // 6-hour rain total per province.
+  // 6-hour rain total per province (sum of hourly gauge readings).
   const rainByProv = new Map()
   const rainRows = db.all(
     `SELECT s.province_code, s.province_th, s.province_en,
@@ -274,59 +293,74 @@ function findMismatches(db, byStation) {
     if (r.province_code) rainByProv.set(String(r.province_code), { ...r, rain_6h: r.rain_6h ?? 0 })
   }
 
-  // Max per-station water rise in 6 h per province.
-  const riseByProv = new Map()
-  const riseRows = db.all(
+  // First/last PM2.5 per station over the window → per-station delta.
+  const pmRows = db.all(
     `SELECT s.province_code, s.province_th, s.province_en,
-            s.station_key, MAX(r.value) - MIN(r.value) AS rise_m
+            s.name_th, s.name_en, r.station_key, r.obs_time, r.value
      FROM readings r
      JOIN stations s ON s.source = r.source AND s.station_key = r.station_key
-     WHERE r.source = 'thaiwater_wl' AND r.metric = 'wl_msl' AND r.obs_time >= ?
-     GROUP BY s.province_code, s.station_key`,
+     WHERE r.source = 'air4thai' AND r.metric = 'pm25' AND r.obs_time >= ?
+     ORDER BY r.station_key, r.obs_time`,
     since,
   )
-  for (const r of riseRows) {
-    if (!r.province_code) continue
-    const code = String(r.province_code)
-    let entry = riseByProv.get(code)
-    if (!entry) {
-      entry = { province_code: code, province_th: r.province_th, province_en: r.province_en, max_rise_m: 0 }
-      riseByProv.set(code, entry)
-    }
-    const rise = r.rise_m ?? 0
-    if (rise > entry.max_rise_m) entry.max_rise_m = rise
+  const byKey = new Map()
+  for (const row of pmRows) {
+    let s = byKey.get(row.station_key)
+    if (!s) { s = { first: row, last: row }; byKey.set(row.station_key, s) }
+    else s.last = row
   }
 
-  const out = []
-  const codes = new Set([...rainByProv.keys(), ...riseByProv.keys()])
-  for (const code of codes) {
-    const rain = rainByProv.get(code)
-    const rise = riseByProv.get(code)
-    const mm6 = rain?.rain_6h ?? 0
-    const maxRise = rise?.max_rise_m ?? 0
+  // Province median delta — the "did the whole province move?" baseline.
+  const deltasByProv = new Map()
+  for (const s of byKey.values()) {
+    const code = s.last.province_code
+    if (!code) continue
+    const d = num(s.last.value) !== null && num(s.first.value) !== null
+      ? s.last.value - s.first.value : null
+    if (d === null) continue
+    if (!deltasByProv.has(code)) deltasByProv.set(code, [])
+    deltasByProv.get(code).push(d)
+  }
+  const medianByProv = new Map()
+  for (const [code, ds] of deltasByProv) {
+    const sorted = [...ds].sort((a, b) => a - b)
+    medianByProv.set(code, sorted[Math.floor(sorted.length / 2)])
+  }
 
-    if (mm6 >= CONFIG.sensorHealth.rainWithoutRiseMm && maxRise < CONFIG.sensorHealth.minRiseM) {
-      out.push({
-        source: 'thaiwater_rain', station_key: code,
-        province_code: code, province_th: rain?.province_th, province_en: rain?.province_en,
-        type: 'rain_without_rise',
-        metric: 'rain_1h', value: Math.round(mm6),
-        body_th: `ฝนสะสม 6 ชม. ~${Math.round(mm6)} มม. แต่ระดับน้ำในจังหวัดไม่ขึ้น — อาจดูดซับ หรือเครื่องวัดระดับน้ำค้าง`,
-        body_en: `~${Math.round(mm6)} mm in 6 h but no water-level rise in the province — may be soaking in, or the water gauges are stuck`,
+  const mismatches = []
+  const spikes = new Map()
+  for (const [stationKey, s] of byKey) {
+    const code = s.last.province_code
+    const rise = s.last.value - s.first.value
+    if (!Number.isFinite(rise)) continue
+
+    // (a) mismatch: heavy rain in the province, yet this monitor's PM rose.
+    const mm6 = code ? (rainByProv.get(String(code))?.rain_6h ?? 0) : 0
+    if (mm6 >= MISMATCH_RAIN_6H_MM && rise >= CONFIG.sensorHealth.rainWithoutDropUg) {
+      mismatches.push({
+        source: 'air4thai', station_key: stationKey,
+        province_code: code, province_th: s.last.province_th, province_en: s.last.province_en,
+        name_th: s.last.name_th, name_en: s.last.name_en,
+        type: 'rain_without_drop',
+        metric: 'pm25', value: Math.round(rise),
+        body_th: `ฝนสะสม 6 ชม. ~${Math.round(mm6)} มม. แต่ PM2.5 ที่ ${s.last.name_th ?? stationKey} กลับเพิ่ม +${Math.round(rise)} µg/m³ — ฝนควรชะล้างฝุ่นลง อาจเป็นเซ็นเซอร์ค้าง`,
+        body_en: `~${Math.round(mm6)} mm of rain in 6 h but PM2.5 at ${s.last.name_en ?? stationKey} ROSE +${Math.round(rise)} µg/m³ — rain should scrub PM down; the monitor may be stuck or drifting`,
       })
     }
-    if (maxRise >= CONFIG.sensorHealth.minRiseM && mm6 < CONFIG.sensorHealth.riseWithoutRainMm) {
-      out.push({
-        source: 'thaiwater_wl', station_key: code,
-        province_code: code, province_th: rise?.province_th, province_en: rise?.province_en,
-        type: 'rise_without_rain',
-        metric: 'wl_msl', value: Math.round(maxRise * 100) / 100,
-        body_th: `ระดับน้ำขึ้นสูงสุด ${maxRise.toFixed(2)} ม. ใน 6 ชม. แต่ฝนในจังหวัดน้อย — อาจเป็นน้ำเหนือไหลมา หรือเครื่องวัดฝนค้าง`,
-        body_en: `Water rose up to ${maxRise.toFixed(2)} m in 6 h with little rain in the province — could be upstream flow, or the rain gauges are stuck`,
+
+    // (b) spike: one station jumped hard while the province median barely moved.
+    const median = code ? (medianByProv.get(code) ?? 0) : 0
+    if (rise >= CONFIG.sensorHealth.spikeUg6h && Math.abs(median) < SPIKE_PROVINCE_MEDIAN_UG) {
+      spikes.set(`air4thai:${stationKey}`, {
+        value: Math.round(s.last.value),
+        rise: Math.round(rise),
+        province_median: Math.round(median),
+        body_th: `PM2.5 ที่สถานีนี้พุ่ง +${Math.round(rise)} µg/m³ ใน 6 ชม. ขณะที่ค่ากลางจังหวัดขยับ ${Math.round(median)} — อาจเป็นเซ็นเซอร์ผิดพลาด หรือไฟไหม้/การเผาในพื้นที่ใกล้สถานี`,
+        body_en: `PM2.5 spiked +${Math.round(rise)} µg/m³ in 6 h at this one station while the province median moved ${Math.round(median)} — possible sensor fault, OR a real fire/burning right near the monitor`,
       })
     }
   }
-  return out
+  return { mismatches, spikes }
 }
 
 /** Province-level data-quality note for the risk payload / UI tooltips. */

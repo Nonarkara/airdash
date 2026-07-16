@@ -17,25 +17,31 @@ import { riskCi } from '../confidence.js?v=2.0.0-final'
 // red to convey "danger to life" — JMA uses solid black for the same
 // reason; we keep red so the brand stays warm.
 const BAND_BG = {
-  normal:   '#00933C',  // L1 green  — all clear
-  low:      '#5BA8C7',  // L2 teal   — stay informed (flood season)
-  watch:    '#F0B400',  // L3 yellow — prepare
-  elevated: '#E86A10',  // L4 orange — act now
-  high:     '#7A1F2B',  // L5 deep red — evacuate
+  normal:   '#00933C',  // L1 green  — good air
+  low:      '#5BA8C7',  // L2 teal   — stay informed (dust season)
+  watch:    '#F0B400',  // L3 yellow — stay informed
+  elevated: '#E86A10',  // L4 orange — limit outdoor time
+  high:     '#7A1F2B',  // L5 deep red — protect now
 }
 const BAND_ICON = {
   normal: '✓', low: 'i', watch: '!', elevated: '!!', high: '!!!',
 }
 
-// The header is a NATIONAL roll-up, not a local evacuation instruction.
-// Use area-scoped language so a hot province never reads as an order for the
-// whole country. Province cards keep the shorter BAND action verbs.
+// The header is a NATIONAL roll-up, not a local instruction.
+// One JMA-style verb per band (design contract): the verb IS the headline.
 const NATIONAL_BAND = {
-  normal:   { th: 'ภาพรวมประเทศปกติ',       en: 'NATIONWIDE ALL CLEAR' },
-  low:      { th: 'อยู่ในช่วงเฝ้าระวัง',     en: 'STAY INFORMED' },
-  watch:    { th: 'มีบางพื้นที่ต้องจับตา',    en: 'WATCH AFFECTED AREAS' },
-  elevated: { th: 'เตรียมพร้อมในพื้นที่เสี่ยง', en: 'PREPARE IN RISK AREAS' },
-  high:     { th: 'ตรวจสอบพื้นที่ของคุณทันที', en: 'CHECK YOUR AREA NOW' },
+  normal:   { th: 'อากาศดี',            en: 'GOOD AIR' },
+  low:      { th: 'อยู่ในช่วงเฝ้าระวังฝุ่น', en: 'STAY INFORMED' },
+  watch:    { th: 'ติดตามสถานการณ์',     en: 'STAY INFORMED' },
+  elevated: { th: 'ลดกิจกรรมกลางแจ้ง',   en: 'LIMIT OUTDOOR TIME' },
+  high:     { th: 'ป้องกันทันที',         en: 'PROTECT NOW' },
+}
+
+// Ask-bar placeholder — first-time visitors don't know what's possible to
+// ask; a concrete dust question teaches by example.
+const ASK_PLACEHOLDER = {
+  th: 'ถามอะไรก็ได้… เช่น "จังหวัดไหนฝุ่นสูงสุดตอนนี้"',
+  en: 'Ask anything… e.g. "Which province has the worst dust right now?"',
 }
 
 export function initHeader() {
@@ -62,7 +68,8 @@ export function initHeader() {
 
   on('snapshot', renderStatus)
   on('sensor-health', renderQuality)
-  on('lang', () => { renderStatus(store.snapshot); renderQuality(store.sensorHealth) })
+  on('lang', () => { renderStatus(store.snapshot); renderQuality(store.sensorHealth); paintAskBar() })
+  paintAskBar()
 
   const qBtn = document.getElementById('data-quality')
   if (qBtn) qBtn.addEventListener('click', openInsightsPane)
@@ -72,12 +79,17 @@ export function initHeader() {
     store.lang === 'th' ? store.snapshot.risk.method_th : store.snapshot.risk.method_en
 }
 
+function paintAskBar() {
+  const ask = document.getElementById('ask-hero-input')
+  if (ask) ask.placeholder = tr(ASK_PLACEHOLDER.th, ASK_PLACEHOLDER.en)
+}
+
 function renderStatus(snap) {
   if (!snap?.risk) return
   const n = snap.risk.national
-  // effective_band flips "normal" → "low" during flood season so the
-  // "ALL CLEAR" verb (lethal during 70%+ soil saturation) is replaced
-  // with "STAY INFORMED". Audit kill shot.
+  // effective_band flips "normal" → "low" during dust season so the
+  // "GOOD AIR" verb (misleading when 30%+ of provinces already exceed the
+  // moderate PM2.5 line) is replaced with "STAY INFORMED".
   const displayBand = n.effective_band ?? n.band
   const band = NATIONAL_BAND[displayBand] ?? NATIONAL_BAND[n.band] ?? BAND[displayBand] ?? BAND[n.band]
   const plate = document.getElementById('national-plate')
@@ -123,14 +135,15 @@ function renderStatus(snap) {
     whyEl.textContent = r ? `· ${tr(r.th, r.en)}` : ''
   }
 
-  // Flood-season micro-badge — kept from the previous design.
+  // Dust-season micro-badge — replaces the old flood-season badge, same
+  // UI treatment ("LOW — STAY INFORMED" pseudo-band).
   const seasonEl = document.getElementById('national-season')
   if (seasonEl) {
-    if (n.floodSeason && displayBand === 'low') {
+    if (n.dustSeason && displayBand === 'low') {
       seasonEl.hidden = false
       seasonEl.textContent = tr(
-        `หน้าน้ำ · ดินอิ่มตัว ${n.soilSaturationPct}% ของจังหวัด`,
-        `FLOOD SEASON · soil saturated in ${n.soilSaturationPct}% of provinces`,
+        `ฤดูฝุ่น · ฝุ่นเกินเกณฑ์ใน ${n.dustLoadPct}% ของจังหวัด`,
+        `DUST SEASON · PM2.5 past the moderate line in ${n.dustLoadPct}% of provinces`,
       )
     } else {
       seasonEl.hidden = true
@@ -138,11 +151,12 @@ function renderStatus(snap) {
   }
 
   // Hotline button — color matches the band. For elevated/high, the
-  // hotline becomes a one-tap call to 1784 with a clear emergency tint.
-  // For safer levels, it stays visible but the label downplays urgency.
+  // hotline becomes a one-tap call to the PCD pollution hotline 1650 with
+  // a clear emergency tint. For safer levels, it stays visible but the
+  // label downplays urgency.
   const hotlineEl = document.getElementById('national-hotline')
   if (hotlineEl) {
-    hotlineEl.href = 'tel:1784'
+    hotlineEl.href = 'tel:1650'
     const isUrgent = displayBand === 'elevated' || displayBand === 'high'
     hotlineEl.style.background = isUrgent ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.18)'
     hotlineEl.style.color = isUrgent ? '#7A1F2B' : '#fff'
@@ -155,12 +169,15 @@ function renderStatus(snap) {
     note.textContent = store.lang === 'th' ? snap.risk.method_th : snap.risk.method_en
   }
 
+  // Band counters — provinces per watch band (worst first).
   const lc = document.getElementById('levelcounts')
   lc.replaceChildren()
-  for (const lv of [5, 4, 3, 2, 1]) {
+  const BAND_LV = [['high', 5], ['elevated', 4], ['watch', 3], ['normal', 1]]
+  for (const [b, lv] of BAND_LV) {
     const wrap = document.createElement('div')
     wrap.className = 'lc'
-    wrap.innerHTML = `<span class="badge lv${lv}">${lv}</span><span class="n">${n.byLevel[lv]}</span>`
+    wrap.innerHTML = `<span class="badge lv${lv}">${BAND_ICON[b]}</span><span class="n">${n.bandCounts?.[b] ?? 0}</span>`
+    wrap.title = b
     lc.append(wrap)
   }
 

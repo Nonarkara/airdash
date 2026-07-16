@@ -27,7 +27,7 @@ function trendArrow(delta) {
 // who sees ONLY this card (citizen mode, mobile) knows both the level AND
 // what to do about it. The card is intentionally compact: head, action,
 // checklist (collapsed by default to keep the ranking visible), and the
-// soil-saturation context when in flood season.
+// dust-load context when in dust season.
 function nationalActionCard(nv) {
   if (!nv) return null
   const card = el('div', { class: `rank-national-card pv-${nv.level}` })
@@ -91,18 +91,24 @@ function render(snap) {
   const rows = snap.risk.provinces.slice(0, 60)
   const rowEls = rows.map((p, i) => {
     const stats = []
-    if (p.max_rain_24h !== null && p.max_rain_24h >= 10) {
+    if (p.pm25 !== null && p.pm25 !== undefined) {
       stats.push(el('div', { class: 'line' },
-        tr('ฝน ', 'rain '),
-        el('b', { class: p.max_rain_24h > 90 ? 'hot' : '' }, fmtNum(p.max_rain_24h, 0)), ' มม.'))
+        tr('ฝุ่น ', 'PM2.5 '),
+        el('b', { class: p.pm25 >= 75 ? 'hot' : '' }, fmtNum(p.pm25, 0)), ' µg/m³'))
     }
-    if (p.stations_l5 > 0 || p.stations_l4 > 0) {
+    if (p.stations_very_unhealthy > 0 || p.stations_unhealthy > 0) {
       stats.push(el('div', { class: 'line' },
-        p.stations_l5 > 0 ? el('span', { class: 'hot' }, `${tr('ล้นตลิ่ง', 'overflow')} ${p.stations_l5} `) : '',
-        p.stations_l4 > 0 ? `${tr('น้ำมาก', 'high')} ${p.stations_l4}` : ''))
+        p.stations_very_unhealthy > 0 ? el('span', { class: 'hot' }, `${tr('อันตราย', 'v.unhealthy')} ${p.stations_very_unhealthy} `) : '',
+        p.stations_unhealthy > 0 ? `${tr('เกินเกณฑ์', 'unhealthy')} ${p.stations_unhealthy}` : ''))
     }
-    if (p.fc_48h !== null && p.fc_48h >= 35) {
-      stats.push(el('div', { class: 'line' }, tr('คาดฝน ', 'fc '), el('b', {}, fmtNum(p.fc_48h, 0)), ` ${tr('มม./48ชม.', 'mm/48h')}`))
+    if (p.pm25_fc_48h !== null && p.pm25_fc_48h >= 37.5) {
+      stats.push(el('div', { class: 'line' }, tr('คาดฝุ่น ', 'fc '), el('b', {}, fmtNum(p.pm25_fc_48h, 0)), ` ${tr('µg/48ชม.', 'µg/48h')}`))
+    }
+    // Washout chip — rain is expected to help this province's dust.
+    if (p.washout_helps && p.washout_relief_pct) {
+      stats.push(el('div', { class: 'line' },
+        el('span', { title: tr('ฝนช่วยล้างฝุ่นได้', 'rain washout expected') },
+          `🌧 −${fmtNum(p.washout_relief_pct, 0)}%`)))
     }
     const card = p.card
     const expand = card ? el('div', { class: 'rank-expand', hidden: true }) : null

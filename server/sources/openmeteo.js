@@ -1,42 +1,29 @@
-// Open-Meteo 3-day precipitation forecast per province. Province centroids are
-// DERIVED from real station coordinates already in the DB (mean of ThaiWater
-// water-level + rain stations per province) — no hand-typed geo data.
+// Open-Meteo 3-day weather forecast per province: precipitation amount AND
+// probability (the washout engine's key input), plus wind (ventilation /
+// stagnation proxy). One multi-point call over all 77 province centroids
+// from the DOPA registry (public/geo/provinces.json).
 import { CONFIG } from '../config.js'
 import { fetchJson, nowLocal } from '../util.js'
 import { storeReadings } from './thaiwater-common.js'
+import { allProvinces } from '../provinces.js'
 
 const BASE = 'https://api.open-meteo.com/v1/forecast'
 const MAX_POINTS = 100 // Open-Meteo multi-point limit safety
 
-export function provinceCentroids(db) {
-  return db.all(
-    `SELECT province_code, province_th, province_en, region_th, region_en,
-            AVG(lat) AS lat, AVG(lng) AS lng, COUNT(*) AS n
-     FROM stations
-     WHERE source IN ('thaiwater_wl','thaiwater_rain')
-       AND lat IS NOT NULL AND lng IS NOT NULL AND province_code IS NOT NULL
-     GROUP BY province_code
-     ORDER BY province_code`,
-  )
-}
-
 export default {
   name: 'openmeteo',
-  label_th: 'พยากรณ์ฝน Open-Meteo',
-  label_en: 'Open-Meteo rain forecast',
+  label_th: 'พยากรณ์ฝน/ลม Open-Meteo',
+  label_en: 'Open-Meteo rain & wind forecast',
   intervalMs: CONFIG.intervals.openmeteo,
   enabled: true,
 
   async run({ db, bus, alerts }) {
-    const provinces = provinceCentroids(db).slice(0, MAX_POINTS)
-    if (provinces.length === 0) {
-      // First boot: ThaiWater stations not ingested yet; next cycle will cover it.
-      return { seen: 0, added: 0 }
-    }
+    const provinces = allProvinces().slice(0, MAX_POINTS)
 
     const lats = provinces.map((p) => p.lat.toFixed(3)).join(',')
     const lngs = provinces.map((p) => p.lng.toFixed(3)).join(',')
-    const url = `${BASE}?latitude=${lats}&longitude=${lngs}&daily=precipitation_sum&forecast_days=3&timezone=Asia%2FBangkok`
+    const daily = 'precipitation_sum,precipitation_probability_max,wind_speed_10m_max'
+    const url = `${BASE}?latitude=${lats}&longitude=${lngs}&daily=${daily}&forecast_days=3&timezone=Asia%2FBangkok`
     // 77 province centroids in one call can exceed 20s; allow headroom before backoff.
     const json = await fetchJson(url, { timeoutMs: 45_000 })
     const results = Array.isArray(json) ? json : [json]
@@ -47,20 +34,26 @@ export default {
     // Issue-hour timestamp: each 3-hour poll stores a fresh forecast row set.
     const obs_time = nowLocal().slice(0, 13) + ':00'
     let added = 0
-    let wetProvinces = 0
-    const heavyFc = []
+    let rainyProvinces = 0
+    const bestWashout = []
 
     db.tx(() => {
       provinces.forEach((p, i) => {
-        const daily = results[i]?.daily
-        const sums = daily?.precipitation_sum
-        if (!Array.isArray(sums)) return
+        const d = results[i]?.daily
+        if (!d) return
+        const val = (arr, idx) => (Array.isArray(arr) && Number.isFinite(arr[idx]) ? arr[idx] : null)
 
-        const [d0, d1, d2] = [sums[0], sums[1], sums[2]].map((v) => (Number.isFinite(v) ? v : null))
-        const next48 = d0 !== null && d1 !== null ? d0 + d1 : null
-        if (next48 !== null && next48 >= CONFIG.thresholds.rainVeryHeavy24h) {
-          wetProvinces += 1
-          heavyFc.push({ p, next48 })
+        const sums = [0, 1, 2].map((k) => val(d.precipitation_sum, k))
+        const probs = [0, 1, 2].map((k) => val(d.precipitation_probability_max, k))
+        const winds = [0, 1, 2].map((k) => val(d.wind_speed_10m_max, k))
+
+        const next48 = sums[0] !== null && sums[1] !== null ? sums[0] + sums[1] : null
+        const prob48 = probs[0] !== null && probs[1] !== null ? Math.max(probs[0], probs[1]) : (probs[0] ?? probs[1])
+
+        if (probs[0] !== null && sums[0] !== null &&
+            probs[0] >= 40 && sums[0] >= CONFIG.thresholds.rainWashout24h) {
+          rainyProvinces += 1
+          bestWashout.push({ p, mm: sums[0], prob: probs[0] })
         }
 
         const station = {
@@ -68,15 +61,21 @@ export default {
           name_th: p.province_th, name_en: p.province_en,
           province_th: p.province_th, province_en: p.province_en,
           province_code: p.province_code,
-          region_th: p.region_th, region_en: p.region_en,
+          region_th: null, region_en: null,
           basin_th: null, basin_en: null,
           lat: p.lat, lng: p.lng,
-          meta_json: JSON.stringify({ centroid_of_stations: p.n }),
+          meta_json: JSON.stringify({ centroid: 'dopa_registry' }),
         }
 
         added += storeReadings({
           db, alerts, source: 'openmeteo', station,
-          metrics: { precip_fc_d0: d0, precip_fc_d1: d1, precip_fc_d2: d2, precip_fc_48h: next48 },
+          metrics: {
+            precip_fc_d0: sums[0], precip_fc_d1: sums[1], precip_fc_d2: sums[2],
+            precip_fc_48h: next48,
+            precip_prob_d0: probs[0], precip_prob_d1: probs[1], precip_prob_d2: probs[2],
+            precip_prob_24h: probs[0], precip_prob_48h: prob48,
+            wind_fc_kmh: winds[0], wind_fc_d1: winds[1],
+          },
           obs_time, fetched_at, now,
         })
       })
@@ -85,17 +84,17 @@ export default {
     if (added > 0) {
       bus.publish({
         kind: 'batch', source: 'openmeteo',
-        severity: wetProvinces > 0 ? 1 : 0,
-        title_th: `พยากรณ์ฝน ${provinces.length} จังหวัด · ฝนหนัก 48 ชม. ${wetProvinces} จังหวัด`,
-        title_en: `Rain forecast for ${provinces.length} provinces · heavy 48h rain in ${wetProvinces}`,
-        payload: { provinces: provinces.length, added, wetProvinces },
+        severity: 0,
+        title_th: `พยากรณ์ฝน/ลม ${provinces.length} จังหวัด · ฝนพอช่วยล้างฝุ่นได้ ${rainyProvinces} จังหวัด`,
+        title_en: `Rain & wind forecast for ${provinces.length} provinces · washout-grade rain likely in ${rainyProvinces}`,
+        payload: { provinces: provinces.length, added, rainyProvinces },
       })
-      for (const { p, next48 } of heavyFc.sort((a, b) => b.next48 - a.next48).slice(0, 3)) {
+      for (const { p, mm, prob } of bestWashout.sort((a, b) => b.mm - a.mm).slice(0, 3)) {
         bus.publish({
-          kind: 'datum', source: 'openmeteo', station_key: p.province_code, severity: 1,
-          title_th: `คาดฝน 48 ชม. ${next48.toFixed(0)} มม. จ.${p.province_th}`,
-          title_en: `Forecast 48h rain ${next48.toFixed(0)} mm in ${p.province_en}`,
-          payload: { precip_fc_48h: next48 },
+          kind: 'datum', source: 'openmeteo', station_key: p.province_code, severity: 0,
+          title_th: `คาดฝน 24 ชม. ${mm.toFixed(0)} มม. (โอกาส ${prob.toFixed(0)}%) จ.${p.province_th} — ช่วยล้างฝุ่น`,
+          title_en: `Forecast 24h rain ${mm.toFixed(0)} mm (${prob.toFixed(0)}% chance) in ${p.province_en} — dust washout likely`,
+          payload: { precip_fc_d0: mm, precip_prob_24h: prob },
         })
       }
     }

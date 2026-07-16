@@ -2,9 +2,8 @@
 import { json, readBody, prebuild, sendPrebuilt, sendFile, SECURITY_HEADERS } from './http.js'
 import { allow } from './ratelimit.js'
 import { CONFIG } from './config.js'
-import { buildCascade } from './cascade.js'
-import { WETNESS_LABELS } from './wetness.js'
-import { ensureSheltersLoaded, ingestShelters, nearestShelters, sheltersInBbox, sheltersInProvince, SHELTER_SOURCE } from './shelters.js'
+import { WASHOUT_LABELS, reliefIfRainPct, washoutBand } from './washout.js'
+import { pm25Score } from './risk.js'
 import { classifyOni } from './sources/enso.js'
 import { FOCUS_AREAS } from './focus.js'
 import { SOURCES, EXPORT_INFO } from './sources-catalog.js'
@@ -12,7 +11,7 @@ import { listExportDays, buildDailyExport, dailyToCsv, buildFullExport, fullToCs
 import { listWeeklyExports, getExportPath, buildWeeklyExport as buildWeeklyExportJob, startWeeklyBuild, getBuildState } from './weeklyExport.js'
 import { libraryToc, searchLibrary, libraryDoc } from './library.js'
 import { searchGazetteer, placeDetail, searchTambons, searchDistricts, lookupPostal, lookupPlace } from './gazetteer.js'
-import { provinceVerdict, riverEta } from './verdict.js'
+import { provinceVerdict } from './verdict.js'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -90,7 +89,7 @@ function pivotLatest(db, source, metrics) {
   return [...byStation.values()]
 }
 
-export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq, startedAt }) {
+export function buildRoutes({ db, bus, scheduler, riskEngine, washout, rag, faq, startedAt }) {
   return {
     'GET /api/sensors/health': (req, res) => {
       json(res, 200, sensorHealth(db))
@@ -138,7 +137,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
       const csv = '\uFEFF' + rows.map((r) => r.map(escape).join(',')).join('\n') + '\n'
       res.writeHead(200, {
         'content-type': 'text/csv; charset=utf-8',
-        'content-disposition': `attachment; filename="flooddash-dead-sensors-${new Date().toISOString().slice(0, 10)}.csv"`,
+        'content-disposition': `attachment; filename="airdash-dead-sensors-${new Date().toISOString().slice(0, 10)}.csv"`,
       })
       res.end(csv)
     },
@@ -160,7 +159,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
         'SELECT page_count * page_size AS bytes FROM pragma_page_count(), pragma_page_size()').bytes
       json(res, 200, {
         ok: true,
-        service: 'flooddash',
+        service: 'airdash',
         now: new Date().toISOString(),
         uptime_s: Math.round((Date.now() - startedAt) / 1000),
         db: { ...dbStats, size_mb: Math.round(dbSize / 1048576 * 10) / 10 },
@@ -182,19 +181,25 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
         return sendPrebuilt(res, 200, snapshotCache.built)
       }
       const risk = riskEngine.get()
-      const water = pivotLatest(db, 'thaiwater_wl', ['situation_level', 'wl_msl', 'storage_pct'])
+      // Primary layer: every AQ station with the full pollutant set.
+      const air = pivotLatest(db, 'air4thai', ['pm25', 'pm10', 'o3', 'co', 'no2', 'so2', 'aqi'])
+      // Rain gauges currently seeing washout-grade rain (≥5mm/24h).
       const rain = pivotLatest(db, 'thaiwater_rain', ['rain_24h', 'rain_1h'])
-        .filter((s) => (s.rain_24h ?? 0) >= 10 && s.lat !== null)
-      const dams = pivotLatest(db, 'thaiwater_dam',
-        ['dam_storage_pct', 'dam_storage_mcm', 'dam_inflow_mcm', 'dam_released_mcm'])
-      const aqi = pivotLatest(db, 'air4thai', ['aqi', 'pm25'])
-      const reservoirs = pivotLatest(db, 'rid_reservoir', ['rsv_storage_pct', 'rsv_volume_mcm'])
-        .sort((a, b) => (b.rsv_storage_pct ?? 0) - (a.rsv_storage_pct ?? 0))
+        .filter((s) => (s.rain_24h ?? 0) >= CONFIG.thresholds.rainWashout24h && s.lat !== null)
+      // Per-province weather forecast (rain chance + wind — washout & ventilation).
+      const weather = pivotLatest(db, 'openmeteo',
+        ['precip_fc_d0', 'precip_fc_48h', 'precip_prob_24h', 'precip_prob_48h', 'wind_fc_kmh'])
+      // Per-province CAMS air-quality forecast.
+      const aqForecast = pivotLatest(db, 'openmeteo_aq',
+        ['pm25_fc_24h', 'pm25_fc_48h', 'pm25_fc_72h', 'pm10_fc_24h', 'dust_fc_24h'])
       const alerts = db.all('SELECT * FROM alerts ORDER BY id DESC LIMIT 20')
       const news = db.all('SELECT feed, title, link, published_at FROM news_items ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT 15')
       const built = prebuild({
         now: new Date().toISOString(),
-        risk, water, rain, dams, reservoirs, aqi, alerts, news,
+        risk, air, rain, weather, aqForecast,
+        // Back-compat key: the map's station layer reads `aqi`.
+        aqi: air,
+        alerts, news,
         sources: scheduler.health(),
       })
       snapshotCache = { at: Date.now(), built }
@@ -216,6 +221,21 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
       if (cached && Date.now() - cached.at < SERIES_DAILY_TTL_MS) {
         return json(res, 200, cached.payload)
       }
+      const pmRows = db.all(
+        `SELECT substr(obs_time, 1, 10) AS date,
+                MAX(value) AS max_ug, AVG(value) AS avg_ug, COUNT(*) AS n
+           FROM readings
+          WHERE metric = 'pm25' AND obs_time >= date('now', ?)
+          GROUP BY date ORDER BY date DESC LIMIT ?`,
+        `-${days} days`, days)
+      const unhealthyRows = db.all(
+        `SELECT substr(obs_time, 1, 10) AS date,
+                SUM(CASE WHEN value >= 37.5 THEN 1 ELSE 0 END) AS unhealthy,
+                SUM(CASE WHEN value >= 75 THEN 1 ELSE 0 END) AS very_unhealthy
+           FROM readings
+          WHERE metric = 'pm25' AND obs_time >= date('now', ?)
+          GROUP BY date ORDER BY date DESC LIMIT ?`,
+        `-${days} days`, days)
       const rainRows = db.all(
         `SELECT substr(obs_time, 1, 10) AS date,
                 MAX(value) AS max_mm, AVG(value) AS avg_mm, COUNT(*) AS n
@@ -223,22 +243,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
           WHERE metric = 'rain_24h' AND obs_time >= date('now', ?)
           GROUP BY date ORDER BY date DESC LIMIT ?`,
         `-${days} days`, days)
-      const wlRows = db.all(
-        `SELECT substr(obs_time, 1, 10) AS date,
-                SUM(CASE WHEN value >= 4 THEN 1 ELSE 0 END) AS l4_plus,
-                SUM(CASE WHEN value >= 5 THEN 1 ELSE 0 END) AS l5
-           FROM readings
-          WHERE metric = 'situation_level' AND obs_time >= date('now', ?)
-          GROUP BY date ORDER BY date DESC LIMIT ?`,
-        `-${days} days`, days)
-      const damRows = db.all(
-        `SELECT substr(obs_time, 1, 10) AS date,
-                SUM(CASE WHEN value >= 90 THEN 1 ELSE 0 END) AS hot
-           FROM readings
-          WHERE metric = 'dam_storage_pct' AND obs_time >= date('now', ?)
-          GROUP BY date ORDER BY date DESC LIMIT ?`,
-        `-${days} days`, days)
-      const payload = { days, rain: rainRows, water: wlRows, dams: damRows }
+      const payload = { days, pm25: pmRows, unhealthy: unhealthyRows, rain: rainRows }
       seriesDailyCache.set(days, { at: Date.now(), payload })
       json(res, 200, payload)
     },
@@ -271,10 +276,12 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
       json(res, 200, payload)
     },
 
-    // 3-day forecast view — replays the watch score with the Open-Meteo
-    // forecast rain (d0/d1/d2) replacing the observed rain, per horizon.
-    // Water/forecast/weights stay the same; only the rain component changes.
-    // The same score formula the live indicator uses — we just swap inputs.
+    // 3-day forecast view — replays the watch score with the CAMS PM2.5
+    // forecast (24/48/72h means) replacing the observed ground PM2.5, per
+    // horizon — each horizon's PM additionally discounted by the rain-washout
+    // relief expected that day. Pollutants/stagnation stay at current values;
+    // trend zeroes out (unknowable at horizon). Same formula as the live
+    // indicator — we just swap inputs.
     'GET /api/forecast': (req, res) => {
       const risk = riskEngine.get()
       const horizons = [
@@ -283,21 +290,6 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
         { hours: 48, label_th: '+48 ชม.',   label_en: '+48h'   },
         { hours: 72, label_th: '+72 ชม.',   label_en: '+72h'   },
       ]
-      // Mirror the helper scores from server/risk.js so the bands line up.
-      const rainScore = (mm) => {
-        if (mm > 135) return 95
-        if (mm > 90)  return 80
-        if (mm > 35)  return 45
-        if (mm > 10)  return 15
-        return 0
-      }
-      const forecastScore = (mm48) => {
-        if (mm48 >= 150) return 90
-        if (mm48 >= 90)  return 70
-        if (mm48 >= 35)  return 40
-        if (mm48 >= 10)  return 15
-        return 0
-      }
       const bandOf = (s) => {
         const b = CONFIG.risk.bands
         if (s >= b.high)     return 'high'
@@ -306,47 +298,49 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
         return 'normal'
       }
       const w = CONFIG.risk.weights
-      // Forecast rows: latest 3 days' precip per province.
+      // Latest CAMS PM2.5 + rain forecast rows per province.
       const fcRows = db.all(
-        `SELECT l.station_key AS province_code, l.metric, l.value
+        `SELECT l.source, l.station_key AS province_code, l.metric, l.value
          FROM latest l
-         WHERE l.source = 'openmeteo'
-           AND l.metric IN ('precip_fc_d0','precip_fc_d1','precip_fc_d2','precip_fc_48h')`)
+         WHERE (l.source = 'openmeteo_aq' AND l.metric IN ('pm25_fc_24h','pm25_fc_48h','pm25_fc_72h'))
+            OR (l.source = 'openmeteo' AND l.metric IN ('precip_fc_d0','precip_fc_d1','precip_fc_d2','precip_prob_d0','precip_prob_d1','precip_prob_d2'))`)
       const byProv = new Map()
       for (const r of fcRows) {
         let p = byProv.get(r.province_code)
         if (!p) byProv.set(r.province_code, p = {})
         p[r.metric] = r.value
       }
+      // Probability-weighted washout discount for one horizon day.
+      const washed = (pm, rainMm, prob) => {
+        if (pm === null || pm === undefined) return null
+        const relief = reliefIfRainPct(rainMm ?? 0) * ((prob ?? 0) / 100)
+        return pm * (1 - relief / 100)
+      }
       const provinces = risk.provinces.map((rp) => {
         const fc = byProv.get(rp.province_code) || {}
-        const d0 = fc.precip_fc_d0 ?? 0
-        const d1 = fc.precip_fc_d1 ?? 0
-        const d2 = fc.precip_fc_d2 ?? 0
-        const fc48 = fc.precip_fc_48h ?? (d0 + d1)
-        // For each horizon, replace observed rain with cumulative forecast rain
-        // up to that point. Water + wetness + rise stay (they don't change in
-        // 24/48/72h without more data — operator interpretation: the rain is
-        // what changes, the rest is "ground truth from now").
-        const rain24 = d0
-        const rain48 = d0 + d1
-        const rain72 = d0 + d1 + d2
-        // Forecast component: use the same 48h-window logic as the live score,
-        // scaled by the horizon length.
-        const fc24 = forecastScore(rain24 * 2)
-        const fc48s = forecastScore(rain48)
-        const fc72 = forecastScore(rain72 * 2 / 3) // 72h × (48h/72h) scaling
+        const pm24 = washed(fc.pm25_fc_24h ?? null, fc.precip_fc_d0, fc.precip_prob_d0)
+        const pm48 = washed(fc.pm25_fc_48h ?? null, fc.precip_fc_d1, fc.precip_prob_d1)
+        const pm72 = washed(fc.pm25_fc_72h ?? null, fc.precip_fc_d2, fc.precip_prob_d2)
+        // Per-horizon score: CAMS PM (washout-discounted) replaces the ground
+        // PM component; the forecast component looks one window further out.
+        const at = (pmH, pmNext) => Math.round(
+          w.pm25 * pm25Score(pmH) + w.pollutants * rp.pollutants_comp +
+          w.forecast * pm25Score(pmNext ?? pmH) + w.stagnation * rp.stagnation_comp)
         const scores = {
           now:  rp.score,
-          p24h: Math.round(w.water * rp.water + w.rain * rainScore(rain24) + w.forecast * fc24 + w.wetness * rp.wetness_score + w.riseRate * rp.rise_score),
-          p48h: Math.round(w.water * rp.water + w.rain * rainScore(rain48) + w.forecast * fc48s + w.wetness * rp.wetness_score + w.riseRate * rp.rise_score),
-          p72h: Math.round(w.water * rp.water + w.rain * rainScore(rain72) + w.forecast * fc72 + w.wetness * rp.wetness_score + w.riseRate * rp.rise_score),
+          p24h: pm24 !== null ? at(pm24, pm48) : rp.score,
+          p48h: pm48 !== null ? at(pm48, pm72) : rp.score,
+          p72h: pm72 !== null ? at(pm72, null) : rp.score,
         }
         return {
           code: rp.province_code,
           name_th: rp.province_th, name_en: rp.province_en,
           lat: rp.lat, lng: rp.lng,
-          forecast: { d0: Math.round(d0*10)/10, d1: Math.round(d1*10)/10, d2: Math.round(d2*10)/10, mm48: Math.round(fc48*10)/10 },
+          forecast: {
+            pm25_d0: fc.pm25_fc_24h ?? null, pm25_d1: fc.pm25_fc_48h ?? null, pm25_d2: fc.pm25_fc_72h ?? null,
+            rain_d0: fc.precip_fc_d0 ?? null, rain_d1: fc.precip_fc_d1 ?? null, rain_d2: fc.precip_fc_d2 ?? null,
+            prob_d0: fc.precip_prob_d0 ?? null, prob_d1: fc.precip_prob_d1 ?? null, prob_d2: fc.precip_prob_d2 ?? null,
+          },
           scores: {
             now:  scores.now,  band:  bandOf(scores.now),
             p24h: scores.p24h, b24h:  bandOf(scores.p24h),
@@ -358,7 +352,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
       // Top 5 escalators: provinces where +72h score is materially higher than now.
       const escalators = provinces
         .map((p) => ({ ...p, delta: p.scores.p72h - p.scores.now }))
-        .filter((p) => p.delta > 0 && p.forecast.mm48 > 0)
+        .filter((p) => p.delta > 0)
         .sort((a, b) => b.delta - a.delta)
         .slice(0, 5)
       json(res, 200, {
@@ -366,26 +360,20 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
         horizons,
         provinces,
         escalators,
-        method_th: 'คะแนนเฝ้าระวัง = 0.40·น้ำ + 0.25·ฝน + 0.15·พยากรณ์ + 0.10·ความชุ่มน้ำ + 0.10·อัตราเพิ่มระดับน้ำ โดยฝนและพยากรณ์ถูกแทนที่ด้วยฝนสะสมตามช่วงเวลา (d0 / d0+d1 / d0+d1+d2)',
-        method_en: 'Watch score = 0.40·water + 0.25·rain + 0.15·forecast + 0.10·wetness + 0.10·riseRate, with rain/forecast swapped for cumulative forecast rain per horizon (d0 / d0+d1 / d0+d1+d2)',
-        disclaimer_th: 'ดัชนีบ่งชี้ ไม่ใช่แบบจำลองพยากรณ์ — น้ำ/ความชื้น/อัตราน้ำขึ้นคงที่ตามเวลาปัจจุบัน',
-        disclaimer_en: 'Heuristic indicator, not a forecast model — water/wetness/riseRate held constant at current observation',
+        method_th: 'คะแนนเฝ้าระวัง = 0.40·PM2.5 + 0.10·มลพิษอื่น + 0.15·แนวโน้ม + 0.20·พยากรณ์ + 0.15·การระบายอากาศ โดย PM2.5 ถูกแทนที่ด้วยค่าพยากรณ์ CAMS รายวัน หักส่วนที่ฝนคาดว่าจะล้างออก',
+        method_en: 'Watch score = 0.40·PM2.5 + 0.10·pollutants + 0.15·trend + 0.20·forecast + 0.15·ventilation, with ground PM2.5 swapped for the CAMS daily forecast, discounted by expected rain washout',
+        disclaimer_th: 'ดัชนีบ่งชี้ ไม่ใช่แบบจำลองพยากรณ์ — มลพิษอื่น/การระบายอากาศคงที่ตามเวลาปัจจุบัน',
+        disclaimer_en: 'Heuristic indicator, not a forecast model — pollutants/ventilation held constant at current observation',
       })
     },
 
-    // What-if: re-projects the watch score with a user-supplied 24h rain
-    // (0-500mm). Water/wetness/riseRate/forecast held at current values.
-    // Cheap endpoint — recomputes the score on the fly, no DB writes.
+    // What-if: the rain-washout simulator. "If X mm of rain falls in 24h,
+    // how much dust washes out of each province?" Re-projects PM2.5 through
+    // the washout curve and recomputes the watch score (rain also zeroes the
+    // stagnation term once it's washout-grade). Cheap — no DB writes.
     'GET /api/whatif': (req, res, url) => {
-      const rain = clamp(url.searchParams.get('rain'), 0, 500, 0)
+      const rain = clamp(url.searchParams.get('rain'), 0, 200, 0)
       const risk = riskEngine.get()
-      const rainScore = (mm) => {
-        if (mm > 135) return 95
-        if (mm > 90)  return 80
-        if (mm > 35)  return 45
-        if (mm > 10)  return 15
-        return 0
-      }
       const bandOf = (s) => {
         const b = CONFIG.risk.bands
         if (s >= b.high)     return 'high'
@@ -394,50 +382,67 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
         return 'normal'
       }
       const w = CONFIG.risk.weights
-      const r = rainScore(rain)
+      const relief = reliefIfRainPct(rain)
+      const stagnationAfter = rain >= CONFIG.thresholds.rainWashout24h ? 0 : null // null = hold current
       const list = risk.provinces.map((p) => {
+        const pm25After = p.pm25 !== null ? Math.round(p.pm25 * (1 - relief / 100)) : null
         const newScore = Math.round(
-          w.water * p.water + w.rain * r +
-          w.forecast * p.forecast + w.wetness * p.wetness_score + w.riseRate * p.rise_score,
+          w.pm25 * pm25Score(pm25After) + w.pollutants * p.pollutants_comp +
+          w.trend * p.trend_comp + w.forecast * p.forecast_comp +
+          w.stagnation * (stagnationAfter ?? p.stagnation_comp),
         )
         return {
           code: p.province_code,
           name_th: p.province_th, name_en: p.province_en,
+          pm25_now: p.pm25, pm25_whatif: pm25After,
+          relief_pct: p.pm25 !== null ? relief : null,
           now: p.score, band_now: p.band,
           whatif: newScore, band_whatif: bandOf(newScore),
           delta: newScore - p.score,
         }
       })
-      // Top 5 escalators
-      const escalators = list
-        .filter((p) => p.delta > 0)
-        .sort((a, b) => b.delta - a.delta)
+      // Top 5 relievers — provinces the rain would help the most.
+      const relievers = list
+        .filter((p) => p.delta < 0)
+        .sort((a, b) => a.delta - b.delta)
         .slice(0, 5)
       // Aggregate summary
       const summary = { normal: 0, watch: 0, elevated: 0, high: 0, total: list.length }
       for (const p of list) summary[p.band_whatif] += 1
       json(res, 200, {
         rain_mm: rain,
+        relief_pct: relief,
         fetched_at: new Date().toISOString(),
         summary,
-        escalators,
+        relievers,
+        // Back-compat key for the slider panel (was "escalators" for floods).
+        escalators: relievers,
         provinces: list,
-        method_th: 'ถ้าฝนตก ' + rain + ' มม. ใน 24 ชม. → คะแนนเฝ้าระวังใหม่ โดยเก็บน้ำ/ความชื้น/อัตราน้ำขึ้น/พยากรณ์ปัจจุบันไว้',
-        method_en: 'If ' + rain + 'mm of rain in 24h → recompute watch score with water/wetness/riseRate/forecast held at current observation',
+        method_th: 'ถ้าฝนตก ' + rain + ' มม. ใน 24 ชม. → ฝุ่นถูกชะล้าง ~' + relief + '% ตามสัดส่วน wet deposition แล้วคำนวณคะแนนเฝ้าระวังใหม่',
+        method_en: 'If ' + rain + 'mm of rain falls in 24h → PM2.5 washes out ~' + relief + '% (wet-deposition ratios), then the watch score is recomputed',
       })
     },
 
-    // Connected waterways — reaches + cascade links + flagship Chao Phraya chain.
-    'GET /api/rivers': (req, res) => json(res, 200, buildCascade(db)),
-
-    // Antecedent Precipitation Index (catchment wetness) per province.
-    'GET /api/wetness': (req, res) => {
-      const all = [...wetness.all().values()].sort((a, b) => b.api - a.api)
+    // Rain-washout outlook per province — the signature panel. Chance of
+    // precipitation + how much it would help the dust situation in each area.
+    'GET /api/washout': (req, res) => {
+      const all = [...washout.all().values()].sort((a, b) =>
+        (b.pm25 ?? -1) - (a.pm25 ?? -1) || (b.expected_relief_pct ?? 0) - (a.expected_relief_pct ?? 0))
       json(res, 200, {
         updated: new Date().toISOString(),
-        method_th: 'ดัชนีฝนสะสมถ่วงเวลา (API_t = 0.92·API_{t-1} + ฝนวันนี้) — ดินยิ่งชุ่ม ฝนยิ่งกลายเป็นน้ำท่า',
-        method_en: 'Antecedent Precipitation Index (API_t = 0.92·API_{t-1} + today rain) — wetter ground → more runoff',
-        labels: WETNESS_LABELS,
+        method_th: 'ฝนชะล้างฝุ่น (wet deposition): ฝน ≥5 มม. ลด PM2.5 ได้ ~20% · ≥15 มม. ~30% · ≥35 มม. ~40% — ถ่วงด้วยโอกาสเกิดฝน',
+        method_en: 'Rain washout (wet deposition): ≥5mm cuts PM2.5 ~20% · ≥15mm ~30% · ≥35mm ~40% — weighted by rain probability',
+        labels: WASHOUT_LABELS,
+        provinces: all,
+      })
+    },
+
+    // Back-compat alias (the flood era called this catchment wetness).
+    'GET /api/wetness': (req, res) => {
+      const all = [...washout.all().values()].sort((a, b) => (b.pm25 ?? -1) - (a.pm25 ?? -1))
+      json(res, 200, {
+        updated: new Date().toISOString(),
+        labels: WASHOUT_LABELS,
         provinces: all,
       })
     },
@@ -453,12 +458,16 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
         anom: Number.isFinite(anom) ? anom : null,
         phase: cls.phase, label_th: cls.th, label_en: cls.en,
         season: db.kvGet('enso_season'),
-        note_th: cls.phase.startsWith('la_nina')
-          ? 'ลานีญาเพิ่มโอกาสฝนมากในหน้าฝน (ชัดสุดในภาคอีสาน) — น้ำท่วมใหญ่ปี 2554 เกิดช่วงลานีญา'
-          : 'สถานะมหาสมุทรเป็นเพียงปัจจัยเสริม ไม่ใช่ตัวพยากรณ์',
-        note_en: cls.phase.startsWith('la_nina')
-          ? 'La Niña raises wet-season rain odds (clearest in the Northeast) — the 2011 flood was a La Niña event'
-          : 'Ocean state is a risk modulator, not a predictor',
+        note_th: cls.phase.startsWith('el_nino')
+          ? 'เอลนีโญทำให้แล้งและร้อนกว่าปกติ — ฤดูเผา/ฝุ่นมักรุนแรงขึ้น เพราะฝนที่ช่วยล้างฝุ่นมาน้อย'
+          : cls.phase.startsWith('la_nina')
+            ? 'ลานีญาเพิ่มโอกาสฝน — ฝนช่วยชะล้างฝุ่นได้บ่อยขึ้นในฤดูฝุ่น'
+            : 'สถานะมหาสมุทรเป็นเพียงปัจจัยเสริม ไม่ใช่ตัวพยากรณ์',
+        note_en: cls.phase.startsWith('el_nino')
+          ? 'El Niño brings drier, hotter conditions — burning/dust seasons tend to be worse because washout rain is scarce'
+          : cls.phase.startsWith('la_nina')
+            ? 'La Niña raises rain odds — more frequent washout during dust season'
+            : 'Ocean state is a risk modulator, not a predictor',
         series,
       })
     },
@@ -496,7 +505,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
         if (format === 'csv') {
           res.writeHead(200, {
             'content-type': 'text/csv; charset=utf-8',
-            'content-disposition': `attachment; filename="flooddash-${day}.csv"`,
+            'content-disposition': `attachment; filename="airdash-${day}.csv"`,
             'cache-control': 'public, max-age=3600',
           })
           res.end('\uFEFF' + dailyToCsv(bundle))
@@ -515,7 +524,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
         if (format === 'json') return json(res, 200, bundle)
         res.writeHead(200, {
           'content-type': 'text/csv; charset=utf-8',
-          'content-disposition': 'attachment; filename="flooddash-full-dataset.csv"',
+          'content-disposition': 'attachment; filename="airdash-full-dataset.csv"',
           'cache-control': 'public, max-age=600',
         })
         res.end('\uFEFF' + fullToCsv(bundle))
@@ -592,7 +601,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
       bus.subscribe(res, req.headers['last-event-id'])
     },
 
-    // The Flood Library — bible + knowledge notes, searchable and rendered.
+    // The Air Library — bible + knowledge notes, searchable and rendered.
     'GET /api/library/toc': (req, res, url) => json(res, 200, libraryToc(db, url.searchParams.get('lang') === 'en' ? 'en' : 'th')),
 
     'GET /api/library/search': (req, res, url) => {
@@ -628,7 +637,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
       }
       const radius = clamp(url.searchParams.get('radius'), 5, 100, 30)
       const detail = placeDetail(db, { lat, lng, province_th, radius_km: radius })
-      // The "so what" layer: plain-language verdict + river time-to-impact.
+      // The "so what" layer: plain-language verdict for this exact place.
       // Try exact province name first; if that fails (district/tambon search
       // where province_th doesn't match the risk engine's list), fall back
       // to the nearest province by centroid so the verdict is never blank.
@@ -645,19 +654,17 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
         }
         prov = best
       }
-      const eta = riverEta(db, lat, lng)
       // Satellite rain (IMERG) for the province, if the source is configured —
-      // catches rain falling where no gauge is reporting.
+      // rain falling right now means washout is already underway.
       const sat = prov?.province_code
         ? db.get(`SELECT value, obs_time FROM latest
                    WHERE source = 'imerg' AND station_key = ? AND metric = 'sat_rain_mmh'`,
                  String(prov.province_code)) ?? null
         : null
-      detail.river_eta = eta
       detail.sat_rain = sat
-      // Pass the actual nearest stations so the verdict catches an overflowing
-      // river near this city even when it sits across a province border.
-      detail.verdict = provinceVerdict(prov, eta, sat, detail.nearest_water)
+      // Pass the actual nearest stations so the verdict catches a smoky valley
+      // near this city even when it sits across a province border.
+      detail.verdict = provinceVerdict(prov, sat, detail.nearest_air ?? detail.nearest_water)
       json(res, 200, detail)
     },
 
@@ -784,71 +791,46 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
       json(res, 200, { ok: true })
     },
 
-    // ── Shelters (DDPM, data.go.th) ──────────────────────────────────
-    // The endpoint that powers "where do I go?" in the citizen hero. Lazy-
-    // loaded on first hit; daily cron keeps the local SQLite fresh.
-    'GET /api/shelters': (req, res, url) => {
-      ensureSheltersLoaded(db)
-      const province = url.searchParams.get('province')
-      if (province) {
-        return json(res, 200, {
-          source: SHELTER_SOURCE,
-          count: sheltersInProvince(db, province, 200).length,
-          shelters: sheltersInProvince(db, province, 200),
-        })
-      }
-      const bbox = url.searchParams.get('bbox')
-      if (bbox) {
-        const parts = bbox.split(',').map(Number)
-        if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) {
-          return json(res, 400, { error: 'bbox must be lat_min,lng_min,lat_max,lng_max' })
-        }
-        return json(res, 200, {
-          source: SHELTER_SOURCE,
-          shelters: sheltersInBbox(db, parts, 500),
-        })
-      }
-      // Default: a sample (first 50) so the dashboard has something to show
-      // on first load. The map frontend calls with bbox for the visible
-      // viewport.
-      const all = db.all(`SELECT id, place, province_th, district_th, lat, lng, capacity
-                          FROM shelters WHERE source = ? LIMIT 50`, SHELTER_SOURCE)
-      json(res, 200, { source: SHELTER_SOURCE, sample: true, shelters: all })
-    },
-
-    // K-nearest shelters to a point — the citizen hero "ศูนย์พักพิงใกล้คุณ"
-    // call. `province` is optional; if provided, restricts the result to
-    // shelters inside the user's province (a citizen of Trat doesn't want to
-    // see Buriram shelters even if they're closer in straight-line km).
-    'GET /api/shelters/nearest': (req, res, url) => {
-      ensureSheltersLoaded(db)
+    // ── Nearest AQ stations ──────────────────────────────────────────
+    // The endpoint that powers "what am I breathing right now?" in the
+    // citizen hero: the K nearest Air4Thai stations to a point with their
+    // latest PM2.5 / AQI and how fresh the reading is.
+    'GET /api/stations/nearest': (req, res, url) => {
       const lat = Number(url.searchParams.get('lat'))
       const lng = Number(url.searchParams.get('lng'))
-      const limit = Math.min(20, Number(url.searchParams.get('limit')) || 5)
-      const province = url.searchParams.get('province')
+      const limit = Math.min(20, Number(url.searchParams.get('limit')) || 3)
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
         return json(res, 400, { error: 'lat and lng required' })
       }
-      let rows = nearestShelters(db, lat, lng, limit)
-      if (province) {
-        // Re-rank: prefer same-province shelters, then fall back to nearest.
-        const inProv = rows.filter((r) => r.province_th === province)
-        const outOfProv = rows.filter((r) => r.province_th !== province)
-        rows = [...inProv, ...outOfProv].slice(0, limit)
-      }
+      // Bbox prefilter (~1.5° ≈ 165 km) keeps this on the geo index, then
+      // exact-ish distance sort in JS over the small candidate set.
+      const D = 1.5
+      const rows = db.all(
+        `SELECT s.station_key, s.name_th, s.name_en, s.province_th, s.province_en,
+                s.lat, s.lng,
+                pm.value AS pm25, pm.obs_time AS pm25_time,
+                aq.value AS aqi
+         FROM stations s
+         LEFT JOIN latest pm ON pm.source = s.source AND pm.station_key = s.station_key AND pm.metric = 'pm25'
+         LEFT JOIN latest aq ON aq.source = s.source AND aq.station_key = s.station_key AND aq.metric = 'aqi'
+         WHERE s.source = 'air4thai'
+           AND s.lat BETWEEN ? AND ? AND s.lng BETWEEN ? AND ?`,
+        lat - D, lat + D, lng - D, lng + D)
+      const KM_LAT = 111, KM_LNG = 101
+      const stations = rows
+        .map((r) => ({
+          ...r,
+          distance_km: Math.round(Math.sqrt(
+            ((r.lat - lat) * KM_LAT) ** 2 + ((r.lng - lng) * KM_LNG) ** 2) * 10) / 10,
+        }))
+        .sort((a, b) => a.distance_km - b.distance_km)
+        .slice(0, limit)
       json(res, 200, {
-        source: SHELTER_SOURCE,
+        source: 'air4thai',
         origin: { lat, lng },
-        count: rows.length,
-        shelters: rows,
+        count: stations.length,
+        stations,
       })
-    },
-
-    // Force a re-ingest (admin / cron endpoint). The daily cron will hit this.
-    'POST /api/shelters/ingest': (req, res) => {
-      const r = ingestShelters(db)
-      if (r.ok) db.kvSet('shelters_loaded_at', new Date().toISOString())
-      json(res, r.ok ? 200 : 500, r)
     },
 
     // ── LINE Notify opt-in ────────────────────────────────────────────
@@ -874,7 +856,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq,
       // user sees a clear error.
       try {
         const { sendLineNotify } = await import('./linePush.js')
-        await sendLineNotify(token, `✅ FloodDash เชื่อมต่อสำเร็จ · connected to ${province_th}. จะส่งแจ้งเตือนเมื่อระดับเสี่ยง ACT NOW ขึ้นไป.`)
+        await sendLineNotify(token, `✅ AirDash เชื่อมต่อสำเร็จ · connected to ${province_th}. จะส่งแจ้งเตือนเมื่อระดับฝุ่นถึงขั้น PROTECT NOW ขึ้นไป.`)
       } catch (err) {
         return json(res, 400, { error: 'LINE rejected token', detail: String(err.message ?? err) })
       }

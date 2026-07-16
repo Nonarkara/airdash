@@ -6,11 +6,10 @@
 import { CONFIG } from './config.js'
 import { log } from './util.js'
 import { BAND_LABELS } from './risk.js'
-import { buildCascade } from './cascade.js'
-import { WETNESS_LABELS } from './wetness.js'
+import { WASHOUT_LABELS } from './washout.js'
 import { classifyOni } from './sources/enso.js'
 
-export function createRag({ db, riskEngine, wetness, faq }) {
+export function createRag({ db, riskEngine, washout, faq }) {
   const o = CONFIG.llm
   let probe = { reachable: false, checkedAt: 0 }
 
@@ -85,7 +84,7 @@ export function createRag({ db, riskEngine, wetness, faq }) {
     return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1)
   }
 
-  // topK=5 now that the corpus includes the full Flood Bible (~800 chunks).
+  // topK=5 now that the corpus includes the full Air Bible (~800 chunks).
   async function retrieveKnowledge(question, topK = 5) {
     const docs = db.all('SELECT doc_key, title, content, embedding FROM rag_docs WHERE embedding IS NOT NULL')
     if (docs.length === 0) return []
@@ -140,16 +139,15 @@ export function createRag({ db, riskEngine, wetness, faq }) {
     const L = BAND_LABELS[p.band]
     const lines = [
       `${p.province_th} (${p.province_en ?? '-'}): score ${p.score}/100 = ${L.th} / ${L.en}`,
-      `  water-level stations: ${p.wl_stations} (level-5 overflowing: ${p.stations_l5}, level-4 high: ${p.stations_l4})`,
+      `  AQ stations: ${p.aq_stations} (PM2.5 ≥75 affecting-health: ${p.stations_very_unhealthy}, ≥37.5 starting-to-affect: ${p.stations_unhealthy})`,
     ]
-    if (p.top_wl.length) lines.push(`  worst stations: ${p.top_wl.map((s) => `${s.th}/${s.en ?? '-'} L${s.level}`).join(' · ')}`)
-    if (p.max_rain_24h !== null) lines.push(`  max rain 24h: ${p.max_rain_24h} mm at ${p.max_rain_station_th}`)
-    if (p.fc_48h !== null) lines.push(`  forecast rain next 48h (province centroid): ${Math.round(p.fc_48h)} mm`)
-    const aqiRows = db.all(
-      `SELECT s.name_th, l.value FROM latest l
-       JOIN stations s ON s.source = l.source AND s.station_key = l.station_key
-       WHERE l.source = 'air4thai' AND l.metric = 'pm25' AND s.province_th = ? LIMIT 2`, p.province_th)
-    for (const r of aqiRows) lines.push(`  PM2.5 at ${r.name_th}: ${r.value} µg/m³`)
+    if (p.pm25 !== null) lines.push(`  worst PM2.5 now: ${p.pm25} µg/m³ at ${p.pm25_station_th ?? '-'}`)
+    if (p.top_stations?.length) lines.push(`  worst stations: ${p.top_stations.map((s) => `${s.th}/${s.en ?? '-'} ${s.pm25} µg/m³`).join(' · ')}`)
+    if (p.rise_6h_ug !== null) lines.push(`  6h PM2.5 trend: ${p.rise_6h_ug > 0 ? '+' : ''}${p.rise_6h_ug} µg/m³`)
+    if (p.pm25_fc_24h !== null) lines.push(`  CAMS forecast PM2.5 next 24h: ${Math.round(p.pm25_fc_24h)} µg/m³${p.pm25_fc_48h !== null ? `, 24–48h: ${Math.round(p.pm25_fc_48h)}` : ''}`)
+    if (p.precip_prob_24h !== null) lines.push(`  rain chance 24h: ${Math.round(p.precip_prob_24h)}% (${Math.round(p.precip_fc_24h ?? 0)} mm forecast)` +
+      (p.washout_relief_pct ? ` — if it rains, PM2.5 washes out ~${p.washout_relief_pct}% → ~${p.projected_pm25} µg/m³` : ''))
+    if (p.rain_obs_24h !== null && p.rain_obs_24h >= 5) lines.push(`  observed rain 24h: ${Math.round(p.rain_obs_24h)} mm (washout underway)`)
     return lines.join('\n')
   }
 
@@ -176,40 +174,36 @@ export function createRag({ db, riskEngine, wetness, faq }) {
     const stations = matchStations(message)
 
     const parts = []
-    parts.push(`Data time: ${risk.updated} (UTC). National status: ${BAND_LABELS[n.band].th} / ${BAND_LABELS[n.band].en}.`)
-    parts.push(`Water-level stations by HII level (1 critically-low, 2 low, 3 normal, 4 high, 5 OVERFLOWING): ` +
-      `L1=${n.byLevel[1]} L2=${n.byLevel[2]} L3=${n.byLevel[3]} L4=${n.byLevel[4]} L5=${n.byLevel[5]}.`)
-    if (n.worstRain) parts.push(`Heaviest 24h rain now: ${n.worstRain.mm} mm in ${n.worstRain.province_th}/${n.worstRain.province_en}.`)
+    parts.push(`Data time: ${risk.updated} (UTC). National status: ${BAND_LABELS[n.band].th} / ${BAND_LABELS[n.band].en}.` +
+      (n.dustSeason ? ' Dust season is ACTIVE (burning window + widespread moderate PM2.5).' : ''))
+    parts.push(`Provinces by band: normal=${n.bandCounts.normal} watch=${n.bandCounts.watch} elevated=${n.bandCounts.elevated} critical=${n.bandCounts.high}. ` +
+      `Provinces past the Thai moderate line (PM2.5 ≥ 25 µg/m³): ${n.dustyProvinceCount}/${n.dustSampledCount} (${n.dustLoadPct}%).`)
+    if (n.worstPm25) parts.push(`Highest PM2.5 now: ${n.worstPm25.ug} µg/m³ in ${n.worstPm25.province_th}/${n.worstPm25.province_en}.`)
     parts.push(`Top provinces by watch score:\n${top.map((p) => `- ${provinceFacts(p)}`).join('\n')}`)
     if (provinces.length) parts.push(`Provinces matched in the question:\n${provinces.map((p) => provinceFacts(p)).join('\n')}`)
     const sf = stationFacts(stations)
     if (sf.length) parts.push(`Stations matched in the question:\n${sf.join('\n')}`)
     if (alerts.length) parts.push(`Recent alerts:\n${alerts.map((a) => `- [sev${a.severity}] ${a.ts.slice(0, 16)} ${a.message_th} | ${a.message_en}`).join('\n')}`)
-    if (news.length) parts.push(`Latest flood news headlines:\n${news.map((x) => `- ${x.title}`).join('\n')}`)
+    if (news.length) parts.push(`Latest air-quality news headlines:\n${news.map((x) => `- ${x.title}`).join('\n')}`)
 
     // Ocean state (ENSO) — seasonal modulator.
     const anom = Number(db.kvGet('enso_anom'))
     if (Number.isFinite(anom)) {
       const cls = classifyOni(anom)
       parts.push(`Ocean state (ENSO): ${cls.en} / ${cls.th}, ONI ${anom > 0 ? '+' : ''}${anom.toFixed(1)} (${db.kvGet('enso_season')}). ` +
-        `La Niña raises wet-season flood odds but is a modulator, not a predictor.`)
+        `El Niño = drier/hotter = worse burning seasons (less washout rain); a modulator, not a predictor.`)
     }
 
-    // River cascade (connected waterways) — discharge + downstream lag.
-    const cascade = buildCascade(db)
-    const rising = cascade.reaches.filter((r) => r.trend === 'rising')
-    const cpChain = cascade.flagship.map((f) =>
-      `${f.name_en} q=${f.discharge ?? '?'}→peak ${f.forecastPeak ?? '?'} m³/s (+${f.cumLagDays}d to here)`).join(' → ')
-    parts.push(`River discharge (GloFAS, m³/s). Chao Phraya cascade upstream→Bangkok: ${cpChain}. ` +
-      `${rising.length} of ${cascade.reaches.length} reaches forecast rising. Lag = flood-wave travel time; ` +
-      `a rise at an upstream reach reaches downstream after the stated days.`)
-
-    // Catchment wetness (Antecedent Precipitation Index).
-    if (wetness) {
-      const wet = [...wetness.all().values()].sort((a, b) => b.api - a.api).slice(0, 6)
-      if (wet.length) {
-        parts.push(`Soil wetness (Antecedent Precipitation Index, higher = wetter ground = more runoff from the same rain):\n` +
-          wet.map((w) => `- ${w.province_th}: API ${w.api} (${WETNESS_LABELS[w.band].en})`).join('\n'))
+    // Rain-washout outlook — where rain is coming and how much dust it clears.
+    if (washout) {
+      const w = [...washout.all().values()]
+        .filter((x) => x.pm25 !== null)
+        .sort((a, b) => (b.expected_relief_pct ?? 0) - (a.expected_relief_pct ?? 0))
+        .slice(0, 6)
+      if (w.length) {
+        parts.push(`Rain-washout outlook (wet deposition — rain scavenges PM2.5; ≥5mm cuts ~20%, ≥15mm ~30%, ≥35mm ~40%):\n` +
+          w.map((x) => `- ${x.province_th}: PM2.5 ${x.pm25} µg/m³, rain chance 24h ${Math.round(x.prob24 ?? 0)}% (${Math.round(x.rain_fc_24 ?? 0)} mm) → ${WASHOUT_LABELS[x.band].en}` +
+            (x.relief_if_rain_pct ? `, if it rains PM2.5 → ~${x.projected_pm25} µg/m³ (−${x.relief_if_rain_pct}%)` : '')).join('\n'))
       }
     }
 
@@ -219,14 +213,16 @@ export function createRag({ db, riskEngine, wetness, faq }) {
 
   function systemPrompt(lang) {
     const langName = lang === 'th' ? 'Thai (ภาษาไทย)' : 'English'
-    return `You are the assistant inside FloodDash, a live flood-monitoring dashboard for Thailand.
+    return `You are the assistant inside AirDash, a live air-quality and dust (PM2.5) dashboard for Thailand.
 Answer in ${langName}. Be direct, calm, and factual — a duty officer's voice.
 
 Hard rules:
 - Use ONLY the numbers and facts in the FACTS and KNOWLEDGE blocks. NEVER estimate, extrapolate, or invent values.
 - If the answer is not in FACTS/KNOWLEDGE, say you don't have that data and point to the closest thing you DO have.
 - The watch score is a heuristic indicator from live data, NOT a forecast. Say so when asked about the future.
-- HII water levels: 1–2 mean LOW water, 3 normal, 4 high, 5 overflowing. Never describe level 1–2 as flooding.
+- Thai AQI 2023 PM2.5 lines: ≤15 very good, ≤25 good, ≤37.5 moderate, 37.5–75 starts affecting health, >75 affecting health. Never call ≤25 dangerous.
+- Washout numbers are expectations from wet-deposition ratios, not measurements — say "expected" when citing them.
+- Official guidance comes from PCD (hotline 1650) and DOH; medical emergencies 1669.
 - Keep answers under 120 words. Thai station/province names first, English in parentheses when useful.
 - Plain text only — no markdown, no asterisks, no headings. Short paragraphs or simple "-" lists.`
   }

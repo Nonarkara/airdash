@@ -184,39 +184,6 @@ CREATE TABLE IF NOT EXISTS chat_faq (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_faq_lang ON chat_faq(lang, approved, served_count DESC);
 
--- ── Shelters (DDPM / data.go.th ศูนย์พักพิง) ──────────────────────────
--- 10K+ emergency shelters across Thailand with coordinates, capacity,
--- amenities, and on-site coordinator phone. The single most actionable
--- dataset for citizens ("where do I go?"). Sourced from:
---   https://data.go.th/dataset/gdpublish-dsc_11_01
--- Updated yearly by DDPM; cached locally and reloaded via the daily
--- shelter-ingest cron task.
-CREATE TABLE IF NOT EXISTS shelters (
-  id            INTEGER PRIMARY KEY,
-  no            INTEGER,            -- row number in source
-  region_th     TEXT,               -- ภาค
-  province_th   TEXT,               -- จังหวัด
-  district_th   TEXT,               -- อำเภอ
-  subdistrict_th TEXT,              -- ตำบล
-  village       TEXT,               -- หมู่บ้าน/ชุมชน
-  place         TEXT,               -- สถานที่ (shelter name)
-  capacity      INTEGER,            -- รองรับ (people)
-  responsible   TEXT,               -- สถานที่รับผิดชอบ (อปท.)
-  coordinator   TEXT,               -- ชื่อ ผู้ประสาน
-  phone         TEXT,               -- หมายเลขโทรศัพท์
-  has_power     INTEGER DEFAULT 0,  -- ไฟฟ้า
-  has_water     INTEGER DEFAULT 0,  -- ประปา
-  has_toilet    INTEGER DEFAULT 0,  -- สุขา
-  lat           REAL,
-  lng           REAL,
-  source        TEXT DEFAULT 'ddpm_gd002',
-  updated_at    TEXT
-);
--- Geo index for "nearest shelter" lookups (bbox on lat/lng). Without it,
--- a province-zoom query for nearest 3 shelters scans 10K rows.
-CREATE INDEX IF NOT EXISTS idx_shelters_geo ON shelters(lat, lng);
-CREATE INDEX IF NOT EXISTS idx_shelters_province ON shelters(province_th);
-
 `
 
 export function openDb(path = CONFIG.dbPath) {

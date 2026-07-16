@@ -1,11 +1,10 @@
-// OSM building footprints — building-level flood risk via OpenStreetMap
-// polygons. Fetches from the Overpass API for the current map bounds,
-// colors each building by the watch score of its nearest province, and
-// shows a popup with the building's risk context.
+// OSM building footprints — building-level air-quality context via
+// OpenStreetMap polygons. Fetches from the Overpass API for the current map
+// bounds, colors each building by the watch score of its nearest province,
+// and shows a popup with the building's risk context.
 //
-// Closes GISTDA's "building-level flood depth" gap at 5% of the cost —
-// they have 3D models, we have 2D footprint coloring driven by our
-// real-time 9-source watch score.
+// 2D footprint coloring driven by our real-time multi-source watch score —
+// a quick "how bad is the air around this block" read at street zoom.
 import { store } from '../state.js?v=2.0.0-final'
 import { tr } from '../i18n.js?v=2.0.0-final'
 import { escapeHtml } from '../fmt.js?v=2.0.0-final'

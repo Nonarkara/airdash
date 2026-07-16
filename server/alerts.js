@@ -3,10 +3,6 @@
 // a per-station cooldown so a station oscillating on a threshold can't spam.
 import { CONFIG } from './config.js'
 
-// HII situation_level semantics: 1 critically-low … 3 normal … 4 high … 5 overflow.
-const LEVEL_TH = { 4: 'น้ำมาก', 5: 'น้ำล้นตลิ่ง' }
-const LEVEL_EN = { 4: 'high water', 5: 'overflowing banks' }
-
 export function createAlerts(db, bus, { line = null } = {}) {
   const cooldownMs = CONFIG.thresholds.alertCooldownMs
 
@@ -46,39 +42,38 @@ export function createAlerts(db, bus, { line = null } = {}) {
     const provTh = station.province_th ? ` จ.${station.province_th}` : ''
     const provEn = station.province_en ? `, ${station.province_en}` : ''
 
-    if (metric === 'situation_level' && value >= t.alertSituationLevel && (prev === null || prev < t.alertSituationLevel)) {
-      const isOverflow = value >= 5
+    // PM2.5 crossing the Thai "starts affecting health" (37.5) and
+    // "affecting health" (75) lines. Hazardous (150) rides the same rule at
+    // severity 3 — the cooldown key is shared so one station escalating
+    // through all three lines inside the window raises once.
+    if (metric === 'pm25' && value >= t.pm25Unhealthy && (prev === null || prev < t.pm25Unhealthy)) {
+      const isVery = value >= t.pm25VeryUnhealthy
+      const isHazard = value >= t.pm25Hazardous
       return raise({
-        rule: 'wl_level', source, station, metric, value, prev,
-        severity: isOverflow ? 3 : 2,
-        message_th: `สถานี${name}${provTh} ${LEVEL_TH[isOverflow ? 5 : 4] ?? 'น้ำมาก'} (ระดับ ${value})`,
-        message_en: `Station ${nameEn}${provEn}: ${LEVEL_EN[isOverflow ? 5 : 4] ?? 'high water'} (level ${value})`,
+        rule: 'pm25_level', source, station, metric, value, prev,
+        severity: isHazard ? 3 : isVery ? 3 : 2,
+        message_th: `PM2.5 ${value.toFixed(0)} µg/m³ ที่ ${name}${provTh} — ${isVery ? 'มีผลต่อสุขภาพ' : 'เริ่มมีผลต่อสุขภาพ'}`,
+        message_en: `PM2.5 at ${value.toFixed(0)} µg/m³, ${nameEn}${provEn} — ${isVery ? 'affecting health' : 'starting to affect health'}`,
       })
     }
 
-    if (metric === 'rain_24h' && value >= t.rainVeryHeavy24h && (prev === null || prev < t.rainVeryHeavy24h)) {
+    // Composite Air4Thai AQI past the unhealthy line.
+    if (metric === 'aqi' && value >= t.aqiUnhealthy && (prev === null || prev < t.aqiUnhealthy)) {
       return raise({
-        rule: 'rain_24h', source, station, metric, value, prev,
-        severity: value >= t.rainCritical24h ? 3 : 2,
-        message_th: `ฝนตกหนักมาก ${value.toFixed(0)} มม./24ชม. ที่ ${name}${provTh}`,
-        message_en: `Very heavy rain: ${value.toFixed(0)} mm/24h at ${nameEn}${provEn}`,
+        rule: 'aqi_level', source, station, metric, value, prev, severity: 2,
+        message_th: `AQI ${value.toFixed(0)} ที่ ${name}${provTh} — เกินเกณฑ์มาตรฐาน`,
+        message_en: `AQI at ${value.toFixed(0)}, ${nameEn}${provEn} — past the unhealthy line`,
       })
     }
 
-    if (metric === 'dam_storage_pct' && value >= t.damFullPct && (prev === null || prev < t.damFullPct)) {
+    // Washout-grade rain arriving in a province — good news worth surfacing.
+    // Severity 1 (notable): rain ≥5mm/24h starts scrubbing PM out of the air.
+    if (metric === 'rain_24h' && source === 'thaiwater_rain' &&
+        value >= t.rainWashout24h * 3 && (prev === null || prev < t.rainWashout24h * 3)) {
       return raise({
-        rule: 'dam_full', source, station, metric, value, prev, severity: 2,
-        message_th: `เขื่อน${name} กักเก็บ ${value.toFixed(1)}% ของความจุ`,
-        message_en: `${nameEn} dam at ${value.toFixed(1)}% of capacity`,
-      })
-    }
-
-    if (metric === 'rsv_storage_pct' && value >= t.reservoirFullPct && (prev === null || prev < t.reservoirFullPct)) {
-      const rsvTh = name.startsWith('อ่างเก็บน้ำ') ? name : `อ่างเก็บน้ำ${name}`
-      return raise({
-        rule: 'reservoir_full', source, station, metric, value, prev, severity: 2,
-        message_th: `${rsvTh} กักเก็บ ${value.toFixed(1)}%`,
-        message_en: `Reservoir ${nameEn} at ${value.toFixed(1)}%`,
+        rule: 'washout_rain', source, station, metric, value, prev, severity: 1,
+        message_th: `ฝนตก ${value.toFixed(0)} มม./24ชม. ที่ ${name}${provTh} — ช่วยชะล้างฝุ่นในพื้นที่`,
+        message_en: `Rain ${value.toFixed(0)} mm/24h at ${nameEn}${provEn} — washing dust out locally`,
       })
     }
 

@@ -2,7 +2,7 @@
 const listeners = new Map() // topic → Set<fn>
 
 export const store = {
-  lang: localStorage.getItem('fd_lang') === 'en' ? 'en' : 'th',
+  lang: localStorage.getItem('ad_lang') === 'en' ? 'en' : 'th',
   snapshot: null,      // last /api/snapshot payload
   sensorHealth: null,  // last /api/sensors/health payload
   connected: false,    // SSE liveness
@@ -22,6 +22,6 @@ export function emit(topic, data) {
 
 export function setLang(lang) {
   store.lang = lang === 'en' ? 'en' : 'th'
-  localStorage.setItem('fd_lang', store.lang)
+  localStorage.setItem('ad_lang', store.lang)
   emit('lang', store.lang)
 }

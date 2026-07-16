@@ -43,10 +43,10 @@ export function paintChrome() {
 }
 
 // BAND — plain-language action framework for the heuristic watch score.
-// This dashboard can tell people to pay attention, prepare, or act, but it
-// cannot issue an evacuation order. Only DDPM / local authorities can do
-// that. Keep the strongest heuristic band at ACT NOW and point the detailed
-// action copy to official instructions.
+// This dashboard can tell people to pay attention, prepare, or protect
+// themselves, but it cannot issue a health order. Only PCD / DDC / local
+// authorities can do that. Keep the strongest heuristic band at ACT NOW and
+// point the detailed action copy to official instructions.
 export const BAND = {
   normal:   { th: 'ปลอดภัย',        en: 'ALL CLEAR',          noun_th: 'ปกติ',     noun_en: 'NORMAL'    },
   low:      { th: 'ติดตาม',         en: 'STAY INFORMED',      noun_th: 'ต่ำ',     noun_en: 'LOW'       },
@@ -55,10 +55,22 @@ export const BAND = {
   high:     { th: 'ปฏิบัติการทันที', en: 'ACT NOW',           noun_th: 'วิกฤต',    noun_en: 'CRITICAL'  },
 }
 
+// LEVEL_NAME — Thai AQI 2023 PM2.5 levels 1–5
+// (breakpoints ≤15 · ≤25 · ≤37.5 · ≤75 · >75 µg/m³).
 export const LEVEL_NAME = {
-  1: { th: 'น้ำน้อยวิกฤต', en: 'critically low' },
-  2: { th: 'น้ำน้อย', en: 'low' },
-  3: { th: 'น้ำปกติ', en: 'normal' },
-  4: { th: 'น้ำมาก', en: 'high' },
-  5: { th: 'ล้นตลิ่ง', en: 'OVERFLOW' },
+  1: { th: 'ดีมาก', en: 'very good' },
+  2: { th: 'ดี', en: 'good' },
+  3: { th: 'ปานกลาง', en: 'moderate' },
+  4: { th: 'เริ่มมีผลต่อสุขภาพ', en: 'unhealthy (start)' },
+  5: { th: 'มีผลต่อสุขภาพ', en: 'UNHEALTHY' },
+}
+
+/** Thai AQI 2023 PM2.5 level (1–5) for a µg/m³ reading, or null. */
+export function pm25Level(ug) {
+  if (ug === null || ug === undefined || !Number.isFinite(ug)) return null
+  if (ug <= 15) return 1
+  if (ug <= 25) return 2
+  if (ug <= 37.5) return 3
+  if (ug <= 75) return 4
+  return 5
 }

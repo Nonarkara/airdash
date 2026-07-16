@@ -35,8 +35,14 @@ export function ago(ts) {
   return `${Math.round(s / 86400)}d ago`
 }
 
+/** PM/pollutant concentration with unit — bilingual µg/m³ suffix. */
+export function fmtUg(v, digits = 0) {
+  if (v === null || v === undefined || Number.isNaN(v)) return '—'
+  return `${fmtNum(v, digits)} ${store.lang === 'th' ? 'มคก./ลบ.ม.' : 'µg/m³'}`
+}
+
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
-/** Station/dam names ultimately come from government API responses, not our
+/** Station names ultimately come from government API responses, not our
  * own code — escape before dropping into innerHTML (Leaflet popups/tooltips)
  * so a compromised or malformed upstream feed can't inject markup. */
 export function escapeHtml(s) {

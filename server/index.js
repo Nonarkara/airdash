@@ -1,5 +1,5 @@
-// FloodDash — 24/7 flood monitoring for Thailand.
-// Single process: ingest scheduler + SQLite collection + HTTP/SSE dashboard + local-LLM chat.
+// AirDash — 24/7 air-quality monitoring for Thailand.
+// Single process: ingest scheduler + SQLite collection + HTTP/SSE dashboard + cloud-LLM chat.
 import { CONFIG } from './config.js'
 import { log } from './util.js'
 import { openDb } from './db.js'
@@ -7,7 +7,7 @@ import { createBus } from './bus.js'
 import { createAlerts } from './alerts.js'
 import { createScheduler } from './scheduler.js'
 import { createRisk } from './risk.js'
-import { createWetness } from './wetness.js'
+import { createWashout } from './washout.js'
 import { createRag } from './rag.js'
 import { createFaq } from './faq.js'
 import { indexKnowledge } from './knowledge.js'
@@ -16,52 +16,49 @@ import { scheduleRetention } from './retention.js'
 import { startHttp } from './http.js'
 import { buildRoutes } from './api.js'
 
-import thaiwaterLevel from './sources/thaiwater-level.js'
-import thaiwaterRain from './sources/thaiwater-rain.js'
-import thaiwaterDam from './sources/thaiwater-dam.js'
-import ridReservoir from './sources/rid-reservoir.js'
 import air4thai from './sources/air4thai.js'
 import openmeteo from './sources/openmeteo.js'
-import glofas from './sources/glofas.js'
+import openmeteoAq from './sources/openmeteo-aq.js'
+import thaiwaterRain from './sources/thaiwater-rain.js'
 import enso from './sources/enso.js'
 import news from './sources/news.js'
 import imerg from './sources/imerg.js'
 import { createLine } from './line.js'
 
 const startedAt = Date.now()
-log('info', 'flooddash starting', { node: process.version, pid: process.pid })
+log('info', 'airdash starting', { node: process.version, pid: process.pid })
 
 const db = openDb()
 const bus = createBus(db)
 const line = createLine(db)
 const alerts = createAlerts(db, bus, { line })
-const wetness = createWetness(db)
-const riskEngine = createRisk(db, wetness)
-const rag = createRag({ db, riskEngine, wetness })
+const washout = createWashout(db)
+const riskEngine = createRisk(db, washout)
+const rag = createRag({ db, riskEngine, washout })
 const faq = createFaq({ db, rag })
 // Bind faq back into rag so the chat endpoint can call logQuestion /
 // tryFaqHit. We do this by re-creating rag with faq attached, then
 // replacing the methods on the original instance.
-const ragWithFaq = createRag({ db, riskEngine, wetness, faq })
+const ragWithFaq = createRag({ db, riskEngine, washout, faq })
 for (const k of Object.keys(ragWithFaq)) {
   if (typeof ragWithFaq[k] === 'function') rag[k] = ragWithFaq[k]
 }
 
 const scheduler = createScheduler({
   db, bus, alerts,
-  sources: [thaiwaterLevel, thaiwaterRain, thaiwaterDam, ridReservoir, air4thai, openmeteo, glofas, enso, news, imerg],
+  sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg],
 })
 
-const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, wetness, rag, faq, startedAt }))
+const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, rag, faq, startedAt }))
 
 scheduler.start()
 scheduleRetention(db)
 
-// LINE Notify push tick — every 5 min, check subscribers and push to
-// anyone whose province crossed into elevated/high. Self-throttles to
-// one push per (token, province) per 3 h, so this is cheap even with
-// thousands of subscribers. Uses dynamic import because linePush.js
-// pulls `node:sqlite` indirectly and the lazy load keeps boot fast.
+// LINE push tick — every 5 min, check subscribers and push to anyone whose
+// province crossed into elevated/high. Self-throttles to one push per
+// (token, province) per 3 h, so this is cheap even with thousands of
+// subscribers. Uses dynamic import because linePush.js pulls `node:sqlite`
+// indirectly and the lazy load keeps boot fast.
 import('./linePush.js').then(({ tickLinePush }) => {
   setInterval(() => {
     tickLinePush(db).then((r) => {
@@ -81,38 +78,30 @@ import('./weeklyExport.js').then(({ startWeeklyBuild }) => {
     const next = new Date(now)
     next.setHours(2, 0, 0, 0)
     const dow = next.getDay() // 0 = Sun
-    const daysUntilSun = (7 - dow) % 7
+    let daysUntilSun = (7 - dow) % 7
     if (dow === 0 && now.getHours() >= 2) daysUntilSun = 7
     next.setDate(next.getDate() + daysUntilSun)
     const ms = Math.max(60_000, next.getTime() - now.getTime())
     log('info', 'weekly export scheduled', { next_at: next.toISOString(), in_h: +(ms / 3_600_000).toFixed(1) })
     setTimeout(() => {
       // startWeeklyBuild is non-blocking; returns immediately with state
-      // and the actual dump runs in the background (~45s for 4.6M rows).
+      // and the actual dump runs in the background.
       startWeeklyBuild({ db, riskEngine, startedAt })
       scheduleWeekly()
     }, ms).unref()
   }
   scheduleWeekly()
 }).catch(() => { /* weeklyExport not available — silently skip */ })
+
 // Keep the hot-path caches warm so a real page load never pays a cold rebuild.
-// /api/snapshot (1.3MB, pivots) and /api/series/daily (aggregate scan) are the
-// two things a page load waits on; when their caches go cold after idle, the
-// rebuild froze the loop for seconds and the page hung on "connecting…". A
-// self-fetch on a timer keeps both caches — and the OS page cache behind them —
-// resident, so the first user always hits a warm cache. Costs a couple of
-// localhost requests; the responses serve from cache between rebuilds.
+// A page load after idle used to fire everything at once against a cold OS
+// cache and thrash the disk — freezing the single-threaded loop. Keeping the
+// working set resident makes every load warm-fast.
 {
   const base = `http://127.0.0.1:${CONFIG.port}`
   const warm = (path) => fetch(`${base}${path}`).then((r) => r.arrayBuffer()).catch(() => {})
-  // Every one of these is fetched during a page load, reads slowly ONLY when
-  // its DB pages are cold, and is the same for all users. A page load after
-  // idle used to fire all of them at once against a cold OS cache and thrash
-  // the disk for tens of seconds — freezing the single-threaded loop so even
-  // trivial endpoints (/api/focus) timed out (504) and the page hung. Keeping
-  // them — and the pages behind them — resident makes every load warm-fast.
   const PATHS = [
-    '/api/snapshot', '/api/series/daily?days=14', '/api/rivers', '/api/wetness',
+    '/api/snapshot', '/api/series/daily?days=14', '/api/washout',
     '/api/insights', '/api/export/days?limit=14', '/api/tap/recent?limit=200',
     '/api/library/toc?lang=th',
   ]
@@ -124,14 +113,14 @@ import('./weeklyExport.js').then(({ startWeeklyBuild }) => {
 
 bus.publish({
   kind: 'system', severity: 0,
-  title_th: 'FloodDash เริ่มทำงาน — เชื่อมต่อทุกแหล่งข้อมูล',
-  title_en: 'FloodDash started — connecting all data pipelines',
+  title_th: 'AirDash เริ่มทำงาน — เชื่อมต่อทุกแหล่งข้อมูล',
+  title_en: 'AirDash started — connecting all data pipelines',
   payload: { pid: process.pid },
 })
 
-// Index knowledge notes after boot; re-attempt daily (covers Ollama coming online later).
+// Index knowledge notes after boot; re-attempt daily (covers the LLM coming online later).
 setTimeout(() => indexKnowledge(db, rag).catch((e) => log('error', 'knowledge index failed', { error: String(e) })), 10_000)
-// Ingest the Flood Library corpus once after boot (hash-guarded, idempotent).
+// Ingest the Air Library corpus once after boot (hash-guarded, idempotent).
 setTimeout(() => ingestLibrary(db).catch((e) => log('error', 'library ingest failed', { error: String(e) })), 12_000)
 const knowledgeTimer = setInterval(
   () => indexKnowledge(db, rag).catch((e) => log('error', 'knowledge index failed', { error: String(e) })),

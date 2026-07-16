@@ -9,10 +9,10 @@
 //     practical noise floor from sensor drift + rounding)
 //   - rain forecast 48h: ±35% of value (Open-Meteo typical 24-48h
 //     forecast RMSE for Thailand is in this range)
-//   - water level (m MSL): sensor accuracy is ~5cm; show ±0.05m
-//   - rise rate (m/6h): ±30% (computed from 2 readings, propagates
+//   - PM2.5 (µg/m³): BAM/optical monitor accuracy is ~±8% at ambient
+//     concentrations; show ±8% of value
+//   - PM2.5 rise (µg/6h): ±30% (computed from 2 readings, propagates
 //     the sensor noise)
-//   - shelter capacity: trust the source (no ±)
 //
 // Format: every helper returns { value, lo, hi, label } so the caller
 // can render either a tight `76 (±5)` or a wide `47 mm (±16)` depending
@@ -20,8 +20,8 @@
 
 const RISK_SIGMA = 5                // 0-100 score, ±5 = ±1 band width
 const FORECAST_REL_SIGMA = 0.35     // 35% of rain forecast
-const WL_SIGMA_M = 0.05             // 5cm sensor noise
-const RISE_SIGMA_REL = 0.30         // 30% of rise
+const PM25_REL_SIGMA = 0.08         // 8% monitor noise at ambient PM2.5
+const RISE_SIGMA_REL = 0.30         // 30% of 6h PM2.5 rise
 
 /** Wrap a number with a 1-sigma confidence interval. Returns a shape
  *  the UI can render: "value (lo–hi)" in the right language. */
@@ -59,5 +59,5 @@ function round(n, p) {
 // ── Specialised helpers (per-metric) ────────────────────────────────────
 export function riskCi(score)   { return ci(score, RISK_SIGMA, { precision: 0 }) }
 export function forecastCi(mm)  { return ci(mm, Math.abs(mm) * FORECAST_REL_SIGMA, { unit: 'mm', precision: 0 }) }
-export function waterCi(m)      { return ci(m, WL_SIGMA_M, { unit: 'm', precision: 2 }) }
-export function riseCi(m)       { return ci(m, Math.abs(m) * RISE_SIGMA_REL, { unit: 'm', precision: 2 }) }
+export function pm25Ci(ug)      { return ci(ug, Math.abs(ug) * PM25_REL_SIGMA, { unit: 'µg/m³', precision: 0 }) }
+export function riseCi(ug)      { return ci(ug, Math.abs(ug) * RISE_SIGMA_REL, { unit: 'µg', precision: 0 }) }
