@@ -146,6 +146,10 @@ function renderStatus(snap) {
       parts.push(`PM2.5 ${worst.pm25_live != null ? worst.pm25_live.toFixed(0) : '–'} µg/m³ (base ${worst.pm_base})`)
       if (worst.temp_c != null) parts.push(`T ${worst.temp_c.toFixed(0)}°C (heat amp ${(worst.heat_amp * 100).toFixed(0)}%)`)
       if (worst.rh_pct != null) parts.push(`RH ${worst.rh_pct.toFixed(0)}% (hygroscopic amp ${(worst.hum_amp * 100).toFixed(0)}%)`)
+      if (worst.noise_leq_db != null) {
+        const nStations = worst.noise_stations > 1 ? ` · ${worst.noise_stations} stn` : ''
+        parts.push(`noise ${worst.noise_leq_db.toFixed(0)} dB${nStations} (amp ${(worst.noise_amp * 100).toFixed(0)}%)`)
+      }
       if (worst.rain_relief > 0) parts.push(`rain relief ${(worst.rain_relief * 100).toFixed(0)}% (${worst.rain_source ?? 'forecast'})`)
       const provinceName = tr(worst.province_th, worst.province_en)
       dangerEl.title = `${label} · ${provinceName} (${worst.score}/100)\n${parts.join(' · ')}`

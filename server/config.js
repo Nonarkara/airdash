@@ -31,6 +31,7 @@ export const CONFIG = {
     news: 30 * MINUTE,
     imerg: 30 * MINUTE,      // IMERG Early publishes half-hourly (~4h latency)
     gistda_pm25: 1 * HOUR,   // GISTDA satellite+ground PM2.5 fusion
+    pcd_noise: 30 * MINUTE,   // PCD noisemonitor.net — daily Leq, polled sub-hourly
   },
 
   // Thai AQI 2023 PM2.5 breakpoints (µg/m³): ≤15 very good, ≤25 good,

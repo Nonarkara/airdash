@@ -25,6 +25,7 @@ import enso from './sources/enso.js'
 import news from './sources/news.js'
 import imerg from './sources/imerg.js'
 import gistdaPm25 from './sources/gistda-pm25.js'
+import pcdNoise from './sources/pcd-noise.js'
 import { createLine } from './line.js'
 
 const startedAt = Date.now()
@@ -49,7 +50,7 @@ for (const k of Object.keys(ragWithFaq)) {
 
 const scheduler = createScheduler({
   db, bus, alerts,
-  sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25],
+  sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise],
 })
 
 const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, rag, faq, startedAt }))

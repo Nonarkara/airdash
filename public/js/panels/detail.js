@@ -123,6 +123,13 @@ export function showProvinceDetail(p) {
           d.rh_pct != null ? `${d.rh_pct.toFixed(0)}%` : '–',
           ` ×(1+${(d.hum_amp).toFixed(2)})`)),
       el('div', { class: 'dm-row' },
+        el('span', { class: 'dm-k' }, tr('เสียง (noise amp)', 'Noise amp')),
+        el('span', { class: 'dm-v' },
+          d.noise_leq_db != null
+            ? `${d.noise_leq_db.toFixed(0)} dB${d.noise_stations > 1 ? ` · ${d.noise_stations} stn` : ''}`
+            : '– ไม่มีสถานี',
+          d.noise_leq_db != null ? ` ×(1+${(d.noise_amp).toFixed(2)})` : '')),
+      el('div', { class: 'dm-row' },
         el('span', { class: 'dm-k' }, tr('ฝน (relief)', 'Rain relief')),
         el('span', { class: 'dm-v' },
           d.rain_obs_24 != null ? `${d.rain_obs_24.toFixed(0)} มม. สังเกต` :
@@ -131,8 +138,8 @@ export function showProvinceDetail(p) {
     ),
     el('div', { class: 'danger-method' },
       tr(
-        `สูตร: PM × (1+heat) × (1+RH) − rain — ดูวิธีคำนวณในงานวิจัยข้อ 2`,
-        `formula: PM × (1+heat) × (1+RH) − rain — see research paper §2 for citations`)),
+        `สูตร: PM × (1+heat) × (1+RH) × (1+noise) − rain — ดูวิธีคำนวณในงานวิจัยข้อ 2`,
+        `formula: PM × (1+heat) × (1+RH) × (1+noise) − rain — see research paper §2 for citations`)),
   ) : null
 
   box().replaceChildren(

@@ -1,13 +1,14 @@
-// Danger Score — the "is it dangerous to breathe here RIGHT NOW" composite.
+// Danger Score — the "is it dangerous to be outside RIGHT NOW" composite.
 // Distinct from the Air Watch Score (which is a per-province watch INDICATOR
 // weighted across PM, pollutants, trend, forecast, stagnation).
 //
 // The Danger Score answers a sharper question: given the air, the heat, the
-// humidity, and any incoming rain, how much more dangerous is it to be
-// outside for an at-risk person than on a normal day? It is the number we
-// want a parent, an elderly neighbour, or a coach to act on.
+// humidity, the noise, and any incoming rain, how much more dangerous is it
+// to be outside for an at-risk person than on a normal day? It is the
+// number we want a parent, an elderly neighbour, or a coach to act on.
 //
-//   danger = pm_base × (1 + heat_amp) × (1 + hum_amp) − rain_relief
+//   danger = pm_base × (1 + heat_amp) × (1 + hum_amp) × (1 + noise_amp)
+//            × (1 − rain_relief)
 //
 // Each modifier is anchored in peer-reviewed literature and capped so a
 // single dimension cannot drive the score alone:
@@ -25,6 +26,14 @@
 //                       accelerates past 80% RH, light-scattering efficiency
 //                       of hygroscopic PM rises sharply). 0–60% RH no
 //                       amplifier; >90% RH capped at +25%.
+//
+//   • noise_amp      — traffic + environmental noise is an independent
+//                       cardiovascular risk factor that the WHO 2018
+//                       Environmental Noise Guidelines recommends be kept
+//                       below 53 dB Lden. AIRCARD 2025 found a +7.5% MACE
+//                       risk per 14.9 dB of traffic noise after adjusting
+//                       for air pollution. 0–55 dB: 0; 55–85 dB: linear
+//                       ramp; >85 dB capped at +30%.
 //
 //   • rain_relief    — below-cloud scavenging Λ = a·R^b (Henzing et al.
 //                       2006: a≈8×10⁻⁵, b≈0.65 for accumulation-mode PM2.5
@@ -99,6 +108,36 @@ function humAmp(rh) {
   if (rh <= 60) return 0
   if (rh >= 90) return 0.25
   return Math.round(((rh - 60) / 30) * 0.25 * 100) / 100
+}
+
+/**
+ * Noise amplification (0–0.30, capped).
+ * Anchored to: WHO Environmental Noise Guidelines for the European Region
+ * (2018) — the recommended limit for road traffic noise is 53 dB Lden
+ * (cardiovascular protection). Above that, every 10 dB is associated
+ * with +8% IHD incidence (Kempen et al. 2018, meta-analysis of 7 cohorts)
+ * and +9% CHD mortality (Gan et al. 2012, AJE). AIRCARD 2025 found an
+ * independent +7.5% MACE risk per 14.9 dB of traffic noise AFTER
+ * adjustment for air pollution — meaning noise is a real additional
+ * amplifier, not a proxy.
+ *
+ * Thresholds (conservative, anchored to the WHO 53 dB Lden guideline):
+ *   below 55 dB: 0     (within WHO safe zone)
+ *   55–85 dB:    linear ramp
+ *   above 85 dB: 0.30 cap (matches heat_amp — each modifier's ceiling
+ *                     is intentionally the same so no single dimension
+ *                     can dominate the composite)
+ *
+ * A typical Bangkok roadside reads 68–74 dB (peak) and 60–65 dB
+ * (background). 85 dB+ is the regime of a motorcycle at 1 m, a chainsaw,
+ * or a busy construction site — sustained exposure is rare outside
+ * industrial zones, so the cap is rarely hit in practice.
+ */
+function noiseAmp(leq) {
+  if (leq === null || !Number.isFinite(leq)) return 0
+  if (leq <= 55) return 0
+  if (leq >= 85) return 0.30
+  return Math.round(((leq - 55) / 30) * 0.30 * 100) / 100
 }
 
 /**
@@ -180,7 +219,7 @@ export function createDanger(db, { riskEngine, washout }) {
   const CACHE_MS = 60_000
 
   function compute() {
-    // Pull all 4 inputs as per-province rows.
+    // Pull all 5 inputs as per-province rows.
     const pmRows = freshByProvince(db, 'air4thai', ['pm25'], localCutoff(FRESH_HOURS))
     const wxRows = freshByProvince(db, 'openmeteo', ['temp_c', 'rh_pct'], localCutoff(FRESH_FC_HOURS))
     const fcRows = freshByProvince(db, 'openmeteo', ['precip_fc_d0', 'precip_prob_24h'], localCutoff(FRESH_FC_HOURS))
@@ -189,6 +228,11 @@ export function createDanger(db, { riskEngine, washout }) {
     // PCD ground network is sparse for that province. We keep BOTH values
     // in the breakdown so the user can audit which feed drove the score.
     const gistRows = freshByProvince(db, 'gistda_pm25', ['pm25'], localCutoff(FRESH_HOURS))
+    // PCD noise: freshByProvince already MAX-aggregates per province; for
+    // the few provinces with multiple stations (Bangkok has 7, Rayong 4)
+    // the SQL aggregate takes the loudest reading, which is what we want
+    // for a worst-case danger score.
+    const noiseRows = freshByProvince(db, 'pcd_noise', ['noise_leq_db'], localCutoff(FRESH_HOURS))
 
     const provinces = new Map()
     const get = (code, th, en) => {
@@ -199,6 +243,7 @@ export function createDanger(db, { riskEngine, washout }) {
           pm25_pcd: null, pm25_gistda: null,
           temp_c: null, rh_pct: null, apparent_c: null,
           rain_obs_24: null, rain_fc_24: null, rain_prob_24: null,
+          noise_leq_db: null, noise_stations: 0,
         }
         provinces.set(code, p)
       }
@@ -220,6 +265,26 @@ export function createDanger(db, { riskEngine, washout }) {
     for (const r of rainRows) {
       get(r.province_code, r.province_th, r.province_en).rain_obs_24 = num(r.value)
     }
+    // Noise: we want MAX Leq across all stations in a province (worst
+    // case), and a count so the UI can flag "from N stations" when
+    // more than one. freshByProvince already MAX-aggregates; we count
+    // separately via a second query.
+    for (const r of noiseRows) {
+      get(r.province_code, r.province_th, r.province_en).noise_leq_db = num(r.value)
+    }
+    const noiseCounts = db.all(
+      `SELECT s.province_code, COUNT(DISTINCT s.station_key) AS n
+         FROM latest l
+         JOIN stations s ON s.source = l.source AND s.station_key = l.station_key
+        WHERE l.source = 'pcd_noise' AND l.metric = 'noise_leq_db'
+          AND l.obs_time >= ? AND s.province_code IS NOT NULL
+        GROUP BY s.province_code`,
+      localCutoff(FRESH_HOURS),
+    )
+    for (const r of noiseCounts) {
+      const p = provinces.get(r.province_code)
+      if (p) p.noise_stations = r.n
+    }
 
     // Risk engine already has aggregated province pm25_fc values; use
     // it for the CAMS forecast PM (forward-looking) without re-querying.
@@ -239,10 +304,11 @@ export function createDanger(db, { riskEngine, washout }) {
 
       const heat = heatAmp(p.temp_c)
       const hum = humAmp(p.rh_pct)
+      const noise = noiseAmp(p.noise_leq_db)
       const { relief, source: rainSrc } = rainRelief(p.rain_obs_24, p.rain_fc_24, p.rain_prob_24)
 
-      // danger = pm × (1+heat) × (1+hum) − relief × pm
-      const amplified = pmBase * (1 + heat) * (1 + hum)
+      // danger = pm × (1+heat) × (1+hum) × (1+noise) × (1 − rain_relief)
+      const amplified = pmBase * (1 + heat) * (1 + hum) * (1 + noise)
       const raw = amplified * (1 - relief)
       const danger = Math.max(0, Math.min(100, Math.round(raw)))
       const bandName = band(danger)
@@ -253,7 +319,7 @@ export function createDanger(db, { riskEngine, washout }) {
       const cams = riskByCode.get(p.province_code)
       const camsWorst = Math.max(cams?.pm25_fc_24h ?? 0, cams?.pm25_fc_48h ?? 0)
       const dangerFc = camsWorst > 0 ? Math.round(Math.min(100,
-        pmBaseScore(camsWorst) * (1 + heat) * (1 + hum) * (1 - relief * 0.5))) : danger
+        pmBaseScore(camsWorst) * (1 + heat) * (1 + hum) * (1 + noise) * (1 - relief * 0.5))) : danger
       const trend = dangerFc - danger
 
       out.push({
@@ -264,8 +330,10 @@ export function createDanger(db, { riskEngine, washout }) {
         pm25_pcd: p.pm25_pcd, pm25_gistda: p.pm25_gistda, pm25_live: pmLive,
         temp_c: p.temp_c, rh_pct: p.rh_pct,
         rain_obs_24: p.rain_obs_24, rain_fc_24: p.rain_fc_24, rain_prob_24: p.rain_prob_24,
+        noise_leq_db: p.noise_leq_db, noise_stations: p.noise_stations,
         // Modifiers (named so the UI can show a breakdown)
-        pm_base: pmBase, heat_amp: heat, hum_amp: hum, rain_relief: relief, rain_source: rainSrc,
+        pm_base: pmBase, heat_amp: heat, hum_amp: hum, noise_amp: noise,
+        rain_relief: relief, rain_source: rainSrc,
         // Output
         score: danger, band: bandName, score_forecast: dangerFc, trend_24h: trend,
         // Bilingual labels for the UI to render directly

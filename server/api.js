@@ -220,7 +220,9 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, r
           if (d) p.danger = {
             score: d.score, band: d.band, score_forecast: d.score_forecast, trend_24h: d.trend_24h,
             pm25_live: d.pm25_live, temp_c: d.temp_c, rh_pct: d.rh_pct,
-            pm_base: d.pm_base, heat_amp: d.heat_amp, hum_amp: d.hum_amp, rain_relief: d.rain_relief,
+            noise_leq_db: d.noise_leq_db, noise_stations: d.noise_stations,
+            pm_base: d.pm_base, heat_amp: d.heat_amp, hum_amp: d.hum_amp, noise_amp: d.noise_amp,
+            rain_relief: d.rain_relief,
             label_th: d.label_th, label_en: d.label_en, band_color: d.band_color,
           }
         }

@@ -366,10 +366,10 @@ function sectionDanger() {
       </h3>
       ${svgDangerFormula()}
 
-      <p data-th="โดยที่ pm_base เป็นค่า 0–100 จากค่า PM2.5 ตามเกณฑ์ Thai AQI 2023 (เส้นโค้งเดียวกับดัชนีเฝ้าระวัง), heat_amp และ hum_amp เป็นตัวคูณที่มาจาก synergy ทางระบาดวิทยา, และ rain_relief คือเปอร์เซ็นต์ PM2.5 ที่ถูกชะล้างโดยฝนที่กำลังจะตกหรือตกอยู่แล้ว" data-en="pm_base is a 0–100 score from the PM2.5 reading against the Thai AQI 2023 breakpoints (the same curve as the watch score); heat_amp and hum_amp are multiplicative factors with epidemiological grounding; rain_relief is the percent of PM2.5 being washed out by rain that is either already falling or forecast.">
+      <p data-th="โดยที่ pm_base เป็นค่า 0–100 จากค่า PM2.5 ตามเกณฑ์ Thai AQI 2023 (เส้นโค้งเดียวกับดัชนีเฝ้าระวัง); heat_amp, hum_amp และ noise_amp เป็นตัวคูณที่มาจาก synergy ทางระบาดวิทยา; และ rain_relief คือเปอร์เซ็นต์ PM2.5 ที่ถูกชะล้างโดยฝนที่กำลังจะตกหรือตกอยู่แล้ว" data-en="pm_base is a 0–100 score from the PM2.5 reading against the Thai AQI 2023 breakpoints (the same curve as the watch score); heat_amp, hum_amp, and noise_amp are multiplicative factors with epidemiological grounding; rain_relief is the percent of PM2.5 being washed out by rain that is either already falling or forecast.">
         ${tr(
-          'โดยที่ pm_base เป็นค่า 0–100 จากค่า PM2.5 ตามเกณฑ์ Thai AQI 2023, heat_amp และ hum_amp เป็นตัวคูณที่มาจาก synergy ทางระบาดวิทยา, และ rain_relief คือเปอร์เซ็นต์ PM2.5 ที่ถูกชะล้างโดยฝน',
-          'pm_base is a 0–100 score from the PM2.5 reading against the Thai AQI 2023 breakpoints; heat_amp and hum_amp are multiplicative factors with epidemiological grounding; rain_relief is the percent of PM2.5 being washed out by rain.'
+          'โดยที่ pm_base เป็นค่า 0–100 จากค่า PM2.5 ตามเกณฑ์ Thai AQI 2023; heat_amp, hum_amp และ noise_amp เป็นตัวคูณที่มาจาก synergy ทางระบาดวิทยา; และ rain_relief คือเปอร์เซ็นต์ PM2.5 ที่ถูกชะล้างโดยฝน',
+          'pm_base is a 0–100 score from the PM2.5 reading against the Thai AQI 2023 breakpoints; heat_amp, hum_amp, and noise_amp are multiplicative factors with epidemiological grounding; rain_relief is the percent of PM2.5 being washed out by rain.'
         )}
       </p>
 
@@ -433,19 +433,39 @@ function sectionDanger() {
         )}
       </p>
 
-      <h3 data-th="2.5 แหล่งข้อมูลอินพุต" data-en="2.5 Inputs and provenance">
-        ${tr('2.5 แหล่งข้อมูลอินพุต', '2.5 Inputs and provenance')}
+      <h3 data-th="2.5 เสียง: traffic + environmental noise amplifier" data-en="2.5 Noise: traffic & environmental noise amplifier">
+        ${tr('2.5 เสียง: traffic + environmental noise amplifier', '2.5 Noise: traffic & environmental noise amplifier')}
       </h3>
 
-      <p data-th="ตัวเศษ PM2.5 ใช้ค่าที่สูงที่สุดระหว่าง (ก) ค่าที่สถานีภาคพื้นดิน Air4Thai ของกรมควบคุมมลพิษ (PCD) วัดได้ในชั่วโมงล่าสุด และ (ข) ค่าจาก GISTDA PM2.5 (satellite + ground fusion, https://pm25.gistda.or.th/) ตัวคูณความร้อนและความชื้นดึงจาก Open-Meteo current-hour fields (temperature_2m, relative_humidity_2m) ตัวลดฝนดึงจาก (ก) เรดาร์ฝน HII ~4,200 สถานี (rain_24h) และ (ข) Open-Meteo forecast 24 ชม. × probability — ใช้ค่าที่มากกว่า" data-en="The PM2.5 numerator takes the worst of (a) the freshest Air4Thai ground station (PCD) reading per province and (b) the GISTDA PM2.5 satellite+ground fusion value (https://pm25.gistda.or.th/). The heat and humidity multipliers come from Open-Meteo current-hour fields. The rain relief uses the maximum of (a) observed 24h rain from ~4,200 HII gauges and (b) Open-Meteo forecast 24h rain × probability.">
+      <p data-th="เสียงจากการจราจรและอุตสาหกรรมเป็นปัจจัยเสี่ยงโรคหัวใจและหลอดเลือดที่ WHO ยอมรับอย่างเป็นทางการใน Environmental Noise Guidelines for the European Region (2018) แนะนำให้เสียงจราจรทางถนนอยู่ต่ำกว่า 53 dB Lden (24-hour day-evening-night average) เพื่อปกป้องระบบหัวใจและหลอดเลือด Kempen et al. (2018) รวมผลการศึกษา 7 cohorts และพบว่าทุก ๆ 10 dB ที่เพิ่มขึ้นมี relative risk (RR) ของการเกิดโรคหัวใจขาดเลือด (IHD) เพิ่มขึ้น 1.08 (95% CI: 1.01–1.15)" data-en="Traffic and environmental noise is now formally recognised as a cardiovascular risk factor by the WHO Environmental Noise Guidelines for the European Region (2018), which recommends road traffic noise below 53 dB Lden (24h day-evening-night average) to protect cardiovascular health. Kempen et al. (2018) meta-analysed 7 longitudinal cohorts and found a relative risk (RR) of 1.08 (95% CI: 1.01–1.15) for ischaemic heart disease per 10 dB increase in road traffic noise.">
         ${tr(
-          'ใช้ค่า PM2.5 ที่สูงสุดระหว่างสถานีภาคพื้นดิน PCD และ GISTDA satellite fusion; ตัวลดฝนใช้ค่าที่มากกว่าระหว่างเรดาร์ฝน HII และ Open-Meteo forecast',
-          'Uses the higher of PCD ground station and GISTDA satellite fusion; rain relief uses the larger of HII gauge and Open-Meteo forecast.'
+          'เสียงจราจรทางถนน RR = 1.08 ต่อ 10 dB สำหรับ IHD — WHO Environmental Noise Guidelines (2018), Kempen et al.',
+          'Road traffic noise RR = 1.08 per 10 dB for IHD — WHO Environmental Noise Guidelines (2018), Kempen et al.'
         )}
       </p>
 
-      <h3 data-th="2.6 ขอบเขตของข้อสรุป" data-en="2.6 What this number is, and what it isn't">
-        ${tr('2.6 ขอบเขตของข้อสรุป', '2.6 What this number is, and what it isn\'t')}
+      ${svgNoiseAmp()}
+
+      <p data-th="ที่สำคัญ AIRCARD cohort (2025) พบว่าเสียงจราจรยังคงมีผลกระทบต่อ MACE อย่างมีนัยสำคัญหลังปรับค่ามลพิษทางอากาศแล้ว (HR = 1.075 ต่อ 14.9 dB) — นั่นคือ เสียงเป็นตัวคูณต่อสุขภาพหัวใจและหลอดเลือดที่เป็นอิสระจากฝุ่น PM ไม่ใช่ confounding variable และยังมีกลไกเฉพาะ: การกระตุ้น sympathetic nervous system, การรบกวนการนอนหลับ, และการหลั่ง stress hormones (cortisol, adrenaline) ที่ทำให้ความดันโลหิตสูงและหลอดเลือดแข็ง AirDash ตั้ง noise_amp = 0 ที่เสียงต่ำกว่า 55 dB (บริเวณที่ WHO แนะนำว่าปลอดภัย) และเพิ่มเป็น 0.30 ที่ 85 dB ขึ้นไป (cap เดียวกับ heat_amp เพื่อไม่ให้ตัวคูณใดครอบงำสูตร)" data-en="Importantly, the AIRCARD cohort (2025) found that traffic noise retains a significant effect on MACE even after adjustment for air pollution (HR = 1.075 per 14.9 dB) — meaning noise is an INDEPENDENT cardiovascular amplifier of the same air, not a confounding proxy for PM. It works through distinct mechanisms: chronic sympathetic nervous system activation, sleep fragmentation, and stress-hormone release (cortisol, adrenaline) that drive hypertension and atherosclerosis. AirDash sets noise_amp = 0 below 55 dB (within the WHO safe zone) and ramps to 0.30 at 85 dB and above (the cap matches heat_amp, deliberately — every amplifier has the same ceiling so no single dimension dominates the composite).">
+        ${tr(
+          'AIRCARD 2025: เสียงจราจร HR = 1.075 ต่อ 14.9 dB หลังปรับค่ามลพิษ — เสียงเป็น amplifier อิสระต่อหัวใจและหลอดเลือด',
+          'AIRCARD 2025: traffic noise HR = 1.075 per 14.9 dB after adjusting for air pollution — noise is an independent cardiovascular amplifier.'
+        )}
+      </p>
+
+      <h3 data-th="2.6 แหล่งข้อมูลอินพุต" data-en="2.6 Inputs and provenance">
+        ${tr('2.6 แหล่งข้อมูลอินพุต', '2.6 Inputs and provenance')}
+      </h3>
+
+      <p data-th="ตัวเศษ PM2.5 ใช้ค่าที่สูงที่สุดระหว่าง (ก) ค่าที่สถานีภาคพื้นดิน Air4Thai ของกรมควบคุมมลพิษ (PCD) วัดได้ในชั่วโมงล่าสุด และ (ข) ค่าจาก GISTDA PM2.5 (satellite + ground fusion, https://pm25.gistda.or.th/) ตัวคูณความร้อนและความชื้นดึงจาก Open-Meteo current-hour fields (temperature_2m, relative_humidity_2m) ตัวคูณเสียงดึงจากสถานี PCD 27 แห่ง (noisemonitor.net, Leq 24h) โดยใช้ค่า MAX ระหว่างสถานีในจังหวัดเดียวกัน ตัวลดฝนดึงจาก (ก) เรดาร์ฝน HII ~4,200 สถานี (rain_24h) และ (ข) Open-Meteo forecast 24 ชม. × probability — ใช้ค่าที่มากกว่า" data-en="The PM2.5 numerator takes the worst of (a) the freshest Air4Thai ground station (PCD) reading per province and (b) the GISTDA PM2.5 satellite+ground fusion value (https://pm25.gistda.or.th/). The heat and humidity multipliers come from Open-Meteo current-hour fields. The noise amplifier comes from 27 PCD noise monitoring stations (noisemonitor.net, daily Leq), taking the MAX across stations in each province. The rain relief uses the maximum of (a) observed 24h rain from ~4,200 HII gauges and (b) Open-Meteo forecast 24h rain × probability.">
+        ${tr(
+          'ใช้ค่า PM2.5 ที่สูงสุดระหว่างสถานีภาคพื้นดิน PCD และ GISTDA satellite fusion; ตัวคูณเสียงใช้ค่า MAX จาก 27 สถานี PCD; ตัวลดฝนใช้ค่าที่มากกว่าระหว่างเรดาร์ฝน HII และ Open-Meteo forecast',
+          'Uses the higher of PCD ground station and GISTDA satellite fusion; noise amp takes the MAX of 27 PCD stations per province; rain relief uses the larger of HII gauge and Open-Meteo forecast.'
+        )}
+      </p>
+
+      <h3 data-th="2.7 ขอบเขตของข้อสรุป" data-en="2.7 What this number is, and what it isn't">
+        ${tr('2.7 ขอบเขตของข้อสรุป', '2.7 What this number is, and what it isn\'t')}
       </h3>
 
       <p data-th="ดัชนีอันตรายเป็น heuristic ที่รวมหลายปัจจัย ไม่ใช่แบบจำลองระบาดวิทยา ไม่ใช่การพยากรณ์ และไม่ได้ทดแทนคำแนะนำจากกรมควบคุมมลพิษหรือกรมอนามัย เราเปิดเผยสูตร เปิดเผยค่าตัวคูณ และเปิดเผยแหล่งข้อมูล เพื่อให้ผู้ใช้ตรวจสอบและปรับเปลี่ยนได้" data-en="The Danger Score is a transparent heuristic, not an epidemiological model, not a forecast, and not a substitute for guidance from the Pollution Control Department (PCD) or the Department of Disease Control (DDC). We publish the formula, the multipliers, and the inputs so a curious user can audit and a downstream system can re-use them.">
@@ -459,14 +479,47 @@ function sectionDanger() {
 }
 
 function svgDangerFormula() {
-  const w = 720, h = 90
+  const w = 760, h = 90
   let svg = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg">`
   // Main formula box
-  svg += `<rect x="20" y="20" width="680" height="50" fill="var(--aqi-unhealthy)" opacity="0.08" stroke="var(--aqi-unhealthy)" stroke-width="1.5"/>`
-  svg += `<text x="360" y="46" text-anchor="middle" font-family="var(--font-num)" font-size="14" font-weight="700" fill="var(--ink)">`
-  svg += `danger = pm_base × (1 + heat_amp) × (1 + hum_amp) × (1 − rain_relief)`
+  svg += `<rect x="20" y="20" width="720" height="50" fill="var(--aqi-unhealthy)" opacity="0.08" stroke="var(--aqi-unhealthy)" stroke-width="1.5"/>`
+  svg += `<text x="380" y="46" text-anchor="middle" font-family="var(--font-num)" font-size="13" font-weight="700" fill="var(--ink)">`
+  svg += `danger = pm_base × (1 + heat_amp) × (1 + hum_amp) × (1 + noise_amp) × (1 − rain_relief)`
   svg += `</text>`
-  svg += `<text x="360" y="62" text-anchor="middle" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">clamped 0–100 · 4 modifiers, each peer-reviewed, each capped so no single dimension can dominate</text>`
+  svg += `<text x="380" y="62" text-anchor="middle" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">clamped 0–100 · 4 modifiers, each peer-reviewed, each capped so no single dimension can dominate</text>`
+  svg += `</svg>`
+  return svg
+}
+
+function svgNoiseAmp() {
+  const w = 600, h = 200
+  let svg = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg">`
+  // X axis: noise dB
+  svg += `<line x1="50" y1="160" x2="560" y2="160" stroke="var(--ink-low)" stroke-width="1"/>`
+  const dbs = [40, 50, 55, 60, 70, 80, 85, 95]
+  for (const db of dbs) {
+    const x = 50 + ((db - 40) / 55) * 510
+    svg += `<line x1="${x}" y1="160" x2="${x}" y2="165" stroke="var(--ink-low)" stroke-width="0.8"/>`
+    svg += `<text x="${x}" y="178" text-anchor="middle" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">${db}</text>`
+  }
+  svg += `<text x="565" y="178" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">dB</text>`
+  // Y axis
+  svg += `<line x1="50" y1="20" x2="50" y2="160" stroke="var(--ink-low)" stroke-width="1"/>`
+  svg += `<text x="42" y="30" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">+30%</text>`
+  svg += `<text x="42" y="92" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">+15%</text>`
+  svg += `<text x="42" y="156" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">0%</text>`
+  // Flat 40-55
+  svg += `<line x1="50" y1="160" x2="${50 + (15 / 55) * 510}" y2="160" stroke="var(--aqi-good)" stroke-width="3"/>`
+  // Ramp 55-85
+  svg += `<line x1="${50 + (15 / 55) * 510}" y1="160" x2="${50 + (45 / 55) * 510}" y2="20" stroke="var(--aqi-unhealthy)" stroke-width="3"/>`
+  // Cap 85-95
+  svg += `<line x1="${50 + (45 / 55) * 510}" y1="20" x2="${50 + (55 / 55) * 510}" y2="20" stroke="var(--aqi-hazardous)" stroke-width="3"/>`
+  // Title
+  svg += `<text x="300" y="10" text-anchor="middle" font-family="var(--font-num)" font-size="10" font-weight="700" fill="var(--th-navy)">noise_amp(Leq) — 0 below 55 dB · 0.30 cap above 85 dB (WHO 53 dB Lden safe zone)</text>`
+  svg += `<text x="${50 + (7.5 / 55) * 510}" y="148" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-good)">WHO safe</text>`
+  svg += `<text x="${50 + (30 / 55) * 510}" y="80" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-unhealthy)">roadside traffic</text>`
+  svg += `<text x="${50 + (50 / 55) * 510}" y="14" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-hazardous)">cap +30%</text>`
+  svg += `<text x="300" y="194" text-anchor="middle" font-family="var(--font-num)" font-size="8" fill="var(--ink-low)">RR = 1.08 per 10 dB for IHD · independent of PM2.5 (AIRCARD 2025)</text>`
   svg += `</svg>`
   return svg
 }
@@ -715,6 +768,13 @@ function sectionCitations() {
     'Henzing, J. S. et al. (2006). Parameterization of below-cloud scavenging for polydisperse fine mode aerosols. Atmos. Chem. Phys. 6, 4703–4722. (Λ = a·R^b, a ≈ 8×10⁻⁵, b ≈ 0.65 for accumulation-mode PM2.5)',
     'Wang, X. et al. (2010). Below-cloud scavenging by rain of atmospheric gases and particulates. Atmos. Environ. 45. (continuous-collection-equation framework)',
     'GEOS-Chem wet-deposition parameterisation: a = 0.00106, b = 0.61 (default for accumulation-mode PM2.5)',
+    // Noise (Section 2.5) — peer-reviewed coefficients.
+    'WHO (2018). Environmental Noise Guidelines for the European Region. (recommended 53 dB Lden for road traffic, cardiovascular protection)',
+    'Kempen, E. van et al. (2018). WHO Environmental Noise Guidelines for the European Region: A Systematic Review on Environmental Noise and Cardiovascular and Metabolic Effects. PMC5858448. (meta-analysis of 7 cohorts, RR = 1.08 per 10 dB for IHD)',
+    'Gan, W. Q. et al. (2012). Association of Long-term Exposure to Community Noise and Traffic-related Air Pollution with Coronary Heart Disease Mortality. American Journal of Epidemiology 175(9), 898. (HR = 1.09 per 10 dB for CHD mortality after PM adjustment)',
+    'Münzel, T. et al. (2022). Transportation noise pollution as a cardiovascular risk factor. PMC12810149. (5% rise in CV mortality per 10 dB(A), independent of air pollution)',
+    'AIRCARD Study (2025). Traffic noise, air pollution, and cardiovascular outcomes. European Heart Journal 46(Suppl 1) ehaf784.4606. (HR = 1.075 per 14.9 dB for MACE after air-pollution adjustment — confirms noise is an INDEPENDENT amplifier)',
+    'EEA (2024). Health risks caused by environmental noise in Europe. (48,000 new heart disease cases and 12,000 premature deaths annually in Europe attributable to long-term noise exposure)',
     // Air Watch Score (Section 3) and air-quality context.
     'Pollution Control Department (2023). Thai AQI revision — PM2.5 breakpoints 15/25/37.5/75 µg/m³.',
     'WHO (2021). Global Air Quality Guidelines: PM2.5 and PM10.',
@@ -722,6 +782,7 @@ function sectionCitations() {
     'NOAA CPC — Oceanic Niño Index: cpc.ncep.noaa.gov/data/indices/oni.ascii.txt',
     // Source data citations.
     'Pollution Control Department (PCD) Air4Thai: air4thai.pcd.go.th',
+    'Pollution Control Department (PCD) Noise4Thai / Sound24Thai: noisemonitor.net (30 stations, 24h Leq)',
     'GISTDA PM2.5 real-time API: pm25.gistda.or.th/rest/getPm25byProvince (satellite + ground fusion, hourly)',
     'Hydro-Informatics Institute (HII) ThaiWater rain telemetry: thaiwater.net',
     'NASA GPM IMERG precipitation: gpm.nasa.gov/data/imerg',
@@ -729,7 +790,7 @@ function sectionCitations() {
     'Smart City Thailand Office: smartcitythailand.or.th',
     'JAXA GSMaP / Himawari: earth.jaxa.jp · eorc.jaxa.jp/ptree',
     'NASA GIBS: gibs.earthdata.nasa.gov',
-    'data.go.th — Open Government Data of Thailand (146 air-quality datasets indexed)',
+    'data.go.th — Open Government Data of Thailand (146 air-quality + 19 noise-pollution datasets indexed)',
   ]
   const list = cites.map((c) => `<li>${c}</li>`).join('')
   return `

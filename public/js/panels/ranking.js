@@ -151,8 +151,8 @@ function render(snap) {
     const dangerChip = danger ? el('div', {
       class: `danger-chip b-${danger.band}`,
       title: tr(
-        `ดัชนีอันตราย: PM2.5 ${danger.pm25_live != null ? danger.pm25_live.toFixed(0) : '–'} · ความร้อน ${danger.temp_c != null ? danger.temp_c.toFixed(0) : '–'}°C · ความชื้น ${danger.rh_pct != null ? danger.rh_pct.toFixed(0) : '–'}% · ลดฝน ${(danger.rain_relief * 100).toFixed(0)}%`,
-        `Danger: PM2.5 ${danger.pm25_live != null ? danger.pm25_live.toFixed(0) : '–'} · T ${danger.temp_c != null ? danger.temp_c.toFixed(0) : '–'}°C · RH ${danger.rh_pct != null ? danger.rh_pct.toFixed(0) : '–'}% · rain −${(danger.rain_relief * 100).toFixed(0)}%`,
+        `ดัชนีอันตราย: PM2.5 ${danger.pm25_live != null ? danger.pm25_live.toFixed(0) : '–'} · ความร้อน ${danger.temp_c != null ? danger.temp_c.toFixed(0) : '–'}°C · ความชื้น ${danger.rh_pct != null ? danger.rh_pct.toFixed(0) : '–'}%${danger.noise_leq_db != null ? ` · เสียง ${danger.noise_leq_db.toFixed(0)} dB` : ''} · ลดฝน ${(danger.rain_relief * 100).toFixed(0)}%`,
+        `Danger: PM2.5 ${danger.pm25_live != null ? danger.pm25_live.toFixed(0) : '–'} · T ${danger.temp_c != null ? danger.temp_c.toFixed(0) : '–'}°C · RH ${danger.rh_pct != null ? danger.rh_pct.toFixed(0) : '–'}%${danger.noise_leq_db != null ? ` · noise ${danger.noise_leq_db.toFixed(0)} dB` : ''} · rain −${(danger.rain_relief * 100).toFixed(0)}%`,
       ),
     },
       el('span', { class: 'dc-num' }, String(danger.score)),
