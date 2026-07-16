@@ -1,10 +1,10 @@
-// What-if widget — "ถ้าฝนตก X มม. ใน 24 ชม. จะเกิดอะไรขึ้น?"
-// Drag the slider → re-projects the watch score for every province and
-// shows the top 5 escalators. Same score formula as the live indicator —
-// only the rain component is replaced with the slider value.
+// What-if widget — "ถ้าฝนตก X มม. ใน 24 ชม. ฝุ่นจะลดลงเท่าไร?"
+// Drag the slider → re-projects PM2.5 through the wet-deposition washout
+// curve for every province and shows the top 5 relievers. Same score
+// formula as the live indicator — only the rain input changes.
 //
 // Audit #8 — "Check your province": a search box lets a user look up their
-// OWN province instead of only seeing the top 5 escalators. The full
+// OWN province instead of only seeing the top 5 relievers. The full
 // /api/whatif payload already contains every province's re-projected
 // score; the search just filters the existing list client-side, so no
 // extra round trip and no server change.
@@ -13,7 +13,7 @@ import { tr, BAND } from '../i18n.js?v=2.0.0-final'
 import { fmtNum, el } from '../fmt.js?v=2.0.0-final'
 import { getJson } from '../cache.js?v=2.0.0-final'
 
-let currentRain = 100
+let currentRain = 20
 let currentData = null
 let currentQuery = ''
 let lastDataRain = null
@@ -57,42 +57,44 @@ export function initWhatIf() {
 
 function render(rain, data, query) {
   const head = el('div', { class: 'whatif-head' },
-    el('div', { class: 'eyebrow' }, tr('ถ้าเกิดเหตุการณ์ · WHAT-IF', 'WHAT-IF')),
+    el('div', { class: 'eyebrow' }, tr('ถ้าฝนตก · WHAT-IF', 'WHAT-IF')),
     el('p', { class: 'whatif-sub' },
-      tr('ฝนตก X มม. ใน 24 ชม. → จังหวัดไหนจะเสี่ยงเพิ่ม',
-         'X mm of rain in 24h → which provinces escalate')))
+      data
+        ? tr(`ถ้าฝนตก ${rain} มม. ใน 24 ชม. ฝุ่นจะลดลง ~${fmtNum(data.relief_pct ?? 0, 0)}%`,
+             `If ${rain} mm falls in 24h, PM2.5 washes out ~${fmtNum(data.relief_pct ?? 0, 0)}%`)
+        : tr('ฝนตก X มม. ใน 24 ชม. → ฝุ่นจังหวัดไหนลดลงมากสุด',
+             'X mm of rain in 24h → where does dust drop most')))
   // Slider + value chip
   const slider = el('div', { class: 'whatif-slider' },
     el('input', {
       type: 'range', id: 'whatif-rain',
-      min: '0', max: '500', step: '10', value: String(rain),
+      min: '0', max: '200', step: '5', value: String(rain),
     }),
     el('div', { class: 'whatif-ticks' },
       el('span', {}, '0'),
+      el('span', {}, '50'),
       el('span', {}, '100'),
-      el('span', {}, '200'),
-      el('span', {}, '300'),
-      el('span', {}, '400'),
-      el('span', {}, '500')),
+      el('span', {}, '150'),
+      el('span', {}, '200')),
     el('div', { class: 'whatif-readout' },
       el('span', { class: 'whatif-rain-num' }, `${rain}`),
       el('span', { class: 'whatif-rain-unit' }, ` ${tr('มม./24ชม.', 'mm/24h')}`)),
   )
   // Search box — looks up a specific province in the same what-if payload.
   // Filters the existing data.provinces list by partial Thai/English match.
-  // Audit #8: a citizen doesn't care about the top-5 escalators; they care
+  // Audit #8: a citizen doesn't care about the top-5 relievers; they care
   // about THEIR province. This makes the feature actually usable.
   const search = el('div', { class: 'whatif-search' },
     el('input', {
       type: 'search', id: 'whatif-search',
-      placeholder: tr('ค้นหาจังหวัดของคุณ… เช่น ตราด เชียงใหม่',
-                       'Look up your province… e.g. Trat, Chiang Mai'),
+      placeholder: tr('ค้นหาจังหวัดของคุณ… เช่น เชียงใหม่ ขอนแก่น',
+                       'Look up your province… e.g. Chiang Mai, Khon Kaen'),
       value: query ?? '',
       autocomplete: 'off',
     }),
   )
-  // Live summary
-  let summary, escalators, foot
+  // Live summary — band migration counts after the washout.
+  let summary, relievers, foot
   if (data) {
     const s = data.summary
     summary = el('div', { class: 'whatif-summary' },
@@ -116,49 +118,58 @@ function render(rain, data, query) {
         (p.name_th ?? '').toLowerCase().includes(q) ||
         (p.name_en ?? '').toLowerCase().includes(q))
       if (match) {
-        // When searching, hide the top-5 escalators and show ONLY the
+        // When searching, hide the top-5 relievers and show ONLY the
         // match — this is the audit's "Check your province" intent.
-        escalators = [
+        relievers = [
           el('div', { class: 'whatif-search-hit' },
             tr('จังหวัดของคุณ', 'Your province')),
           whatifRow(match),
         ]
-        foot = el('div', { class: 'whatif-foot' },
-          tr('น้ำ/ความชื้น/อัตราน้ำขึ้น/พยากรณ์คงที่ตามเวลาปัจจุบัน · เปลี่ยนเฉพาะฝน',
-             'Water/wetness/riseRate/forecast held; only rain changes'))
-        return [head, slider, search, summary, ...escalators, foot].filter(Boolean)
+        foot = whatifFoot()
+        return [head, slider, search, summary, ...relievers, foot].filter(Boolean)
       }
       // No match — show empty state with the typed query echoed back.
-      escalators = [el('div', { class: 'whatif-empty' },
+      relievers = [el('div', { class: 'whatif-empty' },
         tr(`ไม่พบจังหวัด "${query}"`,
            `No province matches "${query}"`))]
-      return [head, slider, search, summary, ...escalators].filter(Boolean)
+      return [head, slider, search, summary, ...relievers].filter(Boolean)
     }
-    // Default: top 5 escalators (no search active).
-    escalators = (data.escalators || []).slice(0, 5).map(whatifRow)
-    if (escalators.length === 0) {
-      escalators = [el('div', { class: 'whatif-empty' },
-        tr('ไม่มีจังหวัดที่เสี่ยงเพิ่มที่ระดับฝนนี้',
-           'No provinces escalate at this rain level'))]
+    // Default: top 5 relievers — the provinces this rain would help most.
+    // (delta is NEGATIVE when rain helps; the server pre-sorts by delta.)
+    relievers = (data.relievers || data.escalators || []).slice(0, 5).map(whatifRow)
+    if (relievers.length === 0) {
+      relievers = [el('div', { class: 'whatif-empty' },
+        tr('ฝนระดับนี้ยังไม่ช่วยลดฝุ่นจังหวัดไหนอย่างมีนัย',
+           'No province improves meaningfully at this rain level'))]
     }
-    foot = el('div', { class: 'whatif-foot' },
-      tr('น้ำ/ความชื้น/อัตราน้ำขึ้น/พยากรณ์คงที่ตามเวลาปัจจุบัน · เปลี่ยนเฉพาะฝน',
-         'Water/wetness/riseRate/forecast held; only rain changes'))
+    foot = whatifFoot()
   } else {
     summary = el('div', { class: 'whatif-summary' })
-    escalators = [el('div', { class: 'whatif-empty' }, tr('กำลังคำนวณ…', 'computing…'))]
+    relievers = [el('div', { class: 'whatif-empty' }, tr('กำลังคำนวณ…', 'computing…'))]
     foot = null
   }
-  return [head, slider, search, summary, ...escalators, foot].filter(Boolean)
+  return [head, slider, search, summary, ...relievers, foot].filter(Boolean)
+}
+
+function whatifFoot() {
+  return el('div', { class: 'whatif-foot' },
+    tr('มลพิษอื่น/แนวโน้ม/พยากรณ์คงที่ตามเวลาปัจจุบัน · เปลี่ยนเฉพาะฝนชะล้างฝุ่น',
+       'Pollutants/trend/forecast held; only rain washout changes'))
 }
 
 function whatifRow(p) {
+  const delta = p.delta ?? 0
   return el('div', { class: `whatif-row b-${p.band_whatif}` },
-    el('div', { class: 'whatif-name' }, tr(p.name_th, p.name_en)),
+    el('div', { class: 'whatif-name' },
+      tr(p.name_th, p.name_en),
+      p.pm25_now !== null && p.pm25_whatif !== null
+        ? el('div', { class: 'whatif-pm', style: 'font-size:10px;color:var(--ink-low)' },
+            `PM2.5 ${fmtNum(p.pm25_now, 0)} → ${fmtNum(p.pm25_whatif, 0)} µg/m³`)
+        : ''),
     el('div', { class: 'whatif-numbers' },
       el('span', { class: 'whatif-num-now' }, String(p.now)),
       el('span', { class: 'whatif-arrow' }, '→'),
       el('span', { class: 'whatif-num-new' }, String(p.whatif)),
-      el('span', { class: 'whatif-delta' }, `(+${p.delta})`)),
+      el('span', { class: 'whatif-delta' }, delta > 0 ? `(+${delta})` : `(${delta})`)),
   )
 }

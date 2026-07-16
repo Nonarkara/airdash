@@ -1,8 +1,8 @@
-// Left-rail drill-down: province detail (its stations) or a single station
-// with a 72-hour chart from /api/series. Charts are zero-dep canvas via
-// /js/chart.js so they re-render cheaply when new snapshots arrive.
+// Left-rail drill-down: province detail (its AQ stations) or a single
+// station with a 72-hour chart from /api/series. Charts are zero-dep canvas
+// via /js/chart.js so they re-render cheaply when new snapshots arrive.
 import { on, store } from '../state.js?v=2.0.0-final'
-import { tr, pick, LEVEL_NAME } from '../i18n.js?v=2.0.0-final'
+import { tr, pick } from '../i18n.js?v=2.0.0-final'
 import { fmtNum, fmtClock, el } from '../fmt.js?v=2.0.0-final'
 import { flyToStation } from '../map.js?v=2.0.0-final'
 import { drawSeriesChart } from '../chart.js?v=2.0.0-final'
@@ -58,13 +58,23 @@ function rerender() {
   else if (current?.type === 'station' && lastSeries) paintChart(lastSeries, current.metric)
 }
 
+// Thai AQI 2023 badge level for a PM2.5 value (µg/m³): reuses the existing
+// lv badge classes — lv5 red (very unhealthy), lv4 orange (unhealthy),
+// lv3 green (fine), lv1/2 grey (low/no data).
+function pm25Lv(v) {
+  if (v === null || v === undefined) return 0
+  if (v >= 75) return 5
+  if (v >= 37.5) return 4
+  return 3
+}
+
 export function showProvinceDetail(p) {
   current = { type: 'province', p }
   show()
   const snap = store.snapshot
-  const stations = (snap?.water ?? [])
+  const stations = (snap?.air ?? [])
     .filter((s) => s.province_th === p.province_th)
-    .sort((a, b) => (b.situation_level ?? 0) - (a.situation_level ?? 0))
+    .sort((a, b) => (b.pm25 ?? -1) - (a.pm25 ?? -1))
     .slice(0, 30)
   const rains = (snap?.rain ?? [])
     .filter((s) => s.province_th === p.province_th)
@@ -87,19 +97,19 @@ export function showProvinceDetail(p) {
       el('div', { class: 'eyebrow' }, `${store.lang === 'th' ? (p.province_en ?? '') : (p.province_th ?? '')} · ${tr('คะแนน', 'score')} ${p.score}/100`),
       qualityNote),
     el('div', { class: 'detail-block' },
-      el('div', { class: 'eyebrow' }, tr('สถานีระดับน้ำ', 'WATER-LEVEL STATIONS')),
+      el('div', { class: 'eyebrow' }, tr('สถานีวัดคุณภาพอากาศ', 'AIR-QUALITY STATIONS')),
       stations.length === 0 ? el('div', { class: 'detail-kv' }, tr('ไม่มีสถานีในจังหวัดนี้', 'no stations here')) :
       stations.map((s) => {
-        const lv = Math.round(s.situation_level ?? 0)
+        const lv = pm25Lv(s.pm25)
         return el('div', {
           class: 'detail-kv', style: 'cursor:pointer',
-          onclick: () => { flyToStation(s); showStationDetail('thaiwater_wl', s) },
+          onclick: () => { flyToStation(s); showStationDetail('air4thai', s) },
         },
-          el('span', {}, el('span', { class: `badge lv${lv || 1}`, style: 'margin-right:6px' }, lv ? String(lv) : '·'), tr(s.name_th, s.name_en)),
-          el('span', { class: 'v' }, s.storage_pct !== null ? `${fmtNum(s.storage_pct, 0)}%` : fmtNum(s.wl_msl, 2)))
+          el('span', {}, el('span', { class: `badge lv${lv || 1}`, style: 'margin-right:6px' }, lv ? '●' : '·'), tr(s.name_th, s.name_en)),
+          el('span', { class: 'v' }, s.pm25 !== null && s.pm25 !== undefined ? `${fmtNum(s.pm25, 0)} µg` : (s.aqi !== null && s.aqi !== undefined ? `AQI ${fmtNum(s.aqi, 0)}` : '—')))
       })),
     rains.length > 0 ? el('div', { class: 'detail-block' },
-      el('div', { class: 'eyebrow' }, tr('ฝนสะสมสูงสุด 24 ชม.', 'TOP RAIN 24H')),
+      el('div', { class: 'eyebrow' }, tr('ฝนสะสมสูงสุด 24 ชม. (ช่วยล้างฝุ่น)', 'TOP RAIN 24H (WASHOUT)')),
       rains.map((s) => el('div', {
         class: 'detail-kv', style: 'cursor:pointer',
         onclick: () => { flyToStation(s); showStationDetail('thaiwater_rain', s, 'rain_24h') },
@@ -110,42 +120,40 @@ export function showProvinceDetail(p) {
 }
 
 const METRIC_LABEL = {
-  wl_msl: { th: 'ระดับน้ำ (ม.รทก.)', en: 'water level (m MSL)' },
-  storage_pct: { th: '% ความจุตลิ่ง', en: '% bank capacity' },
+  pm25: { th: 'PM2.5 (µg/m³)', en: 'PM2.5 (µg/m³)' },
+  pm10: { th: 'PM10 (µg/m³)', en: 'PM10 (µg/m³)' },
+  o3: { th: 'โอโซน O₃ (ppb)', en: 'ozone O₃ (ppb)' },
+  aqi: { th: 'ดัชนี AQI', en: 'AQI index' },
   rain_24h: { th: 'ฝนสะสม 24 ชม. (มม.)', en: 'rain 24h (mm)' },
-  dam_storage_pct: { th: '% กักเก็บเขื่อน', en: 'dam storage %' },
 }
 
 const METRIC_UNIT = {
-  wl_msl: 'm MSL',
-  storage_pct: '%',
+  pm25: 'µg/m³',
+  pm10: 'µg/m³',
+  o3: 'ppb',
+  aqi: '',
   rain_24h: 'mm',
-  dam_storage_pct: '%',
 }
 
 export async function showStationDetail(source, s, metric) {
-  const m = metric ?? (source === 'thaiwater_rain' ? 'rain_24h' : source === 'thaiwater_dam' ? 'dam_storage_pct' : 'wl_msl')
+  const m = metric ?? (source === 'thaiwater_rain' ? 'rain_24h' : 'pm25')
   current = { type: 'station', source, station: s, metric: m }
   show()
 
-  const lv = Math.round(s.situation_level ?? 0)
   const info = [
-    source === 'thaiwater_wl' && lv ? [tr('สถานการณ์', 'status'), `${lv} — ${LEVEL_NAME[lv][store.lang]}`] : null,
-    s.wl_msl !== undefined ? [tr('ระดับน้ำ', 'level'), `${fmtNum(s.wl_msl, 2)} ${tr('ม.รทก.', 'm MSL')}`] : null,
-    s.storage_pct !== undefined && s.storage_pct !== null ? [tr('% ความจุตลิ่ง', '% bank'), `${fmtNum(s.storage_pct)}%`] : null,
+    s.pm25 !== undefined && s.pm25 !== null ? ['PM2.5', `${fmtNum(s.pm25, 1)} µg/m³`] : null,
+    s.pm10 !== undefined && s.pm10 !== null ? ['PM10', `${fmtNum(s.pm10, 1)} µg/m³`] : null,
+    s.o3 !== undefined && s.o3 !== null ? ['O₃', `${fmtNum(s.o3, 1)} ppb`] : null,
+    s.aqi !== undefined && s.aqi !== null ? ['AQI', fmtNum(s.aqi, 0)] : null,
     s.rain_24h !== undefined ? [tr('ฝน 24 ชม.', 'rain 24h'), `${fmtNum(s.rain_24h)} มม.`] : null,
-    s.dam_storage_pct !== undefined ? [tr('กักเก็บ', 'storage'), `${fmtNum(s.dam_storage_pct)}%`] : null,
     [tr('จังหวัด', 'province'), pick(s, 'province')],
-    [tr('ลุ่มน้ำ', 'basin'), pick(s, 'basin')],
     [tr('อัปเดต', 'updated'), fmtClock(s.obs_time)],
   ].filter(Boolean)
 
-  // Threshold bands (% bank capacity: watch 80, danger 95)
-  const thresholds = m === 'storage_pct' || m === 'dam_storage_pct'
-    ? { warn: 80, danger: 95 }
-    : (m === 'wl_msl' && Number.isFinite(s.wl_msl) && Number.isFinite(s.storage_pct)
-        ? deriveWlThresholds(s)
-        : null)
+  // Threshold bands — Thai AQI 2023 PM2.5: unhealthy 37.5, very unhealthy 75.
+  const thresholds = m === 'pm25'
+    ? { warn: 37.5, danger: 75 }
+    : (m === 'pm10' ? { warn: 80, danger: 120 } : null)
 
   box().replaceChildren(
     backButton(),
@@ -160,9 +168,9 @@ export async function showStationDetail(source, s, metric) {
         thresholds
           ? el('span', { class: 'chart-legend' },
               el('span', { class: 'dot warn' }),
-              tr('เฝ้าระวัง', 'watch'),
+              tr('เกินเกณฑ์', 'unhealthy'),
               el('span', { class: 'dot danger' }),
-              tr('อันตราย', 'danger'))
+              tr('อันตราย', 'very unhealthy'))
           : null),
       el('div', { id: 'spark-loading' }, tr('กำลังโหลดกราฟ…', 'loading series…')),
       el('canvas', { class: 'detail-chart', id: 'detail-chart' }),
@@ -178,26 +186,13 @@ export async function showStationDetail(source, s, metric) {
   }
 
   try {
-    const res = await fetch(`/api/series?source=${source}&station=${encodeURIComponent(s.key)}&metric=${m}&hours=72`)
+    const res = await fetch(`/api/series?source=${source}&station=${encodeURIComponent(s.key ?? s.station_key)}&metric=${m}&hours=72`)
     const data = await res.json()
     lastSeries = data.points ?? []
     paintChart(lastSeries, m, thresholds)
   } catch {
     const loading = document.getElementById('spark-loading')
     if (loading) loading.textContent = tr('โหลดกราฟไม่สำเร็จ', 'failed to load series')
-  }
-}
-
-// Derive a "watch" and "danger" water-level band from the current
-// storage_pct if available — bankful onset ≈ 80%, danger ≈ 95% — then
-// back-convert to a wl_msl value so we can draw threshold bands on the
-// chart for stations that don't ship explicit thresholds.
-function deriveWlThresholds(s) {
-  if (s.wl_msl == null || s.storage_pct == null || s.storage_pct <= 0) return null
-  const wlPerPercent = s.wl_msl / s.storage_pct
-  return {
-    warn: wlPerPercent * 80,
-    danger: wlPerPercent * 95,
   }
 }
 

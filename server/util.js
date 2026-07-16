@@ -11,7 +11,7 @@ export function log(level, msg, extra = {}) {
   else process.stdout.write(line + '\n')
 }
 
-const UA = 'FloodDash/1.0 (local flood monitoring; nonsmartcity@gmail.com)'
+const UA = 'AirDash/1.0 (local air-quality monitoring; nonsmartcity@gmail.com)'
 
 export async function fetchJson(url, { timeoutMs = CONFIG.fetchTimeoutMs, headers = {} } = {}) {
   const res = await fetch(url, {

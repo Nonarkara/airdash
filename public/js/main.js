@@ -1,4 +1,4 @@
-// FloodDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
+// AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
 import { on, emit, store, setLang } from './state.js?v=2.0.0-final'
 import { paintChrome } from './i18n.js?v=2.0.0-final'
 import { startTap } from './sse.js?v=2.0.0-final'
@@ -84,7 +84,7 @@ async function loadTapHistory() {
 // First-time visitors arriving through a ?city= link get citizen mode by
 // default — that's the audience those links are made for; everyone's choice
 // persists in localStorage afterwards.
-const MODE_KEY = 'fd_mode'
+const MODE_KEY = 'ad_mode'
 const COMPACT_VIEW = '(max-width: 1100px)'
 let applyMobileSheet = null
 
@@ -213,7 +213,7 @@ function initSheet() {
   apply(document.body.classList.contains('mode-citizen') ? 'citizen' : 'risk')
 }
 
-// Bottom ticker: alerts first, then hot provinces, then news.
+// Bottom ticker: alerts first, then the dustiest reading, hot provinces, news.
 function renderTicker(snap) {
   if (!snap) return
   const lang = store.lang
@@ -221,10 +221,19 @@ function renderTicker(snap) {
   for (const a of (snap.alerts ?? []).slice(0, 6)) {
     bits.push(`⚠ ${lang === 'th' ? a.message_th : (a.message_en ?? a.message_th)}`)
   }
+  const worst = snap.risk?.national?.worstPm25
+  if (worst && Number.isFinite(worst.ug)) {
+    const wName = lang === 'th' ? (worst.province_th ?? worst.province_en ?? '—')
+      : (worst.province_en ?? worst.province_th ?? '—')
+    bits.push(lang === 'th'
+      ? `PM2.5 สูงสุด ${wName} ${Math.round(worst.ug)} มคก./ลบ.ม.`
+      : `worst PM2.5 ${wName} ${Math.round(worst.ug)} µg/m³`)
+  }
   for (const p of (snap.risk?.provinces ?? []).filter((p) => p.band !== 'normal').slice(0, 8)) {
     const name = lang === 'th' ? (p.province_th ?? p.province_en ?? '—')
       : (p.province_en ?? p.province_th ?? '—')
-    bits.push(`${name} ${p.score}/100`)
+    const pm = Number.isFinite(p.pm25) ? ` PM2.5 ${Math.round(p.pm25)}` : ''
+    bits.push(`${name}${pm} · ${p.score}/100`)
   }
   for (const n of (snap.news ?? []).slice(0, 5)) {
     const title = lang === 'th' ? (n.title ?? '') : (n.title_en ?? n.title ?? '')
@@ -333,8 +342,8 @@ function initTts() {
     const why = document.getElementById('national-why')?.textContent ?? ''
     const lang = store.lang === 'th' ? 'th-TH' : 'en-US'
     const text = store.lang === 'th'
-      ? `สถานการณ์ปัจจุบัน: ${verb}. ${why || ''} สายด่วนกรมป้องกันและบรรเทาสาธารณภัย 1784`
-      : `Current situation: ${en}. ${why || ''} DDPM hotline 1784.`
+      ? `สถานการณ์ปัจจุบัน: ${verb}. ${why || ''} สายด่วนกรมควบคุมมลพิษ 1650`
+      : `Current situation: ${en}. ${why || ''} PCD pollution hotline 1650.`
     const u = new SpeechSynthesisUtterance(text)
     u.lang = lang
     u.rate = store.lang === 'th' ? 0.9 : 1.0

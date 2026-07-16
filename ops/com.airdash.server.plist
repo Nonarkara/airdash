@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.flooddash.server</string>
+  <string>com.airdash.server</string>
 
   <key>ProgramArguments</key>
   <array>
@@ -12,7 +12,7 @@
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/axiom/Projects/FloodDash</string>
+  <string>/Users/axiom/AirDash</string>
 
   <key>RunAtLoad</key>
   <true/>
@@ -24,9 +24,9 @@
   <integer>10</integer>
 
   <key>StandardOutPath</key>
-  <string>/Users/axiom/Projects/FloodDash/logs/out.log</string>
+  <string>/Users/axiom/AirDash/logs/out.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/axiom/Projects/FloodDash/logs/err.log</string>
+  <string>/Users/axiom/AirDash/logs/err.log</string>
 
   <key>EnvironmentVariables</key>
   <dict>

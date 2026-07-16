@@ -8,7 +8,7 @@ import { CONFIG } from './config.js'
 import { log } from './util.js'
 import { allow } from './ratelimit.js'
 
-// Text assets worth gzipping on the fly (the 1 MB rivers GeoJSON especially).
+// Text assets worth gzipping on the fly (the province-boundary GeoJSON especially).
 const COMPRESSIBLE = new Set(['.js', '.css', '.json', '.geojson', '.html', '.svg'])
 
 const MIME = {

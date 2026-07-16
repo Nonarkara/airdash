@@ -1,8 +1,8 @@
 // National analytics panel — the one-screen operator view.
-// Three KPI cards · three top-5 lists · one 14-day bar chart · one
-// regional donut · one choropleth map preview. Same shape as the
-// GISTDA สรุปสถานการณ์ panel but pulled from our richer pipeline
-// (real-time water, rain, wetness, forecast, dams) and bilingual.
+// Three KPI cards · three top-5 lists · one 14-day PM2.5 bar chart · one
+// rain (washout) chart · one regional donut. Same shape as the GISTDA
+// สรุปสถานการณ์ panel but pulled from our richer pipeline (real-time PM2.5,
+// rain, forecast, washout) and bilingual.
 import { on, store } from '../state.js?v=2.0.0-final'
 import { tr } from '../i18n.js?v=2.0.0-final'
 import { fmtNum } from '../fmt.js?v=2.0.0-final'
@@ -15,9 +15,6 @@ const BAND_LABEL_TH = {
 const BAND_LABEL_EN = {
   normal: 'Normal', watch: 'Watch', elevated: 'Elevated', high: 'Critical',
 }
-
-const WETNESS_LABEL_TH = { dry: 'แห้ง', moist: 'ชื้น', wet: 'ชุ่ม', saturated: 'อิ่มตัว' }
-const WETNESS_LABEL_EN = { dry: 'Dry', moist: 'Moist', wet: 'Wet', saturated: 'Saturated' }
 
 let lastDaily = null
 let lastDailyFetch = 0
@@ -37,7 +34,7 @@ async function ensureDaily() {
     lastDailyFetch = Date.now()
     return lastDaily
   } catch {
-    return lastDaily ?? { days: 14, rain: [], water: [], dams: [] }
+    return lastDaily ?? { days: 14, pm25: [], unhealthy: [], rain: [] }
   }
 }
 
@@ -52,45 +49,47 @@ function topN(provs, key, n = 5, asc = false) {
   return sorted.slice(0, n)
 }
 
-function topByBand(provs, band, n = 5) {
-  return provs
-    .filter((p) => p.band === band)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, n)
-}
-
 async function render(snap) {
   const host = document.getElementById('analytics')
   if (!host || !snap?.risk?.provinces) return
 
   const provs = snap.risk.provinces.filter((p) => p.province_code !== '99')  // strip boundary spillover
+  const n = snap.risk.national ?? {}
   const isEn = store.lang === 'en'
   const L = (th, en) => isEn ? en : th
 
   // ── National aggregates ────────────────────────────────────────────
   const avgRisk = provs.length ? provs.reduce((s, p) => s + (p.score ?? 0), 0) / provs.length : 0
   const elevatedCount = provs.filter((p) => p.band === 'elevated' || p.band === 'high').length
-  const elevatedPct = Math.round(100 * elevatedCount / Math.max(provs.length, 1))
-  const saturatedCount = provs.filter((p) => p.wetness_band === 'saturated').length
-  const saturatedPct = Math.round(100 * saturatedCount / Math.max(provs.length, 1))
-  const rains = provs.map((p) => p.max_rain_24h ?? 0).filter((v) => v > 0)
-  const maxRain = rains.length ? Math.max(...rains) : 0
-  const avgRain = rains.length ? rains.reduce((s, v) => s + v, 0) / rains.length : 0
+  const dustLoadPct = n.dustLoadPct ?? 0
+  const dustyCount = n.dustyProvinceCount ?? 0
+  const dustSampled = n.dustSampledCount ?? provs.length
+  const worst = n.worstPm25 ?? null
 
   // ── Top-5 lists ─────────────────────────────────────────────────────
-  const topRisk   = topN(provs, 'score', 5)
-  const topDry    = topN(provs.filter((p) => p.wetness_band), 'wetness_score', 5, true)
-  const topRain   = topN(provs, 'max_rain_24h', 5)
+  const topRisk = topN(provs, 'score', 5)
+  const topPm   = topN(provs, 'pm25', 5)
+  const topRain = topN(provs, 'rain_obs_24h', 5)
   const regionalDist = regionDist(provs)
 
   // ── 14-day daily aggregates ────────────────────────────────────────
   const daily = await ensureDaily()
-  const rainSeries = (daily?.rain ?? [])
+  const pmSeries = (daily?.pm25 ?? [])
     .map((r) => ({
       label: r.date?.slice(5) ?? '',  // MM-DD
-      value: r.max_mm ?? 0,
+      value: r.max_ug ?? 0,
+      avg: r.avg_ug ?? 0,
     }))
     .reverse()  // oldest → newest, with the most recent bar in alt color
+  const rainSeries = (daily?.rain ?? [])
+    .map((r) => ({
+      label: r.date?.slice(5) ?? '',
+      value: r.max_mm ?? 0,
+    }))
+    .reverse()
+  const unhealthyToday = (daily?.unhealthy ?? [])[0] ?? null
+  const maxPmDaily = pmSeries.length ? Math.max(...pmSeries.map((r) => r.value)) : 0
+  const maxRainDaily = rainSeries.length ? Math.max(...rainSeries.map((r) => r.value)) : 0
 
   // ── Render host ────────────────────────────────────────────────────
   host.replaceChildren(
@@ -99,21 +98,23 @@ async function render(snap) {
     kpiRow([
       { th: 'คะแนนเฉลี่ยทั้งประเทศ', en: 'NATIONAL AVG RISK',
         value: fmtNum(avgRisk, 0) + '/100',
-        sub: L(`${elevatedCount} จังหวัด ≥ เฝ้าระวัง`, `${elevatedCount} provinces at watch+`),
+        sub: L(`${elevatedCount} จังหวัด ≥ เสี่ยงสูง`, `${elevatedCount} provinces at elevated+`),
         color: bandColor(avgRisk < 20 ? 'normal' : avgRisk < 45 ? 'watch' : avgRisk < 70 ? 'elevated' : 'high') },
-      { th: 'ดินอิ่มตัว', en: 'PROVINCES SATURATED',
-        value: saturatedPct + '%',
-        sub: L(`${saturatedCount} / ${provs.length} จังหวัด`, `${saturatedCount} / ${provs.length} provinces`),
+      { th: 'จังหวัดฝุ่นเกินเกณฑ์', en: 'DUST LOAD',
+        value: dustLoadPct + '%',
+        sub: L(`${dustyCount} / ${dustSampled} จังหวัด ≥ 25 µg/m³`, `${dustyCount} / ${dustSampled} provinces ≥ 25 µg/m³`),
         color: '#5C6BC0' },
-      { th: 'ฝน 24 ชม. สูงสุด', en: '24H MAX RAIN',
-        value: fmtNum(maxRain, 0) + ' มม.',
-        sub: L(`เฉลี่ย ${fmtNum(avgRain, 0)} มม.`, `avg ${fmtNum(avgRain, 0)} mm`),
-        color: '#0039A6' },
+      { th: 'PM2.5 สูงสุดตอนนี้', en: 'WORST PM2.5 NOW',
+        value: worst?.ug != null ? fmtNum(worst.ug, 0) + ' µg' : '—',
+        sub: worst ? L(worst.province_th ?? '', worst.province_en ?? worst.province_th ?? '') : L('ไม่มีข้อมูล', 'no data'),
+        color: '#A51931' },
     ]),
 
-    listsRow(topRisk, topDry, topRain, L),
+    listsRow(topRisk, topPm, topRain, L),
 
-    chartRow(rainSeries, daily?.water ?? [], L),
+    chartRow(pmSeries, unhealthyToday, L),
+
+    rainChartRow(rainSeries, L),
 
     donutRow(regionalDist, L),
 
@@ -123,8 +124,13 @@ async function render(snap) {
   // Paint charts after DOM commit so clientWidth/Height are correct.
   requestAnimationFrame(() => {
     const bar = host.querySelector('#ana-bar')
-    if (bar) drawBarChart(bar, rainSeries, {
-      color: '#0039A6', altColor: '#E86A10', valueLabel: true, yMax: Math.max(maxRain * 1.1, 50),
+    if (bar) drawBarChart(bar, pmSeries, {
+      color: '#241E4E', altColor: '#A51931', valueLabel: true, yMax: Math.max(maxPmDaily * 1.1, 50),
+    })
+
+    const rainBar = host.querySelector('#ana-rain')
+    if (rainBar) drawBarChart(rainBar, rainSeries, {
+      color: '#0039A6', altColor: '#E86A10', valueLabel: true, yMax: Math.max(maxRainDaily * 1.1, 50),
     })
 
     const donut = host.querySelector('#ana-donut')
@@ -172,7 +178,7 @@ function headerRow(snap, L) {
     { day: 'numeric', month: 'short', year: 'numeric' })
   const v = snap.risk?.national_verdict
   return el('div', { class: 'ana-head' },
-    el('div', { class: 'ana-eyebrow' }, L('สรุปสถานการณ์น้ำท่วมประเทศไทย', 'THAILAND FLOOD SITUATION')),
+    el('div', { class: 'ana-eyebrow' }, L('สรุปสถานการณ์ฝุ่นประเทศไทย', 'THAILAND AIR QUALITY SITUATION')),
     el('div', { class: 'ana-sub' },
       L('ข้อมูลสด', 'Live') + ' · ' + dateStr),
     // Plain-language national one-liner — the "so what" for the whole country.
@@ -190,16 +196,13 @@ function kpiRow(cards) {
   )
 }
 
-function listsRow(topRisk, topDry, topRain, L) {
-  function row(p, idx, valueField, valueFmt, wetnessLabel) {
+function listsRow(topRisk, topPm, topRain, L) {
+  function row(p, idx, valueField, valueFmt) {
     const band = bandColor(p.band || 'normal')
     return el('div', { class: 'ana-list-row' },
       el('span', { class: 'ana-list-idx' }, String(idx + 1)),
       el('span', { class: 'ana-list-name' },
-        L(p.province_th, p.province_en) || '—',
-        wetnessLabel
-          ? el('span', { class: 'ana-list-wet' }, ' · ' + wetnessLabel)
-          : null),
+        L(p.province_th, p.province_en) || '—'),
       el('span', { class: 'ana-list-val', style: valueField === 'score' ? `color:${band}` : '' },
         valueFmt(p[valueField])),
     )
@@ -210,30 +213,39 @@ function listsRow(topRisk, topDry, topRain, L) {
       ...topRisk.map((p, i) => row(p, i, 'score', (v) => `${fmtNum(v, 0)}/100`)),
     ),
     el('div', { class: 'ana-list' },
-      el('div', { class: 'ana-list-head' }, L('5 จังหวัดดินแห้งสุด', 'DRIEST 5')),
-      ...topDry.map((p, i) => row(p, i, 'wetness_score',
-        (v) => L(WETNESS_LABEL_TH[p.wetness_band] || '—', WETNESS_LABEL_EN[p.wetness_band] || '—'),
-        L(WETNESS_LABEL_TH[p.wetness_band] || '', WETNESS_LABEL_EN[p.wetness_band] || ''))),
+      el('div', { class: 'ana-list-head' }, L('5 จังหวัดฝุ่นสูงสุด', 'TOP 5 PM2.5')),
+      ...topPm.map((p, i) => row(p, i, 'pm25', (v) => `${fmtNum(v, 0)} µg`)),
     ),
     el('div', { class: 'ana-list' },
-      el('div', { class: 'ana-list-head' }, L('5 จังหวัดฝนหนัก 24 ชม.', 'TOP 5 RAIN 24H')),
-      ...topRain.map((p, i) => row(p, i, 'max_rain_24h', (v) => `${fmtNum(v, 0)} มม.`)),
+      el('div', { class: 'ana-list-head' }, L('5 จังหวัดฝนมาก (ช่วยล้างฝุ่น)', 'TOP 5 RAIN 24H (WASHOUT)')),
+      ...topRain.map((p, i) => row(p, i, 'rain_obs_24h', (v) => `${fmtNum(v, 0)} มม.`)),
     ),
   )
 }
 
-function chartRow(rainSeries, waterSeries, L) {
+function chartRow(pmSeries, unhealthyToday, L) {
   return el('div', { class: 'ana-card' },
     el('div', { class: 'ana-card-head' },
-      el('div', { class: 'ana-card-title' }, L('ฝน 24 ชม. สูงสุดรายวัน — 14 วัน', 'DAILY MAX 24H RAIN — 14 DAYS')),
-      el('div', { class: 'ana-card-sub' }, L('แท่งสีส้ม = วันนี้', 'orange bar = today')),
+      el('div', { class: 'ana-card-title' }, L('PM2.5 สูงสุดรายวัน — 14 วัน', 'DAILY MAX PM2.5 — 14 DAYS')),
+      el('div', { class: 'ana-card-sub' }, L('แท่งสีแดง = วันนี้', 'red bar = today')),
     ),
     el('canvas', { id: 'ana-bar', class: 'ana-bar' }),
-    waterSeries.length > 0
+    unhealthyToday
       ? el('div', { class: 'ana-meta' },
-          L(`สถานี L4+ วันนี้: ${waterSeries.at(-1)?.l4_plus ?? 0} แห่ง`,
-            `L4+ stations today: ${waterSeries.at(-1)?.l4_plus ?? 0}`))
+          L(`สถานีเกินเกณฑ์วันนี้: ${unhealthyToday.unhealthy ?? 0} แห่ง · อันตราย ${unhealthyToday.very_unhealthy ?? 0} แห่ง`,
+            `Unhealthy stations today: ${unhealthyToday.unhealthy ?? 0} · very unhealthy ${unhealthyToday.very_unhealthy ?? 0}`))
       : null,
+  )
+}
+
+function rainChartRow(rainSeries, L) {
+  if (!rainSeries.length) return null
+  return el('div', { class: 'ana-card' },
+    el('div', { class: 'ana-card-head' },
+      el('div', { class: 'ana-card-title' }, L('ฝน 24 ชม. สูงสุดรายวัน — บริบทฝนล้างฝุ่น', 'DAILY MAX RAIN — WASHOUT CONTEXT')),
+      el('div', { class: 'ana-card-sub' }, L('ฝน ≥5 มม. เริ่มชะล้างฝุ่นได้', 'rain ≥5 mm starts scrubbing dust')),
+    ),
+    el('canvas', { id: 'ana-rain', class: 'ana-bar' }),
   )
 }
 
@@ -263,11 +275,11 @@ function donutRow(slices, L) {
 function footerRow(provCount, L) {
   return el('div', { class: 'ana-foot' },
     el('div', { class: 'ana-foot-cell' },
-      L('ข้อมูลสดจาก 10 แหล่งภาครัฐ · ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์',
-        'Live from 10 public pipelines · indicator, not a forecast')),
+      L('ข้อมูลสดจากแหล่งข้อมูลภาครัฐ · ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์',
+        'Live from public pipelines · indicator, not a forecast')),
     el('div', { class: 'ana-foot-cell ana-foot-right' },
-      L('ฟังประกาศ ปภ. / กรมอุตุฯ / สทนช. เสมอ',
-        'Always follow DDPM / TMD / ONWR'),
+      L('ฟังประกาศ คพ. / กรมอุตุฯ เสมอ',
+        'Always follow PCD / TMD'),
     ),
   )
 }

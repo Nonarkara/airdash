@@ -209,7 +209,7 @@ export function allProvinces() {
 export function placeDetail(db, { lat, lng, province_th = null, radius_km = 30 } = {}) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
 
-  // Haversine in SQL — same pattern as rivers.js / cascade.js.
+  // Haversine in SQL.
   // NOTE: the expression does its own deg→rad conversion (the 0.0087…
   // constant is π/360, the 0.0174… is π/180), so the bound parameters must
   // be plain DEGREES. Passing pre-converted radians here once made every

@@ -10,7 +10,7 @@
 // depends on it.
 //
 // Deliberate throttle: at most one broadcast per LINE_MIN_GAP_MS, batching
-// whatever alerts accumulated in between. Flood events fire many station
+// whatever alerts accumulated in between. Haze episodes fire many station
 // alerts at once; followers should get one readable digest, not a machine-gun
 // of pushes (also: free-tier OAs have a monthly message quota).
 import { log } from './util.js'
@@ -51,7 +51,7 @@ export function createLine(db) {
     sending = true
     const lines = batch.slice(0, MAX_LINES_PER_PUSH).map((a) => `• ${a.message_th}`)
     if (batch.length > MAX_LINES_PER_PUSH) lines.push(`…และอีก ${batch.length - MAX_LINES_PER_PUSH} รายการ`)
-    const text = `🌊 FloodDash แจ้งเตือน\n${lines.join('\n')}\n\nดูสด: https://flood.nonarkara.org\nโปรดติดตามประกาศ ปภ./กรมอุตุฯ`
+    const text = `🌫️ AirDash แจ้งเตือนฝุ่น\n${lines.join('\n')}\n\nดูสด: https://air.nonarkara.org\nโปรดติดตามประกาศ คพ./กรมอุตุฯ · ป้องกันทันที PROTECT NOW`
     const body = JSON.stringify({ messages: [{ type: 'text', text }] })
     const headers = { 'content-type': 'application/json', authorization: `Bearer ${t}` }
     try {

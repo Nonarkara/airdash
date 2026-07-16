@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Translation validator for the Flood Bible (EN <-> TH).
+// Translation validator for the Air Bible (EN <-> TH).
 //
 // For each of the 11 section pairs corpus/bible/secNN.en.md / secNN.th.md it
 // asserts structural + numeric parity so a chunk-by-chunk bilingual reader can

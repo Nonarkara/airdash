@@ -1,4 +1,4 @@
-// The Flood Library — boot-time ingest of the bible (corpus/bible/secNN.{en,th}.md)
+// The Air Library — boot-time ingest of the bible (corpus/bible/secNN.{en,th}.md)
 // and knowledge notes (knowledge/*.md) into searchable, pre-rendered HTML chunks.
 // Mirrors knowledge.js's hash-guarded, idempotent ingest pattern but renders
 // markdown to safe HTML and serves TOC/doc/search reads for the frontend.

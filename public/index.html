@@ -3,19 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>FLOODDASH — เฝ้าระวังน้ำท่วมประเทศไทย · Thailand Flood Watch</title>
-<meta name="description" content="ข้อมูลเฝ้าระวังน้ำท่วมประเทศไทยแบบเรียลไทม์ พร้อมระดับน้ำ ฝน ความเสี่ยงรายจังหวัด และศูนย์พักพิงใกล้คุณ · Live Thailand flood watch, local risk and shelters.">
-<link rel="canonical" href="https://flood.nonarkara.org/">
+<title>AIRDASH — เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · Thailand Air Quality & Dust Watch</title>
+<meta name="description" content="ข้อมูลเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทยแบบเรียลไทม์ พร้อมค่าฝุ่นรายสถานี ความเสี่ยงรายจังหวัด และโอกาสฝนช่วยล้างฝุ่น · Live Thailand air quality, local PM2.5 risk and rain-washout outlook.">
+<link rel="canonical" href="https://air.nonarkara.org/">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://flood.nonarkara.org/">
-<meta property="og:title" content="FLOODDASH — Thailand Flood Watch">
-<meta property="og:description" content="Live flood conditions, local risk and nearby shelters across Thailand.">
-<meta property="og:image" content="https://flood.nonarkara.org/FloodDash%20Cover.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="FLOODDASH — Thailand Flood Watch">
-<meta name="twitter:description" content="Live flood conditions, local risk and nearby shelters across Thailand.">
-<meta name="twitter:image" content="https://flood.nonarkara.org/FloodDash%20Cover.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23241E4E'/%3E%3Cpath d='M2 10c2-2 4 2 6 0s4 2 6 0v4H2z' fill='%230039A6'/%3E%3Cpath d='M2 9c2-2 4 2 6 0s4 2 6 0' stroke='%23F6F4EF' stroke-width='1.2' fill='none'/%3E%3C/svg%3E">
+<meta property="og:url" content="https://air.nonarkara.org/">
+<meta property="og:title" content="AIRDASH — Thailand Air Quality & Dust Watch">
+<meta property="og:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="AIRDASH — Thailand Air Quality & Dust Watch">
+<meta name="twitter:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23241E4E'/%3E%3Ccircle cx='11.5' cy='4.5' r='2.5' fill='%23F0B400'/%3E%3Cpath d='M2 8h12M2 10.5h9M2 13h12' stroke='%23F6F4EF' stroke-width='1.4' stroke-linecap='round' opacity='0.9'/%3E%3Ccircle cx='13' cy='10.5' r='1' fill='%23E86A10'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/css/tokens.css?v=2.0.0-final">
 <link rel="stylesheet" href="/css/layout.css?v=2.0.0-final">
@@ -23,14 +21,14 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#241E4E">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","name":"FloodDash","url":"https://flood.nonarkara.org/","description":"Live Thailand flood watch, local risk and nearby shelters."}
+{"@context":"https://schema.org","@type":"WebSite","name":"AirDash","url":"https://air.nonarkara.org/","description":"Live Thailand air quality and dust watch — PM2.5, local risk and rain-washout outlook."}
 </script>
 </head>
 <body>
 
 <div id="boot" role="status" aria-live="polite" aria-busy="true" aria-label="กำลังโหลดข้อมูลสด · Loading live data">
   <div class="sign" style="text-align:center">
-    <div class="th" style="font-size:24px;font-weight:800;letter-spacing:0.04em">FLOOD<span style="color:#E8B33C">DASH</span></div>
+    <div class="th" style="font-size:24px;font-weight:800;letter-spacing:0.04em">AIR<span style="color:#E8B33C">DASH</span></div>
     <div class="en" data-i18n="กำลังเชื่อมต่อข้อมูลสด…|Connecting live pipelines…">connecting live pipelines · กำลังเชื่อมต่อข้อมูลสด</div>
   </div>
   <div class="bar"><div></div></div>
@@ -46,8 +44,10 @@
          1. Steward     — depa (under whom the project lives)
          2. Partner     — Smart City Thailand Office, Axiom+ReTL
          3. Standards   — SLIC, RCAD
-         4. Data        — DDPM, HII/สสน., RID, TMD, PCD (text-based until
-                          we have proper logos to swap in)
+         4. Data        — PCD/Air4Thai, TMD, HII rain gauges, Open-Meteo,
+                          CAMS/Copernicus, NOAA CPC, NASA GIBS/GPM,
+                          RainViewer, JAXA GSMaP (text-based until we have
+                          proper logos to swap in)
        The HTML order matches visual weight; the CSS uses .boot-sponsors
        with three flex rows that wrap on narrow viewports. Each logo
        has alt text in Thai and English for screen readers. -->
@@ -83,11 +83,15 @@
     </div>
     <div class="boot-sponsor-row boot-sponsor-row--data">
       <span class="boot-sponsor-label" data-th="ข้อมูลจาก · DATA">ข้อมูลจาก · DATA</span>
-      <span class="boot-sponsor boot-sponsor--text" data-th="DDPM · กรมป้องกันและบรรเทาสาธารณภัย" data-en="DDPM · Department of Disaster Prevention and Mitigation">DDPM<br><small>ปภ. · ป้องกันภัย</small></span>
-      <span class="boot-sponsor boot-sponsor--text" data-th="HII / สสน. · สถาบันสารสนเทศทรัพยากรน้ำ" data-en="HII · Hydro-Informatics Institute">HII / สสน.<br><small>สารสนเทศน้ำ</small></span>
-      <span class="boot-sponsor boot-sponsor--text" data-th="RID · กรมชลประทาน" data-en="RID · Royal Irrigation Department">RID<br><small>กรมชลฯ · เขื่อน</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="PCD / Air4Thai · คพ. · กรมควบคุมมลพิษ" data-en="PCD / Air4Thai · Pollution Control Department">PCD / Air4Thai<br><small>คพ. · คุณภาพอากาศ</small></span>
       <span class="boot-sponsor boot-sponsor--text" data-th="TMD · กรมอุตุนิยมวิทยา" data-en="TMD · Thai Meteorological Department">TMD<br><small>อุตุฯ · พยากรณ์อากาศ</small></span>
-      <span class="boot-sponsor boot-sponsor--text" data-th="PCD · คพ. · กรมควบคุมมลพิษ" data-en="PCD · Pollution Control Department">PCD<br><small>คพ. · คุณภาพอากาศ</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="HII / สสน. · สถานีวัดฝน" data-en="HII · Hydro-Informatics Institute rain gauges">HII / สสน.<br><small>สถานีวัดฝน</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="Open-Meteo · พยากรณ์อากาศ" data-en="Open-Meteo · weather forecast">Open-Meteo<br><small>พยากรณ์อากาศ</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="CAMS / Copernicus · พยากรณ์ฝุ่น" data-en="CAMS / Copernicus · air-quality forecast">CAMS / Copernicus<br><small>พยากรณ์ฝุ่น</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="NOAA CPC · ดัชนี ENSO" data-en="NOAA CPC · ENSO index">NOAA CPC<br><small>ดัชนี ENSO</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="NASA GIBS / GPM · ดาวเทียม" data-en="NASA GIBS / GPM · satellite">NASA GIBS / GPM<br><small>ดาวเทียม</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="RainViewer · เรดาร์ฝน" data-en="RainViewer · rain radar">RainViewer<br><small>เรดาร์ฝน</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="JAXA GSMaP · ฝนดาวเทียม" data-en="JAXA GSMaP · satellite rain">JAXA GSMaP<br><small>ฝนดาวเทียม</small></span>
     </div>
   </div>
 </div>
@@ -97,8 +101,8 @@
     <div class="flagband"></div>
 
     <div class="brand">
-      <h1 class="name">FLOOD<span class="accent">DASH</span></h1>
-      <div class="sub" data-i18n="เฝ้าระวังน้ำท่วมประเทศไทย|Thailand flood watch · 24/7 live data">เฝ้าระวังน้ำท่วมประเทศไทย · THAILAND FLOOD WATCH</div>
+      <h1 class="name">AIR<span class="accent">DASH</span></h1>
+      <div class="sub" data-i18n="เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย|Thailand Air Quality & Dust Watch · 24/7 live data">เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · THAILAND AIR QUALITY &amp; DUST WATCH</div>
     </div>
 
     <div class="header-partners" aria-label="Project partners">
@@ -116,18 +120,18 @@
     <div class="national" id="national">
       <div class="plate" id="national-plate">–</div>
       <div class="label">
-        <div class="mobile-brand" aria-hidden="true">FLOODDASH</div>
+        <div class="mobile-brand" aria-hidden="true">AIRDASH</div>
         <div class="verb-th" id="national-th">กำลังโหลด…</div>
         <div class="verb-en" id="national-en">LOADING…</div>
         <div class="why" id="national-why"></div>
         <div class="season" id="national-season" hidden></div>
         <div class="national-actions">
           <span class="ci-badge" id="national-ci" hidden></span>
-          <a class="hotline-btn" id="national-hotline" href="tel:1784"
-             data-i18n-title="สายด่วน ปภ. 1784 (โทรฟรี) — กดเพื่อโทร|DDPM hotline 1784 (toll free) — tap to call">
-            <span class="icon">📞</span><span>1784</span>
+          <a class="hotline-btn" id="national-hotline" href="tel:1650"
+             data-i18n-title="สายด่วนมลพิษ คพ. 1650 (โทรฟรี) — กดเพื่อโทร|PCD pollution hotline 1650 (toll free) — tap to call">
+            <span class="icon">📞</span><span>1650</span>
             <span class="hotline-lbl-th" data-i18n="สายด่วน|hotline">สายด่วน</span>
-            <span class="hotline-lbl-en" data-i18n="DDPM|DDPM" hidden>DDPM</span>
+            <span class="hotline-lbl-en" data-i18n="คพ.|PCD" hidden>PCD</span>
           </a>
           <button class="tts-btn" id="national-tts" type="button"
             data-i18n-title="ฟังสถานการณ์ (เสียงอ่านออกเสียง)|read the situation aloud (text-to-speech)"
@@ -136,7 +140,7 @@
       </div>
     </div>
 
-    <div class="levelcounts" id="levelcounts" data-i18n-title="สถานีวัดระดับน้ำตามระดับสถานการณ์|water-level stations by HII level"></div>
+    <div class="levelcounts" id="levelcounts" data-i18n-title="สถานีวัดฝุ่นตามระดับ PM2.5|AQ stations by Thai AQI PM2.5 level"></div>
 
     <div class="spacer"></div>
 
@@ -159,7 +163,7 @@
       <button id="back-to-thailand" type="button" hidden
         data-i18n-title="กลับสู่ภาพรวมทั้งประเทศ|back to All Thailand view"
         data-i18n="← ทั้งประเทศ|← All Thailand">← ทั้งประเทศ</button>
-      <button id="compare-btn" aria-label="เทียบเส้นทางน้ำ · Compare waterways" data-i18n-title="เทียบเส้นทางน้ำ · compare waterways">⊞</button>
+      <button id="compare-btn" aria-label="เทียบพื้นที่ · Compare areas" data-i18n-title="เทียบพื้นที่ · compare areas">⊞</button>
       <button id="split-btn" aria-label="เปรียบเทียบตำแหน่ง · Compare places" data-i18n-title="เปรียบเทียบตำแหน่ง · compare places" aria-pressed="false">⊟</button>
     </div>
 
@@ -189,8 +193,8 @@
     <form id="ask-hero" class="ask-hero" autocomplete="off" novalidate>
       <span class="ask-hero-icon" aria-hidden="true">💬</span>
       <input id="ask-hero-input" type="search" autocomplete="off"
-        data-i18n-ph="ถามอะไรก็ได้… เช่น 'น้ำที่หาดใหญ่ตอนนี้' · 'จังหวัดไหนเสี่ยงสุด'|Ask anything… e.g. 'water level at Hat Yai now' · 'which province is most at risk?'"
-        placeholder="ถามอะไรก็ได้… เช่น 'น้ำที่หาดใหญ่ตอนนี้'">
+        data-i18n-ph="ถามอะไรก็ได้… เช่น 'ฝุ่นที่เชียงใหม่ตอนนี้' · 'จังหวัดไหนฝุ่นเยอะสุด'|Ask anything… e.g. 'PM2.5 in Chiang Mai now' · 'which province is dustiest?'"
+        placeholder="ถามอะไรก็ได้… เช่น 'ฝุ่นที่เชียงใหม่ตอนนี้'">
       <button id="ask-hero-send" type="submit"
         data-i18n="ถาม|Ask">ถาม</button>
     </form>
@@ -201,7 +205,7 @@
       <div class="eyebrow" id="left-eyebrow" data-i18n="จัดอันดับเฝ้าระวัง · สด|PROVINCE WATCH RANKING · LIVE">PROVINCE WATCH RANKING · LIVE</div>
       <div class="sign">
         <div class="th" data-i18n="จัดอันดับเฝ้าระวังรายจังหวัด|Province watch ranking">จัดอันดับเฝ้าระวังรายจังหวัด</div>
-        <div class="en" id="risk-method-note" data-i18n="น้ำ 40% · ฝน 25% · พยากรณ์ 15% · ความชุ่มน้ำ 10% · อัตราเพิ่มระดับน้ำ 10% — ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์|Water 40% · rain 25% · forecast 15% · wetness 10% · rise rate 10% — indicator, not a prediction">น้ำ 40% · ฝน 25% · พยากรณ์ 15% · ความชุ่มน้ำ 10% · อัตราเพิ่มระดับน้ำ 10% — ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์</div>
+        <div class="en" id="risk-method-note" data-i18n="PM2.5 40% · มลพิษอื่น 10% · แนวโน้ม 15% · พยากรณ์ 20% · การระบายอากาศ 15% — ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์|PM2.5 40% · other pollutants 10% · trend 15% · forecast 20% · ventilation 15% — indicator, not a prediction">PM2.5 40% · มลพิษอื่น 10% · แนวโน้ม 15% · พยากรณ์ 20% · การระบายอากาศ 15% — ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์</div>
       </div>
     </div>
     <div class="scroll" id="ranking"></div>
@@ -211,14 +215,14 @@
     <div id="whatif" class="whatif-box"></div>
   </aside>
 
-  <main id="map" aria-label="แผนที่สถานการณ์น้ำท่วมประเทศไทย · Thailand flood situation map"></main>
+  <main id="map" aria-label="แผนที่สถานการณ์ฝุ่นประเทศไทย · Thailand air quality situation map"></main>
 
   <!-- Compare Places overlay — the redesigned split view.
        Replaces the old side-by-side clone of the main map. Up to 4 panes
        (2/3/4 selector) each with a search input that finds any of 70k+
        places via /api/search. The data bar on the left shows a card per
-       selected place with JMA verb, score+CI, water, rain, forecast, soil
-       sat — so the comparison reads at a glance.
+       selected place with JMA verb, score+CI, PM2.5, rain chance, forecast,
+       washout — so the comparison reads at a glance.
        The data bar IS the customized left rail: when this overlay opens,
        the regular left rail is hidden behind it. Closing restores it. -->
   <div id="places-overlay" hidden>
@@ -242,12 +246,12 @@
   </div>
 
   <aside class="rail" id="rail-right">
-    <div class="tabs" id="righttabs" role="tablist" aria-label="ข้อมูลสถานการณ์น้ำ · Situation panels">
+    <div class="tabs" id="righttabs" role="tablist" aria-label="ข้อมูลสถานการณ์ฝุ่น · Situation panels">
       <button data-pane="analytics" class="active" role="tab" id="tab-analytics" aria-selected="true" aria-controls="pane-analytics">ภาพรวม<br><span class="en-lbl">OVERVIEW</span></button>
       <button data-pane="citizen" role="tab" id="tab-citizen" aria-selected="false" aria-controls="pane-citizen">พื้นที่ฉัน<br><span class="en-lbl">MY AREA</span></button>
       <button data-pane="alerts" role="tab" id="tab-alerts" aria-selected="false" aria-controls="pane-alerts">เตือน <span class="cnt" id="alert-cnt"></span><br><span class="en-lbl">ALERTS</span></button>
       <button data-pane="chat" role="tab" id="tab-chat" aria-selected="false" aria-controls="pane-chat">ถาม AI<br><span class="en-lbl">ASK</span></button>
-      <button data-pane="waterways" role="tab" id="tab-waterways" aria-selected="false" aria-controls="pane-waterways">เส้นทางน้ำ<br><span class="en-lbl">RIVERS</span></button>
+      <button data-pane="waterways" role="tab" id="tab-waterways" aria-selected="false" aria-controls="pane-waterways">ฝนล้างฝุ่น<br><span class="en-lbl">WASHOUT</span></button>
       <button data-pane="history" role="tab" id="tab-history" aria-selected="false" aria-controls="pane-history">ประวัติ<br><span class="en-lbl">HISTORY</span></button>
       <button data-pane="insights" role="tab" id="tab-insights" aria-selected="false" aria-controls="pane-insights">สัญญาณ<br><span class="en-lbl">SIGNALS</span></button>
       <button data-pane="sources" role="tab" id="tab-sources" aria-selected="false" aria-controls="pane-sources">แหล่งข้อมูล<br><span class="en-lbl">DATA</span></button>
@@ -305,8 +309,8 @@
       <div class="chat-status" id="chat-status"></div>
       <form id="chat-form">
         <input id="chat-input" autocomplete="off"
-               data-i18n-ph="ถามสถานการณ์น้ำ…|Ask about the flood situation…"
-               placeholder="ถามสถานการณ์น้ำ… / ask about the flood situation…">
+               data-i18n-ph="ถามสถานการณ์ฝุ่น…|Ask about the air quality…"
+               placeholder="ถามสถานการณ์ฝุ่น… / ask about the air quality…">
         <button id="chat-send" type="submit" data-i18n="ส่ง|Send">ส่ง</button>
       </form>
     </div>
@@ -315,7 +319,7 @@
   <nav id="sheettabs" aria-label="แผงข้อมูล · Dashboard sections">
     <button data-sheet="citizen">พื้นที่ฉัน<br><span class="en-lbl">MY AREA</span></button>
     <button data-sheet="risk" class="active">เสี่ยง<br><span class="en-lbl">RISK</span></button>
-    <button data-sheet="waterways">เส้นน้ำ<br><span class="en-lbl">RIVERS</span></button>
+    <button data-sheet="waterways">ล้างฝุ่น<br><span class="en-lbl">WASHOUT</span></button>
     <button data-sheet="tap">เข้า<br><span class="en-lbl">TAP</span></button>
     <button data-sheet="sources">ข้อมูล<br><span class="en-lbl">DATA</span></button>
     <button data-sheet="library">คู่มือ<br><span class="en-lbl">LIB</span></button>
@@ -342,12 +346,12 @@
     <span class="en" data-en="Real-time as the system allows. Data may have reception issues, so use judgement in any decision. We work as hard as we can to compute from the best data available at the moment.">Real-time as the system allows. Data may have reception issues, so use judgement in any decision. We work as hard as we can to compute from the best data available at the moment.</span>
   </div>
   <div class="appfooter-line appfooter-standards">
-    <span class="th" data-th="มาตรฐานระบบ · 10 แหล่งข้อมูลสด · ดึงทุก 3–60 นาที · สถานีเฝ้าระวัง 6,000+ แห่ง · 0 ข้อมูลจำลอง · ทุกค่าถูกบันทึกลง SQLite เพื่อตรวจสอบย้อนหลัง">มาตรฐานระบบ · 10 แหล่งข้อมูลสด · ดึงทุก 3–60 นาที · สถานีเฝ้าระวัง 6,000+ แห่ง · 0 ข้อมูลจำลอง · ทุกค่าถูกบันทึกลง SQLite เพื่อตรวจสอบย้อนหลัง</span>
-    <span class="en" data-en="System standards · 10 live data sources · refreshed every 3–60 min · 6,000+ monitored stations · 0 mock data · every reading persisted to SQLite for full audit trail">System standards · 10 live data sources · refreshed every 3–60 min · 6,000+ monitored stations · 0 mock data · every reading persisted to SQLite for full audit trail</span>
+    <span class="th" data-th="มาตรฐานระบบ · 7 แหล่งข้อมูลสด · ดึงทุก 10 นาที–3 ชม. · สถานีเฝ้าระวัง 4,400+ แห่ง · 0 ข้อมูลจำลอง · ทุกค่าถูกบันทึกลง SQLite เพื่อตรวจสอบย้อนหลัง">มาตรฐานระบบ · 7 แหล่งข้อมูลสด · ดึงทุก 10 นาที–3 ชม. · สถานีเฝ้าระวัง 4,400+ แห่ง · 0 ข้อมูลจำลอง · ทุกค่าถูกบันทึกลง SQLite เพื่อตรวจสอบย้อนหลัง</span>
+    <span class="en" data-en="System standards · 7 live data sources · refreshed every 10 min–3 h · 4,400+ monitored stations · 0 mock data · every reading persisted to SQLite for full audit trail">System standards · 7 live data sources · refreshed every 10 min–3 h · 4,400+ monitored stations · 0 mock data · every reading persisted to SQLite for full audit trail</span>
   </div>
   <div class="appfooter-line appfooter-core">
-    <span class="th" data-th="แก่นของระบบนี้ · คำนวณจากข้อมูลที่ดีที่สุดที่หาได้ เพื่อหาแนวทางรักษาชีวิต — นี่คือเป้าหมายสูงสุดของ FloodDash">แก่นของระบบนี้ · คำนวณจากข้อมูลที่ดีที่สุดที่หาได้ เพื่อหาแนวทางรักษาชีวิต — นี่คือเป้าหมายสูงสุดของ FloodDash</span>
-    <span class="en" data-en="Core idea of this system · compute from the best data we can find, to map out the possibilities of saving lives — that is FloodDash's highest goal.">Core idea of this system · compute from the best data we can find, to map out the possibilities of saving lives — that is FloodDash's highest goal.</span>
+    <span class="th" data-th="แก่นของระบบนี้ · คำนวณจากข้อมูลที่ดีที่สุดที่หาได้ เพื่อหาแนวทางปกป้องสุขภาพและรักษาชีวิต — นี่คือเป้าหมายสูงสุดของ AirDash">แก่นของระบบนี้ · คำนวณจากข้อมูลที่ดีที่สุดที่หาได้ เพื่อหาแนวทางปกป้องสุขภาพและรักษาชีวิต — นี่คือเป้าหมายสูงสุดของ AirDash</span>
+    <span class="en" data-en="Core idea of this system · compute from the best data we can find, to map out the possibilities of protecting health and saving lives — that is AirDash's highest goal.">Core idea of this system · compute from the best data we can find, to map out the possibilities of protecting health and saving lives — that is AirDash's highest goal.</span>
   </div>
 </footer>
 
@@ -374,8 +378,8 @@
         <div class="about-role" data-th="ผู้เชี่ยวชาญอาวุโส ฝ่ายส่งเสริมเมืองอัจฉริยะ สำนักงานส่งเสริมเศรษฐกิจดิจิทัล (depa)" data-en="Senior Expert, Smart City Promotion Department · Digital Economy Promotion Agency (depa)">
           ผู้เชี่ยวชาญอาวุโส ฝ่ายส่งเสริมเมืองอัจฉริยะ สำนักงานส่งเสริมเศรษฐกิจดิจิทัล (depa)
         </div>
-        <div class="about-blurb" data-th="ผู้ริเริ่มและดูแลโครงการ FloodDash — ระบบเฝ้าระวังน้ำท่วมเรียลไทม์สำหรับประเทศไทย เพื่อให้ทุกจังหวัดเข้าถึงข้อมูลสถานการณ์น้ำจากแหล่งข้อมูลภาครัฐได้อย่างโปร่งใส ผ่านสำนักงานเมืองอัจฉริยะประเทศไทย (Smart City Thailand Office)" data-en="Initiator and steward of FloodDash — a real-time, openly-sourced flood watch built so every Thai province can read the same situation picture from official public data, delivered under the Smart City Thailand Office (depa).">
-          ผู้ริเริ่มและดูแลโครงการ FloodDash — ระบบเฝ้าระวังน้ำท่วมเรียลไทม์สำหรับประเทศไทย เพื่อให้ทุกจังหวัดเข้าถึงข้อมูลสถานการณ์น้ำจากแหล่งข้อมูลภาครัฐได้อย่างโปร่งใส ผ่านสำนักงานเมืองอัจฉริยะประเทศไทย (Smart City Thailand Office)
+        <div class="about-blurb" data-th="ผู้ริเริ่มและดูแลโครงการ AirDash — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์สำหรับประเทศไทย เพื่อให้ทุกจังหวัดเข้าถึงข้อมูลสถานการณ์ฝุ่นจากแหล่งข้อมูลภาครัฐได้อย่างโปร่งใส ผ่านสำนักงานเมืองอัจฉริยะประเทศไทย (Smart City Thailand Office)" data-en="Initiator and steward of AirDash — a real-time, openly-sourced air-quality watch built so every Thai province can read the same PM2.5 situation picture from official public data, delivered under the Smart City Thailand Office (depa).">
+          ผู้ริเริ่มและดูแลโครงการ AirDash — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์สำหรับประเทศไทย เพื่อให้ทุกจังหวัดเข้าถึงข้อมูลสถานการณ์ฝุ่นจากแหล่งข้อมูลภาครัฐได้อย่างโปร่งใส ผ่านสำนักงานเมืองอัจฉริยะประเทศไทย (Smart City Thailand Office)
         </div>
       </div>
     </section>
@@ -476,12 +480,12 @@
     <!-- Methodology pointer -->
     <section class="about-card">
       <div class="eyebrow" data-th="วิธีใช้งาน · แหล่งข้อมูล · เอกสารวิจัย" data-en="USAGE · SOURCES · RESEARCH PAPER">วิธีใช้งาน · แหล่งข้อมูล · เอกสารวิจัย</div>
-      <p data-th="FloodDash ดึงข้อมูลจาก 10 แหล่งสาธารณะทุก 3–60 นาที (สสน. · กรมชลประทาน · คพ. · NOAA · Copernicus · Open-Meteo · NASA GPM · RainViewer · ข่าว RSS) — ไม่มีการจำลองข้อมูล ทุกค่าที่วัดได้ถูกเก็บลง SQLite เพื่อวิเคราะห์รูปแบบระยะยาว ดูรายละเอียดเต็มได้ที่เอกสารวิชาการในโฟลเดอร์ knowledge/" data-en="FloodDash streams 10 public sources every 3–60 minutes (HII · RID · PCD · NOAA · Copernicus · Open-Meteo · NASA GPM · RainViewer · news RSS) — nothing is mocked; every reading is persisted to SQLite for long-horizon pattern analysis. Full methodology in the paper under knowledge/.">
-        FloodDash ดึงข้อมูลจาก 10 แหล่งสาธารณะทุก 3–60 นาที (สสน. · กรมชลประทาน · คพ. · NOAA · Copernicus · Open-Meteo · NASA GPM · RainViewer · ข่าว RSS) — ไม่มีการจำลองข้อมูล ทุกค่าที่วัดได้ถูกเก็บลง SQLite เพื่อวิเคราะห์รูปแบบระยะยาว ดูรายละเอียดเต็มได้ที่เอกสารวิชาการในโฟลเดอร์ knowledge/
+      <p data-th="AirDash ดึงข้อมูลจาก 7 แหล่งสาธารณะทุก 10 นาที–3 ชม. (คพ./Air4Thai · อุตุฯ · สสน. · Open-Meteo · CAMS/Copernicus · NOAA · NASA GPM · RainViewer · ข่าว RSS) — ไม่มีการจำลองข้อมูล ทุกค่าที่วัดได้ถูกเก็บลง SQLite เพื่อวิเคราะห์รูปแบบระยะยาว ดูรายละเอียดเต็มได้ที่เอกสารวิชาการในโฟลเดอร์ knowledge/" data-en="AirDash streams 7 public sources every 10 min–3 h (PCD/Air4Thai · TMD · HII · Open-Meteo · CAMS/Copernicus · NOAA · NASA GPM · RainViewer · news RSS) — nothing is mocked; every reading is persisted to SQLite for long-horizon pattern analysis. Full methodology in the paper under knowledge/.">
+        AirDash ดึงข้อมูลจาก 7 แหล่งสาธารณะทุก 10 นาที–3 ชม. (คพ./Air4Thai · อุตุฯ · สสน. · Open-Meteo · CAMS/Copernicus · NOAA · NASA GPM · RainViewer · ข่าว RSS) — ไม่มีการจำลองข้อมูล ทุกค่าที่วัดได้ถูกเก็บลง SQLite เพื่อวิเคราะห์รูปแบบระยะยาว ดูรายละเอียดเต็มได้ที่เอกสารวิชาการในโฟลเดอร์ knowledge/
       </p>
       <div class="about-links">
         <a href="#" id="research-paper-link" data-th="อ่านเอกสารวิชาการ →" data-en="Read the research paper →">อ่านเอกสารวิชาการ →</a>
-        <a href="https://github.com/Nonarkara/FloodDash-Blueprint" target="_blank" rel="noopener" data-th="สร้างเองได้ → Build Your Own" data-en="Build Your Own →">Build Your Own →</a>
+        <a href="https://github.com/Nonarkara/AirDash-Blueprint" target="_blank" rel="noopener" data-th="สร้างเองได้ → Build Your Own" data-en="Build Your Own →">Build Your Own →</a>
         <a href="https://depa.or.th" target="_blank" rel="noopener" data-th="depa.or.th" data-en="depa.or.th">depa.or.th</a>
         <a href="https://smartcitythailand.or.th" target="_blank" rel="noopener" data-th="smartcitythailand.or.th" data-en="smartcitythailand.or.th">smartcitythailand.or.th</a>
       </div>
@@ -500,8 +504,8 @@
 <div id="compare-overlay" hidden>
   <div class="compare-head">
     <div class="sign">
-      <span class="th">เทียบพื้นที่ · น้ำต้นทาง–ปลายน้ำ</span>
-      <span class="en">COMPARE AREAS · UPSTREAM–DOWNSTREAM</span>
+      <span class="th">เทียบพื้นที่ · สถานการณ์ฝุ่น</span>
+      <span class="en">COMPARE AREAS · AIR QUALITY</span>
     </div>
     <div class="compare-actions">
       <button data-panes="2" class="active">2</button>
@@ -516,8 +520,8 @@
 <div id="library-overlay" hidden>
   <div class="library-head">
     <div class="sign">
-      <span class="th">ห้องสมุดน้ำท่วม</span>
-      <span class="en">THE FLOOD LIBRARY</span>
+      <span class="th">ห้องสมุดฝุ่น</span>
+      <span class="en">THE AIR LIBRARY</span>
       <span class="doc-title"></span>
     </div>
     <div class="library-head-actions">
@@ -536,23 +540,23 @@
 
 <script src="/vendor/leaflet/leaflet.js"></script>
 <script type="module">
-  // v1 used stale-while-revalidate for every module. Clear that shell once
-  // before starting v2 so returning users never run old safety language or
-  // removed media controls during the service-worker handover.
-  const shell = 'flooddash-v2.0.0-final'
-  const migrated = `fd-shell-ready:${shell}`
+  // The FloodDash-era shell (and any older AirDash shell) must be cleared
+  // once so returning users never run old flood-era language or removed map
+  // layers during the service-worker handover.
+  const shell = 'airdash-v1'
+  const migrated = `ad-shell-ready:${shell}`
   const registrations = 'serviceWorker' in navigator
     ? await navigator.serviceWorker.getRegistrations()
     : []
   const cacheNames = 'caches' in window ? await caches.keys() : []
   const hasOldShell = cacheNames.some((name) =>
-    name.startsWith('flooddash-') && name !== shell)
+    (name.startsWith('flooddash-') || name.startsWith('airdash-')) && name !== shell)
 
   if (!sessionStorage.getItem(migrated) && (registrations.length || hasOldShell)) {
     sessionStorage.setItem(migrated, '1')
     await Promise.all(registrations.map((registration) => registration.unregister()))
     await Promise.all(cacheNames
-      .filter((name) => name.startsWith('flooddash-'))
+      .filter((name) => (name.startsWith('flooddash-') || name.startsWith('airdash-')) && name !== shell)
       .map((name) => caches.delete(name)))
     location.reload()
   } else {

@@ -1,8 +1,8 @@
 # Cloudflare Pages project config. Direct-upload deploy:
-#   npx wrangler pages deploy public --project-name flood
+#   npx wrangler pages deploy public --project-name airdash
 # The static UI lives in public/; functions/ holds the /api/* proxy to the
 # tunneled Mac backend. This project hosts ONLY the frontend — the real
-# FloodDash server runs 24/7 on the Mac (see ops/).
-name = "flood"
+# AirDash server runs 24/7 on the Mac (see ops/).
+name = "airdash"
 compatibility_date = "2026-07-01"
 pages_build_output_dir = "public"

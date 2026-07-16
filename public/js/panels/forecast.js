@@ -1,7 +1,8 @@
-// 3-day flood forecast view — "Where will the crisis be in 3 days?"
-// Replays the live watch score with Open-Meteo's 3-day forecast rain
-// replacing the observed rain. Water/wetness/riseRate held constant at
-// current observation. Honest framing: heuristic indicator, not a model.
+// 3-day air forecast view — "Where will the dust be in 3 days?"
+// Replays the live watch score with the CAMS PM2.5 forecast replacing the
+// observed ground PM2.5, discounted by expected rain washout per day.
+// Pollutants/ventilation held constant. Honest framing: heuristic
+// indicator, not a model.
 import { on, store } from '../state.js?v=2.0.0-final'
 import { tr, BAND } from '../i18n.js?v=2.0.0-final'
 import { fmtNum, el } from '../fmt.js?v=2.0.0-final'
@@ -34,18 +35,34 @@ async function refresh(box) {
   box.replaceChildren(...render(data))
 }
 
+// One-line PM2.5 + rain summary for a province's 3-day outlook.
+function fcLine(f) {
+  const pm = [f.pm25_d0, f.pm25_d1, f.pm25_d2].filter((v) => v !== null && v !== undefined)
+  const probs = [f.prob_d0, f.prob_d1, f.prob_d2].filter((v) => v !== null && v !== undefined)
+  const parts = []
+  if (pm.length) {
+    parts.push(`PM2.5 ${fmtNum(pm[0], 0)}→${fmtNum(pm[pm.length - 1], 0)} µg/m³`)
+  }
+  if (probs.length) {
+    parts.push(`🌧 ${tr('โอกาสฝนสูงสุด', 'max rain odds')} ${fmtNum(Math.max(...probs), 0)}%`)
+  }
+  return parts.join(' · ')
+}
+
 function render(d) {
   const head = el('div', { class: 'forecast-head' },
     el('div', { class: 'eyebrow' }, tr('พยากรณ์ +3 วัน', '3-DAY FORECAST')),
     el('div', { class: 'forecast-method' },
-      tr('คะแนนเฝ้าระวัง · น้ำคงที่ · ฝน = ฝนสะสมพยากรณ์',
-         'Watch score · water held · rain = cum. forecast')))
+      tr('คะแนนเฝ้าระวัง · PM2.5 = CAMS หักฝนล้างฝุ่น',
+         'Watch score · PM2.5 = CAMS minus rain washout')))
   const escalators = d.escalators || []
   if (escalators.length === 0) {
     return [head, el('div', { class: 'forecast-empty' },
-      tr('ไม่มีจังหวัดที่คาดว่าเสี่ยงเพิ่มใน 3 วันข้างหน้า',
-         'No provinces expected to escalate in the next 3 days'))]
+      tr('ไม่มีจังหวัดที่แนวโน้มฝุ่นแย่ลงใน 3 วันข้างหน้า',
+         'No provinces trending worse over the next 3 days'))]
   }
+  const sub = el('div', { class: 'forecast-sub eyebrow' },
+    tr('จังหวัดที่แนวโน้มแย่ลง', 'PROVINCES TRENDING WORSE'))
   const rows = escalators.map((p) => el('a', {
     class: `forecast-row b-${p.scores.b72h}`,
     href: '#',
@@ -53,8 +70,7 @@ function render(d) {
   },
     el('div', { class: 'forecast-name' },
       el('div', { class: 'th' }, tr(p.name_th, p.name_en)),
-      el('div', { class: 'forecast-rain' },
-        `🌧 ${tr('คาด', 'fc')} ${fmtNum(p.forecast.mm48, 0)} ${tr('มม./48ชม.', 'mm/48h')}`)),
+      el('div', { class: 'forecast-rain' }, fcLine(p.forecast))),
     el('div', { class: 'forecast-rail' },
       el('div', { class: 'forecast-col' },
         el('div', { class: 'forecast-h' }, tr('ตอนนี้', 'NOW')),
@@ -77,7 +93,7 @@ function render(d) {
   ))
   // Footnote disclaimer
   const foot = el('div', { class: 'forecast-foot' },
-    tr('ดัชนีบ่งชี้ ไม่ใช่แบบจำลอง — น้ำ/ดินชื้น/อัตราน้ำขึ้นคงที่ตามเวลาปัจจุบัน · เปลี่ยนเฉพาะฝน',
-       'Indicator, not a model — water/wetness/rise held; only rain changes'))
-  return [head, ...rows, foot]
+    tr('ดัชนีบ่งชี้ ไม่ใช่แบบจำลอง — มลพิษอื่น/การระบายอากาศคงที่ตามเวลาปัจจุบัน',
+       'Indicator, not a model — pollutants/ventilation held at current observation'))
+  return [head, sub, ...rows, foot]
 }

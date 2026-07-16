@@ -1,12 +1,12 @@
 /**
- * FloodDash Service Worker
+ * AirDash Service Worker
  *
- * CRITICAL: This dashboard streams live flood data. The service worker
+ * CRITICAL: This dashboard streams live air-quality data. The service worker
  * deliberately NEVER caches /api/ endpoints or SSE streams (/api/tap).
  * Live data integrity is non-negotiable.
  */
 
-const CACHE = 'flooddash-v2.0.0-final';
+const CACHE = 'airdash-v1';
 
 const PRECACHE_URLS = [
   '/',

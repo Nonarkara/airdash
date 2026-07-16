@@ -3,12 +3,12 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.flooddash.watchdog</string>
+  <string>com.airdash.watchdog</string>
 
   <key>ProgramArguments</key>
   <array>
     <string>/bin/zsh</string>
-    <string>/Users/axiom/Projects/FloodDash/ops/health-watchdog.sh</string>
+    <string>/Users/axiom/AirDash/ops/health-watchdog.sh</string>
   </array>
 
   <!-- Fires at :00 of every hour, not just "every 3600s since last run"
@@ -23,9 +23,9 @@
   <true/>
 
   <key>StandardOutPath</key>
-  <string>/Users/axiom/Projects/FloodDash/logs/watchdog-stdout.log</string>
+  <string>/Users/axiom/AirDash/logs/watchdog-stdout.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/axiom/Projects/FloodDash/logs/watchdog-stderr.log</string>
+  <string>/Users/axiom/AirDash/logs/watchdog-stderr.log</string>
 
   <key>EnvironmentVariables</key>
   <dict>

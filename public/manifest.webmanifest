@@ -1,7 +1,7 @@
 {
-  "name": "FloodDash — Thailand Flood Watch",
-  "short_name": "FloodDash",
-  "description": "Real-time flood monitoring for Thailand · เฝ้าระวังน้ำท่วมประเทศไทย",
+  "name": "AirDash — Thailand Air Quality & Dust Watch",
+  "short_name": "AirDash",
+  "description": "Real-time PM2.5 and air-quality monitoring for Thailand · เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

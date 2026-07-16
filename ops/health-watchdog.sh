@@ -1,16 +1,16 @@
 #!/bin/zsh
-# Hourly self-healing health check for FloodDash. Installed as a launchd
-# LaunchAgent (com.flooddash.watchdog, StartCalendarInterval Minute=0).
+# Hourly self-healing health check for AirDash. Installed as a launchd
+# LaunchAgent (com.airdash.watchdog, StartCalendarInterval Minute=0).
 #
 # Checks, in order:
-#   1. Local server (localhost:8340) — if unreachable, this has twice been
+#   1. Local server (localhost:8341) — if unreachable, this has twice been
 #      an orphaned process holding the port with no launchd supervision
 #      (a plain `kickstart -k` can silently no-op against that). Kill any
 #      stray process directly, then kickstart, matching the recovery that
 #      has actually worked in practice.
-#   2. Cloudflare Tunnel backend (api-flood.nonarkara.org) — restart the
+#   2. Cloudflare Tunnel backend (api-air.nonarkara.org) — restart the
 #      tunnel service if unreachable.
-#   3. Public custom domain (flood.nonarkara.org) — Cloudflare/DNS-side;
+#   3. Public custom domain (air.nonarkara.org) — Cloudflare/DNS-side;
 #      not locally fixable, so this is detect-and-log only.
 #   4. LLM chat (NVIDIA NIM cloud API) — informational only. Chat degrades
 #      to a structured live-data summary when the API/key is unavailable,
@@ -21,11 +21,11 @@
 # self-heals invisibly, and not on every successful hourly check.
 set -u
 UID_NUM=$(id -u)
-LOG="/Users/axiom/Projects/FloodDash/logs/watchdog.log"
+LOG="/Users/axiom/AirDash/logs/watchdog.log"
 NOW() { date '+%Y-%m-%dT%H:%M:%S%z' }
 log() { print -r -- "[$(NOW)] $*" >> "$LOG" }
 notify() {
-  osascript -e "display notification \"$1\" with title \"FloodDash watchdog\" sound name \"Basso\"" 2>/dev/null
+  osascript -e "display notification \"$1\" with title \"AirDash watchdog\" sound name \"Basso\"" 2>/dev/null
 }
 up() { curl -sf --max-time 8 "$1" -o /dev/null; }
 
@@ -63,7 +63,7 @@ proc_age_s() {
 problems=0
 
 # ── 1. Local server ─────────────────────────────────────────────────────
-if up_retry "http://localhost:8340/api/health"; then
+if up_retry "http://localhost:8341/api/health"; then
   log "ok: local server"
 else
   pid=$(pgrep -f "node server/index.js" | head -1)
@@ -81,9 +81,9 @@ else
       kill "$pid" 2>/dev/null
       sleep 2
     fi
-    launchctl kickstart -k "gui/$UID_NUM/com.flooddash.server" 2>>"$LOG"
+    launchctl kickstart -k "gui/$UID_NUM/com.airdash.server" 2>>"$LOG"
     sleep 20
-    if up_retry "http://localhost:8340/api/health" 3 20; then
+    if up_retry "http://localhost:8341/api/health" 3 20; then
       log "  RECOVERED: local server healthy after restart"
     else
       log "  FAILED: local server still unreachable after recovery attempt"
@@ -93,13 +93,13 @@ else
 fi
 
 # ── 2. Tunnel backend ────────────────────────────────────────────────────
-if up_retry "https://api-flood.nonarkara.org/api/health"; then
+if up_retry "https://api-air.nonarkara.org/api/health"; then
   log "ok: tunnel backend"
 else
   log "PROBLEM: tunnel backend unreachable — restarting tunnel"
-  launchctl kickstart -k "gui/$UID_NUM/com.flooddash.tunnel" 2>>"$LOG"
+  launchctl kickstart -k "gui/$UID_NUM/com.airdash.tunnel" 2>>"$LOG"
   sleep 6
-  if up "https://api-flood.nonarkara.org/api/health"; then
+  if up "https://api-air.nonarkara.org/api/health"; then
     log "  RECOVERED: tunnel healthy after restart"
   else
     log "  FAILED: tunnel still unreachable after recovery attempt"
@@ -108,15 +108,15 @@ else
 fi
 
 # ── 3. Public domain (Cloudflare-side; detect only) ─────────────────────
-if up_retry "https://flood.nonarkara.org/api/health"; then
+if up_retry "https://air.nonarkara.org/api/health"; then
   log "ok: public domain"
 else
-  log "PROBLEM: flood.nonarkara.org unreachable — not locally fixable (Cloudflare/DNS side)"
+  log "PROBLEM: air.nonarkara.org unreachable — not locally fixable (Cloudflare/DNS side)"
   problems=$((problems + 1))
 fi
 
 # ── 4. LLM chat API (informational only — degraded ≠ down) ─────────────
-llm_reachable=$(curl -sf --max-time 8 "http://localhost:8340/api/chat/status" 2>/dev/null | grep -o '"reachable":[a-z]*' | cut -d: -f2)
+llm_reachable=$(curl -sf --max-time 8 "http://localhost:8341/api/chat/status" 2>/dev/null | grep -o '"reachable":[a-z]*' | cut -d: -f2)
 if [ "${llm_reachable:-}" = "true" ]; then
   log "ok: LLM chat API (NIM)"
 else

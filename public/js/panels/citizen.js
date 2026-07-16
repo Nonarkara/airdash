@@ -1,10 +1,9 @@
 // Citizen-mode panel — what ordinary people need to see in 30 seconds.
-// Surfaces the four questions that matter during a flood:
+// Surfaces the four questions that matter during a dust episode:
 //   1. Am I safe right now?          → JMA verb at the top
-//   2. What do I do?                  → checklist (already in the
-//                                      national action card, surfaced bigger here)
-//   3. Where do I go?                 → 3 nearest shelters + one-tap
-//                                      Google Maps navigate
+//   2. What do I do?                  → per-band health advice (N95, windows,
+//                                      purifier, sensitive groups)
+//   3. What am I breathing?           → 3 nearest AQ stations with live PM2.5
 //   4. How do I tell my family?       → share-status via LINE / SMS
 //
 // Citizen mode also pins the user's "My Province" — saved to localStorage
@@ -12,15 +11,37 @@
 // "เปลี่ยนจังหวัด" button opens a searchable province picker.
 import { on, store, emit } from '../state.js?v=2.0.0-final'
 import { tr, BAND } from '../i18n.js?v=2.0.0-final'
-import { el, escapeHtml } from '../fmt.js?v=2.0.0-final'
-import { fetchNearestShelters } from '../layers/shelters.js?v=2.0.0-final'
+import { el, fmtNum, ago } from '../fmt.js?v=2.0.0-final'
+import { getJson } from '../cache.js?v=2.0.0-final'
 import { flyToProvince } from '../map.js?v=2.0.0-final'
 
-const MY_PROVINCE_KEY = 'fd_my_province'
+const MY_PROVINCE_KEY = 'ad_my_province'
 
-// All 77 provinces of Thailand (TH + EN) for the picker. Hardcoded because
-// the snapshot only includes the 78 that have stations; some border-area
-// provinces might not. We cross-reference with the snapshot on render.
+// Per-band health advice — the "what do I do" layer for ordinary people.
+// One line per audience: everyone, then sensitive groups.
+const HEALTH_ADVICE = {
+  normal: [
+    { th: 'อากาศดี ใช้ชีวิตกลางแจ้งได้ตามปกติ', en: 'Good air — outdoor life as usual' },
+    { th: 'เปิดหน้าต่างระบายอากาศได้', en: 'Fine to open windows and ventilate' },
+  ],
+  watch: [
+    { th: 'กลุ่มเสี่ยง (เด็ก ผู้สูงอายุ โรคปอด/หัวใจ หญิงตั้งครรภ์) ลดกิจกรรมกลางแจ้งหนัก ๆ', en: 'Sensitive groups (kids, elderly, lung/heart disease, pregnant) limit heavy outdoor exertion' },
+    { th: 'เช็กค่าฝุ่นก่อนออกกำลังกายกลางแจ้ง', en: 'Check PM2.5 before outdoor exercise' },
+  ],
+  elevated: [
+    { th: 'ลดกิจกรรมกลางแจ้ง — สวมหน้ากาก N95 เมื่อออกนอกบ้าน', en: 'Limit outdoor time — wear an N95 outside' },
+    { th: 'ปิดหน้าต่าง เปิดเครื่องฟอกอากาศถ้ามี', en: 'Close windows, run an air purifier if you have one' },
+    { th: 'กลุ่มเสี่ยงอยู่ในอาคารให้มากที่สุด', en: 'Sensitive groups stay indoors as much as possible' },
+  ],
+  high: [
+    { th: 'งดกิจกรรมกลางแจ้งทั้งหมด — N95 ทุกครั้งที่ต้องออกนอกบ้าน', en: 'Avoid all outdoor activity — N95 whenever you must go out' },
+    { th: 'ปิดบ้านให้มิดชิด เปิดเครื่องฟอกอากาศ', en: 'Seal the house, run the purifier' },
+    { th: 'มีอาการแน่นหน้าอก/หอบ ให้พบแพทย์ หรือโทร 1669', en: 'Chest tightness or wheezing → see a doctor or call 1669' },
+  ],
+}
+
+// All 77 provinces of Thailand (TH + EN) for the picker, populated from the
+// first risk snapshot so lat/lng + band data come attached.
 let PROVINCE_INDEX = []
 
 export function initCitizen() {
@@ -37,7 +58,7 @@ export function initCitizen() {
     // URL ?city= deep link: someone shared a link to "your city's dashboard".
     // Pin that province on first snapshot arrival (not on init, because the
     // index isn't populated yet) so the citizen panel auto-loads with
-    // JMA verb + shelters + share without any clicks.
+    // JMA verb + nearest AQ stations + share without any clicks.
     const urlCity = new URLSearchParams(location.search).get('city')?.trim()
     if (urlCity && !readMyProvince() && PROVINCE_INDEX.length) {
       const match = matchProvinceFromQuery(urlCity)
@@ -91,8 +112,8 @@ function matchProvinceFromQuery(q) {
 function tryGeolocate() {
   if (!('geolocation' in navigator)) return
   // Throttle so we don't re-prompt on every navigation
-  if (sessionStorage.getItem('fd_geo_asked')) return
-  sessionStorage.setItem('fd_geo_asked', '1')
+  if (sessionStorage.getItem('ad_geo_asked')) return
+  sessionStorage.setItem('ad_geo_asked', '1')
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const lat = pos.coords.latitude
@@ -159,8 +180,8 @@ function renderEmpty() {
   const intro = el('div', { class: 'citizen-empty' },
     el('h3', {}, tr('เลือกจังหวัดของคุณ', 'Pick your province')),
     el('p', { class: 'citizen-empty-sub' },
-      tr('เพื่อดูศูนย์พักพิงใกล้บ้าน + ระดับเสี่ยงเฉพาะพื้นที่',
-         'See shelters near you + local risk level')),
+      tr('เพื่อดูสถานีวัดฝุ่นใกล้บ้าน + ระดับเสี่ยงเฉพาะพื้นที่',
+         'See AQ stations near you + local risk level')),
     renderPicker(),
   )
   return [intro]
@@ -193,33 +214,40 @@ function renderForProvince(province) {
     ),
   )
 
-  // "Where do I go" — three nearest shelters (loaded async below)
-  const shelterHead = el('div', { class: 'citizen-section-head' },
-    el('span', {}, tr('📍 ศูนย์พักพิงใกล้คุณ', '📍 shelters near you')))
-  // Show a "looking up..." placeholder so the section never looks broken
-  // — shelters take ~5s to compute across 10,399 DDPM records.
-  const shelterList = el('div', { class: 'citizen-shelter-list' },
+  // "What do I do" — health advice for the current band.
+  const adviceHead = el('div', { class: 'citizen-section-head' },
+    el('span', {}, tr('😷 คำแนะนำสุขภาพวันนี้', '😷 health advice today')))
+  const advice = el('div', { class: 'citizen-advice' },
+    ...(HEALTH_ADVICE[band] ?? HEALTH_ADVICE.normal).map((a) =>
+      el('div', { class: 'citizen-advice-row' }, `· ${tr(a.th, a.en)}`)))
+
+  // "What am I breathing" — three nearest AQ stations (loaded async below)
+  const stationHead = el('div', { class: 'citizen-section-head' },
+    el('span', {}, tr('🌫 สถานีวัดฝุ่นใกล้คุณ', '🌫 AQ stations near you')))
+  // Show a "looking up..." placeholder so the section never looks broken.
+  const stationList = el('div', { class: 'citizen-shelter-list' },
     el('div', { class: 'citizen-loading' },
       el('span', { class: 'citizen-loading-dot' }),
       el('span', { class: 'citizen-loading-dot' }),
       el('span', { class: 'citizen-loading-dot' }),
       el('span', { class: 'citizen-loading-text' },
-        tr('กำลังค้นหาศูนย์พักพิงใกล้คุณ…', 'Looking up shelters near you…'))))
+        tr('กำลังค้นหาสถานีวัดฝุ่นใกล้คุณ…', 'Looking up AQ stations near you…'))))
   // Render shell first, fill in async so the page is interactive immediately
-  const out = [head, shelterHead, shelterList]
+  const out = [head, adviceHead, advice, stationHead, stationList]
   if (province.lat != null && province.lng != null) {
-    fetchNearestShelters(province.lat, province.lng, 3, province.th)
-      .then((rows) => {
+    getJson(`/api/stations/nearest?lat=${province.lat}&lng=${province.lng}&limit=3`, 60_000)
+      .then((data) => {
+        const rows = data?.stations ?? []
         if (!rows.length) {
-          shelterList.replaceChildren(el('div', { class: 'citizen-empty-sub' },
-            tr('ไม่พบศูนย์พักพิงในจังหวัดนี้', 'no shelters found in this province')))
+          stationList.replaceChildren(el('div', { class: 'citizen-empty-sub' },
+            tr('ไม่พบสถานีวัดฝุ่นใกล้จังหวัดนี้', 'no AQ stations found near this province')))
           return
         }
-        shelterList.replaceChildren(...rows.map(shelterCard))
+        stationList.replaceChildren(...rows.map(stationCard))
       })
       .catch(() => {})
   } else {
-    shelterList.replaceChildren(el('div', { class: 'citizen-empty-sub' },
+    stationList.replaceChildren(el('div', { class: 'citizen-empty-sub' },
       tr('กำลังโหลดพิกัดจังหวัด…', 'loading province coords…')))
   }
 
@@ -232,57 +260,71 @@ function renderForProvince(province) {
     copyButton(province, band, score),
   )
 
-  // LINE Notify was retired in 2025. Keep one honest, low-friction route:
-  // follow the FloodDash Official Account. No personal token field, no dead
-  // onboarding flow, and no promise of province-specific delivery.
+  // LINE opt-in — follow the AirDash Official Account for dust alerts
+  // (PROTECT NOW and above). One honest, low-friction route; no personal
+  // token field and no promise of province-specific delivery.
   const lineHead = el('div', { class: 'citizen-section-head' },
-    el('span', {}, tr('📲 ติดตาม FloodDash บน LINE', '📲 follow FloodDash on LINE')))
+    el('span', {}, tr('📲 รับแจ้งเตือนฝุ่นทาง LINE', '📲 dust alerts on LINE')))
   const lineCard = el('a', {
-    class: 'citizen-line-follow', href: 'https://line.me/R/ti/p/@flooddash',
+    class: 'citizen-line-follow', href: 'https://line.me/R/ti/p/@airdash',
     target: '_blank', rel: 'noopener',
   },
     el('span', { class: 'citizen-line-mark' }, 'LINE'),
-    el('span', {}, tr('เพิ่มเพื่อน @flooddash', 'Add @flooddash')),
+    el('span', {}, tr('เพิ่มเพื่อน @airdash — แจ้งเตือนเมื่อฝุ่นถึงขั้นต้องป้องกัน', 'Add @airdash — alerts when dust hits PROTECT NOW')),
     el('span', { 'aria-hidden': 'true' }, '→'),
   )
 
-  // "I need help" — one-tap hotline
+  // "I need help" — one-tap hotlines
   const helpHead = el('div', { class: 'citizen-section-head' },
-    el('span', {}, tr('🆘 ขอความช่วยเหลือ', '🆘 get help')))
+    el('span', {}, tr('🆘 สายด่วน', '🆘 hotlines')))
   const helpRow = el('div', { class: 'citizen-help-row' },
-    el('a', { class: 'citizen-help-btn', href: 'tel:1784' },
-      el('div', { class: 'citizen-help-num' }, '1784'),
-      el('div', { class: 'citizen-help-lbl' }, tr('ปภ. (ตลอด 24 ชม.)', 'DDPM (24/7)'))),
+    el('a', { class: 'citizen-help-btn', href: 'tel:1650' },
+      el('div', { class: 'citizen-help-num' }, '1650'),
+      el('div', { class: 'citizen-help-lbl' }, tr('มลพิษ (คพ.)', 'pollution (PCD)'))),
+    el('a', { class: 'citizen-help-btn', href: 'tel:1422' },
+      el('div', { class: 'citizen-help-num' }, '1422'),
+      el('div', { class: 'citizen-help-lbl' }, tr('กรมควบคุมโรค', 'DDC health'))),
     el('a', { class: 'citizen-help-btn', href: 'tel:1669' },
       el('div', { class: 'citizen-help-num' }, '1669'),
       el('div', { class: 'citizen-help-lbl' }, tr('กู้ชีพ ฉุกเฉิน', 'EMS'))),
-    el('a', { class: 'citizen-help-btn', href: 'tel:191' },
-      el('div', { class: 'citizen-help-num' }, '191'),
-      el('div', { class: 'citizen-help-lbl' }, tr('ตำรวจฉุกเฉิน', 'police emergency'))),
   )
 
   return [...out, shareHead, shareRow, lineHead, lineCard, helpHead, helpRow, renderPickerCollapsed()]
 }
 
-function shelterCard(s) {
-  const km = s.distance_km?.toFixed(1) ?? '?'
-  const phone = s.phone ? `<a href="tel:${escapeHtml(s.phone)}">📞 ${escapeHtml(s.phone)}</a>` : ''
+// Thai AQI 2023 colour anchor for a PM2.5 value (µg/m³).
+function pm25Color(v) {
+  if (v === null || v === undefined) return '#B7AFA3'
+  if (v >= 75) return '#A51931'
+  if (v >= 37.5) return '#E86A10'
+  if (v >= 25) return '#F0B400'
+  return '#00933C'
+}
+
+function stationCard(s) {
+  const km = s.distance_km?.toFixed?.(1) ?? '?'
   const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`
-  return el('a', { class: 'citizen-shelter', href: gmaps, target: '_blank', rel: 'noopener' },
-    el('div', { class: 'citizen-shelter-name' }, s.place ?? '—'),
+  const freshness = s.pm25_time ? ago(s.pm25_time) : tr('ไม่มีข้อมูลล่าสุด', 'no recent data')
+  return el('a', { class: 'citizen-shelter citizen-station', href: gmaps, target: '_blank', rel: 'noopener' },
+    el('div', { class: 'citizen-shelter-name' },
+      el('span', { class: 'citizen-station-dot', style: `display:inline-block;width:10px;height:10px;margin-right:6px;background:${pm25Color(s.pm25)}` }),
+      tr(s.name_th, s.name_en) || '—'),
     el('div', { class: 'citizen-shelter-meta' },
-      `${tr('ห่าง', '~')} ${km} ${tr('กม.', 'km')} · ${tr('รองรับ', 'cap.')} ${s.capacity ?? '—'} ${tr('คน', 'ppl')}`,
+      s.pm25 !== null && s.pm25 !== undefined
+        ? `PM2.5 ${fmtNum(s.pm25, 0)} µg/m³ · ${freshness}`
+        : freshness,
+      ` · ${tr('ห่าง', '~')} ${km} ${tr('กม.', 'km')}`,
     ),
-    el('div', { class: 'citizen-shelter-contact', dangerouslySetInnerHTML: phone }),
-    el('div', { class: 'citizen-shelter-cta' }, `🧭 ${tr('นำทาง', 'navigate')}`),
+    el('div', { class: 'citizen-shelter-cta' }, `🧭 ${tr('นำทางไปสถานี', 'navigate')}`),
   )
 }
 
 function buildShareText(province, band, score) {
   const verb = (BAND[band] ?? BAND.normal)
+  const link = `${location.origin}/?city=${encodeURIComponent(province.en || province.th)}`
   return tr(
-    `[FloodDash] สถานการณ์${province.th} (${province.en}): ${verb.th} · ${score}/100\nดูสด: https://flood.nonarkara.org/?city=${encodeURIComponent(province.en || province.th)}`,
-    `[FloodDash] ${province.en} status: ${verb.en} · ${score}/100\nLive: https://flood.nonarkara.org/?city=${encodeURIComponent(province.en || province.th)}`,
+    `[AirDash] สถานการณ์ฝุ่น${province.th} (${province.en}): ${verb.th} · ${score}/100\nดูสด: ${link}`,
+    `[AirDash] ${province.en} air status: ${verb.en} · ${score}/100\nLive: ${link}`,
   )
 }
 

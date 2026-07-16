@@ -1,17 +1,17 @@
 // Cloudflare Pages Function — proxies every /api/* request from the static
-// dashboard (flood.nonarkara.org) to the live FloodDash backend running 24/7
-// on the Mac, exposed via a named Cloudflare Tunnel at api-flood.nonarkara.org.
-// (Deliberately one label, not api.flood.nonarkara.org — the zone's free
+// dashboard (air.nonarkara.org) to the live AirDash backend running 24/7
+// on the Mac, exposed via a named Cloudflare Tunnel at api-air.nonarkara.org.
+// (Deliberately one label, not api.air.nonarkara.org — the zone's free
 // Universal cert only covers *.nonarkara.org, one level deep; a two-level
 // hostname needs its own paid Advanced Certificate, which this zone doesn't
 // have provisioned.)
 //
-// Why a proxy: FloodDash is a stateful server (SQLite + 9 pipelines + local
-// Ollama chat) that cannot run on Pages. Keeping it same-origin here means the
+// Why a proxy: AirDash is a stateful server (SQLite + 7 pipelines + cloud
+// LLM chat) that cannot run on Pages. Keeping it same-origin here means the
 // frontend needs zero changes and there is no CORS to manage. Streaming
 // responses (the SSE tap at /api/tap and chat at /api/chat) pass straight
 // through — Workers stream a subrequest body without buffering.
-const BACKEND = 'https://api-flood.nonarkara.org'
+const BACKEND = 'https://api-air.nonarkara.org'
 
 const JSON_TIMEOUT_MS = 30_000
 const STREAM_TIMEOUT_MS = 300_000
@@ -32,7 +32,7 @@ export async function onRequest({ request }) {
   if (RETIRED_LINE_NOTIFY_PATHS.has(url.pathname)) {
     return new Response(JSON.stringify({
       error: 'LINE Notify integration retired',
-      alternative: 'Follow the FloodDash LINE Official Account',
+      alternative: 'Follow the AirDash LINE Official Account',
     }), {
       status: 410,
       headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -55,7 +55,7 @@ export async function onRequest({ request }) {
     return new Response(
       JSON.stringify({
         error: offline ? 'backend timeout' : 'backend unreachable',
-        hint: 'the FloodDash tunnel (api-flood.nonarkara.org) may be offline or slow',
+        hint: 'the AirDash tunnel (api-air.nonarkara.org) may be offline or slow',
       }),
       { status: offline ? 504 : 502, headers: { 'content-type': 'application/json' } },
     )

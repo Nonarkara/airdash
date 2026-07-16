@@ -1,34 +1,33 @@
-// Waterways panel — the connected-rivers story: ENSO ocean state, the flagship
-// Chao Phraya cascade (upstream discharge → Bangkok in N days), and per-province
-// catchment wetness (Antecedent Precipitation Index). This is the "science of
-// it" surfaced from live data.
+// Washout panel — the rain-washout story: ENSO ocean state (drier = worse
+// haze) and the per-province Rain-Washout outlook from /api/washout: chance
+// of rain, expected mm, how much PM2.5 it would scrub out, and the projected
+// value if it lands. This is the "science of it" surfaced from live data.
+// (Kept the initWaterways export + #waterways container so main.js/index.html
+// keep working unchanged.)
 import { getJson } from '../cache.js?v=2.0.0-final'
-import { on, store, emit } from '../state.js?v=2.0.0-final'
-import { tr, pick } from '../i18n.js?v=2.0.0-final'
+import { on } from '../state.js?v=2.0.0-final'
+import { tr } from '../i18n.js?v=2.0.0-final'
 import { fmtNum, el } from '../fmt.js?v=2.0.0-final'
-import { flyToStation } from '../map.js?v=2.0.0-final'
 
-const BAND_COLOR = { normal: '#1D66A8', watch: '#F0B400', warning: '#E86A10', emergency: '#A51931', unknown: '#B7AFA3' }
+const WASHOUT_COLOR = { strong: '#1D66A8', moderate: '#3E7CB1', light: '#5BA8C7', none: '#B7AFA3', unknown: '#B7AFA3' }
 
 export function initWaterways() {
   render()
   on('lang', render)
   setInterval(render, 3 * 60_000)
-  on('reach-select', (r) => { if (r?.lat) flyToStation({ lat: r.lat, lng: r.lng }) })
 }
 
 async function render() {
   const box = document.getElementById('waterways')
   if (!box) return
-  const [rivers, enso, wetness] = await Promise.all([
-    getJson('/api/rivers', 60_000).catch(() => null),
+  const [enso, washout] = await Promise.all([
     getJson('/api/enso', 3600_000).catch(() => null),
-    getJson('/api/wetness', 60_000).catch(() => null),
+    getJson('/api/washout', 60_000).catch(() => null),
   ])
 
   const children = []
 
-  // ENSO ocean-state chip.
+  // ENSO ocean-state chip — seasonal context (El Niño = drier = worse haze).
   if (enso) {
     children.push(el('div', { class: `enso-chip enso-${enso.phase}` },
       el('span', { class: 'enso-dot' }),
@@ -38,47 +37,49 @@ async function render() {
       el('div', { class: 'oni', title: 'Oceanic Niño Index' }, `${enso.anom > 0 ? '+' : ''}${fmtNum(enso.anom, 1)}`)))
   }
 
-  // Flagship Chao Phraya cascade.
-  if (rivers?.flagship?.length) {
+  // Rain-Washout table — provinces where the rain would actually help
+  // (helps_dust) sort first, then by expected relief, then by dust load.
+  if (washout?.provinces?.length) {
     children.push(el('div', { class: 'panel-head' },
-      el('div', { class: 'eyebrow' }, tr('น้ำเดินทางลงเจ้าพระยา', 'CHAO PHRAYA CASCADE')),
-      el('div', { class: 'sign' }, el('div', { class: 'en' }, tr(rivers.method_th, rivers.method_en)))))
+      el('div', { class: 'eyebrow' }, tr('ฝนช่วยล้างฝุ่น', 'RAIN WASHOUT OUTLOOK')),
+      el('div', { class: 'sign' }, el('div', { class: 'en' }, tr(washout.method_th, washout.method_en)))))
 
-    const flow = el('div', { class: 'cascade-flow' })
-    rivers.flagship.forEach((s) => {
-      const color = BAND_COLOR[s.band ?? 'unknown']
-      flow.append(el('div', { class: 'cascade-step' },
-        el('div', { class: 'cascade-node-sq', style: `background:${color}` }),
+    const rows = [...washout.provinces]
+      .filter((p) => p.pm25 !== null)
+      .sort((a, b) =>
+        (b.helps_dust === true) - (a.helps_dust === true) ||
+        (b.expected_relief_pct ?? 0) - (a.expected_relief_pct ?? 0) ||
+        (b.pm25 ?? -1) - (a.pm25 ?? -1))
+      .slice(0, 14)
+
+    for (const p of rows) {
+      const lbl = washout.labels?.[p.band] ?? { th: p.band, en: p.band }
+      const color = WASHOUT_COLOR[p.band ?? 'unknown']
+      children.push(el('div', { class: `washout-row wet-row wet-${p.band}` },
+        el('div', { class: 'cascade-node-sq', style: `background:${color}`,
+          title: tr(lbl.th, lbl.en) }),
         el('div', { class: 'cascade-body' },
-          el('div', { class: 'nm' }, tr(s.name_th, s.name_en)),
-          el('div', { class: 'q' }, tr('ไหลวันนี้ ', 'now '), el('b', {}, fmtNum(s.discharge, 0)),
-            ` ${tr('ลบ.ม./วิ · คาด', 'm³/s · peak')} ${fmtNum(s.forecastPeak, 0)}`)),
+          el('div', { class: 'nm' },
+            tr(p.province_th, p.province_en) || p.province_code,
+            p.helps_dust
+              ? el('span', { class: 'hot', style: 'margin-left:6px;font-size:10px' },
+                  `🌧 −${fmtNum(p.relief_if_rain_pct, 0)}%`)
+              : ''),
+          el('div', { class: 'q' },
+            tr('ฝุ่น ', 'PM2.5 '), el('b', {}, fmtNum(p.pm25, 0)), ' µg/m³',
+            ` · ${tr('โอกาสฝน 24ชม.', 'rain 24h')} ${fmtNum(p.prob24 ?? 0, 0)}%`,
+            ` · ${tr('คาด', 'fc')} ${fmtNum(p.rain_fc_24 ?? 0, 0)} ${tr('มม.', 'mm')}`),
+          el('div', { class: 'q' }, tr(lbl.th, lbl.en))),
         el('div', { class: 'cascade-lag' },
-          s.cumLagDays > 0 ? el('div', { class: 'eta' }, `+${s.cumLagDays}${tr('ว', 'd')}`) : tr('ต้นน้ำ', 'source'))))
-    })
-    children.push(flow)
-  }
-
-  // Catchment wetness (Antecedent Precipitation Index).
-  if (wetness?.provinces?.length) {
-    const top = wetness.provinces.filter((p) => p.api >= 5).slice(0, 12)
-    children.push(el('div', { class: 'panel-head' },
-      el('div', { class: 'eyebrow' }, tr('ความชุ่มน้ำของดิน (API)', 'CATCHMENT WETNESS (API)'), ' ',
-        el('a', { href: '#', class: 'lib-more', onclick: (e) => { e.preventDefault(); window.openLibraryDoc?.('knowledge/soil-wetness') } },
-          tr('อ่านเพิ่มเติม →', 'read more →'))),
-      el('div', { class: 'sign' }, el('div', { class: 'en' }, tr(wetness.method_th, wetness.method_en)))))
-    const maxApi = Math.max(60, ...top.map((p) => p.api))
-    for (const p of top) {
-      const lbl = wetness.labels[p.band]
-      children.push(el('div', { class: `wet-row wet-${p.band}` },
-        el('span', { class: 'nm' }, tr(p.province_th, p.province_en) || p.province_code),
-        el('div', { class: 'wet-bar' }, el('div', { style: `width:${Math.min(100, (p.api / maxApi) * 100)}%` })),
-        el('span', { class: 'val' }, `${fmtNum(p.api, 0)} · ${tr(lbl.th, lbl.en)}`)))
+          p.projected_pm25 !== null && (p.relief_if_rain_pct ?? 0) > 0
+            ? el('div', { class: 'eta', title: tr('ค่าฝุ่นถ้าฝนตกจริง', 'PM2.5 if the rain lands') },
+                `→${fmtNum(p.projected_pm25, 0)}`)
+            : '—')))
     }
   }
 
   if (children.length === 0) {
-    children.push(el('div', { class: 'wx-method' }, tr('กำลังโหลดข้อมูลเส้นทางน้ำ…', 'loading waterways…')))
+    children.push(el('div', { class: 'wx-method' }, tr('กำลังโหลดข้อมูลฝนล้างฝุ่น…', 'loading washout outlook…')))
   }
   box.replaceChildren(...children)
 }

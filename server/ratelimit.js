@@ -6,8 +6,8 @@
 const buckets = new Map() // key -> { count, resetAt }
 
 function clientIp(req) {
-  // Traffic arrives via flood.nonarkara.org (Pages) -> Pages Function proxy
-  // -> api-flood.nonarkara.org (tunnel) -> here. Cloudflare rewrites
+  // Traffic arrives via air.nonarkara.org (Pages) -> Pages Function proxy
+  // -> api-air.nonarkara.org (tunnel) -> here. Cloudflare rewrites
   // cf-connecting-ip at EACH hop to the immediate peer, so by the time a
   // request reaches us that header is the Pages Function's own egress IP —
   // identical for every visitor — which would bucket all real users

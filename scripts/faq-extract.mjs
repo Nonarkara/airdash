@@ -19,13 +19,13 @@ const { CONFIG } = await import('../server/config.js')
 const { openDb } = await import('../server/db.js')
 const { createRag } = await import('../server/rag.js')
 const { createRisk } = await import('../server/risk.js')
-const { createWetness } = await import('../server/wetness.js')
+const { createWashout } = await import('../server/washout.js')
 const { createFaq } = await import('../server/faq.js')
 
 const db = openDb()
-const wetness = createWetness(db)
-const riskEngine = createRisk(db, wetness)
-const rag = createRag({ db, riskEngine, wetness })
+const washout = createWashout(db)
+const riskEngine = createRisk(db, washout)
+const rag = createRag({ db, riskEngine, washout })
 const faq = createFaq({ db, rag })
 
 const out = await faq.clusterRecent({

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://flood.nonarkara.org/sitemap.xml
+Sitemap: https://air.nonarkara.org/sitemap.xml

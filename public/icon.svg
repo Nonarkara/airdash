@@ -2,12 +2,15 @@
   <!-- Navy background -->
   <rect width="512" height="512" fill="#241E4E" rx="64" ry="64"/>
 
-  <!-- Water body (rainfall blue, matching the dashboard's rain color) -->
-  <path d="M 64 280 Q 128 240 192 280 T 320 280 T 448 280 L 448 448 L 64 448 Z" fill="#0039A6"/>
+  <!-- Hazy sun (dust-season yellow, matching the watch-band color) -->
+  <circle cx="352" cy="152" r="72" fill="#F0B400"/>
 
-  <!-- Wave stroke (paper color, echoing the favicon) -->
-  <path d="M 64 256 Q 128 216 192 256 T 320 256 T 448 256" stroke="#F6F4EF" stroke-width="16" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Haze bands (paper color, echoing the favicon) -->
+  <path d="M 72 264 H 440" stroke="#F6F4EF" stroke-width="34" stroke-linecap="round"/>
+  <path d="M 72 340 H 356" stroke="#F6F4EF" stroke-width="26" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 72 408 H 440" stroke="#F6F4EF" stroke-width="20" stroke-linecap="round" opacity="0.45"/>
 
-  <!-- Secondary wave for depth -->
-  <path d="M 64 320 Q 128 280 192 320 T 320 320 T 448 320" stroke="#F6F4EF" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+  <!-- Dust motes (elevated orange, the PM accent) -->
+  <circle cx="404" cy="340" r="14" fill="#E86A10"/>
+  <circle cx="132" cy="196" r="10" fill="#E86A10" opacity="0.8"/>
 </svg>

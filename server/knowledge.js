@@ -33,7 +33,7 @@ export async function indexKnowledge(db, rag) {
     log('info', 'embedding model changed — invalidated all stored vectors', { model: modelId })
   }
 
-  // Also embed the Flood Library (bible) chunks so the chat's RAG retrieval
+  // Also embed the Air Library (bible) chunks so the chat's RAG retrieval
   // covers the full corpus in both languages. Library ingest runs shortly
   // after boot, so the first embedding pass is deferred a few minutes.
   if (!libraryEmbedScheduled) {
@@ -96,7 +96,7 @@ export async function indexKnowledge(db, rag) {
 }
 
 /**
- * Embed Flood Library chunks (both languages) into rag_docs so the local-LLM
+ * Embed Air Library chunks (both languages) into rag_docs so the local-LLM
  * chat retrieves bible content semantically — Thai questions hit Thai chunks,
  * English questions hit English ones. Hash-guarded and incremental; a full
  * first pass (~800 chunks) takes a few minutes of background nomic calls.

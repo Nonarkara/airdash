@@ -1,5 +1,6 @@
-// Daily compiled exports from FloodDash SQLite — meaningful rollups for
-// researchers who want our collected observations without hitting live APIs.
+// Daily compiled exports from AirDash SQLite — meaningful rollups for
+// researchers who want our collected observations (PM2.5/PM10/O3/NO2/SO2/CO/
+// AQI, rain gauges, forecasts) without hitting live APIs.
 import { CONFIG } from './config.js'
 
 /** List calendar days that have hourly or raw readings.
@@ -113,7 +114,7 @@ export function dailyToCsv(bundle) {
 /**
  * Build the complete permanent dataset — all hourly aggregates across all
  * days, joined with station metadata. This is the research-quality export:
- * every observation FloodDash has ever permanently stored, ready for offline
+ * every observation AirDash has ever permanently stored, ready for offline
  * analysis.
  */
 export function buildFullExport(db) {
@@ -130,8 +131,8 @@ export function buildFullExport(db) {
   return {
     generated: new Date().toISOString(),
     retention_raw_days: CONFIG.retention.rawDays,
-    method_th: 'ค่ารายชั่วโมงถาวรทั้งหมด (min/max/avg) — ข้อมูลที่ FloodDash เก็บถาวร',
-    method_en: 'All permanent hourly aggregates (min/max/avg) — FloodDash permanent record',
+    method_th: 'ค่ารายชั่วโมงถาวรทั้งหมด (min/max/avg) — ข้อมูลที่ AirDash เก็บถาวร',
+    method_en: 'All permanent hourly aggregates (min/max/avg) — AirDash permanent record',
     series: hourly,
     counts: { series: hourly.length },
   }

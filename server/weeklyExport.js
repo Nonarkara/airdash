@@ -7,18 +7,17 @@
 // the precompiled B-tree pages.
 //
 // What's in the archive (one CSV per table + a meta.json + a README):
-//   stations.csv          6,148 station registry (lat/lng/province/basin)
-//   readings.csv          last 90 days of raw 10-min readings
+//   stations.csv          station registry (lat/lng/province)
+//   readings.csv          last 90 days of raw readings (AQ hourly, rain 10-min)
 //   readings_hourly.csv   permanent hourly rollups
 //   latest.csv            O(1) snapshot: latest value per (station, metric)
 //   events.csv            the running tap (events.id doubles as SSE id)
 //   alerts.csv            threshold crossings
 //   news_items.csv        Google News TH + Khaosod headlines
-//   rag_docs.csv          knowledge base (Flood Library BIBLE etc.)
+//   rag_docs.csv          knowledge base (Air Library BIBLE etc.)
 //   ingest_runs.csv       per-source poll history (last 90 d, by time)
 //   chat_logs.csv         AI chat history with feedback votes
 //   chat_faq.csv          FAQ cache (served_count, approval state)
-//   shelters.csv          10,399 DDPM emergency shelters
 //   line_subs.csv         LINE Notify opt-ins
 //   kv.csv                key-value cache (risk_snapshot_cache etc.)
 //   risk_snapshot.json    current risk payload (in-memory, not in DB)
@@ -70,18 +69,17 @@ export function getBuildState() {
 //   "node"   — use node:sqlite with keyset pagination. For small tables
 //              (stations, alerts, news) the overhead is invisible.
 const TABLES = [
-  { name: 'stations',        desc: 'station registry (lat/lng/province/basin)',           dump: 'node' },
-  { name: 'readings',        desc: 'raw observations (10-min cadence, 90-day retention)', dump: 'shell' },
+  { name: 'stations',        desc: 'station registry (lat/lng/province)',                 dump: 'node' },
+  { name: 'readings',        desc: 'raw observations (AQ hourly / rain 10-min, 90-day retention)', dump: 'shell' },
   { name: 'readings_hourly', desc: 'permanent hourly rollups',                            dump: 'shell' },
   { name: 'latest',          desc: 'O(1) latest-value snapshot per (station, metric)',   dump: 'shell' },
   { name: 'events',          desc: 'the running tap; events.id doubles as SSE id',      dump: 'shell' },
   { name: 'alerts',          desc: 'threshold-crossing alerts',                          dump: 'node' },
   { name: 'news_items',      desc: 'Google News TH + Khaosod headlines',                dump: 'node' },
-  { name: 'rag_docs',        desc: 'knowledge base (Flood Library BIBLE etc.)',         dump: 'node' },
+  { name: 'rag_docs',        desc: 'knowledge base (Air Library BIBLE etc.)',           dump: 'node' },
   { name: 'ingest_runs',     desc: 'per-source poll history',                            dump: 'shell' },
   { name: 'chat_logs',       desc: 'AI chat history (with feedback votes)',             dump: 'node' },
   { name: 'chat_faq',        desc: 'FAQ cache (served_count, approval state)',          dump: 'node' },
-  { name: 'shelters',        desc: '10,399 DDPM emergency shelters',                     dump: 'shell' },
   { name: 'line_subs',       desc: 'LINE Notify opt-ins (token hash only — no raw token)', dump: 'node' },
   { name: 'kv',              desc: 'key-value cache (risk snapshot etc.)',              dump: 'shell' },
 ]
@@ -237,7 +235,7 @@ function buildMeta({ rowCounts, startedAt, riskSummary }) {
     db_size_mb: 0,  // filled in by caller if available
     row_counts: rowCounts,
     risk_summary: riskSummary ? {
-      national_band: riskSummary.band,
+      national_band: riskSummary.national?.band ?? null,
       provinces: riskSummary.provinces?.length ?? 0,
     } : null,
     server_uptime_s: uptime_s,
@@ -245,9 +243,9 @@ function buildMeta({ rowCounts, startedAt, riskSummary }) {
   }
 }
 
-const README = `# FloodDash weekly data export
+const README = `# AirDash weekly data export
 
-This archive is a full snapshot of the FloodDash SQLite database generated
+This archive is a full snapshot of the AirDash SQLite database generated
 on the date in the filename. One CSV per table, plus a sidecar JSON of
 the in-memory risk snapshot and a meta.json with row counts and freshness.
 
@@ -255,29 +253,36 @@ the in-memory risk snapshot and a meta.json with row counts and freshness.
 
 | File | Rows (typical) | What it is |
 |------|---------------:|-----------|
-| stations.csv        | ~6,200   | Station registry: source, station_key, name (TH/EN), province (TH/EN/code), basin (TH/EN), lat, lng, first_seen, last_seen |
-| readings.csv        | ~4 M     | Raw observations at 10-min cadence. 90-day retention — older rows are pruned by server/retention.js |
+| stations.csv        | ~4,400   | Station registry: source, station_key, name (TH/EN), province (TH/EN/code), lat, lng, first_seen, last_seen |
+| readings.csv        | ~4 M     | Raw observations (AQ hourly, rain gauges 10-min). 90-day retention — older rows are pruned by server/retention.js |
 | readings_hourly.csv | ~3 M     | Permanent hourly rollups (min/max/avg per hour). Survives raw retention. |
 | latest.csv          | ~50 K    | O(1) latest-value snapshot per (source, station_key, metric) |
 | events.csv          | varies   | The running tap feed. events.id doubles as the SSE event id. |
 | alerts.csv          | varies   | Threshold-crossing alerts with TH/EN titles and severity. |
 | news_items.csv      | varies   | Google News TH + Khaosod headlines with keyword filters. |
-| rag_docs.csv        | ~150     | Knowledge base — the Flood Library BIBLE chapters + knowledge notes. |
+| rag_docs.csv        | ~150     | Knowledge base — the Air Library BIBLE chapters + knowledge notes. |
 | ingest_runs.csv     | ~30 K    | Per-source poll history: started_at, dur_ms, ok, error. |
 | chat_logs.csv       | varies   | AI chat history. feedback column has +1 (👍) or -1 (👎). |
 | chat_faq.csv        | varies   | FAQ cache with served_count, approved flag, lang. |
-| shelters.csv        | 10,399   | DDPM emergency shelters (lat/lng/place/capacity/has_water/has_power/has_toilet). |
 | line_subs.csv       | varies   | LINE Notify opt-ins. \`token\` is SHA-256-hashed, never the raw token. |
 | kv.csv              | varies   | Key-value cache (risk_snapshot_cache, knowledge_indexed_at, etc.). |
-| risk_snapshot.json  | 1 object | Current national + province risk payload, freshest live picture. |
+| risk_snapshot.json  | 1 object | Current national + province air-watch payload, freshest live picture. |
 | meta.json           | 1 object | Export metadata: date, row counts, server uptime. |
+
+## Key metrics
+
+Air4Thai stations: pm25, pm10 (µg/m³) · o3, no2, so2 (ppb) · co (ppm) · aqi.
+Open-Meteo per province: precip_fc_d0/d1/d2/48h, precip_prob_d0/d1/d2/24h/48h,
+wind_fc_kmh, wind_fc_d1. CAMS (openmeteo_aq): pm25_fc_24h/48h/72h,
+pm10_fc_24h, dust_fc_24h. Rain gauges: rain_24h, rain_1h (mm). ENSO: oni_anom.
+IMERG: sat_rain_mmh.
 
 ## How to load
 
 \`\`\`bash
 # Decompress
-tar -xzf flooddash-YYYY-MM-DD.tar.gz
-cd flooddash-YYYY-MM-DD
+tar -xzf airdash-YYYY-MM-DD.tar.gz
+cd airdash-YYYY-MM-DD
 
 # Inspect
 head stations.csv
@@ -290,19 +295,19 @@ duckdb -c "SELECT metric, COUNT(*) FROM readings GROUP BY 1"
 
 ## Source pipeline
 
-Every row came from one of ten public pipelines: HII water level, HII
-rain gauges, major dams (HII/EGAT/RID), RID medium reservoirs, PCD AQI,
-Open-Meteo rain forecast, Copernicus GloFAS river discharge, NOAA CPC
-ENSO, Google News TH + Khaosod, and NASA GPM IMERG satellite rain. The
-pipeline health (which sources ran on time) is in ingest_runs.csv.
+Every row came from one of seven public pipelines: PCD Air4Thai ground
+stations (PRIMARY), Open-Meteo weather forecast, Copernicus CAMS air-quality
+forecast (via Open-Meteo AQ API), HII rain gauges, NASA GPM IMERG satellite
+rain, NOAA CPC ENSO, and Google News TH + Khaosod. The pipeline health
+(which sources ran on time) is in ingest_runs.csv.
 
 ## Citation
 
 If you use this data in a paper, please cite:
 
-  Arkaraprasertkul, N. (2026). FloodDash Thailand weekly export
+  Arkaraprasertkul, N. (2026). AirDash Thailand weekly export
   (Version YYYY-MM-DD). depa / Smart City Thailand Office.
-  https://flood.nonarkara.org
+  https://air.nonarkara.org
 
 ## Contact
 
@@ -324,7 +329,7 @@ export async function buildWeeklyExport({ db, riskEngine, startedAt }) {
     mkdirSync(EXPORT_DIR, { recursive: true })
     const date = new Date().toISOString().slice(0, 10)
     const tmpDir = join(EXPORT_DIR, `tmp-${date}-${process.pid}`)
-    const outFile = join(EXPORT_DIR, `flooddash-${date}.tar.gz`)
+    const outFile = join(EXPORT_DIR, `airdash-${date}.tar.gz`)
 
     rmSync(tmpDir, { recursive: true, force: true })
     mkdirSync(tmpDir, { recursive: true })
@@ -398,11 +403,11 @@ export function startWeeklyBuild(args) {
 export function listWeeklyExports() {
   if (!existsSync(EXPORT_DIR)) return []
   return readdirSync(EXPORT_DIR)
-    .filter((f) => f.startsWith('flooddash-') && f.endsWith('.tar.gz'))
+    .filter((f) => f.startsWith('airdash-') && f.endsWith('.tar.gz'))
     .map((f) => {
       const full = join(EXPORT_DIR, f)
       const s = statSync(full)
-      const date = f.match(/flooddash-(\d{4}-\d{2}-\d{2})\.tar\.gz/)?.[1]
+      const date = f.match(/airdash-(\d{4}-\d{2}-\d{2})\.tar\.gz/)?.[1]
       return { filename: f, size: s.size, mtime: s.mtime, date }
     })
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -410,7 +415,7 @@ export function listWeeklyExports() {
 
 /** Resolve a filename to an absolute path, with safety check. */
 export function getExportPath(filename) {
-  if (!/^flooddash-\d{4}-\d{2}-\d{2}\.tar\.gz$/.test(filename)) return null
+  if (!/^airdash-\d{4}-\d{2}-\d{2}\.tar\.gz$/.test(filename)) return null
   const full = join(EXPORT_DIR, filename)
   if (!existsSync(full)) return null
   return full

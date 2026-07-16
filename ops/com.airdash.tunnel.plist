@@ -3,14 +3,16 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.flooddash.tunnel</string>
+  <string>com.airdash.tunnel</string>
 
   <key>ProgramArguments</key>
   <array>
     <string>/opt/homebrew/bin/cloudflared</string>
     <string>tunnel</string>
+    <string>--config</string>
+    <string>/Users/axiom/.cloudflared/airdash.yml</string>
     <string>run</string>
-    <string>flooddash</string>
+    <string>airdash</string>
   </array>
 
   <key>RunAtLoad</key>
@@ -21,8 +23,8 @@
   <integer>10</integer>
 
   <key>StandardOutPath</key>
-  <string>/Users/axiom/Projects/FloodDash/logs/tunnel.log</string>
+  <string>/Users/axiom/AirDash/logs/tunnel.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/axiom/Projects/FloodDash/logs/tunnel.err.log</string>
+  <string>/Users/axiom/AirDash/logs/tunnel.err.log</string>
 </dict>
 </plist>
