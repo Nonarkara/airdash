@@ -1,0 +1,164 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   FLOODDASH design core — Rams × NYC transit × Thai command.
+   Warm paper ground, Thai-flag navy chrome, red reserved for real emergency.
+   Radius 0. No shadows. 4px grid. Mono for every number that changes.
+   ──────────────────────────────────────────────────────────────────────────── */
+@import url('/fonts/fonts.css');
+
+:root {
+  /* Ground */
+  --paper:       #F6F4EF;   /* warm paper — the ground everywhere */
+  --well:        #FFFFFF;   /* panel wells */
+  --well-dim:    #EFECE4;   /* recessed strips */
+  --rule:        #E2DFD4;   /* hairlines */
+  --rule-strong: #241E4E;
+
+  /* Ink — Thai-flag navy, not black */
+  --ink:      #241E4E;
+  --ink-mid:  #5E5A6E;
+  --ink-low:  #908C9C;
+  --ink-inv:  #F6F4EF;
+
+  /* Thai flag accents */
+  --th-red:  #A51931;
+  --th-navy: #241E4E;
+
+  /* HII situation levels: 1–2 low water (drought), 3 normal, 4 high, 5 overflow */
+  --lv1: #B7AFA3;
+  --lv2: #948C7F;
+  --lv3: #00933C;
+  --lv4: #E86A10;
+  --lv5: #A51931;
+
+  /* Risk bands */
+  --band-normal:   #00933C;
+  --band-watch:    #F0B400;
+  --band-elevated: #E86A10;
+  --band-high:     #A51931;
+
+  /* Data hues */
+  --rain: #0039A6;   /* NYC A/C/E blue for rainfall */
+  --dam:  #0E7C7B;   /* reservoir teal */
+  --aqi:  #7C7287;
+
+  --font-ui: 'Sarabun', 'Thonburi', 'Helvetica Neue', sans-serif;
+  --font-num: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --header-h: 110px;  /* brand row (~64px) + ASK AI bar (~46px) */
+  --ticker-h: 34px;
+  --rail-l: 324px;
+  --rail-r: 392px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0 !important; box-shadow: none !important; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;               /* fixed viewport — the map owns the page */
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.num, .mono {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Machine label — uppercase mono eyebrow used on every panel */
+.eyebrow {
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-low);
+}
+
+/* Bilingual signage block: Thai leads, English follows small */
+.sign .th { font-weight: 600; }
+.sign .en {
+  font-family: var(--font-num);
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+}
+
+/* Square status badge — FloodDash's "subway bullet" is a SQUARE */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 11px;
+  color: #fff;
+  flex: none;
+}
+.badge.lv1 { background: var(--lv1); }
+.badge.lv2 { background: var(--lv2); }
+.badge.lv3 { background: var(--lv3); }
+.badge.lv4 { background: var(--lv4); }
+.badge.lv5 { background: var(--lv5); }
+.badge.b-normal   { background: var(--band-normal); }
+.badge.b-watch    { background: var(--band-watch); color: var(--ink); }
+.badge.b-elevated { background: var(--band-elevated); }
+.badge.b-high     { background: var(--band-high); }
+
+.sev0 { color: var(--ink-mid); }
+.sev1 { color: var(--rain); }
+.sev2 { color: var(--lv4); }
+.sev3 { color: var(--th-red); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--rule); }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-low); }
+::-webkit-scrollbar-track { background: transparent; }
+
+button {
+  font-family: inherit;
+  border: 1px solid var(--rule-strong);
+  background: var(--well);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 3px 8px;
+}
+/* CONTRAST CONTRACT: these global state rules set background AND color as an
+   inseparable pair. Any component override of its own buttons MUST override
+   both — overriding only `background` leaves the cream text from here on a
+   light surface (invisible label; this exact bug shipped once on the right-
+   rail tabs), and vice versa. */
+button:hover { background: var(--ink); color: var(--ink-inv); }
+button.active { background: var(--ink); color: var(--ink-inv); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #E8B33C;
+  outline-offset: 2px;
+}
+
+input, textarea {
+  font-family: inherit;
+  font-size: 14px;
+  border: 1px solid var(--rule-strong);
+  background: var(--well);
+  color: var(--ink);
+  padding: 6px 8px;
+}
+input:focus, textarea:focus { outline: 2px solid var(--th-navy); outline-offset: -1px; }
+
+a { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  #ticker .track .crawl { padding-left: 12px; transform: none !important; }
+}

@@ -1,0 +1,20 @@
+node_modules/
+data/*.db
+data/*.db-wal
+data/*.db-shm
+logs/*.log
+# Vendored at setup time (setup.sh) — regenerated, not committed.
+public/vendor/
+public/fonts/
+.DS_Store
+.wrangler/
+# Local tool configs (per-machine paths, never share)
+.claude/
+# Kimi blueprint working files — large binaries stay on disk, untracked
+corpus/kimi-blueprint/**/*.docx
+corpus/kimi-blueprint/**/*.png
+
+# Agent context — local only
+CLAUDE.md
+.claude/
+data/exports/

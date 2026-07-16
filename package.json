@@ -1,0 +1,15 @@
+{
+  "name": "flooddash",
+  "version": "2.0.0",
+  "description": "FloodDash \u2014 24/7 flood monitoring for Thailand / \u0e23\u0e30\u0e1a\u0e1a\u0e40\u0e1d\u0e49\u0e32\u0e23\u0e30\u0e27\u0e31\u0e07\u0e19\u0e49\u0e33\u0e17\u0e48\u0e27\u0e21\u0e1b\u0e23\u0e30\u0e40\u0e17\u0e28\u0e44\u0e17\u0e22",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "setup": "bash setup.sh",
+    "tag:waterways": "node scripts/tag-waterways.mjs"
+  }
+}

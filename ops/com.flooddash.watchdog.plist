@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.flooddash.watchdog</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/axiom/Projects/FloodDash/ops/health-watchdog.sh</string>
+  </array>
+
+  <!-- Fires at :00 of every hour, not just "every 3600s since last run"
+       (which would drift). -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/axiom/Projects/FloodDash/logs/watchdog-stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/axiom/Projects/FloodDash/logs/watchdog-stderr.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>
