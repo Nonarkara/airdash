@@ -1,84 +1,64 @@
-# แหล่งข้อมูลของ FloodDash / FloodDash data sources
+# แหล่งข้อมูลของ AirDash / AirDash data sources
 
 ## ท่อข้อมูลที่ดึงอัตโนมัติ / Live pipelines (pulled on a timer)
 
-1. ระดับน้ำ สสน. (HII ThaiWater) — สถานีโทรมาตร ~776 แห่งทั่วประเทศ ทุก 10 นาที
-   รายงานระดับน้ำ (ม.รทก.), % ความจุตลิ่ง, ระดับสถานการณ์ 1–5
-2. ฝนสะสม (ThaiWater รวมหลายหน่วยงาน) — ~4,200 สถานี ฝน 1 ชม./24 ชม. ทุก 10 นาที
-3. เขื่อนขนาดใหญ่ (สสน./กฟผ./กรมชลฯ) — ~35–50 เขื่อน รายวัน: กักเก็บ น้ำเข้า ระบายออก
-4. อ่างเก็บน้ำขนาดกลาง กรมชลประทาน — ~461 อ่าง รายวัน: % กักเก็บ
-5. คุณภาพอากาศ Air4Thai กรมควบคุมมลพิษ — ~174 สถานี AQI/PM2.5 รายชั่วโมง
-6. พยากรณ์ฝน Open-Meteo — ทุกจังหวัด (จุดกึ่งกลางคำนวณจากสถานีจริง) ทุก 3 ชม.
-7. GloFAS (Copernicus) ผ่าน Open-Meteo Flood API — ~15 จุดลำน้ำ อัตราการไหล m³/s + พยากรณ์ 46 วัน
-8. NOAA ONI (ENSO) — ดัชนีมหาสมุทร ตัวปรับตามฤดูกาล
-9. ข่าวน้ำท่วม — Google News (คำค้น "น้ำท่วม OR อุทกภัย") + ข่าวสด ทุก 30 นาที
+1. คุณภาพอากาศ Air4Thai กรมควบคุมมลพิษ — สถานีภาคพื้นดินราว 200 แห่ง ทุก 1 ชม.
+   รายงาน PM2.5 PM10 O3 NO2 SO2 CO และ AQI — ค่าจริงหลักของระบบ (PRIMARY)
+2. พยากรณ์อากาศ Open-Meteo — ทุกจังหวัด (จุดกึ่งกลาง 77 จังหวัด) ทุก 3 ชม.
+   ปริมาณฝน + โอกาสฝน (วันนี้/พรุ่งนี้/48 ชม.) + ความเร็วลม — ป้อน washout และ stagnation
+3. พยากรณ์คุณภาพอากาศ CAMS (Copernicus ผ่าน air-quality-api.open-meteo.com) —
+   ทุก 3 ชม. PM2.5/PM10/ฝุ่น ล่วงหน้า 24/48/72 ชม. รายจังหวัด
+4. ฝนสะสม สสน. (ThaiWater หลายหน่วยงาน) — สถานีฝนราว 4,200 แห่ง ทุก 10 นาที
+   ฝน 1 ชม./24 ชม. — ยืนยันว่าฝนชะฝุ่นเกิดขึ้นจริง
+5. ฝนดาวเทียม GPM IMERG (NASA) — ทุก 30 นาที รายจังหวัด ต้องใช้ Earthdata token
+   (ไม่มี token = ข้ามเงียบ ๆ)
+6. ดัชนี ONI / ENSO (NOAA CPC) — ทุก 12 ชม. เอลนีโญ = แล้ง = ฤดูฝุ่นแรง (บริบท ไม่ใช่คะแนน)
+7. ข่าวฝุ่น/หมอกควัน — Google News TH (คำค้น ฝุ่น / PM2.5 / หมอกควัน) + ข่าวสด ทุก 30 นาที
 
-เรดาร์ฝน RainViewer และภาพดาวเทียม NASA GIBS MODIS แสดงบนแผนที่โดยตรง (ไม่เก็บลงฐานข้อมูล)
+เรดาร์ฝน RainViewer และภาพดาวเทียม NASA GIBS แสดงบนแผนที่โดยตรง (ไม่เก็บลงฐานข้อมูล)
 
-English: nine polled pipelines (HII water levels 10-min, ~4,200 rain gauges,
-major dams daily, 461 RID reservoirs daily, Air4Thai AQI hourly, Open-Meteo
-province forecasts 3-hourly, GloFAS 15 river reaches via Open-Meteo, NOAA
-ONI ENSO 12-hourly, flood news RSS 30-min) — every reading is stored in
-SQLite for pattern analysis. RainViewer radar and NASA GIBS MODIS render on
-the map directly.
+English: seven polled pipelines — Air4Thai ground AQI hourly (~200 stations,
+PRIMARY), Open-Meteo weather 3-hourly (rain amount/probability + wind per
+province centroid), CAMS air-quality forecast 3-hourly (PM2.5 outlook to 72 h),
+HII rain gauges 10-min (~4,200 gauges, washout verification), NASA GPM IMERG
+30-min (token-gated), NOAA ONI 12-hourly, and air-quality news RSS 30-min.
+Every reading is stored in SQLite. RainViewer radar and NASA GIBS imagery
+render on the map directly.
+
+## หน่วยของ Air4Thai / Air4Thai units
+
+ฝุ่นละออง (PM2.5/PM10) หน่วย µg/m³ · ก๊าซ O3 NO2 SO2 หน่วย ppb · CO หน่วย ppm
+สถานีถูกจับคู่จังหวัดด้วยชื่อ (province_th/en) เทียบ `public/geo/provinces.json`
+English: particulates in µg/m³, O3/NO2/SO2 in ppb, CO in ppm. Stations get
+`province_code` by matching names against `public/geo/provinces.json`.
 
 ## ข้อมูลที่โหลดครั้งเดียวตอนบูต / Loaded once at boot (gazetteer)
 
-10. **DOPA address registry** — โหลดจาก open mirror ของข้อมูลทะเบียนราษฎร์
-    ที่กรมการปกครองเผยแพร่ (ผ่าน TOR ของสัญญา ICT ภาครัฐ):
-    - `public/geo/provinces.json` — 77 จังหวัด + lat/lng centroid
-    - `public/geo/districts.json` — 928 อำเภอ
-    - `public/geo/subdistricts.json` — 7,436 ตำบล
-    - `public/geo/province-boundaries.geojson` — 77 polygon ขอบเขตจังหวัด
-      (chinchai/OpenGISData-Thailand, CC-BY 4.0)
-    - `public/geo/historical-floods.json` + `historical-flood-extents.geojson` —
-      6 เหตุการณ์น้ำท่วมใหญ่ (2554, 2558, 2561, 2562, 2565, 2568)
-
-    ใช้สำหรับ (i) แถบค้นหาแบบ universal — province / district / tambon /
-    postal code; (ii) ชั้น choropleth "ขอบเขตจังหวัด" บนแผนที่; (iii) place-card
-    ที่บินไปหา entity พร้อม nearest stations และ forecast
-
-    **English:** Loaded once from open mirrors of the same DOPA registries
-    behind `data.go.th`. We use the mirrors because `data.go.th` requires
-    an authenticated session designed for human browsers, not machine
-    pulls. The GitHub mirrors (`thailand-geography-data/thailand-geography-json`,
-    CC0, and `chingchai/OpenGISData-Thailand`, CC-BY 4.0) hold the same
-    data DOPA publishes. Tambon (7,436 rows) is the finest *open*
-    granularity — every Thai village belongs to exactly one tambon, so
-    the search bar reaches every village by parent until DOPA publishes
-    a public muban (village) endpoint.
-
-## ไม่ใช่ "แหล่งข้อมูล" ทางภูมิศาสตร์ แต่ฝังไว้ให้แชทบอท / Not a geo data source, but embedded for chat
-
-**Knowledge base** — `knowledge/*.md` (paper, risk-method, soil-wetness,
-data-sources, connected-waterways, glossary, rain-bands, situation-
-levels, flood-seasonality, historical-floods) — embedded via
-nomic-embed-text at boot for the RAG chatbot. Bilingual TH/EN, hand-
-authored to be auditable. Deliberately left out of the numbered list
-above (and out of `knowledge/paper.md` §3's own "source 11", which is a
-different thing — client-side satellite/GIS overlays) since this is
-internal documentation, not an external geographic/environmental feed.
+ทะเบียนที่อยู่จาก open mirror ของข้อมูลกรมการปกครอง: 77 จังหวัด (จุดกึ่งกลาง),
+928 อำเภอ, 7,436 ตำบล, ขอบเขตจังหวัด 77 polygon — ใช้กับแถบค้นหา universal,
+ชั้น choropleth และ place-card
+English: DOPA-derived open mirrors — 77 provinces with centroids, 928
+districts, 7,436 tambons, and 77 province boundary polygons — power universal
+search, the choropleth layer, and place cards.
 
 ## ความถี่และความหน่วง / Cadence and latency
 
-ข้อมูลระดับน้ำ/ฝนหน่วงจากสนามจริงราว 10–60 นาทีตามหน่วยงานต้นทาง
-เวลาแสดงบนแดชบอร์ดคือเวลาที่สถานีวัด (เวลาไทย) ไม่ใช่เวลาที่ระบบดึงข้อมูล
-ข้อมูลอ่างเก็บน้ำ/เขื่อน/พยากรณ์หน่วงรายวันถึง 1–3 ชม.
-
-English: field-to-dashboard latency is roughly 10–60 minutes depending on the
-upstream agency; timestamps shown are station observation times (Thai time).
-Reservoir / dam / forecast sources lag 1–3 hours because they publish on a
-daily/3-hourly cadence. Gazetteer and historical-floods data are static —
-loaded once at boot, cached for the lifetime of the process.
+ค่าคุณภาพอากาศหน่วงจากสถานีจริงราว 1 ชม. ตามรอบเผยแพร่ของ Air4Thai
+เวลาที่แสดงคือเวลาสังเกตการณ์ของสถานี (เวลาไทย) ไม่ใช่เวลาที่ระบบดึง
+เครื่องคำนวณคะแนนทิ้งค่าที่เก่ากว่าหน้าต่างความสด (ฝุ่น 6 ชม. · พยากรณ์ 13 ชม. ·
+ฝน 26 ชม.) แทนที่จะใช้ซ้ำ
+English: field-to-dashboard latency is roughly an hour on the Air4Thai publish
+cycle; timestamps shown are station observation times (Thai time). The scoring
+engine discards readings older than its freshness windows (PM 6 h, forecasts
+13 h, rain 26 h) rather than silently reusing them.
 
 ## หมายเหตุการระบุที่มา / Source-attribution notes
 
-- `data.go.th` (DGA, DLT) — เป็นแหล่งทางการที่ประชาชนต้องเข้าถึงได้ แต่
-  ออกแบบมาให้คนเปิดดู ไม่ใช่ให้เครื่องดึง — เราใช้ open mirror ที่ host
-  บน GitHub สำหรับ machine-readable pull เมื่อ DLT เปิด public API
-  endpoint เราจะย้ายกลับไปใช้ต้นทางโดยตรง
-- HII (`tiwrmdev.hii.or.th`) — มี CORS / session layer ไม่เปิดให้
-  cross-origin เราดึงผ่านเซิร์ฟเวอร์ของเราเองแล้วส่งให้ browser
-- Open-Meteo, GloFAS, NOAA ONI, RainViewer, NASA GIBS — เปิดให้ใช้ฟรี
-  มี API key แบบ optional (rate limit สูงกว่าเมื่อใส่) — เราใช้แบบ
-  keyless เพื่อให้ deploy ได้บนเครื่องเดียวโดยไม่ต้องตั้ง env
+- Air4Thai (`air4thai.pcd.go.th`) — แหล่งทางการของ คพ. เราดึงผ่านเซิร์ฟเวอร์
+  ของเราเองแล้วเก็บ obs_time ต้นทางตรง ๆ ทุกแถว
+- Open-Meteo / CAMS / NOAA / RainViewer / NASA GIBS — เปิดใช้ฟรีแบบ keyless
+  (IMERG ต้องใช้ Earthdata token ฟรี) เพื่อให้ deploy บนเครื่องเดียวได้
+- ข้อมูลดิบเก็บ 90 วัน แล้วสรุปรายชั่วโมงถาวร — ส่งออก CSV ได้ทั้งชุด
+English: raw readings kept 90 days then rolled into permanent hourly
+aggregates; the full dataset exports as CSV. All feeds are keyless except the
+optional free NASA Earthdata token for IMERG.

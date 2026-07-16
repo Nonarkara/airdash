@@ -1,33 +1,34 @@
-# Deploying FloodDash
+# Deploying AirDash
 
-FloodDash has two halves that deploy differently:
+AirDash has two halves that deploy differently:
 
 | Half | What | Where it runs |
 |------|------|---------------|
-| **Backend** | Node server: SQLite + 9 live pipelines + SSE + local Ollama chat | **This Mac, 24/7** (it is inherently stateful and uses a local LLM — it cannot run on serverless edge) |
-| **Frontend** | Static UI (`public/`) + a tiny `/api/*` proxy Function | **Cloudflare Pages** → `flood.pages.dev` / `flood.nonarkara.org` |
+| **Backend** | Node server: SQLite + 7 live pipelines + SSE + chat | **This Mac, 24/7** (it is inherently stateful — it cannot run on serverless edge) |
+| **Frontend** | Static UI (`public/`) + a tiny `/api/*` proxy Function | **Cloudflare Pages** → `airdash.pages.dev` / `air.nonarkara.org` |
 
 The public page reaches the live Mac backend through a **named Cloudflare Tunnel**
-(`api-flood.nonarkara.org`). The Pages Function in `functions/api/[[path]].js`
+(`api-air.nonarkara.org`). The Pages Function in `functions/api/[[path]].js`
 proxies `/api/*` (including the SSE tap and streaming chat) to that tunnel, so
 the frontend stays same-origin with no CORS.
 
 ```
-Browser → flood.nonarkara.org (Cloudflare Pages: static UI)
-            └─ /api/* → Pages Function → api-flood.nonarkara.org
-                                           └─ Cloudflare Tunnel → localhost:8340 (this Mac)
+Browser → air.nonarkara.org (Cloudflare Pages: static UI)
+            └─ /api/* → Pages Function → api-air.nonarkara.org
+                                           └─ Cloudflare Tunnel → localhost:8341 (this Mac)
 ```
 
 ## 1. Frontend → Cloudflare Pages
 
 ```bash
 bash setup.sh                      # ensure public/vendor + public/fonts exist
-npx wrangler pages deploy public --project-name flood
+npx wrangler pages deploy public --project-name airdash
 ```
 
-First run creates the `flood` project (URL `flood.pages.dev`). Add the custom
-domain once (dashboard: Pages → flood → Custom domains → `flood.nonarkara.org`,
-or via API). Redeploy anytime by re-running the deploy command.
+First run creates the `airdash` project (URL `airdash.pages.dev`). Add the
+custom domain once (dashboard: Pages → airdash → Custom domains →
+`air.nonarkara.org`, or via API). Redeploy anytime by re-running the deploy
+command.
 
 ## 2. Backend tunnel (one-time, needs your browser)
 
@@ -36,25 +37,29 @@ cloudflared tunnel login           # opens browser — pick the nonarkara.org zo
 bash ops/setup-tunnel.sh           # creates tunnel, DNS, and a 24/7 launchd service
 ```
 
-This maps `https://api-flood.nonarkara.org → http://localhost:8340` and installs
-`com.flooddash.tunnel` so it restarts on boot/crash — matching the
-`com.flooddash.server` service.
+This maps `https://api-air.nonarkara.org → http://localhost:8341` and installs
+`com.airdash.tunnel` so it restarts on boot/crash — matching the
+`com.airdash.server` service.
 
 ## 3. Verify
 
 ```bash
-curl https://api-flood.nonarkara.org/api/health   # backend via tunnel
-open https://flood.nonarkara.org                  # full dashboard, live
+curl https://api-air.nonarkara.org/api/health     # backend via tunnel
+curl https://api-air.nonarkara.org/api/washout    # the signature feature
+open https://air.nonarkara.org                    # full dashboard, live
 ```
 
 ## Notes
 
 - The Mac must stay awake for live data (System Settings → keep awake on power).
-- No secrets anywhere — every data source is keyless.
+- Almost no secrets — every core data source is keyless (only the optional
+  NASA Earthdata token for IMERG, stored in the SQLite kv table).
+- The Air Library (`corpus/bible/`) is ingested at **boot**; after editing
+  bible or knowledge markdown, restart the server service to refresh it.
 - If you ever want a fully edge-hosted variant, the backend would need a rewrite
-  (D1 for storage, Cron-triggered Workers for pipelines, Durable Objects for SSE,
-  Workers AI in place of local Ollama). That abandons the "runs on my Mac with a
-  local LLM" design, so the tunnel approach is the right fit here.
+  (D1 for storage, Cron-triggered Workers for pipelines, Durable Objects for SSE).
+  That abandons the "runs on my Mac" design, so the tunnel approach is the
+  right fit here.
 
 ## Optional integrations (each = one free token, one command)
 

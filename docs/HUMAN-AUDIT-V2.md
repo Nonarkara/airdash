@@ -1,5 +1,11 @@
 # FloodDash v2.0 Human Audit
 
+> **Provenance note (AirDash):** this document is inherited from FloodDash,
+> the flood-watch ancestor AirDash was seeded from. It is kept verbatim as a
+> historical record of the UX audit whose fixes AirDash inherits (header
+> layout, citizen mode, a11y, hotline semantics). Flood-specific content
+> (shelters, water levels, 1784) does not apply to AirDash.
+
 Date: 2026-07-16
 Production baseline: `c8e7509`
 Audit viewports: 1440×900, 1024×768, 390×844

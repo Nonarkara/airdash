@@ -1,27 +1,35 @@
-# อภิธานศัพท์น้ำท่วม / Flood glossary (TH–EN)
+# อภิธานศัพท์คุณภาพอากาศ / Air-quality glossary (TH–EN)
 
 ## คำศัพท์หลัก / Core terms
 
-- น้ำล้นตลิ่ง — river overflowing its banks (HII situation level 5)
-- น้ำมาก — high water (level 4)
-- น้ำท่วมฉับพลัน / น้ำป่าไหลหลาก — flash flood / mountain runoff
-- น้ำท่วมขัง — standing urban floodwater (drainage overwhelmed)
-- มวลน้ำ — water mass moving downstream through a basin
-- น้ำทะเลหนุน — tidal surge pushing river levels up near the coast
-- ลุ่มน้ำ — river basin (e.g. ลุ่มเจ้าพระยา Chao Phraya basin)
-- คลองอู่ตะเภา — Khlong U-Taphao, the canal through Hat Yai, Songkhla
-- ม.รทก. — meters above mean sea level (MSL datum)
-- ปริมาณกักเก็บ — reservoir/dam storage volume
-- ล้าน ลบ.ม. (MCM) — million cubic meters
-- ดินถล่ม — landslide
-- เขตเฝ้าระวัง — watch zone
+- ฝุ่นละอองขนาดเล็ก PM2.5 — fine particulate matter under 2.5 µm (reaches the alveoli)
+- ฝุ่นหยาบ PM10 — coarse particulate matter under 10 µm
+- หมอกควัน — haze / smog (esp. the northern burning-season kind)
+- ดัชนีคุณภาพอากาศ (AQI) — Air Quality Index (Thai scale, 2023 revision)
+- ชั้นอุณหภูมิผกผัน — temperature inversion (warm lid trapping cold surface air)
+- ความสูงชั้นผสม — mixing height (top of the freely-mixing surface layer)
+- การระบายอากาศ — ventilation (wind × mixing height diluting emissions)
+- ภาวะอากาศนิ่ง — stagnation (calm, dry, capped — pollution accumulates)
+- ฝนชะฝุ่น / การตกสะสมแบบเปียก — rain washout / wet deposition
+- การกวาดล้างใต้เมฆ — below-cloud scavenging (falling drops sweep particles)
+- การเผาในที่โล่ง — open burning (fields, stubble, forest)
+- จุดความร้อน — satellite fire hotspot
+- หมอกควันข้ามพรมแดน — transboundary haze (Myanmar/Laos/Indonesia)
+- ฤดูฝุ่น — dust season (1 Dec – 30 Apr in AirDash)
+- กลุ่มเสี่ยง — sensitive groups (children, elderly, pregnant, heart/lung patients)
+- ห้องอากาศสะอาด — clean room (sealed room + HEPA purifier)
+- หน้ากาก N95 — N95-class respirator (fine-particle filtering)
+- µg/m³ (ไมโครกรัมต่อลูกบาศก์เมตร) — micrograms per cubic metre (PM unit)
+- ppb / ppm — parts per billion / million (gas units: O3, NO2, SO2 in ppb; CO in ppm)
 
 ## หน่วยงาน / Agencies
 
-- สสน. (HII) — Hydro-Informatics Institute, runs the ThaiWater telemetry
-- กรมชลประทาน (RID) — Royal Irrigation Department, reservoirs and canals
-- กรมอุตุนิยมวิทยา (TMD) — Thai Meteorological Department, forecasts/warnings
-- ปภ. (DDPM) — Department of Disaster Prevention and Mitigation, evacuation orders
-- สทนช. (ONWR) — Office of National Water Resources, national coordination
-- กฟผ. (EGAT) — Electricity Generating Authority, operates major dams
-- คพ. (PCD) — Pollution Control Department, Air4Thai network
+- คพ. (PCD) — Pollution Control Department, runs Air4Thai; hotline 1650
+- กรมอนามัย (DOH) — Department of Health, health guidance during haze
+- กรมควบคุมโรค (DDC) — Department of Disease Control; health hotline 1422
+- กรมอุตุนิยมวิทยา (TMD) — Thai Meteorological Department, weather/wind/rain
+- สสน. (HII) — Hydro-Informatics Institute, rain-gauge telemetry
+- สพฉ. (NIEM) — emergency medical services; hotline 1669
+- GISTDA — space agency, fire-hotspot satellite products
+- NOAA CPC — ENSO / Oceanic Niño Index
+- Copernicus CAMS — atmosphere-monitoring forecasts (PM2.5 outlook)

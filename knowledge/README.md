@@ -9,16 +9,16 @@ methodology, in both Thai and English.
 
 | File | Purpose | Primary reader |
 |------|---------|----------------|
-| `paper.md` | **Full research paper** — methodology, sources, user manual, references, acknowledgements. This is the canonical citation for FloodDash. | Researchers, partner agencies, audit reviewers |
-| `connected-waterways.md` | The Chao Phraya cascade, flood-wave travel time, the directed-graph model. | Hydrologists, EOC operators |
-| `data-sources.md` | All nine pipelines with cadences, records, and field-level provenance. | Data engineers, auditors |
-| `risk-method.md` | The watch-score formula, bands, honest limitations. | Anyone reading the ranking rail |
-| `flood-seasonality.md` | Thailand wet/dry season timing by region; ENSO as a seasonal modulator. | Planning, year-over-year comparison |
-| `historical-floods.md` | Major events (2011 Great Flood, 2019 Ubon, 2025 Hat Yai) for the historical-floods map layer. | Researchers, journalists |
-| `situation-levels.md` | HII levels 1–5 — what they mean and what to do at each. | Operators |
-| `soil-wetness.md` | API definition, decay constant, bands — why two provinces with equal rain are not equal. | Hydrologists |
-| `rain-bands.md` | Rain-rate categories used by the alert engine. | Operators |
-| `glossary.md` | TH–EN terms and agency acronyms. | New users |
+| `paper.md` | **Full research paper** — methodology, sources, user manual, references, acknowledgements. This is the canonical citation for AirDash. | Researchers, partner agencies, audit reviewers |
+| `rain-washout.md` | The Rain-Washout model — wet deposition, the relief curve, probability weighting, the Greenfield gap. | Atmospheric scientists, operators |
+| `data-sources.md` | All seven pipelines with cadences, units, and field-level provenance. | Data engineers, auditors |
+| `score-method.md` | The Air Watch Score formula, sub-score curves, bands, honest limitations. | Anyone reading the ranking rail |
+| `dust-seasonality.md` | The Dec–Apr window, northern burning season, inversions, ENSO modulation. | Planning, year-over-year comparison |
+| `historical-haze.md` | Major episodes (2019 Bangkok smog, Chiang Mai 2019/2023, 2015 southern haze) and their lessons. | Researchers, journalists |
+| `aqi-bands.md` | Thai AQI bands and the 2023 PM2.5 breakpoints (15/25/37.5/75). | New users, operators |
+| `pollutant-standards.md` | Thai standards per pollutant (PM2.5/PM10/O3/NO2/SO2/CO) and how the score uses them. | Operators |
+| `glossary.md` | TH–EN air-quality terms and agency acronyms. | New users |
+| `project-vision.md` | Why AirDash exists, the working method, the toolbox pattern, what's missing. | Contributors, next agents |
 
 ## How the index is built
 

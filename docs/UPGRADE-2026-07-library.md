@@ -1,5 +1,12 @@
 # Upgrade plan — The Flood Library (ห้องสมุดน้ำท่วม) + audit fixes
 
+> **Provenance note (AirDash):** this document is inherited from FloodDash
+> and kept verbatim as the historical design record of the Library / FTS5 /
+> bilingual-bible architecture that AirDash reuses. In AirDash the library
+> is the **Air Bible** (`corpus/bible/sec00–10`, air-quality methodology);
+> the mechanics described here (FTS5 trigram search, boot-time ingest,
+> `validate-bible.mjs` parity checks) apply unchanged.
+
 Planned by Fable 5 from `Kimi_Agent_Thailand Flood Dashboard Blueprint` (the
 11-section "Flood Bible", ~42,000 words EN, plus 24 research files). Executed by
 an Opus 4.8 orchestrator with a Sonnet/Haiku agent swarm.
