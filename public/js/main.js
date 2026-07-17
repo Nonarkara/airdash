@@ -303,35 +303,41 @@ function initAskBtn() {
 }
 
 async function boot() {
-  paintChrome()
-  initHeader()
-  initAskBtn()
-  initMode()
-  const map = initMap()
-  initRanking()
-  initForecast()
-  initWhatIf()
-  initDetail()
-  initTap()
-  initSources()
-  initHistory()
-  initInsights()
-  initAnalytics()
-  initFeeds()
-  initChat()
-  initCitizen()
-  initWaterways()
-  initFocus(map)
-  initCityDashboard()
-  initCompare()
-  initSplit(map)
-  initLibrary()
-  initResearch()
-  initSearch()
-  initTabs()
-  initSheet()
-  initAbout()
-  initAskBtn()
+  // Boot trace — every init call posts a milestone to window.__bootTrace
+  // so a stuck boot can be diagnosed from the browser console. Cheap
+  // (one assignment per init) and stripped in production builds later.
+  const trace = (window.__bootTrace ??= [])
+  const mark = (n) => { trace.push({ n, t: Math.round(performance.now()) }); window.__lastBootMark = n }
+  mark('boot:start')
+  paintChrome();                              mark('paintChrome')
+  initHeader();                                mark('initHeader')
+  initAskBtn();                                mark('initAskBtn')
+  initMode();                                  mark('initMode')
+  const map = initMap();                        mark('initMap')
+  initRanking();                                mark('initRanking')
+  initForecast();                              mark('initForecast')
+  initWhatIf();                                mark('initWhatIf')
+  initDetail();                                mark('initDetail')
+  initTap();                                   mark('initTap')
+  initSources();                               mark('initSources')
+  initHistory();                               mark('initHistory')
+  initInsights();                              mark('initInsights')
+  initAnalytics();                             mark('initAnalytics')
+  initFeeds();                                 mark('initFeeds')
+  initChat();                                  mark('initChat')
+  initCitizen();                               mark('initCitizen')
+  initWaterways();                             mark('initWaterways')
+  try { await initFocus(map); mark('initFocus') } catch (e) { trace.push({ err: 'initFocus: ' + e.message }) }
+  initCityDashboard();                         mark('initCityDashboard')
+  initCompare();                               mark('initCompare')
+  initSplit(map);                              mark('initSplit')
+  initLibrary();                               mark('initLibrary')
+  initResearch();                              mark('initResearch')
+  initSearch();                                mark('initSearch')
+  initTabs();                                  mark('initTabs')
+  initSheet();                                 mark('initSheet')
+  initAbout();                                 mark('initAbout')
+  initAskBtn();                                mark('initAskBtn-2')
 
   // Place search → fly the map
   on('place-select', ({ lat, lng, zoom }) => {
@@ -353,19 +359,16 @@ async function boot() {
   on('tap', (e) => { if (e.kind === 'alert' && e.severity >= 2) loadSnapshot() })
 
   try {
-    await loadSnapshotWithRetry()
-    await loadTapHistory()
+    mark('try:start')
+    await loadSnapshotWithRetry();   mark('after:loadSnapshot')
+    await loadTapHistory();          mark('after:loadTapHistory')
     refreshSensorHealth().catch(() => {})
-    document.getElementById('boot')?.remove()
-    // Announce readiness to screen readers via a hidden live region.
-    // The boot's own aria-live went away with the boot — we need a
-    // separate region to actually fire the "ready" message. Reading
-    // the national JMA verb out is enough: a screen reader user knows
-    // the dashboard is live AND the current situation in one line.
-    announceReady()
-    startTap()
-    invalidateMap()
+    document.getElementById('boot')?.remove(); mark('after:removeBoot')
+    announceReady();                  mark('after:announceReady')
+    startTap();                       mark('after:startTap')
+    invalidateMap();                  mark('after:invalidateMap')
   } catch (err) {
+    trace.push({ err: String(err?.message ?? err), stack: err?.stack?.split('\n').slice(0,3) })
     showBootError(err)
   }
 }
