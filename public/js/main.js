@@ -1,30 +1,30 @@
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.0.0-final'
-import { paintChrome } from './i18n.js?v=2.0.0-final'
-import { startTap } from './sse.js?v=2.0.0-final'
-import { initMap, invalidateMap } from './map.js?v=2.0.0-final'
-import { initHeader } from './panels/header.js?v=2.0.0-final'
-import { initRanking } from './panels/ranking.js?v=2.0.0-final'
-import { initForecast } from './panels/forecast.js?v=2.0.0-final'
-import { initWhatIf } from './panels/whatif.js?v=2.0.0-final'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.0.0-final'
-import { initTap } from './panels/tap.js?v=2.0.0-final'
-import { initSources } from './panels/sources.js?v=2.0.0-final'
-import { initHistory } from './panels/history.js?v=2.0.0-final'
-import { initInsights } from './panels/insights.js?v=2.0.0-final'
-import { initAnalytics } from './panels/analytics.js?v=2.0.0-final'
-import { initFeeds } from './panels/feeds.js?v=2.0.0-final'
-import { initChat } from './panels/chat.js?v=2.0.0-final'
-import { initCitizen } from './panels/citizen.js?v=2.0.0-final'
-import { initWaterways } from './panels/waterways.js?v=2.0.0-final'
-import { initFocus } from './panels/focus.js?v=2.0.0-final'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-final'
-import { initCompare } from './panels/compare.js?v=2.0.0-final'
-import { initSplit } from './panels/split.js?v=2.0.0-final'
-import { initLibrary } from './panels/library.js?v=2.0.0-final'
-import { initResearch } from './panels/research.js?v=2.0.0-final'
-import { initSearch } from './panels/search.js?v=2.0.0-final'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.0.0-final'
+import { on, emit, store, setLang } from './state.js?v=2.0.0-fix1'
+import { paintChrome } from './i18n.js?v=2.0.0-fix1'
+import { startTap } from './sse.js?v=2.0.0-fix1'
+import { initMap, invalidateMap } from './map.js?v=2.0.0-fix1'
+import { initHeader } from './panels/header.js?v=2.0.0-fix1'
+import { initRanking } from './panels/ranking.js?v=2.0.0-fix1'
+import { initForecast } from './panels/forecast.js?v=2.0.0-fix1'
+import { initWhatIf } from './panels/whatif.js?v=2.0.0-fix1'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.0.0-fix1'
+import { initTap } from './panels/tap.js?v=2.0.0-fix1'
+import { initSources } from './panels/sources.js?v=2.0.0-fix1'
+import { initHistory } from './panels/history.js?v=2.0.0-fix1'
+import { initInsights } from './panels/insights.js?v=2.0.0-fix1'
+import { initAnalytics } from './panels/analytics.js?v=2.0.0-fix1'
+import { initFeeds } from './panels/feeds.js?v=2.0.0-fix1'
+import { initChat } from './panels/chat.js?v=2.0.0-fix1'
+import { initCitizen } from './panels/citizen.js?v=2.0.0-fix1'
+import { initWaterways } from './panels/waterways.js?v=2.0.0-fix1'
+import { initFocus } from './panels/focus.js?v=2.0.0-fix1'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-fix1'
+import { initCompare } from './panels/compare.js?v=2.0.0-fix1'
+import { initSplit } from './panels/split.js?v=2.0.0-fix1'
+import { initLibrary } from './panels/library.js?v=2.0.0-fix1'
+import { initResearch } from './panels/research.js?v=2.0.0-fix1'
+import { initSearch } from './panels/search.js?v=2.0.0-fix1'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.0.0-fix1'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -128,7 +128,7 @@ function initMode() {
 // ARIA attributes (aria-selected, hidden, tabindex), so the tab pattern is
 // fully accessible to screen-reader and keyboard-only users — officers and
 // community leaders who navigate without a mouse during a live event.
-function selectPane(pane) {
+export function selectPane(pane) {
   const tabsEl = document.getElementById('righttabs')
   if (!tabsEl) return
   const tabBtns = Array.from(tabsEl.querySelectorAll('button'))
@@ -303,41 +303,39 @@ function initAskBtn() {
 }
 
 async function boot() {
-  // Boot trace — every init call posts a milestone to window.__bootTrace
-  // so a stuck boot can be diagnosed from the browser console. Cheap
-  // (one assignment per init) and stripped in production builds later.
-  const trace = (window.__bootTrace ??= [])
-  const mark = (n) => { trace.push({ n, t: Math.round(performance.now()) }); window.__lastBootMark = n }
-  mark('boot:start')
-  paintChrome();                              mark('paintChrome')
-  initHeader();                                mark('initHeader')
-  initAskBtn();                                mark('initAskBtn')
-  initMode();                                  mark('initMode')
-  const map = initMap();                        mark('initMap')
-  initRanking();                                mark('initRanking')
-  initForecast();                              mark('initForecast')
-  initWhatIf();                                mark('initWhatIf')
-  initDetail();                                mark('initDetail')
-  initTap();                                   mark('initTap')
-  initSources();                               mark('initSources')
-  initHistory();                               mark('initHistory')
-  initInsights();                              mark('initInsights')
-  initAnalytics();                             mark('initAnalytics')
-  initFeeds();                                 mark('initFeeds')
-  initChat();                                  mark('initChat')
-  initCitizen();                               mark('initCitizen')
-  initWaterways();                             mark('initWaterways')
-  try { await initFocus(map); mark('initFocus') } catch (e) { trace.push({ err: 'initFocus: ' + e.message }) }
-  initCityDashboard();                         mark('initCityDashboard')
-  initCompare();                               mark('initCompare')
-  initSplit(map);                              mark('initSplit')
-  initLibrary();                               mark('initLibrary')
-  initResearch();                              mark('initResearch')
-  initSearch();                                mark('initSearch')
-  initTabs();                                  mark('initTabs')
-  initSheet();                                 mark('initSheet')
-  initAbout();                                 mark('initAbout')
-  initAskBtn();                                mark('initAskBtn-2')
+  paintChrome()
+  initHeader()
+  initAskBtn()
+  initMode()
+  const map = initMap()
+  initRanking()
+  initForecast()
+  initWhatIf()
+  initDetail()
+  initTap()
+  initSources()
+  initHistory()
+  initInsights()
+  initAnalytics()
+  initFeeds()
+  initChat()
+  initCitizen()
+  initWaterways()
+  // initFocus is async and pulls /api/focus; if anything in it throws
+  // (or the API is briefly down), the rest of the boot must still proceed.
+  // We catch and log to the console so a future stuck-boot can be
+  // diagnosed without a screen-share.
+  try { await initFocus(map) } catch (e) { console.error('initFocus failed:', e) }
+  initCityDashboard()
+  initCompare()
+  initSplit(map)
+  initLibrary()
+  initResearch()
+  initSearch()
+  initTabs()
+  initSheet()
+  initAbout()
+  initAskBtn()
 
   // Place search → fly the map
   on('place-select', ({ lat, lng, zoom }) => {
@@ -353,22 +351,28 @@ async function boot() {
   on('snapshot', renderTicker)
   on('lang', () => { paintChrome(); renderTicker(store.snapshot) })
   on('resync', () => { loadSnapshot(); loadTapHistory() })
+  // The ask-ai button in the header fires this event; we listen here
+  // (not in header.js) to keep the boot flow acyclic.
+  window.addEventListener('ask-ai', () => { try { selectPane('chat') } catch (e) { console.error('ask-ai:', e) } })
   // Refresh aggregates periodically; the tap keeps the feel live in between.
   setInterval(loadSnapshot, SNAPSHOT_MS)
   // A critical alert refreshes aggregates immediately.
   on('tap', (e) => { if (e.kind === 'alert' && e.severity >= 2) loadSnapshot() })
 
   try {
-    mark('try:start')
-    await loadSnapshotWithRetry();   mark('after:loadSnapshot')
-    await loadTapHistory();          mark('after:loadTapHistory')
+    await loadSnapshotWithRetry()
+    await loadTapHistory()
     refreshSensorHealth().catch(() => {})
-    document.getElementById('boot')?.remove(); mark('after:removeBoot')
-    announceReady();                  mark('after:announceReady')
-    startTap();                       mark('after:startTap')
-    invalidateMap();                  mark('after:invalidateMap')
+    document.getElementById('boot')?.remove()
+    // Announce readiness to screen readers via a hidden live region.
+    // The boot's own aria-live went away with the boot — we need a
+    // separate region to actually fire the "ready" message. Reading
+    // the national JMA verb out is enough: a screen reader user knows
+    // the dashboard is live AND the current situation in one line.
+    announceReady()
+    startTap()
+    invalidateMap()
   } catch (err) {
-    trace.push({ err: String(err?.message ?? err), stack: err?.stack?.split('\n').slice(0,3) })
     showBootError(err)
   }
 }

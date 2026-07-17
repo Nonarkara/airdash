@@ -6,15 +6,19 @@
  * Live data integrity is non-negotiable.
  */
 
-const CACHE = 'airdash-v2';
+const CACHE = 'airdash-v3';
 
 const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/css/tokens.css?v=2.0.0-final',
-  '/css/layout.css?v=2.0.0-final',
-  '/css/components.css?v=2.0.0-final',
-  '/js/main.js?v=2.0.0-final'
+  '/css/tokens.css?v=2.0.0-fix1',
+  '/css/layout.css?v=2.0.0-fix1',
+  '/css/components.css?v=2.0.0-fix1',
+  '/css/city-dashboard.css?v=2.0.0-fix1',
+  '/js/main.js?v=2.0.0-fix1',
+  // New modules added in Phase 1. The SW does NOT precache every panel
+  // (the install event is fragile if any 404s), but the runtime cache
+  // picks them up on first load via stale-while-revalidate.
 ];
 
 /**
