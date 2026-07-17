@@ -1,12 +1,12 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.0.0-fix1'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.0.0-fix1'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.0.0-fix1'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.0.0-fix1'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles } from './layers/satellite.js?v=2.0.0-fix1'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.0.0-fix1'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.0.0-fix1'
+import { on, store } from './state.js?v=2.0.0-i18n1'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.0.0-i18n1'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.0.0-i18n1'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.0.0-i18n1'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles } from './layers/satellite.js?v=2.0.0-i18n1'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.0.0-i18n1'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.0.0-i18n1'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map

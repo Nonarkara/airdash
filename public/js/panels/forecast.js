@@ -3,11 +3,11 @@
 // observed ground PM2.5, discounted by expected rain washout per day.
 // Pollutants/ventilation held constant. Honest framing: heuristic
 // indicator, not a model.
-import { on, store } from '../state.js?v=2.0.0-fix1'
-import { tr, BAND } from '../i18n.js?v=2.0.0-fix1'
-import { fmtNum, el } from '../fmt.js?v=2.0.0-fix1'
-import { getJson } from '../cache.js?v=2.0.0-fix1'
-import { flyToProvince } from '../map.js?v=2.0.0-fix1'
+import { on, store } from '../state.js?v=2.0.0-i18n1'
+import { tr, BAND } from '../i18n.js?v=2.0.0-i18n1'
+import { fmtNum, el } from '../fmt.js?v=2.0.0-i18n1'
+import { getJson } from '../cache.js?v=2.0.0-i18n1'
+import { flyToProvince } from '../map.js?v=2.0.0-i18n1'
 
 const BAND_LABEL = {
   normal:   { th: 'ปกติ',     en: 'Normal'   },

@@ -3,11 +3,11 @@
 // to Bangkok's traffic smog and read the difference directly. Each pane is
 // its own Leaflet map of live AQ stations + a readout of that area's worst
 // PM2.5 and washout context.
-import { getJson } from '../cache.js?v=2.0.0-fix1'
-import { store, on } from '../state.js?v=2.0.0-fix1'
-import { tr, pick } from '../i18n.js?v=2.0.0-fix1'
-import { fmtNum, el } from '../fmt.js?v=2.0.0-fix1'
-import { focusAreas } from './focus.js?v=2.0.0-fix1'
+import { getJson } from '../cache.js?v=2.0.0-i18n1'
+import { store, on } from '../state.js?v=2.0.0-i18n1'
+import { tr, pick } from '../i18n.js?v=2.0.0-i18n1'
+import { fmtNum, el } from '../fmt.js?v=2.0.0-i18n1'
+import { focusAreas } from './focus.js?v=2.0.0-i18n1'
 
 // Thai AQI 2023 PM2.5 marker colours (15 / 25 / 37.5 / 75 µg/m³).
 function pm25Color(v) {
