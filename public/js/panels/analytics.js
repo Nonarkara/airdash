@@ -112,7 +112,7 @@ async function render(snap) {
         value: fmtNum(avgRisk, 0) + '/100',
         sub: L(`${elevatedCount} จังหวัด ≥ เสี่ยงสูง`, `${elevatedCount} provinces at elevated+`),
         color: bandColor(avgRisk < 20 ? 'normal' : avgRisk < 45 ? 'watch' : avgRisk < 70 ? 'elevated' : 'high') },
-    ]),
+    ], L),
 
     listsRow(topRisk, topPm, topRain, L),
 
@@ -189,6 +189,9 @@ function headerRow(snap, L) {
     v ? el('div', { class: `ana-verdict pv-${v.level}` }, L(v.th, v.en)) : null,
   )
 }
+// Note: every L(th, en) call in this file is single-language in each arg.
+// Earlier versions stored bilingual text in BOTH args (e.g. "TH · EN" in
+// both) and picked one — that defeats the language toggle.
 
 // "SEVERE NOW" strip — the stations past the Thai health line (≥37.5 µg/m³),
 // worst first, each clickable to fly the map there. When nothing is severe
@@ -204,7 +207,7 @@ function severeRow(snap, L) {
     .slice(0, 6)
 
   const head = el('div', { class: 'ana-severe-head' },
-    L('จุดฝุ่นรุนแรงตอนนี้ · SEVERE NOW', 'SEVERE NOW · จุดฝุ่นรุนแรง'))
+    L('จุดฝุ่นรุนแรงตอนนี้', 'SEVERE NOW'))
 
   if (!severe.length) {
     return el('div', { class: 'ana-severe ana-severe--clear' }, head,
@@ -223,16 +226,17 @@ function severeRow(snap, L) {
       },
         el('span', { class: 'ana-severe-ug' }, `${fmtNum(s.pm25, 0)} µg`),
         el('span', { class: 'ana-severe-name' },
-          `${L(s.name_th, s.name_en ?? s.name_th)} · ${L(s.province_th ?? '', s.province_en ?? s.province_th ?? '')}`))
+          `${L(s.name_th, s.name_en ?? s.name_th)} · ${L(s.province_th ?? '', s.province_en ?? s.province_th ?? '')}`)),
+    chip.addEventListener('click', () => emit('station-select', { source: 'air4thai', station: s }))
       chip.addEventListener('click', () => emit('station-select', { source: 'air4thai', station: s }))
       return chip
     }))
 }
 
-function kpiRow(cards) {
+function kpiRow(cards, L) {
   return el('div', { class: 'ana-kpis' },
     ...cards.map((c) => el('div', { class: 'ana-kpi' },
-      el('div', { class: 'ana-kpi-label' }, c.th + ' · ' + c.en),
+      el('div', { class: 'ana-kpi-label' }, L(c.th, c.en)),
       el('div', { class: 'ana-kpi-value', style: `color:${c.color}` }, c.value),
       el('div', { class: 'ana-kpi-sub' }, c.sub),
     )),
@@ -261,7 +265,7 @@ function listsRow(topRisk, topPm, topRain, L) {
     ),
     el('div', { class: 'ana-list' },
       el('div', { class: 'ana-list-head' }, L('5 จังหวัดฝนมาก (ช่วยล้างฝุ่น)', 'TOP 5 RAIN 24H (WASHOUT)')),
-      ...topRain.map((p, i) => row(p, i, 'rain_obs_24h', (v) => `${fmtNum(v, 0)} มม.`)),
+      ...topRain.map((p, i) => row(p, i, 'rain_obs_24h', (v) => `${fmtNum(v, 0)} ${L('มม.', 'mm')}`)),
     ),
   )
 }
@@ -278,6 +282,8 @@ function chartRow(pmSeries, unhealthyToday, L) {
           L(`สถานีเกินเกณฑ์วันนี้: ${unhealthyToday.unhealthy ?? 0} แห่ง · อันตราย ${unhealthyToday.very_unhealthy ?? 0} แห่ง`,
             `Unhealthy stations today: ${unhealthyToday.unhealthy ?? 0} · very unhealthy ${unhealthyToday.very_unhealthy ?? 0}`))
       : null,
+    // ^ note: this is a single-language template with two numbers — the L
+    //   args are each fully in one language, so the toggle works correctly.
   )
 }
 
@@ -308,7 +314,7 @@ function donutRow(slices, L) {
           el('span', { class: 'sw', style: `background:${s.color}` }),
           el('span', { class: 'lbl' }, L(s.label_th, s.label_en)),
           el('span', { class: 'val' },
-            `${fmtNum(s.value, 0)} ${L('คะแนน', 'pts')} · ${s.count} จ.`),
+            `${fmtNum(s.value, 0)} ${L('คะแนน', 'pts')} · ${s.count} ${L('จ.', 'pv')}`),
         )),
       ),
     ),

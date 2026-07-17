@@ -181,6 +181,25 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, r
         return sendPrebuilt(res, 200, snapshotCache.built)
       }
       const risk = riskEngine.get()
+      // Augment the per-province risk payload with the Danger Score so the
+      // top-bar hero chip can paint the same "is it safe to go outside
+      // RIGHT NOW" number that /api/risk already serves. The snapshot is
+      // what every client fetches on first load; without this augmentation
+      // the chip stays stuck on "–/loading" until the user opens a city.
+      if (danger) {
+        const dangerByCode = new Map(danger.get().map((d) => [d.province_code, d]))
+        for (const p of risk.provinces) {
+          const d = dangerByCode.get(p.province_code)
+          if (d) p.danger = {
+            score: d.score, band: d.band, score_forecast: d.score_forecast, trend_24h: d.trend_24h,
+            pm25_live: d.pm25_live, temp_c: d.temp_c, rh_pct: d.rh_pct,
+            noise_leq_db: d.noise_leq_db, noise_stations: d.noise_stations,
+            pm_base: d.pm_base, heat_amp: d.heat_amp, hum_amp: d.hum_amp, noise_amp: d.noise_amp,
+            rain_relief: d.rain_relief,
+            label_th: d.label_th, label_en: d.label_en, band_color: d.band_color,
+          }
+        }
+      }
       // Primary layer: every AQ station with the full pollutant set.
       const air = pivotLatest(db, 'air4thai', ['pm25', 'pm10', 'o3', 'co', 'no2', 'so2', 'aqi'])
       // Rain gauges currently seeing washout-grade rain (≥5mm/24h).

@@ -85,6 +85,22 @@ header {
   white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
 }
+/* Compact short subtitle — used on viewports where the full one would
+   push the search box off-screen. Says "PM2.5 · AQI · 24/7" which
+   carries the three pillars without the long Thai sentence. */
+.brand .sub-short {
+  display: none;
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-mid);
+  margin-top: 2px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+html[lang="th"] .brand .sub-short { letter-spacing: 0.01em; text-transform: none; font-weight: 500; }
 
 .national {
   display: flex; align-items: center; gap: 10px;
@@ -167,9 +183,9 @@ header {
    so the meaning is visually continuous with the rest of the system. */
 .danger {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 6px 12px 0 12px;
+  padding: 4px 10px 0 10px;
   flex: none;
-  min-width: 92px;
+  min-width: 88px;
   height: var(--header-h);
   border-right: 1px solid var(--rule);
   cursor: help;
@@ -202,7 +218,7 @@ html[lang="en"] .danger-label .en { display: inline; }
 
 .danger-num {
   font-family: var(--font-num);
-  font-weight: 800; font-size: 30px; line-height: 1;
+  font-weight: 800; font-size: 26px; line-height: 1;
   color: var(--th-deep);
   letter-spacing: -0.02em;
   font-feature-settings: 'tnum' 1;
@@ -462,24 +478,39 @@ html[lang="en"] .appfooter-line .en { display: inline; }
    The header is a single 80px flex strip. Without progressive disclosure
    it overflows under ~1600px and people zoom OUT — which kills the
    aha. Hide secondary chrome first; keep brand + verb + danger + ask +
-   search + lang + mode + about. */
+   search + lang + mode + about. v3 adds a *compact* brand subtitle
+   (PM2.5 · AQI · 24/7) so the wordmark still has a tag-line on
+   narrower screens, instead of going bare. */
 @media (max-width: 1620px) {
   .brand .sub { display: none; }
+  .brand .sub-short { display: block; }
   .national-secondary { display: none; }
   :root { --rail-l: 300px; --rail-r: 360px; }
 }
+@media (max-width: 1480px) {
+  .searchbox { min-width: 140px; max-width: 240px; }
+  .focusbox select { max-width: 140px; }
+}
 @media (max-width: 1380px) {
-  #about-btn .lbl { display: none; }
-  #about-btn { padding: 4px 7px; margin-right: 4px; }
+  /* Keep the about label — operators look for it specifically. */
   :root { --rail-l: 300px; --rail-r: 360px; }
 }
 @media (max-width: 1280px) {
-  .searchbox { min-width: 120px; max-width: 220px; }
+  .searchbox { min-width: 120px; max-width: 200px; }
+  .danger { min-width: 78px; padding: 4px 8px 0 8px; }
+  .danger-num { font-size: 22px; }
   :root { --rail-l: 300px; --rail-r: 360px; }
 }
 @media (max-width: 1180px) {
   #ask-btn .ask-lbl { display: none !important; }
+  #ask-btn { padding: 4px 8px; }
   :root { --rail-l: 280px; --rail-r: 320px; }
+}
+@media (max-width: 1080px) {
+  /* Brand subtitle disappears entirely — the wordmark alone is fine. */
+  .brand .sub-short { display: none; }
+  .focusbox { display: none; }   /* city selection moves to dashboard grid */
+  .searchbox { min-width: 100px; max-width: 180px; }
 }
 
 /* ── Compact view: map on top, tabbed sheet below ────────────────────────

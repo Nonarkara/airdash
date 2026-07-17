@@ -1,6 +1,7 @@
 // Dust alerts + haze news lists (ข่าวฝุ่น/หมอกควัน — right rail tabs),
 // refreshed from snapshot and tap events.
 import { on, store } from '../state.js?v=2.0.0-fix1'
+import { tr } from '../i18n.js?v=2.0.0-fix1'
 import { el, ago } from '../fmt.js?v=2.0.0-fix1'
 
 export function initFeeds() {
@@ -27,24 +28,23 @@ export function initFeeds() {
 
 function render(snap) {
   if (!snap) return
-  const lang = store.lang
   const alerts = document.getElementById('alerts')
   alerts.replaceChildren(...(snap.alerts ?? []).slice(0, 100).map((a) =>
     el('div', { class: 'alert-row' },
       el('span', { class: `badge ${a.severity >= 3 ? 'lv5' : a.severity >= 2 ? 'lv4' : 'lv3'}` }, a.severity >= 3 ? '!' : '›'),
       el('div', {},
-        el('div', {}, lang === 'th' ? a.message_th : (a.message_en ?? a.message_th)),
+        el('div', {}, tr(a.message_th, a.message_en)),
         el('div', { class: 'when' }, ago(a.ts))))))
   if ((snap.alerts ?? []).length === 0) {
     alerts.replaceChildren(el('div', { class: 'alert-row' },
-      lang === 'th' ? 'ยังไม่มีการแจ้งเตือน' : 'no alerts yet'))
+      tr('ยังไม่มีการแจ้งเตือน', 'no alerts yet')))
   }
   document.getElementById('alert-cnt').textContent =
     (snap.alerts ?? []).filter((a) => Date.now() - new Date(a.ts) < 24 * 3600_000).length || ''
 
   const news = document.getElementById('news')
   news.replaceChildren(...(snap.news ?? []).slice(0, 60).map((n) => {
-    const title = lang === 'th' ? (n.title ?? '') : (n.title_en ?? n.title ?? '')
+    const title = tr(n.title, n.title_en)
     return el('div', { class: 'news-row' },
       n.link
         ? el('a', { href: n.link, target: '_blank', rel: 'noopener' }, title)

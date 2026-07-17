@@ -171,7 +171,11 @@ function renderStatus(snap) {
       dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high')
       dangerEl.classList.add('band-normal')
       dangerNum.textContent = '–'
-      dangerBand.textContent = tr('กำลังโหลด', 'loading')
+      // Subtle "waiting on data" state — just a short loading hint, not a
+      // full sentence that takes two rows in the chip. The national plate
+      // already says "กำลังโหลด/LOADING" so duplicating it here is noise.
+      dangerBand.textContent = tr('รอข้อมูล', '…')
+      dangerEl.title = tr('กำลังโหลดข้อมูล Danger Score…', 'Loading Danger Score…')
     }
   }
 }
