@@ -24,8 +24,16 @@ let geo = null
 let paneCount = 2
 
 export function initCompare() {
-  document.getElementById('compare-btn').addEventListener('click', open)
-  document.getElementById('compare-close').addEventListener('click', close)
+  // The compare feature is opt-in: it only attaches handlers if the trigger
+  // button is present in the DOM. The top bar v2 redesign removed the
+  // compare-btn chip (it was a tertiary feature, not in the headline), so
+  // most builds will skip the wiring entirely. The overlay, close button
+  // and grid stay available for any future header that re-adds the trigger.
+  const trigger = document.getElementById('compare-btn')
+  const closeBtn = document.getElementById('compare-close')
+  if (!trigger) return  // no compare button → feature is disabled in this build
+  trigger.addEventListener('click', open)
+  if (closeBtn) closeBtn.addEventListener('click', close)
   document.querySelectorAll('.compare-actions button[data-panes]').forEach((b) => {
     b.addEventListener('click', () => {
       paneCount = Number(b.dataset.panes)

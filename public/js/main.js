@@ -30,6 +30,14 @@ function tr(th, en) {
   return store.lang === 'th' ? th : en
 }
 
+// Wrap a single panel's init so a synchronous throw (e.g. an optional DOM
+// element got removed in a header redesign) can never block the rest of
+// boot. Without this, a single bad panel strands the operator on the boot
+// screen during the exact event the dashboard exists for.
+function safeInit(name, fn) {
+  try { fn() } catch (e) { console.error(`init ${name} failed:`, e) }
+}
+
 const SNAPSHOT_MS = 5 * 60_000
 
 async function loadSnapshot() {
@@ -303,48 +311,41 @@ function initAskBtn() {
 }
 
 async function boot() {
-  console.log('[boot] start')
+  // Each init is wrapped in its own try/catch so a single broken panel
+  // (e.g. compare.js when the top bar v2 stripped the trigger button) can
+  // never strand the rest of the boot on a dead screen. The dashboard has
+  // nine right-rail panels; the user needs every working one of them,
+  // even if a single optional overlay fails to bind.
   paintChrome()
-  console.log('[boot] paintChrome done')
   initHeader()
-  console.log('[boot] initHeader done')
   initAskBtn()
   initMode()
-  console.log('[boot] mode set')
   const map = initMap()
-  console.log('[boot] map ok')
-  initRanking()
-  initForecast()
-  initWhatIf()
-  initDetail()
-  initTap()
-  initSources()
-  initHistory()
-  initInsights()
-  initAnalytics()
-  initFeeds()
-  initChat()
-  initCitizen()
-  initWaterways()
-  console.log('[boot] sync inits done')
-  console.log('[boot] boot stage 1 complete, about to do initFocus + second wave')
-  // initFocus is async and pulls /api/focus; if anything in it throws
-  // (or the API is briefly down), the rest of the boot must still proceed.
-  // We catch and log to the console so a future stuck-boot can be
-  // diagnosed without a screen-share.
-  try { console.log('[boot] -> initFocus'); await initFocus(map); console.log('[boot] <- initFocus ok') } catch (e) { console.error('initFocus failed:', e) }
-  console.log('[boot] -> initCityDashboard'); try { initCityDashboard() } catch(e) { console.error('initCityDashboard threw:', e) }
-  console.log('[boot] -> initCompare'); try { initCompare() } catch(e) { console.error('initCompare threw:', e) }
-  console.log('[boot] -> initSplit'); try { initSplit(map) } catch(e) { console.error('initSplit threw:', e) }
-  console.log('[boot] -> initLibrary'); try { initLibrary() } catch(e) { console.error('initLibrary threw:', e) }
-  console.log('[boot] -> initResearch'); try { initResearch() } catch(e) { console.error('initResearch threw:', e) }
-  console.log('[boot] -> initSearch'); try { initSearch() } catch(e) { console.error('initSearch threw:', e) }
-  console.log('[boot] -> initTabs'); try { initTabs() } catch(e) { console.error('initTabs threw:', e) }
-  console.log('[boot] -> initSheet'); try { initSheet() } catch(e) { console.error('initSheet threw:', e) }
-  console.log('[boot] -> initAbout'); try { initAbout() } catch(e) { console.error('initAbout threw:', e) }
-  console.log('[boot] -> initAskBtn2'); try { initAskBtn() } catch(e) { console.error('initAskBtn2 threw:', e) }
-  console.log('[boot] ALL INITS DONE')
-  console.log('[boot] second wave inits done, about to load snapshot')
+  safeInit('ranking', initRanking)
+  safeInit('forecast', initForecast)
+  safeInit('whatif', initWhatIf)
+  safeInit('detail', initDetail)
+  safeInit('tap', initTap)
+  safeInit('sources', initSources)
+  safeInit('history', initHistory)
+  safeInit('insights', initInsights)
+  safeInit('analytics', initAnalytics)
+  safeInit('feeds', initFeeds)
+  safeInit('chat', initChat)
+  safeInit('citizen', initCitizen)
+  safeInit('waterways', initWaterways)
+  // initFocus is async; if it fails the rest of the boot must still proceed.
+  try { await initFocus(map) } catch (e) { console.error('initFocus failed:', e) }
+  safeInit('cityDashboard', initCityDashboard)
+  safeInit('compare', initCompare)
+  safeInit('split', () => initSplit(map))
+  safeInit('library', initLibrary)
+  safeInit('research', initResearch)
+  safeInit('search', initSearch)
+  safeInit('tabs', initTabs)
+  safeInit('sheet', initSheet)
+  safeInit('about', initAbout)
+  safeInit('askBtn2', initAskBtn)
 
   // Place search → fly the map
   on('place-select', ({ lat, lng, zoom }) => {
@@ -369,15 +370,10 @@ async function boot() {
   on('tap', (e) => { if (e.kind === 'alert' && e.severity >= 2) loadSnapshot() })
 
   try {
-    console.log('[boot] calling loadSnapshotWithRetry...')
     await loadSnapshotWithRetry()
-    console.log('[boot] snapshot loaded, calling loadTapHistory...')
     await loadTapHistory()
-    console.log('[boot] tap history loaded')
     refreshSensorHealth().catch(() => {})
-    console.log('[boot] removing boot div...')
     document.getElementById('boot')?.remove()
-    console.log('[boot] boot div removed')
     // Announce readiness to screen readers via a hidden live region.
     // The boot's own aria-live went away with the boot — we need a
     // separate region to actually fire the "ready" message. Reading
