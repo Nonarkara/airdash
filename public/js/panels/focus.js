@@ -1,10 +1,13 @@
-// Focus switcher — populates the header dropdown from the /api/focus manifest.
-// Selecting an area flies the map and (when it names a province) scopes the
-// ranking rail to that province's stations. Adding a city is a server-side
-// one-liner in focus.js; this UI needs no change.
+// Focus switcher — populates the (optional) header dropdown from the
+// /api/focus manifest. Selecting an area flies the map and (when it names
+// a province) scopes the ranking rail to that province's stations. The
+// header dropdown may or may not be present depending on the top bar
+// layout — when it's not, the focus still works: the city-picker grid
+// in the city-dashboard panel emits the same 'focus' event, and the
+// URL state sync keeps the deep-link mechanism alive.
 //
 // URL state sync (?city=ID) — the dashboard is shareable. A deep link
-// like /?city=chiangmai loads the city on first paint; selections
+// like /?city=chiangmai loads that city on first paint; selections
 // update the URL via history.replaceState (no full reload, no
 // back-button clutter).
 import { getJson } from '../cache.js?v=2.0.0-final'
@@ -15,6 +18,10 @@ let areas = []
 let initialised = false
 
 export async function initFocus(map) {
+  // Both elements are optional — the top bar v2 stripped the focusbox,
+  // and the focus mechanism is now driven by the city-picker grid in
+  // city-dashboard.js. We still look for them so a future header that
+  // re-adds the dropdown works without any change here.
   const sel = document.getElementById('focus-select')
   const back = document.getElementById('back-to-thailand')
   try {
@@ -23,6 +30,9 @@ export async function initFocus(map) {
   } catch { return }
 
   const paint = () => {
+    // Defensive: if the header dropdown was removed, skip the population
+    // (the city-picker grid in city-dashboard.js is the primary UI).
+    if (!sel) return
     sel.replaceChildren(...areas.map((a) => {
       const o = document.createElement('option')
       o.value = a.id
@@ -34,30 +44,32 @@ export async function initFocus(map) {
   paint()
   on('lang', paint)
 
-  sel.addEventListener('change', () => applyFocus(sel.value, map, { source: 'dropdown' }))
+  if (sel) {
+    sel.addEventListener('change', () => applyFocus(sel.value, map, { source: 'dropdown' }))
+  }
 
-  // Back-to-Thailand: one-click way out of any city view. The dropdown
-  // alone wasn't discoverable enough — a visible pill in the header makes
-  // it obvious how to return to the all-Thailand overview.
+  // Back-to-Thailand pill (optional). Click → return to the country
+  // overview, fire the focus event, collapse the province detail so
+  // the ranking + analytics panels are restored.
   if (back) {
     back.addEventListener('click', () => {
-      sel.value = 'thailand'
-      sel.dispatchEvent(new Event('change'))
-      // Also collapse any province drill-down on the left rail so the
-      // country overview (ranking + analytics) is fully restored.
+      if (sel) {
+        sel.value = 'thailand'
+        sel.dispatchEvent(new Event('change'))
+      }
       hideDetail()
     })
   }
 
   // Initial focus: if the URL has ?city=X, load that city on first paint.
   // Falls back to 'thailand' for the all-Thailand overview. Fires only
-  // once — subsequent navigations go through the dropdown or the URL
-  // listener below.
+  // once — subsequent navigations go through the dropdown, the city-picker
+  // grid, or the URL listener below.
   if (!initialised) {
     initialised = true
     const urlCity = new URL(window.location.href).searchParams.get('city')
     const startId = areas.find((a) => a.id === urlCity) ? urlCity : 'thailand'
-    sel.value = startId
+    if (sel) sel.value = startId
     applyFocus(startId, map, { source: 'url' })
   }
 

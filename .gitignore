@@ -18,3 +18,4 @@ corpus/kimi-blueprint/**/*.png
 CLAUDE.md
 .claude/
 data/exports/
+.gstack/

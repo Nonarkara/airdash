@@ -1158,3 +1158,49 @@ body.mode-citizen #pane-citizen:not([hidden]) { display: flex !important; }
   }
   body.mode-citizen #rail-left { display: none; }
 }
+
+/* ── Focus dropdown (compact) ──────────────────────────────────────────────
+   Re-added because the v2 top bar stripped it. The dropdown is the
+   small anchor that lets users jump to a focus area without scrolling
+   to the city-picker grid; the city-picker grid in city-dashboard.js
+   remains the primary focus mechanism (richer visuals, geography
+   accents), but this dropdown is the always-visible fallback. */
+.focusbox {
+  display: flex; align-items: center; gap: 6px;
+  flex: none; align-self: center;
+  height: var(--header-h);
+  padding: 8px 0 0 0;
+}
+.focusbox #focus-select {
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  background: var(--well); color: var(--ink);
+  border: 1px solid var(--rule);
+  padding: 4px 6px;
+  max-width: 180px;
+  cursor: pointer;
+}
+.focusbox #focus-select:hover { border-color: var(--th-sage); }
+.focusbox #back-to-thailand {
+  border: 1px solid var(--th-red); background: transparent;
+  color: var(--th-red);
+  font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.02em; padding: 4px 7px; cursor: pointer;
+  white-space: nowrap;
+}
+.focusbox #back-to-thailand:hover { background: var(--th-red); color: #fff; }
+.focusbox #back-to-thailand[hidden] { display: none; }
+
+@media (max-width: 1520px) {
+  .focusbox #focus-select { max-width: 140px; }
+}
+@media (max-width: 1280px) {
+  .focusbox { padding-right: 4px; }
+  .focusbox #focus-select { max-width: 110px; font-size: 11px; }
+}
+@media (max-width: 1100px) {
+  .focusbox { display: none; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .focusbox #focus-select { background: var(--paper); color: var(--ink); border-color: var(--rule); }
+}

@@ -152,6 +152,22 @@
       <div class="search-results" id="search-results" role="listbox" aria-label="ผลการค้นหา · Search results" style="display:none"></div>
     </div>
 
+    <!-- Focus dropdown — small compact select that lets the user jump to
+         a focus area (the country overview, the 7 dust-prone cities, or
+         any province) without leaving the top bar. Defaults to "All
+         Thailand" so the boot always lands on a sensible state. The
+         dropdown is wired in focus.js — selecting an option fires a
+         'focus' event that flies the map, scopes the ranking rail, and
+         updates the URL. Optional element: the focus mechanism still
+         works via the city-picker grid in city-dashboard.js if the
+         dropdown is removed. -->
+    <div class="focusbox" id="focusbox">
+      <select id="focus-select" aria-label="โฟกัสพื้นที่ · Focus area" data-i18n-title="โฟกัสพื้นที่|focus area"></select>
+      <button id="back-to-thailand" type="button" hidden
+        data-i18n-title="กลับสู่ภาพรวมทั้งประเทศ|back to All Thailand view"
+        data-i18n="← ทั้งประเทศ|← All Thailand">← ทั้งประเทศ</button>
+    </div>
+
     <div class="langtoggle" id="langtoggle">
       <button data-lang="th" type="button" aria-pressed="false">ไทย</button>
       <button data-lang="en" type="button" aria-pressed="false">EN</button>
