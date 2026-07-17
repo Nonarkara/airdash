@@ -303,11 +303,16 @@ function initAskBtn() {
 }
 
 async function boot() {
+  console.log('[boot] start')
   paintChrome()
+  console.log('[boot] paintChrome done')
   initHeader()
+  console.log('[boot] initHeader done')
   initAskBtn()
   initMode()
+  console.log('[boot] mode set')
   const map = initMap()
+  console.log('[boot] map ok')
   initRanking()
   initForecast()
   initWhatIf()
@@ -321,6 +326,7 @@ async function boot() {
   initChat()
   initCitizen()
   initWaterways()
+  console.log('[boot] sync inits done')
   // initFocus is async and pulls /api/focus; if anything in it throws
   // (or the API is briefly down), the rest of the boot must still proceed.
   // We catch and log to the console so a future stuck-boot can be
@@ -336,6 +342,7 @@ async function boot() {
   initSheet()
   initAbout()
   initAskBtn()
+  console.log('[boot] second wave inits done, about to load snapshot')
 
   // Place search → fly the map
   on('place-select', ({ lat, lng, zoom }) => {
@@ -360,10 +367,15 @@ async function boot() {
   on('tap', (e) => { if (e.kind === 'alert' && e.severity >= 2) loadSnapshot() })
 
   try {
+    console.log('[boot] calling loadSnapshotWithRetry...')
     await loadSnapshotWithRetry()
+    console.log('[boot] snapshot loaded, calling loadTapHistory...')
     await loadTapHistory()
+    console.log('[boot] tap history loaded')
     refreshSensorHealth().catch(() => {})
+    console.log('[boot] removing boot div...')
     document.getElementById('boot')?.remove()
+    console.log('[boot] boot div removed')
     // Announce readiness to screen readers via a hidden live region.
     // The boot's own aria-live went away with the boot — we need a
     // separate region to actually fire the "ready" message. Reading
