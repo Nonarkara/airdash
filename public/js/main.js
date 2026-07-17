@@ -327,21 +327,23 @@ async function boot() {
   initCitizen()
   initWaterways()
   console.log('[boot] sync inits done')
+  console.log('[boot] boot stage 1 complete, about to do initFocus + second wave')
   // initFocus is async and pulls /api/focus; if anything in it throws
   // (or the API is briefly down), the rest of the boot must still proceed.
   // We catch and log to the console so a future stuck-boot can be
   // diagnosed without a screen-share.
-  try { await initFocus(map) } catch (e) { console.error('initFocus failed:', e) }
-  initCityDashboard()
-  initCompare()
-  initSplit(map)
-  initLibrary()
-  initResearch()
-  initSearch()
-  initTabs()
-  initSheet()
-  initAbout()
-  initAskBtn()
+  try { console.log('[boot] -> initFocus'); await initFocus(map); console.log('[boot] <- initFocus ok') } catch (e) { console.error('initFocus failed:', e) }
+  console.log('[boot] -> initCityDashboard'); try { initCityDashboard() } catch(e) { console.error('initCityDashboard threw:', e) }
+  console.log('[boot] -> initCompare'); try { initCompare() } catch(e) { console.error('initCompare threw:', e) }
+  console.log('[boot] -> initSplit'); try { initSplit(map) } catch(e) { console.error('initSplit threw:', e) }
+  console.log('[boot] -> initLibrary'); try { initLibrary() } catch(e) { console.error('initLibrary threw:', e) }
+  console.log('[boot] -> initResearch'); try { initResearch() } catch(e) { console.error('initResearch threw:', e) }
+  console.log('[boot] -> initSearch'); try { initSearch() } catch(e) { console.error('initSearch threw:', e) }
+  console.log('[boot] -> initTabs'); try { initTabs() } catch(e) { console.error('initTabs threw:', e) }
+  console.log('[boot] -> initSheet'); try { initSheet() } catch(e) { console.error('initSheet threw:', e) }
+  console.log('[boot] -> initAbout'); try { initAbout() } catch(e) { console.error('initAbout threw:', e) }
+  console.log('[boot] -> initAskBtn2'); try { initAskBtn() } catch(e) { console.error('initAskBtn2 threw:', e) }
+  console.log('[boot] ALL INITS DONE')
   console.log('[boot] second wave inits done, about to load snapshot')
 
   // Place search → fly the map
