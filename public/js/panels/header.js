@@ -116,43 +116,56 @@ function renderStatus(snap) {
     note.textContent = store.lang === 'th' ? snap.risk.method_th : snap.risk.method_en
   }
 
-  // DANGER SCORE — paint the hero chip from the worst province in the
-  // ranking. Same `danger` block was added to /api/risk alongside the
-  // Air Watch Score, so we don't need a separate fetch.
+  // DANGER SCORE — paint the hero chip. When a focus city is selected
+  // (store.activeArea is set by focus.js), scope the chip to that city's
+  // province. When no city is selected (All Thailand), show the worst
+  // province nationally — the same headline answer readers expect from
+  // the top bar.
   const dangerEl = document.getElementById('danger-hero')
   const dangerNum = document.getElementById('danger-num')
   const dangerBand = document.getElementById('danger-band')
   if (dangerEl && dangerNum && dangerBand) {
-    // Find the worst Danger score in the ranking. We use the highest
-    // (most dangerous) province, not the average, because the headline
-    // answer to "is it dangerous outside right now?" is worst-case.
+    const activeArea = store.activeArea
+    let scoped = null
+    if (activeArea && activeArea.id !== 'thailand' && activeArea.province_th) {
+      scoped = snap.risk.provinces.find((p) => p.province_th === activeArea.province_th) ?? null
+    }
+    // Worst case across all provinces — used when no city is focused, or
+    // when the user's selected city has no data (e.g. first load).
     let worst = null
     for (const p of snap.risk.provinces) {
       const d = p.danger
       if (!d) continue
       if (!worst || d.score > worst.score) worst = d
     }
-    if (worst) {
+    const show = scoped?.danger ?? worst
+    if (show) {
+      const isCityScoped = !!scoped
       // Smooth transition between bands via a class, not an inline color
       dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high')
-      dangerEl.classList.add(`band-${worst.band}`)
-      dangerNum.textContent = worst.score
-      const label = tr(worst.label_th, worst.label_en)
+      dangerEl.classList.add(`band-${show.band}`)
+      dangerNum.textContent = show.score
+      const label = tr(show.label_th, show.label_en)
       dangerBand.textContent = label
+      // Add a small "scoped" badge so readers can tell whether the number
+      // is national-worst or just-the-city. A tiny chip, not a redraw.
+      const cityBadge = isCityScoped
+        ? ` · ${tr(activeArea.name_th, activeArea.name_en)}`
+        : ''
       // Build the audit-trail tooltip — every modifier, in one place.
       // Lets a curious reader see what drove the number without leaving
       // the top bar.
       const parts = []
-      parts.push(`PM2.5 ${worst.pm25_live != null ? worst.pm25_live.toFixed(0) : '–'} µg/m³ (base ${worst.pm_base})`)
-      if (worst.temp_c != null) parts.push(`T ${worst.temp_c.toFixed(0)}°C (heat amp ${(worst.heat_amp * 100).toFixed(0)}%)`)
-      if (worst.rh_pct != null) parts.push(`RH ${worst.rh_pct.toFixed(0)}% (hygroscopic amp ${(worst.hum_amp * 100).toFixed(0)}%)`)
-      if (worst.noise_leq_db != null) {
-        const nStations = worst.noise_stations > 1 ? ` · ${worst.noise_stations} stn` : ''
-        parts.push(`noise ${worst.noise_leq_db.toFixed(0)} dB${nStations} (amp ${(worst.noise_amp * 100).toFixed(0)}%)`)
+      parts.push(`PM2.5 ${show.pm25_live != null ? show.pm25_live.toFixed(0) : '–'} µg/m³ (base ${show.pm_base})`)
+      if (show.temp_c != null) parts.push(`T ${show.temp_c.toFixed(0)}°C (heat amp ${(show.heat_amp * 100).toFixed(0)}%)`)
+      if (show.rh_pct != null) parts.push(`RH ${show.rh_pct.toFixed(0)}% (hygroscopic amp ${(show.hum_amp * 100).toFixed(0)}%)`)
+      if (show.noise_leq_db != null) {
+        const nStations = show.noise_stations > 1 ? ` · ${show.noise_stations} stn` : ''
+        parts.push(`noise ${show.noise_leq_db.toFixed(0)} dB${nStations} (amp ${(show.noise_amp * 100).toFixed(0)}%)`)
       }
-      if (worst.rain_relief > 0) parts.push(`rain relief ${(worst.rain_relief * 100).toFixed(0)}% (${worst.rain_source ?? 'forecast'})`)
-      const provinceName = tr(worst.province_th, worst.province_en)
-      dangerEl.title = `${label} · ${provinceName} (${worst.score}/100)\n${parts.join(' · ')}`
+      if (show.rain_relief > 0) parts.push(`rain relief ${(show.rain_relief * 100).toFixed(0)}% (${show.rain_source ?? 'forecast'})`)
+      const provinceName = tr(show.province_th, show.province_en)
+      dangerEl.title = `${label} · ${provinceName} (${show.score}/100)${cityBadge}\n${parts.join(' · ')}`
     } else {
       dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high')
       dangerEl.classList.add('band-normal')

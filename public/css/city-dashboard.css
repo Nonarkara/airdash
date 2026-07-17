@@ -1,0 +1,401 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   City Dashboard — the morphed panel when a focus city is selected.
+   Follows the AirDash design language: paper ground, deep teal ink, square
+   corners, no shadows, monospace numbers. The city plate uses display
+   typography (Manrope) for the city name — the one place on the dashboard
+   where a single name is the headline.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+#city-dashboard {
+  flex: none;
+  width: 100%;
+  max-height: 65vh;
+  overflow-y: auto;
+  background: var(--well);
+  border-bottom: 2px solid var(--rule);
+}
+
+/* ── City identity plate ─────────────────────────────────────────────────── */
+.cd-plate {
+  position: relative;
+  padding: 14px 12px 12px;
+  background: linear-gradient(180deg, var(--paper-warm) 0%, var(--well) 100%);
+  border-bottom: 1px solid var(--rule);
+  overflow: hidden;
+}
+
+.cd-accent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 40px;
+  color: var(--ink);
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.cd-eyebrow {
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--th-sage);
+  margin-bottom: 4px;
+}
+
+.cd-name {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.cd-context {
+  font-size: 11px;
+  color: var(--ink-low);
+  margin-bottom: 8px;
+  font-family: var(--font-num);
+  letter-spacing: 0.02em;
+  position: relative;
+  z-index: 1;
+}
+
+.cd-blurb {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-mid);
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Score cards (watch score, danger, washout) ──────────────────────────── */
+.cd-scores {
+  display: flex;
+  gap: 1px;
+  background: var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.cd-score-card {
+  flex: 1;
+  padding: 10px 8px;
+  background: var(--well);
+  text-align: center;
+}
+
+.cd-score-label {
+  font-family: var(--font-num);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-low);
+  margin-bottom: 4px;
+}
+
+.cd-score-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.cd-score-sub {
+  font-size: 10px;
+  color: var(--ink-mid);
+  line-height: 1.2;
+}
+
+/* ── Multi-metric pollutant strip ────────────────────────────────────────── */
+.cd-section {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.cd-section-head {
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-low);
+  margin-bottom: 8px;
+}
+
+.cd-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 4px;
+}
+
+.cd-metric-tile {
+  padding: 6px 4px;
+  background: var(--well-dim);
+  text-align: center;
+  position: relative;
+}
+
+/* Left border = band color, so the severity reads at a glance without
+   coloring the whole tile (which would make the strip visually noisy). */
+.cd-metric-tile.lv1  { border-left: 3px solid var(--aqi-good); }
+.cd-metric-tile.lv2  { border-left: 3px solid var(--aqi-moderate); }
+.cd-metric-tile.lv3  { border-left: 3px solid var(--aqi-watch); }
+.cd-metric-tile.lv4  { border-left: 3px solid var(--aqi-unhealthy); }
+.cd-metric-tile.lv5  { border-left: 3px solid var(--aqi-hazardous); }
+.cd-metric-tile.cd-metric-weather { border-left: 3px solid var(--ink-low); }
+
+.cd-metric-label {
+  font-family: var(--font-num);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-low);
+}
+
+.cd-metric-value {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 2px 0 1px;
+}
+
+.cd-metric-unit {
+  font-size: 9px;
+  color: var(--ink-low);
+}
+
+/* ── Nearest stations list ───────────────────────────────────────────────── */
+.cd-stations { }
+
+.cd-station-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.cd-station-row:last-child { border-bottom: none; }
+.cd-station-row:hover { background: var(--well-dim); }
+
+.cd-station-pm {
+  flex: none;
+  width: 36px;
+  text-align: right;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.cd-station-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cd-station-dist {
+  flex: none;
+  font-size: 11px;
+  color: var(--ink-low);
+}
+
+/* ── Seasonal context ────────────────────────────────────────────────────── */
+.cd-seasonal { background: var(--well-dim); }
+.cd-seasonal-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-mid);
+}
+
+/* ── Hotlines & resources ────────────────────────────────────────────────── */
+.cd-resources { }
+
+.cd-resources-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.cd-hotline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--th-deep);
+  color: var(--ink-inv);
+  text-decoration: none;
+  flex: 1;
+  min-width: 80px;
+}
+
+.cd-hotline:hover {
+  background: var(--ink);
+  color: var(--ink-inv);
+}
+
+.cd-hotline-num {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.cd-hotline-label {
+  font-size: 9px;
+  text-align: center;
+  opacity: 0.85;
+  margin-top: 1px;
+  line-height: 1.1;
+}
+
+.cd-links {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cd-link {
+  font-size: 11px;
+  color: var(--th-deep);
+  text-decoration: none;
+  padding: 2px 0;
+}
+.cd-link:hover { text-decoration: underline; }
+
+/* ── Recent alerts ───────────────────────────────────────────────────────── */
+.cd-alerts { }
+
+.cd-alert {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 11px;
+}
+.cd-alert:last-child { border-bottom: none; }
+
+.cd-alert-time {
+  flex: none;
+  font-family: var(--font-num);
+  font-size: 10px;
+  color: var(--ink-low);
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.cd-alert-msg {
+  flex: 1;
+  color: var(--ink-mid);
+}
+
+/* ── Mobile (compact view) ───────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  #city-dashboard {
+    max-height: 50vh;
+  }
+  .cd-name {
+    font-size: 22px;
+  }
+  .cd-metric-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  }
+}
+/* ── "Pick a city" landing grid (shown when All Thailand is selected) ──
+   Tiles mirror each city's accent SVG + blurb in the same visual
+   vocabulary as the city dashboard plate itself — so clicking a tile
+   is visually a continuation of "the same kind of card" the user
+   already saw. Geometry classes (geo-basin, geo-valley, etc.) get
+   their own background tint so the grid reads as a categorised
+   lattice, not a wall of identical boxes. */
+.cd-pick-head {
+  padding: 14px 12px 10px;
+  border-bottom: 1px solid var(--rule);
+  background: linear-gradient(180deg, var(--paper-warm) 0%, var(--well) 100%);
+}
+.cd-pick-eyebrow {
+  font-family: var(--font-num);
+  font-size: 10px; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--th-sage);
+  margin-bottom: 2px;
+}
+.cd-pick-hint {
+  font-size: 11.5px; color: var(--ink-mid); line-height: 1.4;
+}
+.cd-pick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--rule);
+  border-bottom: 2px solid var(--rule-strong);
+}
+.cd-pick-tile {
+  position: relative;
+  padding: 12px 10px 10px;
+  background: var(--well);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  border: 0;
+  overflow: hidden;
+  min-height: 110px;
+  display: flex; flex-direction: column;
+  transition: background 120ms;
+}
+.cd-pick-tile:hover { background: var(--paper-warm); }
+.cd-pick-tile:active { background: var(--th-deep); color: var(--ink-inv); }
+.cd-pick-accent {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 28px;
+  color: var(--th-sage);
+  opacity: 0.10;
+  pointer-events: none;
+}
+.cd-pick-name {
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: 800; line-height: 1.1;
+  letter-spacing: -0.01em; color: var(--ink);
+  margin-bottom: 3px; position: relative; z-index: 1;
+}
+.cd-pick-tile:active .cd-pick-name { color: var(--ink-inv); }
+.cd-pick-geo {
+  font-family: var(--font-num);
+  font-size: 9.5px; letter-spacing: 0.04em;
+  color: var(--ink-low);
+  margin-bottom: 5px; position: relative; z-index: 1;
+}
+.cd-pick-blurb {
+  font-size: 11px; line-height: 1.35; color: var(--ink-mid);
+  position: relative; z-index: 1;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cd-pick-tile:active .cd-pick-blurb { color: rgba(255,255,255,0.85); }
+
+/* Geography-class background tints — subtle, just enough to group the
+   grid by terrain type. Bg + accent both shift together. */
+.geo-basin   { background: var(--well); }
+.geo-basin   .cd-pick-accent { color: #2E8B57; }
+.geo-valley  { background: var(--well); }
+.geo-valley  .cd-pick-accent { color: #6B2D5C; }
+.geo-plain   .cd-pick-accent { color: #C8B560; }
+.geo-coastal .cd-pick-accent { color: #3A8A6E; }
+.geo-metro   .cd-pick-accent { color: #0E4A5E; opacity: 0.14; }
+.geo-border  .cd-pick-accent { color: #C8453A; }
+
+/* Dark-mode overrides — the city-picker grid should sit on the same
+   dark navy ground as the rest of the dashboard in night mode. */
+@media (prefers-color-scheme: dark) {
+  .cd-pick-tile { background: var(--paper); color: var(--ink); }
+  .cd-pick-tile:hover { background: var(--paper-warm); }
+  .cd-pick-accent { opacity: 0.18; }
+  .cd-pick-name { color: var(--ink); }
+  .cd-pick-blurb { color: var(--ink-mid); }
+}

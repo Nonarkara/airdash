@@ -5,7 +5,7 @@ import { CONFIG } from './config.js'
 import { WASHOUT_LABELS, reliefIfRainPct, washoutBand } from './washout.js'
 import { pm25Score } from './risk.js'
 import { classifyOni } from './sources/enso.js'
-import { FOCUS_AREAS } from './focus.js'
+import { FOCUS_AREAS, FOCUS_BY_ID } from './focus.js'
 import { SOURCES, EXPORT_INFO } from './sources-catalog.js'
 import { listExportDays, buildDailyExport, dailyToCsv, buildFullExport, fullToCsv } from './export.js'
 import { listWeeklyExports, getExportPath, buildWeeklyExport as buildWeeklyExportJob, startWeeklyBuild, getBuildState } from './weeklyExport.js'
@@ -504,6 +504,139 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, r
 
     // Focus areas — the "cities" manifest. One row = one focus button.
     'GET /api/focus': (req, res) => json(res, 200, { areas: FOCUS_AREAS }),
+
+    // ── City Dashboard detail endpoint ─────────────────────────────────
+    // Returns the full enriched manifest entry for one focus area PLUS all
+    // data scoped to that city: its risk entry, danger score, washout
+    // outlook, nearest AQ stations, CAMS/wind forecast, multi-metric
+    // pollutant panel, and city-specific alerts/insights. This is the single
+    // payload that powers the morphed city header plate + the city
+    // multi-metric strip — the frontend doesn't need to filter the national
+    // snapshot itself. One request, one city, everything it needs.
+    //
+    //   GET /api/focus/chiangmai  →  { area, risk, danger, washout,
+    //                                  stations, weather, forecast,
+    //                                  multi_metrics, insights, alerts }
+    'GET /api/focus/:id': (req, res, url) => {
+      const id = url.searchParams.get(':id')
+      const area = FOCUS_BY_ID.get(id)
+      if (!area) return json(res, 404, { error: 'focus area not found' })
+
+      const risk = riskEngine.get()
+      // Find this province in the national risk payload (null for "thailand").
+      const provinceRisk = area.province_th
+        ? risk.provinces.find((p) => p.province_th === area.province_th
+           || p.province_en === area.province_th) ?? null
+        : null
+
+      // Danger score for this province
+      let dangerEntry = null
+      if (danger && area.province_th) {
+        const dByCode = new Map(danger.get().map((d) => [d.province_code, d]))
+        if (provinceRisk) dangerEntry = dByCode.get(provinceRisk.province_code) ?? null
+      }
+
+      // Washout outlook for this province
+      let washoutEntry = null
+      if (area.province_th) {
+        const all = washout.all()
+        for (const [, w] of all) {
+          if (provinceRisk && String(w.province_code) === String(provinceRisk.province_code)) {
+            washoutEntry = w
+            break
+          }
+        }
+      }
+
+      // Nearest AQ stations to the city center (top 6, with latest PM2.5/AQI)
+      let stations = []
+      const lat = area.center[0], lng = area.center[1]
+      if (id !== 'thailand') {
+        const D = 1.5
+        const rows = db.all(
+          `SELECT s.station_key, s.name_th, s.name_en, s.province_th, s.province_en,
+                  s.lat, s.lng,
+                  pm.value AS pm25, pm.obs_time AS pm25_time, aq.value AS aqi
+           FROM stations s
+           LEFT JOIN latest pm ON pm.source = s.source AND pm.station_key = s.station_key AND pm.metric = 'pm25'
+           LEFT JOIN latest aq ON aq.source = s.source AND aq.station_key = s.station_key AND aq.metric = 'aqi'
+           WHERE s.source = 'air4thai'
+             AND s.lat BETWEEN ? AND ? AND s.lng BETWEEN ? AND ?`,
+          lat - D, lat + D, lng - D, lng + D)
+        const KM_LAT = 111, KM_LNG = 101
+        stations = rows
+          .map((r) => ({
+            ...r,
+            distance_km: Math.round(Math.sqrt(
+              ((r.lat - lat) * KM_LAT) ** 2 + ((r.lng - lng) * KM_LNG) ** 2) * 10) / 10,
+          }))
+          .sort((a, b) => a.distance_km - b.distance_km)
+          .slice(0, 6)
+      }
+
+      // Per-province weather + CAMS forecast (multi-metric strip source)
+      let weather = null
+      let aqForecast = null
+      if (provinceRisk) {
+        const code = String(provinceRisk.province_code)
+        const wxRows = db.all(
+          `SELECT metric, value FROM latest
+           WHERE source = 'openmeteo' AND station_key = ? AND metric IN
+             ('precip_fc_d0','precip_fc_48h','precip_prob_24h','precip_prob_48h','wind_fc_kmh','temp_c','rh_pct')`, code)
+        weather = {}
+        for (const r of wxRows) weather[r.metric] = r.value
+        const aqRows = db.all(
+          `SELECT metric, value FROM latest
+           WHERE source = 'openmeteo_aq' AND station_key = ? AND metric IN
+             ('pm25_fc_24h','pm25_fc_48h','pm25_fc_72h','pm10_fc_24h','dust_fc_24h')`, code)
+        aqForecast = {}
+        for (const r of aqRows) aqForecast[r.metric] = r.value
+      }
+
+      // Multi-metric pollutant panel: worst reading per metric across this
+      // province's Air4Thai stations. Gives the operator every pollutant in
+      // one glance — PM2.5, PM10, O3, NO2, SO2, CO.
+      let multiMetrics = null
+      if (provinceRisk) {
+        const code = String(provinceRisk.province_code)
+        const mRows = db.all(
+          `SELECT l.metric, MAX(l.value) AS value
+           FROM latest l JOIN stations s
+             ON s.source = l.source AND s.station_key = l.station_key
+           WHERE l.source = 'air4thai' AND s.province_code = ?
+             AND l.metric IN ('pm25','pm10','o3','no2','so2','co','aqi')
+           GROUP BY l.metric`, code)
+        multiMetrics = {}
+        for (const r of mRows) multiMetrics[r.metric] = r.value
+      }
+
+      // Recent alerts for this province (last 5). The alerts table stores
+      // province_th, not province_code, so we match on the name.
+      let alerts = []
+      if (provinceRisk) {
+        alerts = db.all(
+          `SELECT * FROM alerts WHERE province_th = ? ORDER BY id DESC LIMIT 5`,
+          provinceRisk.province_th ?? '')
+      }
+
+      json(res, 200, {
+        area,
+        fetched_at: new Date().toISOString(),
+        risk: provinceRisk,
+        danger: dangerEntry,
+        washout: washoutEntry,
+        stations,
+        weather,
+        forecast: aqForecast,
+        multi_metrics: multiMetrics,
+        alerts,
+        national_context: {
+          dust_load_pct: risk.national?.dustLoadPct ?? null,
+          national_band: risk.national?.band ?? null,
+          worst_province: risk.national?.worstPm25 ?? null,
+        },
+      })
+    },
 
     // Data-source catalog for integrators + JAXA / remote-sensing reference.
     'GET /api/sources': (req, res) => json(res, 200, {

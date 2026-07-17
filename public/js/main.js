@@ -18,6 +18,7 @@ import { initChat } from './panels/chat.js?v=2.0.0-final'
 import { initCitizen } from './panels/citizen.js?v=2.0.0-final'
 import { initWaterways } from './panels/waterways.js?v=2.0.0-final'
 import { initFocus } from './panels/focus.js?v=2.0.0-final'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-final'
 import { initCompare } from './panels/compare.js?v=2.0.0-final'
 import { initSplit } from './panels/split.js?v=2.0.0-final'
 import { initLibrary } from './panels/library.js?v=2.0.0-final'
@@ -321,6 +322,7 @@ async function boot() {
   initCitizen()
   initWaterways()
   initFocus(map)
+  initCityDashboard()
   initCompare()
   initSplit(map)
   initLibrary()

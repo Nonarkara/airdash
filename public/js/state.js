@@ -6,6 +6,8 @@ export const store = {
   snapshot: null,      // last /api/snapshot payload
   sensorHealth: null,  // last /api/sensors/health payload
   connected: false,    // SSE liveness
+  activeArea: null,    // current focus area (set by focus.js on selection);
+                        // consumed by the top-bar danger chip + city dashboard.
 }
 
 export function on(topic, fn) {

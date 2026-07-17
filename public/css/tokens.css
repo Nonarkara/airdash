@@ -184,3 +184,101 @@ a { color: var(--ink); }
   }
   #ticker .track .crawl { padding-left: 12px; transform: none !important; }
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+   DARK MODE — "instrument panel at night" for the EOC wall TV / dark-room
+   operator. Activated automatically via prefers-color-scheme. Same teal/sage
+   identity inverted: ink becomes light teal, paper becomes deep navy-black,
+   AQI band colors are brightened slightly to stay readable on the dark ground.
+   The :root tokens are overridden inside the media query so every panel that
+   uses var(--*) inherits the night palette without any per-component work.
+   ──────────────────────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:       #0D1B24;   /* deep navy-black — the night ground */
+    --paper-warm:  #122634;   /* the topmost band, slightly lighter */
+    --well:        #16293A;   /* panel wells — dark teal-navy */
+    --well-dim:    #1B3043;   /* recessed strips */
+    --rule:        #2A4055;   /* hairlines */
+    --rule-strong: #3A8A6E;   /* sage for heavy rules / input borders */
+
+    /* Ink — light teal/sage for the dark ground */
+    --ink:      #B8D4E0;      /* primary text — light teal-white */
+    --ink-mid:  #8DA8B8;      /* secondary text */
+    --ink-low:  #6A8294;      /* tertiary / labels */
+    --ink-inv:  #0D1B24;      /* inverse — dark text on light fills */
+
+    /* Accents stay the same hue but are brightened for dark contrast */
+    --th-red:  #E55A4E;       /* brighter brick red — reads on dark */
+    --th-sage: #4CAF85;       /* brighter sage */
+    --th-deep: #3A8A6E;       /* sage for primary chrome */
+
+    /* Legacy aliases */
+    --th-navy: #3A8A6E;
+    --th-amber: #E5A04A;
+
+    /* AQI bands — brightened ~15% for dark-ground legibility */
+    --aqi-good:      #3FA868;
+    --aqi-moderate:  #D4C170;
+    --aqi-watch:     #E5A04A;
+    --aqi-unhealthy: #DE554A;
+    --aqi-hazardous: #8B3A6E;
+
+    --band-normal:   var(--aqi-good);
+    --band-watch:    var(--aqi-watch);
+    --band-elevated: var(--aqi-unhealthy);
+    --band-high:     var(--aqi-hazardous);
+
+    --rain: #4A9DB5;   /* brighter teal for rainfall/washout */
+    --aqi:  #4A9DB5;
+  }
+
+  /* The AQI stripe gradient and map tiles stay — they're images. But we
+     soften the page background transition for the night panel. */
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  /* Buttons in dark mode: the global hover uses --th-deep which is now sage.
+     Invert the text to dark so sage hover stays readable. */
+  button:hover { color: var(--paper); }
+  button.active { color: var(--paper); }
+
+  /* Inputs — dark well with light ink, sage focus ring */
+  input, textarea {
+    background: var(--well);
+    color: var(--ink);
+    border-color: var(--rule);
+  }
+  input:focus, textarea:focus {
+    outline: 2px solid var(--th-sage);
+    outline-offset: -1px;
+  }
+
+  /* Scrollbar in dark */
+  ::-webkit-scrollbar-thumb { background: var(--rule); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-low); }
+
+  /* Leaflet controls (z-index overlay) — match the dark palette */
+  .leaflet-control-zoom a {
+    background: var(--well) !important;
+    color: var(--ink) !important;
+    border-color: var(--rule) !important;
+  }
+  .leaflet-control-zoom a:hover {
+    background: var(--th-deep) !important;
+    color: var(--paper) !important;
+  }
+  .leaflet-control-attribution {
+    background: rgba(13, 27, 36, 0.85) !important;
+    color: var(--ink-low) !important;
+  }
+  .leaflet-control-attribution a { color: var(--ink-mid) !important; }
+
+  /* Leaflet popups */
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+    background: var(--well) !important;
+    color: var(--ink) !important;
+  }
+}
