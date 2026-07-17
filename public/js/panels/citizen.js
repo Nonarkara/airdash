@@ -9,11 +9,11 @@
 // Citizen mode also pins the user's "My Province" — saved to localStorage
 // so the dashboard defaults to the user's location on every visit. The
 // "เปลี่ยนจังหวัด" button opens a searchable province picker.
-import { on, store, emit } from '../state.js?v=2.0.0-i18n1'
-import { tr, BAND } from '../i18n.js?v=2.0.0-i18n1'
-import { el, fmtNum, ago } from '../fmt.js?v=2.0.0-i18n1'
-import { getJson } from '../cache.js?v=2.0.0-i18n1'
-import { flyToProvince } from '../map.js?v=2.0.0-i18n1'
+import { on, store, emit } from '../state.js?v=2.0.0-final'
+import { tr, BAND } from '../i18n.js?v=2.0.0-final'
+import { el, fmtNum, ago } from '../fmt.js?v=2.0.0-final'
+import { getJson } from '../cache.js?v=2.0.0-final'
+import { flyToProvince } from '../map.js?v=2.0.0-final'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -70,7 +70,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.0.0-i18n1').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.0.0-final').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }

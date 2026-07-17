@@ -1,30 +1,31 @@
+
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.0.0-i18n1'
-import { paintChrome } from './i18n.js?v=2.0.0-i18n1'
-import { startTap } from './sse.js?v=2.0.0-i18n1'
-import { initMap, invalidateMap } from './map.js?v=2.0.0-i18n1'
-import { initHeader } from './panels/header.js?v=2.0.0-i18n1'
-import { initRanking } from './panels/ranking.js?v=2.0.0-i18n1'
-import { initForecast } from './panels/forecast.js?v=2.0.0-i18n1'
-import { initWhatIf } from './panels/whatif.js?v=2.0.0-i18n1'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.0.0-i18n1'
-import { initTap } from './panels/tap.js?v=2.0.0-i18n1'
-import { initSources } from './panels/sources.js?v=2.0.0-i18n1'
-import { initHistory } from './panels/history.js?v=2.0.0-i18n1'
-import { initInsights } from './panels/insights.js?v=2.0.0-i18n1'
-import { initAnalytics } from './panels/analytics.js?v=2.0.0-i18n1'
-import { initFeeds } from './panels/feeds.js?v=2.0.0-i18n1'
-import { initChat } from './panels/chat.js?v=2.0.0-i18n1'
-import { initCitizen } from './panels/citizen.js?v=2.0.0-i18n1'
-import { initWaterways } from './panels/waterways.js?v=2.0.0-i18n1'
-import { initFocus } from './panels/focus.js?v=2.0.0-i18n1'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-i18n1'
-import { initCompare } from './panels/compare.js?v=2.0.0-i18n1'
-import { initSplit } from './panels/split.js?v=2.0.0-i18n1'
-import { initLibrary } from './panels/library.js?v=2.0.0-i18n1'
-import { initResearch } from './panels/research.js?v=2.0.0-i18n1'
-import { initSearch } from './panels/search.js?v=2.0.0-i18n1'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.0.0-i18n1'
+import { on, emit, store, setLang } from './state.js?v=2.0.0-final'
+import { paintChrome } from './i18n.js?v=2.0.0-final'
+import { startTap } from './sse.js?v=2.0.0-final'
+import { initMap, invalidateMap } from './map.js?v=2.0.0-final'
+import { initHeader } from './panels/header.js?v=2.0.0-final'
+import { initRanking } from './panels/ranking.js?v=2.0.0-final'
+import { initForecast } from './panels/forecast.js?v=2.0.0-final'
+import { initWhatIf } from './panels/whatif.js?v=2.0.0-final'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.0.0-final'
+import { initTap } from './panels/tap.js?v=2.0.0-final'
+import { initSources } from './panels/sources.js?v=2.0.0-final'
+import { initHistory } from './panels/history.js?v=2.0.0-final'
+import { initInsights } from './panels/insights.js?v=2.0.0-final'
+import { initAnalytics } from './panels/analytics.js?v=2.0.0-final'
+import { initFeeds } from './panels/feeds.js?v=2.0.0-final'
+import { initChat } from './panels/chat.js?v=2.0.0-final'
+import { initCitizen } from './panels/citizen.js?v=2.0.0-final'
+import { initWaterways } from './panels/waterways.js?v=2.0.0-final'
+import { initFocus } from './panels/focus.js?v=2.0.0-final'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-final'
+import { initCompare } from './panels/compare.js?v=2.0.0-final'
+import { initSplit } from './panels/split.js?v=2.0.0-final'
+import { initLibrary } from './panels/library.js?v=2.0.0-final'
+import { initResearch } from './panels/research.js?v=2.0.0-final'
+import { initSearch } from './panels/search.js?v=2.0.0-final'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.0.0-final'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -335,7 +336,6 @@ async function boot() {
   safeInit('citizen', initCitizen)
   safeInit('waterways', initWaterways)
   // initFocus is async; if it fails the rest of the boot must still proceed.
-  try { await initFocus(map) } catch (e) { console.error('initFocus failed:', e) }
   safeInit('cityDashboard', initCityDashboard)
   safeInit('compare', initCompare)
   safeInit('split', () => initSplit(map))

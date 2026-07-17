@@ -3,11 +3,11 @@
 // rain (washout) chart · one regional donut. Same shape as the GISTDA
 // สรุปสถานการณ์ panel but pulled from our richer pipeline (real-time PM2.5,
 // rain, forecast, washout) and bilingual.
-import { on, emit, store } from '../state.js?v=2.0.0-i18n1'
-import { tr } from '../i18n.js?v=2.0.0-i18n1'
-import { fmtNum } from '../fmt.js?v=2.0.0-i18n1'
-import { getJson } from '../cache.js?v=2.0.0-i18n1'
-import { drawBarChart, drawDonut } from '../chart.js?v=2.0.0-i18n1'
+import { on, emit, store } from '../state.js?v=2.0.0-final'
+import { tr } from '../i18n.js?v=2.0.0-final'
+import { fmtNum } from '../fmt.js?v=2.0.0-final'
+import { getJson } from '../cache.js?v=2.0.0-final'
+import { drawBarChart, drawDonut } from '../chart.js?v=2.0.0-final'
 
 const BAND_LABEL_TH = {
   normal: 'ปกติ', watch: 'เฝ้าระวัง', elevated: 'เสี่ยงสูง', high: 'วิกฤต',
@@ -226,8 +226,7 @@ function severeRow(snap, L) {
       },
         el('span', { class: 'ana-severe-ug' }, `${fmtNum(s.pm25, 0)} µg`),
         el('span', { class: 'ana-severe-name' },
-          `${L(s.name_th, s.name_en ?? s.name_th)} · ${L(s.province_th ?? '', s.province_en ?? s.province_th ?? '')}`)),
-    chip.addEventListener('click', () => emit('station-select', { source: 'air4thai', station: s }))
+          `${L(s.name_th, s.name_en ?? s.name_th)} · ${L(s.province_th ?? '', s.province_en ?? s.province_th ?? '')}`))
       chip.addEventListener('click', () => emit('station-select', { source: 'air4thai', station: s }))
       return chip
     }))
