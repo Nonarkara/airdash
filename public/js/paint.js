@@ -1,9 +1,9 @@
 // Pure data-paint functions — accept a target layers object + snapshot slice.
 // Imported by map.js so the map renders risk/air/rain widgets straight from
 // the /api/snapshot stream with its own layer groups. No module-level state.
-import { emit, store } from './state.js?v=2.0.0-final'
-import { tr, pick, BAND, LEVEL_NAME, pm25Level } from './i18n.js?v=2.0.0-final'
-import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.0.0-final'
+import { emit, store } from './state.js?v=2.0.0-heatmap1'
+import { tr, pick, BAND, LEVEL_NAME, pm25Level } from './i18n.js?v=2.0.0-heatmap1'
+import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.0.0-heatmap1'
 
 const BAND_COLOR = { normal: '#00933C', watch: '#F0B400', elevated: '#E86A10', high: '#A51931' }
 
@@ -19,7 +19,7 @@ export function pm25Color(ug) {
   return lv === null ? PM_NONE : PM_COLOR[lv]
 }
 
-function popupHtml(title_th, title_en, rows) {
+export function popupHtml(title_th, title_en, rows) {
   // title/sub and row values ultimately trace back to government API station
   // names — escape before innerHTML so a malformed/compromised upstream feed
   // can't inject markup into the page.

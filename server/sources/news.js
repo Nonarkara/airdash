@@ -2,6 +2,7 @@
 // feed filtered to dust keywords. Tiny regex RSS parser — feeds are simple RSS 2.0.
 import { CONFIG } from '../config.js'
 import { fetchText, str } from '../util.js'
+import { matchProvinceInText } from '../provinces.js'
 
 const FEEDS = [
   {
@@ -14,6 +15,19 @@ const FEEDS = [
 ]
 
 const AIR_KEYWORDS = ['pm2.5', 'pm 2.5', 'pm10', 'ฝุ่น', 'หมอกควัน', 'ค่าฝุ่น', 'คุณภาพอากาศ', 'เผา', 'ไฟป่า', 'จุดความร้อน', 'haze', 'air quality', 'smog']
+
+// Subset of AIR_KEYWORDS that specifically names an open-burning/fire source
+// (as opposed to just discussing the resulting dust) — these get the red
+// "fire" map-marker treatment. Deliberately NOT the bare verb "เผา" ("to
+// burn") — it's Thai's everyday word for burning anything (cremation, crime
+// reporting, cooking) and matches far too much unrelated news; only the
+// compound forms below are specific to open burning / wildfire. Checked
+// against the raw (non-lowercased) title for the Thai terms since Thai has
+// no case; the English ones are checked against the lowercased string.
+const FIRE_KEYWORDS = [
+  'ไฟป่า', 'ไหม้ป่า', 'จุดความร้อน', 'เผาป่า', 'เผาไร่', 'เผาตอซัง', 'เผาในที่โล่ง',
+  'wildfire', 'hotspot', 'open burning', 'agricultural burning',
+]
 
 function decodeEntities(s) {
   return s
@@ -70,6 +84,12 @@ export default {
         // href verbatim. Only http(s) links are stored.
         const rawLink = str(item.link)
         const safeLink = rawLink && /^https?:\/\//i.test(rawLink) ? rawLink : null
+        // Best-effort geotag (see matchProvinceInText) so a fire/pollution
+        // headline can be pinned on the map next to the live PM2.5 reading
+        // for that same place — most Thai headlines lead with the province.
+        const titleLower = item.title.toLowerCase()
+        const province = matchProvinceInText(item.title)
+        const isFire = FIRE_KEYWORDS.some((k) => titleLower.includes(k))
         const isNew = db.insertNews({
           feed: feed.id,
           guid: item.guid,
@@ -77,6 +97,12 @@ export default {
           link: safeLink,
           published_at: published && !Number.isNaN(+published) ? published.toISOString() : null,
           fetched_at,
+          province_code: province?.province_code ?? null,
+          province_th: province?.province_th ?? null,
+          province_en: province?.province_en ?? null,
+          lat: province?.lat ?? null,
+          lng: province?.lng ?? null,
+          is_fire: isFire,
         })
         if (isNew) { added += 1; fresh.push(item.title) }
       }

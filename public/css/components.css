@@ -870,7 +870,12 @@ body.mode-citizen .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .news-row { padding: 8px 12px; border-bottom: 1px solid var(--rule); background: var(--well); font-size: 13.5px; }
 .news-row a { text-decoration: none; }
 .news-row a:hover { text-decoration: underline; }
-.news-row .when { font-family: var(--font-num); font-size: 10px; color: var(--ink-low); }
+.news-row .when { font-family: var(--font-num); font-size: 10px; color: var(--ink-low); display: flex; align-items: center; gap: 6px; }
+.news-prov {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 600;
+  color: var(--th-red); border: 1px solid var(--th-red);
+  padding: 0 5px; border-radius: 8px;
+}
 
 /* ── Chat ────────────────────────────────────────────────────────────────── */
 #chat-log { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
@@ -1045,6 +1050,32 @@ body.mode-citizen .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .stn-badge.lv4 { background: var(--lv4); }
 .stn-badge.lv5 { background: var(--lv5); animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 50% { transform: scale(1.18); } }
+
+/* News/fire map pins — always red (categorical "there's a story here"
+   signal), with a small PM2.5-coloured badge riding the corner showing what
+   the air is actually doing at that place right now. */
+.newsfire-pin {
+  position: relative;
+  width: 26px; height: 26px; margin: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1;
+  background: var(--th-red); color: #fff;
+  border: 1.5px solid #fff; border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,.35);
+}
+.newsfire-pin.is-fire { animation: pulse 2.4s ease-in-out infinite; }
+.newsfire-pm {
+  position: absolute; bottom: -5px; right: -8px;
+  min-width: 18px; padding: 0 3px; height: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-num); font-size: 9px; font-weight: 700; color: #fff;
+  border: 1px solid #fff; border-radius: 7px;
+}
+.leaflet-popup-content .newsfire-link {
+  display: block; margin-top: 6px; font-size: 11.5px;
+  color: var(--th-navy); text-decoration: none; font-weight: 600;
+}
+.leaflet-popup-content .newsfire-link:hover { text-decoration: underline; }
 
 .leaflet-popup-content-wrapper { border: 1px solid var(--rule-strong); }
 .leaflet-popup-content { font-family: var(--font-ui); font-size: 13px; margin: 10px 12px; }

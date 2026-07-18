@@ -1,8 +1,8 @@
 // Dust alerts + haze news lists (ข่าวฝุ่น/หมอกควัน — right rail tabs),
 // refreshed from snapshot and tap events.
-import { on, store } from '../state.js?v=2.0.0-final'
-import { tr } from '../i18n.js?v=2.0.0-final'
-import { el, ago } from '../fmt.js?v=2.0.0-final'
+import { on, store } from '../state.js?v=2.0.0-heatmap1'
+import { tr } from '../i18n.js?v=2.0.0-heatmap1'
+import { el, ago } from '../fmt.js?v=2.0.0-heatmap1'
 
 export function initFeeds() {
   on('snapshot', render)
@@ -51,10 +51,16 @@ function render(snap) {
     // Defence-in-depth: only http(s) links become anchors (the server now
     // also scheme-validates at ingest, but old rows may predate that).
     const safeLink = n.link && /^https?:\/\//i.test(n.link) ? n.link : null
+    // Geotagged items (province named in the headline) get the same 🔥/⚠
+    // treatment as their map pin, so the panel and the map tell one story.
+    const provChip = n.province_code
+      ? el('span', { class: `news-prov${n.is_fire ? ' is-fire' : ''}` },
+          n.is_fire ? '🔥' : '⚠', ' ', tr(n.province_th, n.province_en ?? n.province_th))
+      : null
     return el('div', { class: 'news-row' },
       safeLink
         ? el('a', { href: safeLink, target: '_blank', rel: 'noopener' }, title)
         : el('span', {}, title),
-      el('div', { class: 'when' }, ago(n.published_at ?? n.fetched_at)))
+      el('div', { class: 'when' }, provChip, ago(n.published_at ?? n.fetched_at)))
   }))
 }

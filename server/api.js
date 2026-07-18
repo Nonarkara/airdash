@@ -235,7 +235,12 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
       const aqForecast = pivotLatest(db, 'openmeteo_aq',
         ['pm25_fc_24h', 'pm25_fc_48h', 'pm25_fc_72h', 'pm10_fc_24h', 'dust_fc_24h'])
       const alerts = db.all('SELECT * FROM alerts ORDER BY id DESC LIMIT 20')
-      const news = db.all('SELECT feed, title, link, published_at FROM news_items ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT 15')
+      // LIMIT 40 (not 15): the map's news/fire layer only plots the subset
+      // that got geotagged (province named in the headline), so it needs a
+      // wider recent window to have enough pinnable items to show.
+      const news = db.all(
+        `SELECT feed, title, link, published_at, province_code, province_th, province_en, lat, lng, is_fire
+         FROM news_items ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT 40`)
       const built = prebuild({
         now: new Date().toISOString(),
         risk, air, rain, weather, aqForecast,
@@ -819,7 +824,9 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
       const limit = clamp(url.searchParams.get('limit'), 1, 100, 30)
       json(res, 200, {
         news: db.all(
-          'SELECT feed, title, link, published_at, fetched_at FROM news_items ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT ?',
+          `SELECT feed, title, link, published_at, fetched_at,
+                  province_code, province_th, province_en, lat, lng, is_fire
+           FROM news_items ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT ?`,
           limit),
       })
     },

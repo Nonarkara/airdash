@@ -1,18 +1,21 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.0.0-final'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.0.0-final'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.0.0-final'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.0.0-final'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles } from './layers/satellite.js?v=2.0.0-final'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.0.0-final'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.0.0-final'
+import { on, store } from './state.js?v=2.0.0-heatmap1'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.0.0-heatmap1'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.0.0-heatmap1'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.0.0-heatmap1'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles } from './layers/satellite.js?v=2.0.0-heatmap1'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.0.0-heatmap1'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.0.0-heatmap1'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.0.0-heatmap1'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.0.0-heatmap1'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
 const layers = {}
 let satLayers = null
 let osmBuildingsApi = null
+let newsFireApi = null
 let basemaps = null
 const BASEMAP_KEY = 'ad_basemap'
 let currentBasemap = (() => {
@@ -40,6 +43,9 @@ export function initMap() {
   layers.risk = L.layerGroup([], { pane: 'data' })
   layers.air = L.layerGroup([], { pane: 'data' })
   layers.rain = L.layerGroup([], { pane: 'data' })
+  layers.heatmap = createPm25HeatmapLayer()
+  newsFireApi = createNewsFireLayer()
+  layers.newsfire = newsFireApi.group
   osmBuildingsApi = createOsmBuildingsLayer({ getMap: () => map, getRisk: () => store.snapshot?.risk })
   layers.osmbuild = osmBuildingsApi.group
   const boundariesApi = createProvinceBoundariesLayer()
@@ -69,6 +75,8 @@ function renderAll(snap) {
   paintRisk(layers, snap.risk)
   renderAir(snap.air)
   paintRain(layers, snap.rain)
+  layers.heatmap?.setData(snap.air)
+  newsFireApi?.setData(snap.news, snap.risk?.provinces)
 }
 
 let airStations = null
@@ -235,7 +243,12 @@ function addLegend() {
       <div class="lrow"><span class="lsw round" style="background:#1565C0;opacity:.5"></span>${tr('GPM IMERG ฝนดาวเทียม', 'GPM IMERG satellite rain')}</div>
       <div class="lrow"><span class="lsw" style="background:#5C6BC0;opacity:.6"></span>${tr('Himawari-9 IR เมฆ', 'Himawari-9 IR clouds')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
-      <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>`
+      <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>
+      <div class="eyebrow" style="margin-top:6px">${tr('ฮีทแมป PM2.5', 'PM2.5 HEAT MAP')}</div>
+      <div class="lrow">${tr('สีของแต่ละจุด = ค่า PM2.5 จริงที่สถานีนั้น ไม่ใช่ความหนาแน่นจุด', 'blob colour = the actual PM2.5 at that station, not point density')}</div>
+      <div class="eyebrow" style="margin-top:6px">${tr('ข่าวไฟป่า/มลพิษ', 'FIRE & POLLUTION NEWS')}</div>
+      <div class="lrow"><span class="lsw round" style="background:#A51931"></span>🔥 ${tr('ข่าวไฟป่า/การเผา', 'wildfire / open-burning news')}</div>
+      <div class="lrow"><span class="lsw round" style="background:#A51931"></span>⚠ ${tr('ข่าวมลพิษอื่น + ค่าฝุ่นปัจจุบันของพื้นที่', 'other pollution news + current PM2.5 there')}</div>`
     head.onclick = () => {
       body.hidden = !body.hidden
       head.setAttribute('aria-expanded', body.hidden ? 'false' : 'true')

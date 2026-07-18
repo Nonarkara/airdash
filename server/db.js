@@ -107,6 +107,13 @@ CREATE TABLE IF NOT EXISTS alerts (
 );
 CREATE INDEX IF NOT EXISTS idx_alerts_ts ON alerts(ts DESC);
 
+-- province_code/th/en + lat/lng: best-effort geotag (province-name substring
+-- match against the headline, see server/provinces.js matchProvinceInText)
+-- so fire/pollution news can be pinned on the map next to the AQ reading for
+-- that same place. is_fire flags headlines naming open burning / wildfire /
+-- hotspots specifically, for the red map marker treatment. All nullable —
+-- most headlines don't name a single province and that's fine, they just
+-- don't get a map pin.
 CREATE TABLE IF NOT EXISTS news_items (
   id           INTEGER PRIMARY KEY,
   feed         TEXT NOT NULL,
@@ -114,8 +121,18 @@ CREATE TABLE IF NOT EXISTS news_items (
   title        TEXT,
   link         TEXT,
   published_at TEXT,
-  fetched_at   TEXT
+  fetched_at   TEXT,
+  province_code TEXT,
+  province_th   TEXT,
+  province_en   TEXT,
+  lat           REAL,
+  lng           REAL,
+  is_fire       INTEGER DEFAULT 0
 );
+-- idx_news_province is created in migrate() below, not here: on a pre-
+-- existing DB this CREATE TABLE is a no-op (the table already exists
+-- without these columns), so an index on province_code run at this point,
+-- before migrate() adds the column, fails with "no such column".
 
 CREATE TABLE IF NOT EXISTS rag_docs (
   id         INTEGER PRIMARY KEY,
@@ -186,6 +203,25 @@ CREATE INDEX IF NOT EXISTS idx_chat_faq_lang ON chat_faq(lang, approved, served_
 
 `
 
+// Additive column migrations for tables that predate a field — CREATE TABLE
+// IF NOT EXISTS never touches a table that already exists, so a new column
+// needs an explicit, idempotent ALTER TABLE guarded by what's already there.
+function migrate(db) {
+  const news_items = db.prepare("PRAGMA table_info(news_items)").all().map((c) => c.name)
+  const addCol = (table, name, decl) => {
+    if (!news_items.includes(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${decl}`)
+  }
+  addCol('news_items', 'province_code', 'TEXT')
+  addCol('news_items', 'province_th', 'TEXT')
+  addCol('news_items', 'province_en', 'TEXT')
+  addCol('news_items', 'lat', 'REAL')
+  addCol('news_items', 'lng', 'REAL')
+  addCol('news_items', 'is_fire', 'INTEGER DEFAULT 0')
+  // Safe to run every boot regardless of whether the columns above were
+  // just added or already existed — the columns are guaranteed present now.
+  db.exec('CREATE INDEX IF NOT EXISTS idx_news_province ON news_items(province_code, fetched_at DESC)')
+}
+
 export function openDb(path = CONFIG.dbPath) {
   mkdirSync(dirname(path), { recursive: true })
   const db = new DatabaseSync(path)
@@ -193,6 +229,7 @@ export function openDb(path = CONFIG.dbPath) {
   db.exec('PRAGMA synchronous=NORMAL')
   db.exec('PRAGMA busy_timeout=5000')
   db.exec(SCHEMA)
+  migrate(db)
   return wrap(db)
 }
 
@@ -269,9 +306,13 @@ function wrap(db) {
 
     /** Returns true when the item is new. */
     insertNews(n) {
-      const res = prep(`INSERT OR IGNORE INTO news_items (feed, guid, title, link, published_at, fetched_at)
-                        VALUES (?,?,?,?,?,?)`)
-        .run(n.feed, n.guid, n.title, n.link, n.published_at, n.fetched_at)
+      const res = prep(`INSERT OR IGNORE INTO news_items
+                          (feed, guid, title, link, published_at, fetched_at,
+                           province_code, province_th, province_en, lat, lng, is_fire)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(n.feed, n.guid, n.title, n.link, n.published_at, n.fetched_at,
+             n.province_code ?? null, n.province_th ?? null, n.province_en ?? null,
+             n.lat ?? null, n.lng ?? null, n.is_fire ? 1 : 0)
       return res.changes > 0
     },
 

@@ -57,3 +57,36 @@ export function provinceByName(nameTh, nameEn) {
   const idx = nameIndex()
   return idx.get(normTh(nameTh)) ?? idx.get(normEn(nameEn)) ?? null
 }
+
+let _byLengthDesc = null
+
+/**
+ * Best-effort geotag: does this free text (a news headline) NAME a province?
+ * Thai news headlines almost always lead with the place ("เชียงใหม่ฝุ่นพุ่ง...",
+ * "ไฟป่าที่แม่ฮ่องสอน..."), so a substring scan against the province registry
+ * catches most of them without any NLP. Longest name wins first so a short
+ * name can't shadow a longer one that also matches (e.g. a name that happens
+ * to be a prefix of another). Names under 4 characters are excluded — Thai
+ * has no word-boundary spaces, so short names (3-char "ตาก" etc.) risk
+ * matching inside an unrelated longer word; this is a hint for a map pin,
+ * not an authoritative geocode, so a modest false-negative rate here (skip
+ * a few short-named provinces) is the safer trade than false positives.
+ * Returns null when nothing matches — most headlines don't name one province.
+ */
+export function matchProvinceInText(text) {
+  if (!text) return null
+  if (!_byLengthDesc) {
+    const seen = new Set()
+    const rows = []
+    for (const p of allProvinces()) {
+      if (p.province_th.length >= 4 && !seen.has(p.province_th)) { seen.add(p.province_th); rows.push({ name: p.province_th, p }) }
+    }
+    // Bangkok's common shorthand isn't the registry's full official name.
+    const bkk = allProvinces().find((p) => p.province_code === '10')
+    if (bkk) rows.push({ name: 'กรุงเทพฯ', p: bkk })
+    rows.sort((a, b) => b.name.length - a.name.length)
+    _byLengthDesc = rows
+  }
+  const hit = _byLengthDesc.find((r) => text.includes(r.name))
+  return hit ? hit.p : null
+}
