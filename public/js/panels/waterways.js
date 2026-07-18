@@ -8,6 +8,7 @@ import { getJson } from '../cache.js?v=2.0.0-final'
 import { on } from '../state.js?v=2.0.0-final'
 import { tr } from '../i18n.js?v=2.0.0-final'
 import { fmtNum, el } from '../fmt.js?v=2.0.0-final'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.0.0-final'
 
 const WASHOUT_COLOR = { strong: '#1D66A8', moderate: '#3E7CB1', light: '#5BA8C7', none: '#B7AFA3', unknown: '#B7AFA3' }
 
@@ -64,11 +65,15 @@ async function render() {
             p.helps_dust
               ? el('span', { class: 'hot', style: 'margin-left:6px;font-size:10px' },
                   `🌧 −${fmtNum(p.relief_if_rain_pct, 0)}%`)
-              : ''),
+              : '',
+            worseBeforeBetterChip(p)),
           el('div', { class: 'q' },
             tr('ฝุ่น ', 'PM2.5 '), el('b', {}, fmtNum(p.pm25, 0)), ' µg/m³',
             ` · ${tr('โอกาสฝน 24ชม.', 'rain 24h')} ${fmtNum(p.prob24 ?? 0, 0)}%`,
             ` · ${tr('คาด', 'fc')} ${fmtNum(p.rain_fc_24 ?? 0, 0)} ${tr('มม.', 'mm')}`),
+          // Relief timeline — which forecast day first brings washout-grade
+          // rain ("ฝนช่วยล้างฝุ่นพรุ่งนี้ · washout rain tomorrow, 8mm @98%").
+          reliefEtaLine(p),
           el('div', { class: 'q' }, tr(lbl.th, lbl.en))),
         el('div', { class: 'cascade-lag' },
           p.projected_pm25 !== null && (p.relief_if_rain_pct ?? 0) > 0

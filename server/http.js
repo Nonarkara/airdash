@@ -30,7 +30,10 @@ export const SECURITY_HEADERS = {
   'x-frame-options': 'SAMEORIGIN',
   // The dashboard never needs any of these browser capabilities — deny them
   // outright rather than leaving the default (allowed for same-origin).
-  'permissions-policy': 'geolocation=(), camera=(), microphone=(), payment=(), usb=()',
+  // geolocation must stay allowed for same-origin: citizen mode's "near
+  // me" feature calls getCurrentPosition (citizen.js) and the app is
+  // served from this origin on LAN/tunnel use.
+  'permissions-policy': 'geolocation=(self), camera=(), microphone=(), payment=(), usb=()',
 }
 
 // Serialize + gzip an object ONCE into a reusable pair, for responses that

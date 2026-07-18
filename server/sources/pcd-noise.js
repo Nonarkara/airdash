@@ -121,6 +121,10 @@ export default {
         const prev = series.length >= 2 ? series[series.length - 2] : null
         const leq = num(latest[1])
         if (leq === null) continue
+        // Dead upstream stations keep returning the last entry of an old
+        // month series; skip anything whose latest 24h window is older
+        // than ~48h so stale data never upserts as "current".
+        if (Date.now() - latest[0] > 48 * 3600_000) continue
         // We don't have station-level coords from PCD; use the province
         // centroid so the station sits on the map where readers expect.
         const prov = provinceByName(s.province_th, s.province_en ?? null)
@@ -136,8 +140,11 @@ export default {
           meta_json: JSON.stringify({ upstream: 'noisemonitor.net', pcd_station_id: s.id }),
         }
         // Use the timestamp from the upstream data (start of the 24h
-        // window) so the observation time is honest.
-        const obs_time = new Date(latest[0]).toISOString().slice(0, 16)
+        // window) so the observation time is honest. Convert to the
+        // system-wide Bangkok-local YYYY-MM-DDTHH:MM convention — raw
+        // toISOString() is UTC, 7h behind every other source, which
+        // starved danger.js freshness cutoffs.
+        const obs_time = new Date(latest[0] + 7 * 3600_000).toISOString().slice(0, 16)
         added += storeReadings({
           db, alerts, source: 'pcd_noise', station,
           metrics: {

@@ -65,11 +65,16 @@ export default {
         if (!feed.preFiltered && !AIR_KEYWORDS.some((k) => item.title.toLowerCase().includes(k))) continue
         seen += 1
         const published = item.pubDate ? new Date(item.pubDate) : null
+        // Scheme-validate the link at ingest: a spoofed/compromised feed
+        // could supply javascript: URIs that the frontend would set as
+        // href verbatim. Only http(s) links are stored.
+        const rawLink = str(item.link)
+        const safeLink = rawLink && /^https?:\/\//i.test(rawLink) ? rawLink : null
         const isNew = db.insertNews({
           feed: feed.id,
           guid: item.guid,
           title: item.title,
-          link: str(item.link),
+          link: safeLink,
           published_at: published && !Number.isNaN(+published) ? published.toISOString() : null,
           fetched_at,
         })

@@ -232,7 +232,9 @@ export function createDanger(db, { riskEngine, washout }) {
     // the few provinces with multiple stations (Bangkok has 7, Rayong 4)
     // the SQL aggregate takes the loudest reading, which is what we want
     // for a worst-case danger score.
-    const noiseRows = freshByProvince(db, 'pcd_noise', ['noise_leq_db'], localCutoff(FRESH_HOURS))
+    // Noise is a DAILY Leq window (obs_time = start of the 24h window), so
+    // a 6h freshness cutoff starved it; 30h fits the daily cadence.
+    const noiseRows = freshByProvince(db, 'pcd_noise', ['noise_leq_db'], localCutoff(30))
 
     const provinces = new Map()
     const get = (code, th, en) => {

@@ -9,6 +9,8 @@ import { createScheduler } from './scheduler.js'
 import { createRisk } from './risk.js'
 import { createWashout } from './washout.js'
 import { createDanger } from './danger.js'
+import { createCauses } from './causes.js'
+import { createPatterns } from './patterns.js'
 import { createRag } from './rag.js'
 import { createFaq } from './faq.js'
 import { indexKnowledge } from './knowledge.js'
@@ -26,6 +28,7 @@ import news from './sources/news.js'
 import imerg from './sources/imerg.js'
 import gistdaPm25 from './sources/gistda-pm25.js'
 import pcdNoise from './sources/pcd-noise.js'
+import aqHistory from './sources/aq-history.js'
 import { createLine } from './line.js'
 
 const startedAt = Date.now()
@@ -38,6 +41,8 @@ const alerts = createAlerts(db, bus, { line })
 const washout = createWashout(db)
 const riskEngine = createRisk(db, washout)
 const danger = createDanger(db, { riskEngine, washout })
+const causes = createCauses(db, { riskEngine })
+const patterns = createPatterns(db)
 const rag = createRag({ db, riskEngine, washout })
 const faq = createFaq({ db, rag })
 // Bind faq back into rag so the chat endpoint can call logQuestion /
@@ -50,10 +55,10 @@ for (const k of Object.keys(ragWithFaq)) {
 
 const scheduler = createScheduler({
   db, bus, alerts,
-  sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise],
+  sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise, aqHistory],
 })
 
-const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, rag, faq, startedAt }))
+const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, startedAt }))
 
 scheduler.start()
 scheduleRetention(db)

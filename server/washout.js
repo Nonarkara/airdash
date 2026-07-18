@@ -48,6 +48,29 @@ export const WASHOUT_LABELS = {
   unknown: { th: 'ไม่ทราบ', en: 'Unknown' },
 }
 
+// Relief-timeline labels — which forecast day first brings washout-grade
+// (band moderate+) rain. day: 0 | 1 | 2 | null.
+export const RELIEF_ETA_LABELS = {
+  0: { th: 'ฝนช่วยล้างฝุ่นคืนนี้', en: 'washout rain today' },
+  1: { th: 'ฝนช่วยล้างฝุ่นพรุ่งนี้', en: 'washout rain tomorrow' },
+  2: { th: 'ฝนช่วยล้างฝุ่นมะรืนนี้', en: 'washout rain the day after' },
+  none: { th: 'ยังไม่มีฝนใน 3 วัน', en: 'no washout rain in sight (3 days)' },
+}
+
+/** First forecast day (0/1/2) whose rain clears the moderate washout bar. */
+export function reliefEta(days) {
+  for (let d = 0; d < 3; d++) {
+    const { mm, prob } = days[d] ?? {}
+    const band = washoutBand(mm ?? null, prob ?? null)
+    if (band === 'moderate' || band === 'strong') {
+      const l = RELIEF_ETA_LABELS[d]
+      return { day: d, label_th: l.th, label_en: l.en, mm: mm ?? null, prob: prob ?? null }
+    }
+  }
+  const l = RELIEF_ETA_LABELS.none
+  return { day: null, label_th: l.th, label_en: l.en, mm: null, prob: null }
+}
+
 function localCutoff(hoursAgo) {
   return new Date(Date.now() + 7 * 3600_000 - hoursAgo * 3600_000).toISOString().slice(0, 16)
 }
@@ -72,9 +95,13 @@ export function createWashout(db) {
   function compute() {
     const pmRows = latestByProvince('air4thai', ['pm25'], localCutoff(FRESH_PM_HOURS))
     const fcRows = latestByProvince('openmeteo',
-      ['precip_fc_d0', 'precip_fc_48h', 'precip_prob_24h', 'precip_prob_48h'],
+      ['precip_fc_d0', 'precip_fc_48h', 'precip_prob_24h', 'precip_prob_48h',
+       // Relief-timeline extension: per-day amounts + probabilities (d0/d1/d2).
+       'precip_fc_d1', 'precip_fc_d2', 'precip_prob_d0', 'precip_prob_d1', 'precip_prob_d2'],
       localCutoff(FRESH_FC_HOURS))
     const rainRows = latestByProvince('thaiwater_rain', ['rain_24h'], localCutoff(FRESH_RAIN_HOURS))
+    // CAMS PM2.5 forecast — used only by the worse_before_better flag.
+    const camsRows = latestByProvince('openmeteo_aq', ['pm25_fc_24h', 'pm25_fc_48h'], localCutoff(FRESH_FC_HOURS))
 
     const out = new Map()
     const entry = (row) => {
@@ -84,6 +111,9 @@ export function createWashout(db) {
           province_code: row.province_code, province_th: row.province_th, province_en: row.province_en,
           pm25: null, prob24: null, prob48: null,
           rain_fc_24: null, rain_fc_48: null, rain_obs_24: null,
+          // Relief-timeline extension fields (additive, never breaking).
+          fc_days: [{ mm: null, prob: null }, { mm: null, prob: null }, { mm: null, prob: null }],
+          pm25_fc_24h: null, pm25_fc_48h: null,
         }
         out.set(row.province_code, e)
       }
@@ -100,10 +130,23 @@ export function createWashout(db) {
       const e = entry(row)
       const v = num(row.value)
       if (v === null) continue
-      if (row.metric === 'precip_fc_d0') e.rain_fc_24 = v
+      if (row.metric === 'precip_fc_d0') { e.rain_fc_24 = v; e.fc_days[0].mm = v }
       else if (row.metric === 'precip_fc_48h') e.rain_fc_48 = v
       else if (row.metric === 'precip_prob_24h') e.prob24 = v
       else if (row.metric === 'precip_prob_48h') e.prob48 = v
+      else if (row.metric === 'precip_fc_d1') e.fc_days[1].mm = v
+      else if (row.metric === 'precip_fc_d2') e.fc_days[2].mm = v
+      else if (row.metric === 'precip_prob_d0') e.fc_days[0].prob = v
+      else if (row.metric === 'precip_prob_d1') e.fc_days[1].prob = v
+      else if (row.metric === 'precip_prob_d2') e.fc_days[2].prob = v
+    }
+    // CAMS PM2.5 forecast per province — worse_before_better input.
+    for (const row of camsRows) {
+      const e = entry(row)
+      const v = num(row.value)
+      if (v === null) continue
+      if (row.metric === 'pm25_fc_24h') e.pm25_fc_24h = v
+      else if (row.metric === 'pm25_fc_48h') e.pm25_fc_48h = v
     }
     // Max observed 24h rain gauge per province — is washout already underway?
     for (const row of rainRows) {
@@ -120,6 +163,19 @@ export function createWashout(db) {
         ? Math.round(e.pm25 * (1 - e.relief_if_rain_pct / 100))
         : null
       e.helps_dust = e.pm25 !== null && e.pm25 > 25 && (e.band === 'moderate' || e.band === 'strong')
+
+      // ── Relief timeline (additive fields) ─────────────────────────────
+      // Which forecast day first brings washout-grade (moderate+) rain?
+      e.relief_eta = reliefEta(e.fc_days)
+      // worse_before_better: CAMS says PM2.5 climbs >25% above the current
+      // level at a horizon that arrives BEFORE the washout rain does —
+      // i.e. prepare now, relief comes later (or not within 3 days).
+      const etaDay = e.relief_eta.day
+      const worse24 = e.pm25 !== null && e.pm25_fc_24h !== null
+        && e.pm25_fc_24h > e.pm25 * 1.25 && (etaDay === null || etaDay >= 1)
+      const worse48 = e.pm25 !== null && e.pm25_fc_48h !== null
+        && e.pm25_fc_48h > e.pm25 * 1.25 && (etaDay === null || etaDay >= 2)
+      e.worse_before_better = worse24 || worse48
     }
     return out
   }

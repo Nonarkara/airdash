@@ -44,10 +44,16 @@ function render(snap) {
 
   const news = document.getElementById('news')
   news.replaceChildren(...(snap.news ?? []).slice(0, 60).map((n) => {
-    const title = tr(n.title, n.title_en)
+    // Google-News-TH items have no English title — fall back to the Thai
+    // headline instead of rendering an empty link (the ticker already
+    // does exactly this).
+    const title = tr(n.title, n.title_en ?? n.title)
+    // Defence-in-depth: only http(s) links become anchors (the server now
+    // also scheme-validates at ingest, but old rows may predate that).
+    const safeLink = n.link && /^https?:\/\//i.test(n.link) ? n.link : null
     return el('div', { class: 'news-row' },
-      n.link
-        ? el('a', { href: n.link, target: '_blank', rel: 'noopener' }, title)
+      safeLink
+        ? el('a', { href: safeLink, target: '_blank', rel: 'noopener' }, title)
         : el('span', {}, title),
       el('div', { class: 'when' }, ago(n.published_at ?? n.fetched_at)))
   }))

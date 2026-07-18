@@ -20,7 +20,6 @@ import { initCitizen } from './panels/citizen.js?v=2.0.0-final'
 import { initWaterways } from './panels/waterways.js?v=2.0.0-final'
 import { initFocus } from './panels/focus.js?v=2.0.0-final'
 import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-final'
-import { initCompare } from './panels/compare.js?v=2.0.0-final'
 import { initSplit } from './panels/split.js?v=2.0.0-final'
 import { initLibrary } from './panels/library.js?v=2.0.0-final'
 import { initResearch } from './panels/research.js?v=2.0.0-final'
@@ -140,6 +139,11 @@ function initMode() {
 export function selectPane(pane) {
   const tabsEl = document.getElementById('righttabs')
   if (!tabsEl) return
+  // Citizen (EASY) mode hides every pane except MY AREA and ALERTS via
+  // CSS (!important). Selecting a hidden pane would mark it .active while
+  // it stays display:none — on mobile that leaves the whole sheet blank
+  // (the ASK AI chip used to do exactly this). Refuse the no-op instead.
+  if (document.body.classList.contains('mode-citizen') && pane !== 'citizen' && pane !== 'alerts') return
   const tabBtns = Array.from(tabsEl.querySelectorAll('button'))
   const panes = document.querySelectorAll('#rail-right .tabpane')
   tabBtns.forEach((b) => {
@@ -313,7 +317,7 @@ function initAskBtn() {
 
 async function boot() {
   // Each init is wrapped in its own try/catch so a single broken panel
-  // (e.g. compare.js when the top bar v2 stripped the trigger button) can
+  // (e.g. an optional overlay whose trigger button was removed) can
   // never strand the rest of the boot on a dead screen. The dashboard has
   // nine right-rail panels; the user needs every working one of them,
   // even if a single optional overlay fails to bind.
@@ -335,9 +339,15 @@ async function boot() {
   safeInit('chat', initChat)
   safeInit('citizen', initCitizen)
   safeInit('waterways', initWaterways)
-  // initFocus is async; if it fails the rest of the boot must still proceed.
   safeInit('cityDashboard', initCityDashboard)
-  safeInit('compare', initCompare)
+  // initFocus is async; if it fails the rest of the boot must still
+  // proceed. It is the canonical ?city= resolver for FOCUS IDS
+  // (?city=chiangmai): it populates the header dropdown, wires the
+  // city-picker grid's 'focus' events, sets store.activeArea (which
+  // city-scopes the header Danger chip) and keeps the URL in sync.
+  // Province names / place names in ?city= are resolved by citizen.js
+  // (EASY mode pin, space-insensitive) and search.js (place card).
+  safeInit('focus', () => initFocus(map))
   safeInit('split', () => initSplit(map))
   safeInit('library', initLibrary)
   safeInit('research', initResearch)
@@ -345,7 +355,6 @@ async function boot() {
   safeInit('tabs', initTabs)
   safeInit('sheet', initSheet)
   safeInit('about', initAbout)
-  safeInit('askBtn2', initAskBtn)
 
   // Place search → fly the map
   on('place-select', ({ lat, lng, zoom }) => {

@@ -34,7 +34,7 @@ export function runRetention(db) {
          ON CONFLICT(source, station_key, metric, hour) DO UPDATE SET
            v_min = MIN(v_min, excluded.v_min),
            v_max = MAX(v_max, excluded.v_max),
-           v_avg = excluded.v_avg,
+           v_avg = (v_avg * n + excluded.v_avg * excluded.n) / (n + excluded.n),
            n = n + excluded.n`).changes
       deleted += db.run(`DELETE FROM readings WHERE id IN (${idList})`).changes
     })

@@ -116,6 +116,7 @@
       <div class="national-secondary">
         <div class="national-why" id="national-why"></div>
         <div class="national-season" id="national-season" hidden></div>
+        <div class="national-relief" id="national-relief" hidden></div>
       </div>
     </div>
 
@@ -124,7 +125,7 @@
          every parent, coach and elderly reader actually has. Color follows
          the AQI palette; number is the 0–100 composite (PM + heat amp +
          humidity amp − rain relief). -->
-    <div class="danger" id="danger-hero"
+    <button type="button" class="danger" id="danger-hero"
          data-i18n-title="Danger Score: PM2.5 + heat amp + humidity amp − rain relief — research-backed composite, 0-100">
       <div class="danger-label">
         <span class="th" data-i18n="ดัชนีอันตราย|DANGER">ดัชนีอันตราย</span>
@@ -132,7 +133,8 @@
       </div>
       <div class="danger-num" id="danger-num">–</div>
       <div class="danger-band" id="danger-band">–</div>
-    </div>
+      <div class="danger-scope" id="danger-scope"></div>
+    </button>
 
     <!-- Single ASK AI icon button (was a full-width hero form). Tapping
          opens the chat overlay directly, no second click. -->
@@ -178,6 +180,12 @@
       <button data-mode="citizen" type="button" aria-pressed="false" data-i18n="ง่าย|EASY">ง่าย</button>
       <button data-mode="operator" type="button" aria-pressed="false" data-i18n="เต็ม|FULL">เต็ม</button>
     </div>
+
+    <!-- Compare Places trigger — re-added after the top-bar v2 redesign
+         silently dropped it (the whole split-view overlay was unreachable).
+         Wired in split.js. Hidden in citizen mode and on compact widths. -->
+    <button id="split-btn" type="button"
+            data-i18n-title="เปรียบเทียบพื้นที่แบบแบ่งจอ|compare places side-by-side">⊞ <span class="lbl" data-i18n="เทียบพื้นที่|Compare">เทียบพื้นที่</span></button>
 
     <button id="about-btn" data-i18n-title="เกี่ยวกับโครงการ|about this project">ⓘ <span class="lbl" data-i18n="เกี่ยวกับ|About">เกี่ยวกับ</span></button>
   </header>
@@ -302,15 +310,23 @@
     </div>
   </aside>
 
+  <!-- Mobile bottom-sheet nav. Horizontally scrollable (see layout.css) so
+       every pane stays reachable on a phone — OVERVIEW first because the
+       severity-first surface (SEVERE NOW, worst tiles) must exist on
+       mobile too. Citizen mode CSS strips this to MY AREA/RISK/ALERTS. -->
   <nav id="sheettabs" aria-label="แผงข้อมูล · Dashboard sections">
     <button data-sheet="citizen">พื้นที่ฉัน<br><span class="en-lbl">MY AREA</span></button>
     <button data-sheet="risk" class="active">เสี่ยง<br><span class="en-lbl">RISK</span></button>
+    <button data-sheet="analytics">ภาพรวม<br><span class="en-lbl">OVERVIEW</span></button>
     <button data-sheet="waterways">ล้างฝุ่น<br><span class="en-lbl">WASHOUT</span></button>
+    <button data-sheet="alerts">เตือน<br><span class="en-lbl">ALERTS</span></button>
+    <button data-sheet="chat">ถาม<br><span class="en-lbl">ASK</span></button>
+    <button data-sheet="history">ประวัติ<br><span class="en-lbl">HISTORY</span></button>
+    <button data-sheet="insights">สัญญาณ<br><span class="en-lbl">SIGNALS</span></button>
+    <button data-sheet="news">ข่าว<br><span class="en-lbl">NEWS</span></button>
     <button data-sheet="tap">เข้า<br><span class="en-lbl">TAP</span></button>
     <button data-sheet="sources">ข้อมูล<br><span class="en-lbl">DATA</span></button>
     <button data-sheet="library">คู่มือ<br><span class="en-lbl">LIB</span></button>
-    <button data-sheet="alerts">เตือน<br><span class="en-lbl">ALERTS</span></button>
-    <button data-sheet="chat">ถาม<br><span class="en-lbl">ASK</span></button>
   </nav>
 
   <div id="ticker">
@@ -652,22 +668,6 @@
   </div>
 </div>
 
-<div id="compare-overlay" hidden>
-  <div class="compare-head">
-    <div class="sign">
-      <span class="th">เทียบพื้นที่ · สถานการณ์ฝุ่น</span>
-      <span class="en">COMPARE AREAS · AIR QUALITY</span>
-    </div>
-    <div class="compare-actions">
-      <button data-panes="2" class="active">2</button>
-      <button data-panes="3">3</button>
-      <button data-panes="4">4</button>
-      <button id="compare-close" title="ปิดหน้าต่างเปรียบเทียบ / close compare view">✕ <span class="lbl">ปิด</span></button>
-    </div>
-  </div>
-  <div id="compare-grid"></div>
-</div>
-
 <div id="library-overlay" hidden>
   <div class="library-head">
     <div class="sign">
@@ -692,7 +692,7 @@
 <script src="/vendor/leaflet/leaflet.js"></script>
 <script type="module">
   console.log("[inline] module starting");
-  const shell = 'airdash-v7'
+  const shell = 'airdash-v9'
   const migrated = `ad-shell-ready:${shell}`
   console.log("[inline] checking sessionStorage:", sessionStorage.getItem(migrated));
   const registrations = 'serviceWorker' in navigator

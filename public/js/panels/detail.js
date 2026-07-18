@@ -7,6 +7,7 @@ import { fmtNum, fmtClock, el } from '../fmt.js?v=2.0.0-final'
 import { flyToStation } from '../map.js?v=2.0.0-final'
 import { drawSeriesChart } from '../chart.js?v=2.0.0-final'
 import { provinceHealth } from '../sensorHealth.js?v=2.0.0-final'
+import { causeChip, causesByProvince, causeEvidenceBlock, provincePatternsBlock } from './patterns-ui.js?v=2.0.0-final'
 
 let current = null // {type:'province', p} | {type:'station', source, station, metric}
 let lastSeries = null // last fetched points so we can re-paint on lang/snapshot
@@ -142,13 +143,30 @@ export function showProvinceDetail(p) {
         `formula: PM × (1+heat) × (1+RH) × (1+noise) − rain — see research paper §2 for citations`)),
   ) : null
 
-  box().replaceChildren(
+  // WHY block — cause hypothesis chip inline, ranked evidence loaded async
+  // from /api/causes (the fold in the snapshot only carries the top cause).
+  const causeWrap = el('div', { class: 'detail-cause-wrap' })
+  if (p.province_code) {
+    causesByProvince().then((map) => {
+      const block = causeEvidenceBlock(map.get(p.province_code))
+      if (block && current?.type === 'province' && current.p?.province_code === p.province_code) {
+        causeWrap.replaceChildren(block)
+      }
+    }).catch(() => {})
+  }
+
+  // NOTE: replaceChildren coerces a literal null into the text "null"
+  // (Web IDL DOMString), so the child list is filtered below.
+  box().replaceChildren(...[
     backButton(),
     el('div', { class: 'detail-block' },
       el('h3', {}, `${tr('จ.', 'Prov. ')}${tr(p.province_th, p.province_en)}`),
       el('div', { class: 'eyebrow' }, `${store.lang === 'th' ? (p.province_en ?? '') : (p.province_th ?? '')} · ${tr('คะแนน', 'score')} ${p.score}/100`),
+      p.cause ? el('div', { class: 'detail-cause-line' }, causeChip(p.cause)) : null,
       qualityNote),
+    causeWrap,
     dangerBlock,
+    p.province_code ? provincePatternsBlock(p.province_code) : null,
     el('div', { class: 'detail-block' },
       el('div', { class: 'eyebrow' }, tr('สถานีวัดคุณภาพอากาศ', 'AIR-QUALITY STATIONS')),
       stations.length === 0 ? el('div', { class: 'detail-kv' }, tr('ไม่มีสถานีในจังหวัดนี้', 'no stations here')) :
@@ -169,7 +187,7 @@ export function showProvinceDetail(p) {
       },
         el('span', {}, tr(s.name_th, s.name_en)),
         el('span', { class: 'v' }, `${fmtNum(s.rain_24h)} มม.`)))) : null,
-  )
+  ].filter(Boolean))
 }
 
 const METRIC_LABEL = {

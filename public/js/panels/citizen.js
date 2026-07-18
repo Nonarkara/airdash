@@ -14,6 +14,7 @@ import { tr, BAND } from '../i18n.js?v=2.0.0-final'
 import { el, fmtNum, ago } from '../fmt.js?v=2.0.0-final'
 import { getJson } from '../cache.js?v=2.0.0-final'
 import { flyToProvince } from '../map.js?v=2.0.0-final'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.0.0-final'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -93,9 +94,13 @@ export function initCitizen() {
 // code. The province index is loaded from the risk snapshot so we have
 // lat/lng + band data attached.
 function matchProvinceFromQuery(q) {
-  const norm = (s) => (s ?? '').toString().trim().toLowerCase()
+  // Space-insensitive so the FOCUS-ID vocabulary ("chiangmai",
+  // "khonkaen" — city-dashboard/focus deep links) resolves to the same
+  // province as the spelled-out name ("Chiang Mai"). One shared ?city=
+  // now lands SOMEWHERE sensible in every mode.
+  const norm = (s) => (s ?? '').toString().trim().toLowerCase().replace(/\s+/g, '')
   const qn = norm(q)
-  // Exact match (Thai or English, case-insensitive)
+  // Exact match (Thai or English, case/space-insensitive)
   let m = PROVINCE_INDEX.find((p) => norm(p.th) === qn || norm(p.en) === qn)
   if (m) return m
   // Code match (2-digit)
@@ -214,6 +219,22 @@ function renderForProvince(province) {
     ),
   )
 
+  // WHEN does relief come — the province's washout relief timeline
+  // ("ฝนช่วยล้างฝุ่นพรุ่งนี้ · washout rain tomorrow, 8mm @98%") plus the
+  // honest "worse before better" warning when CAMS says so. Filled async;
+  // the empty div costs nothing when there is nothing to say.
+  const reliefWrap = el('div', { class: 'citizen-relief' })
+  getJson('/api/washout', 60_000).then((w) => {
+    const entry = (w?.provinces ?? []).find((x) =>
+      (province.code && x.province_code === province.code) ||
+      (province.th && x.province_th === province.th)) ?? null
+    if (!entry) return
+    const line = reliefEtaLine(entry, { alwaysShow: (entry.pm25 ?? 0) >= 25 })
+    const worse = worseBeforeBetterChip(entry)
+    const kids = [line, worse].filter(Boolean)
+    if (kids.length) reliefWrap.replaceChildren(...kids)
+  }).catch(() => {})
+
   // "What do I do" — health advice for the current band.
   const adviceHead = el('div', { class: 'citizen-section-head' },
     el('span', {}, tr('😷 คำแนะนำสุขภาพวันนี้', '😷 health advice today')))
@@ -233,7 +254,7 @@ function renderForProvince(province) {
       el('span', { class: 'citizen-loading-text' },
         tr('กำลังค้นหาสถานีวัดฝุ่นใกล้คุณ…', 'Looking up AQ stations near you…'))))
   // Render shell first, fill in async so the page is interactive immediately
-  const out = [head, adviceHead, advice, stationHead, stationList]
+  const out = [head, reliefWrap, adviceHead, advice, stationHead, stationList]
   if (province.lat != null && province.lng != null) {
     getJson(`/api/stations/nearest?lat=${province.lat}&lng=${province.lng}&limit=3`, 60_000)
       .then((data) => {

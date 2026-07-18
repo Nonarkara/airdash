@@ -12,10 +12,21 @@ function clientIp(req) {
   // request reaches us that header is the Pages Function's own egress IP —
   // identical for every visitor — which would bucket all real users
   // together and rate-limit them as one "client". x-forwarded-for instead
-  // accumulates one entry per hop with the original client first, so use
-  // that when present.
+  // accumulates one entry per hop.
+  //
+  // IMPORTANT: the FIRST entry is client-controlled — a client that sends
+  // its own X-Forwarded-For header gets it *prepended* by every proxy, so
+  // keying on hops[0] lets an attacker pick a fresh bucket per request and
+  // bypass the limiter entirely. Key on the last UNTRUSTED hop instead:
+  // the rightmost entry was appended by our own trusted edge, so the entry
+  // just before it is the peer that edge actually saw — the closest thing
+  // to a real client identity we can trust.
   const xff = req.headers['x-forwarded-for']
-  if (xff) return xff.split(',')[0].trim()
+  if (xff) {
+    const hops = xff.split(',').map((s) => s.trim()).filter(Boolean)
+    if (hops.length >= 2) return hops[hops.length - 2]
+    if (hops.length === 1) return hops[0]
+  }
   return req.headers['cf-connecting-ip'] || req.socket.remoteAddress || 'unknown'
 }
 

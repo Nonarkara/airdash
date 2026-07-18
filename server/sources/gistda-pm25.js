@@ -68,7 +68,13 @@ export default {
           meta_json: JSON.stringify({ gistda_pv_idn: pvIdn, source: 'gistda.pm25.gistda.or.th' }),
         }
         // Use the upstream observation timestamp when present, else now.
-        const obs_time = row.dt ?? nowLocal().slice(0, 16)
+        // GISTDA's `dt` is Bangkok wall time mislabeled with a Z suffix
+        // (e.g. 2026-07-18T23:00:00.000Z); strip the fraction+Z so the
+        // stored value follows the local YYYY-MM-DDTHH:MM convention
+        // explicitly instead of matching string comparisons by accident.
+        const obs_time = (typeof row.dt === 'string'
+          ? row.dt.replace(/(\.\d+)?Z$/, '')
+          : nowLocal()).slice(0, 16)
 
         const result = storeReadings({
           db, alerts, source: 'gistda_pm25', station,

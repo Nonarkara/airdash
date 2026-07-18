@@ -2294,3 +2294,148 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
   padding: 4px 8px 6px; font-family: var(--font-num); font-size: 9.5px;
   color: var(--ink-low); border-top: 1px solid var(--rule);
 }
+
+/* ── Gap engines: WHY (causes) · WHEN (relief) · WHAT (patterns) ─────── */
+
+/* Cause chip — the "WHY is the air bad here" hypothesis. */
+.cause-chip {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10px; font-weight: 600;
+  background: var(--well);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ink-low);
+  color: var(--ink-mid);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+.cause-chip.cause-burning       { border-left-color: #C8453A; }
+.cause-chip.cause-traffic       { border-left-color: #5C6BC0; }
+.cause-chip.cause-transboundary { border-left-color: #8B3A6E; }
+.cause-chip.cause-industry      { border-left-color: #6B5B4A; }
+.cause-chip.cause-desert_dust   { border-left-color: #C8B560; }
+.cause-chip.cause-stagnation    { border-left-color: #7A8A94; }
+
+.detail-cause-line { margin-top: 4px; }
+.cause-evidence {
+  padding: 8px 10px; margin: 0 0 2px;
+  border-top: 1px solid var(--rule);
+  font-size: 11.5px; line-height: 1.45;
+}
+.cause-ev-head { margin-top: 6px; }
+.cause-ev-head:first-of-type { margin-top: 2px; }
+.cause-ev-line { color: var(--ink-mid); font-size: 11px; padding-left: 6px; }
+.cause-method, .pat-method {
+  margin-top: 6px; padding-top: 5px;
+  border-top: 1px dashed var(--rule);
+  font-size: 11px; color: var(--ink-low);
+  font-family: var(--font-en); line-height: 1.4;
+}
+
+/* Relief timeline line — "washout rain tomorrow, 8mm @98%". */
+.relief-eta {
+  margin-top: 3px;
+  font-size: 11px; font-weight: 600;
+  color: var(--rain, #1D66A8);
+}
+.relief-eta-none { color: var(--ink-low); font-weight: 400; }
+.citizen-relief { padding: 0 12px; }
+.citizen-relief .relief-eta { font-size: 12.5px; margin-top: 8px; }
+.citizen-relief .worse-chip { margin: 6px 0 0; }
+
+/* "Worse before better" honesty chip. */
+.worse-chip {
+  display: inline-block;
+  margin-left: 6px; padding: 0 5px;
+  font-size: 9.5px; font-weight: 700;
+  color: #B34F08;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+
+/* Hero relief sub-line under the national verb. */
+.national-relief {
+  font-size: 10px; font-weight: 600;
+  color: var(--rain, #1D66A8);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Patterns — hour-of-day strip, month climatology, region table. */
+.pat-block { font-size: 11.5px; }
+.pat-loading { padding: 6px 0; color: var(--ink-low); font-size: 11px; }
+.pat-row-head {
+  margin-top: 8px;
+  font-family: var(--font-num);
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--ink-mid);
+}
+.pat-peak-lbl, .pat-worst-lbl { color: var(--th-red); text-transform: none; letter-spacing: 0; }
+.pat-hbar-row {
+  display: flex; gap: 1px; align-items: flex-end;
+  height: 36px; margin-top: 4px;
+}
+.pat-hbar { flex: 1; height: 100%; display: flex; align-items: flex-end; background: var(--well); }
+.pat-hbar-fill { width: 100%; background: var(--ink-low); min-height: 1px; }
+.pat-hbar-peak .pat-hbar-fill { background: var(--th-red); }
+.pat-hbar-empty .pat-hbar-fill { background: var(--rule); }
+.pat-hbar-axis {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-num); font-size: 8.5px; color: var(--ink-low);
+  margin-top: 2px;
+}
+.pat-weekday { margin-top: 6px; font-size: 11px; color: var(--ink-mid); }
+.pat-mrow { display: flex; gap: 2px; margin-top: 4px; }
+.pat-mcol { flex: 1; min-width: 0; text-align: center; }
+.pat-mbar { height: 34px; display: flex; align-items: flex-end; background: var(--well); }
+.pat-mbar-fill { width: 100%; background: var(--th-deep); min-height: 1px; }
+.pat-mcol-prior .pat-mbar-fill { background: var(--rule); }
+.pat-mcol-worst .pat-mbar-fill { background: var(--th-red); }
+.pat-mlbl { font-family: var(--font-num); font-size: 7.5px; color: var(--ink-low); margin-top: 1px; }
+.pat-regions { margin-top: 4px; }
+.pat-region-row {
+  display: flex; justify-content: space-between; gap: 8px;
+  padding: 2px 0; font-size: 11px;
+  border-bottom: 1px dashed var(--rule);
+}
+.pat-region-name { font-weight: 600; }
+.pat-region-val { font-family: var(--font-num); font-size: 10.5px; color: var(--ink-mid); }
+.pat-insights { margin-top: 6px; }
+.pat-insight { font-size: 11.5px; line-height: 1.45; margin-top: 3px; }
+
+/* ── Dark mode: flip every hardcoded white/near-white chip ────────────
+   tokens.css flips --ink to light teal but these backgrounds were
+   literal whites — at night the "what to do" layer (national action
+   line, citizen picker, score chips) became ghost text on white.
+   One override block, matching tokens.css's night palette. */
+@media (prefers-color-scheme: dark) {
+  .whatif-search input:focus { background: var(--well); }
+  .rnc-icon,
+  .rnc-toggle,
+  .rnc-window,
+  .rnc-action,
+  .rank-expand,
+  .rx-action,
+  .rx-detail-btn,
+  .citizen-band-score,
+  .place-verdict .pv-action,
+  .pv-window { background: rgba(255,255,255,0.08); }
+  .rnc-toggle:hover,
+  .rx-detail-btn:hover,
+  .citizen-shelter:hover,
+  .chat-example-chip:hover { background: rgba(255,255,255,0.14); }
+  .citizen-change,
+  .citizen-share-btn,
+  .citizen-pick-row { background: var(--well); }
+  .citizen-pick-row:hover { background: var(--well-dim); }
+  .citizen-share-btn.line { color: #3FD860; border-color: #2AA648; }
+  #boot .boot-sponsors { background: var(--well); }
+  #boot .boot-sponsor:hover { background: var(--well-dim); }
+  #boot .boot-sponsor-row--steward { background: rgba(255,255,255,0.05); }
+  .place-results { background: var(--paper); }
+  .places-card { background: var(--well); }
+  .pat-hbar, .pat-mbar { background: var(--well-dim); }
+  .pat-hbar-fill { background: var(--ink-mid); }
+  .relief-eta, .national-relief { color: var(--rain); }
+  .worse-chip { color: #E5A04A; }
+}

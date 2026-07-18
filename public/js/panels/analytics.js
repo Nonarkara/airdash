@@ -8,6 +8,7 @@ import { tr } from '../i18n.js?v=2.0.0-final'
 import { fmtNum } from '../fmt.js?v=2.0.0-final'
 import { getJson } from '../cache.js?v=2.0.0-final'
 import { drawBarChart, drawDonut } from '../chart.js?v=2.0.0-final'
+import { nationalPatternsBlock } from './patterns-ui.js?v=2.0.0-final'
 
 const BAND_LABEL_TH = {
   normal: 'ปกติ', watch: 'เฝ้าระวัง', elevated: 'เสี่ยงสูง', high: 'วิกฤต',
@@ -53,7 +54,9 @@ async function render(snap) {
   const host = document.getElementById('analytics')
   if (!host || !snap?.risk?.provinces) return
 
-  const provs = snap.risk.provinces.filter((p) => p.province_code !== '99')  // strip boundary spillover
+  // Strip cross-border spillover entries (e.g. Myanmar HII gauges arrive
+  // with 5-digit geocodes like '10499') — real DOPA codes are 2 digits.
+  const provs = snap.risk.provinces.filter((p) => p.province_code && p.province_code.length === 2)
   const n = snap.risk.national ?? {}
   const isEn = store.lang === 'en'
   const L = (th, en) => isEn ? en : th
@@ -122,6 +125,10 @@ async function render(snap) {
 
     donutRow(regionalDist, L),
 
+    // WHAT history teaches — national hour-of-day profile, weekday delta,
+    // per-region worst-month table + insights from /api/patterns.
+    nationalPatternsBlock(),
+
     footerRow(provs.length, L),
   )
 
@@ -142,16 +149,30 @@ async function render(snap) {
   })
 }
 
+// Region from the DOPA province code. AQ stations carry region_th: null
+// (air4thai.js never fills it), so matching on region_th made every donut
+// slice zero — the code ranges are the reliable signal (same mapping as
+// server/patterns.js regionOf).
+function regionOfCode(code) {
+  const n = parseInt(code, 10)
+  if (!Number.isFinite(n)) return null
+  if (n === 10) return 'bkk'
+  if ((n >= 50 && n <= 58) || (n >= 60 && n <= 67)) return 'north'
+  if (n >= 30 && n <= 49) return 'northeast'
+  if (n >= 80 && n <= 96) return 'south'
+  return 'central'
+}
+
 function regionDist(provs) {
   const order = [
-    { key: 'ภาคเหนือ',           en: 'North',         color: '#241E4E' },
-    { key: 'ภาคกลาง',           en: 'Central',       color: '#A51931' },
-    { key: 'ภาคตะวันออกเฉียงเหนือ', en: 'Northeast',   color: '#E86A10' },
-    { key: 'ภาคใต้',             en: 'South',         color: '#F0B400' },
-    { key: 'กรุงเทพมหานคร',     en: 'Bangkok',       color: '#00933C' },
+    { id: 'north',     key: 'ภาคเหนือ',            en: 'North',     color: '#241E4E' },
+    { id: 'central',   key: 'ภาคกลาง',             en: 'Central',   color: '#A51931' },
+    { id: 'northeast', key: 'ภาคตะวันออกเฉียงเหนือ', en: 'Northeast', color: '#E86A10' },
+    { id: 'south',     key: 'ภาคใต้',              en: 'South',     color: '#F0B400' },
+    { id: 'bkk',       key: 'กรุงเทพมหานคร',       en: 'Bangkok',   color: '#00933C' },
   ]
   return order.map((o) => {
-    const regionProvs = provs.filter((p) => p.region_th === o.key || p.region_en === o.en)
+    const regionProvs = provs.filter((p) => regionOfCode(p.province_code) === o.id)
     const scoreSum = regionProvs.reduce((s, p) => s + (p.score ?? 0), 0)
     return {
       label_th: o.key, label_en: o.en, color: o.color,

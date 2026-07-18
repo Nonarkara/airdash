@@ -15,6 +15,9 @@ import { on, store, setLang } from '../state.js?v=2.0.0-final'
 import { tr } from '../i18n.js?v=2.0.0-final'
 import { openInsightsPane } from '../sensorHealth.js?v=2.0.0-final'
 import { riskCi } from '../confidence.js?v=2.0.0-final'
+import { getJson } from '../cache.js?v=2.0.0-final'
+import { flyToProvince } from '../map.js?v=2.0.0-final'
+import { showProvinceDetail } from './detail.js?v=2.0.0-final'
 
 // AQI-derived 5-level palette — the same gradient the top stripe uses.
 // Watch (yellow) keeps dark text for contrast.
@@ -62,9 +65,49 @@ export function initHeader() {
     })
   }
 
+  // Danger chip is now a real <button>: tapping it opens the same
+  // formula breakdown the province detail panel renders, scoped to the
+  // province driving the number — no more hover-only tooltip that touch
+  // and keyboard users could never reach.
+  const dangerBtn = document.getElementById('danger-hero')
+  if (dangerBtn) {
+    dangerBtn.addEventListener('click', () => {
+      if (!dangerProvince) return
+      try { flyToProvince(dangerProvince); showProvinceDetail(dangerProvince) } catch {}
+    })
+  }
+
   on('snapshot', renderStatus)
   on('sensor-health', () => { /* quiet: pain in v1 was the data-quality pill. Now hidden. */ })
   on('lang', () => { renderStatus(store.snapshot) })
+}
+
+// The province row whose Danger composite the hero chip currently shows —
+// used by the chip's click handler to open the matching breakdown.
+let dangerProvince = null
+
+// Hero relief sub-line — "WHEN does relief come" for the worst-PM province
+// ("จ.เชียงใหม่ ฝนช่วยล้างฝุ่นพรุ่งนี้ · washout rain tomorrow, 8mm @98%").
+// Only speaks when the worst province is actually dusty (>=25 µg/m³) and
+// hides itself otherwise — an honest empty state, not a filler line.
+function renderReliefLine(snap) {
+  const box = document.getElementById('national-relief')
+  if (!box) return
+  const worst = snap?.risk?.national?.worstPm25
+  if (!worst || !(worst.ug >= 25)) { box.hidden = true; return }
+  getJson('/api/washout', 60_000).then((w) => {
+    const entry = (w?.provinces ?? []).find((x) => x.province_th === worst.province_th) ?? null
+    const eta = entry?.relief_eta
+    if (!eta || eta.day === null) { box.hidden = true; return }
+    const name = tr(entry.province_th, entry.province_en)
+    const mm = eta.mm !== null ? `, ${Math.round(eta.mm)}${tr('มม.', 'mm')}` : ''
+    const prob = eta.prob !== null ? ` @${Math.round(eta.prob)}%` : ''
+    const worse = entry.worse_before_better
+      ? ` · ⚠ ${tr('แย่ลงก่อนดีขึ้น', 'worse before better')}`
+      : ''
+    box.textContent = `🌧 ${name}: ${tr(eta.label_th, eta.label_en)}${mm}${prob}${worse}`
+    box.hidden = false
+  }).catch(() => { box.hidden = true })
 }
 
 function renderStatus(snap) {
@@ -132,16 +175,20 @@ function renderStatus(snap) {
       scoped = snap.risk.provinces.find((p) => p.province_th === activeArea.province_th) ?? null
     }
     // Worst case across all provinces — used when no city is focused, or
-    // when the user's selected city has no data (e.g. first load).
-    let worst = null
+    // when the user's selected city has no data (e.g. first load). Keep
+    // the whole province row (not just .danger) so the chip's click can
+    // open the matching breakdown panel.
+    let worstP = null
     for (const p of snap.risk.provinces) {
       const d = p.danger
       if (!d) continue
-      if (!worst || d.score > worst.score) worst = d
+      if (!worstP || d.score > worstP.danger.score) worstP = p
     }
-    const show = scoped?.danger ?? worst
+    const showP = (scoped?.danger ? scoped : null) ?? worstP
+    const show = showP?.danger ?? null
+    dangerProvince = showP ?? null
     if (show) {
-      const isCityScoped = !!scoped
+      const isCityScoped = !!scoped?.danger
       // Smooth transition between bands via a class, not an inline color
       dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high')
       dangerEl.classList.add(`band-${show.band}`)
@@ -153,6 +200,15 @@ function renderStatus(snap) {
       const cityBadge = isCityScoped
         ? ` · ${tr(activeArea.name_th, activeArea.name_en)}`
         : ''
+      // The scope is IN the chip, not tooltip-only: a phone user must be
+      // able to see that "62 Dangerous" means one worst province, not
+      // the whole country contradicting the calm hero verb next to it.
+      const scopeEl = document.getElementById('danger-scope')
+      if (scopeEl) {
+        scopeEl.textContent = isCityScoped
+          ? tr(activeArea.name_th, activeArea.name_en)
+          : `${tr(showP.province_th, showP.province_en)} · ${tr('จังหวัดแย่สุด', 'worst province')}`
+      }
       // Build the audit-trail tooltip — every modifier, in one place.
       // Lets a curious reader see what drove the number without leaving
       // the top bar.
@@ -165,8 +221,8 @@ function renderStatus(snap) {
         parts.push(`noise ${show.noise_leq_db.toFixed(0)} dB${nStations} (amp ${(show.noise_amp * 100).toFixed(0)}%)`)
       }
       if (show.rain_relief > 0) parts.push(`rain relief ${(show.rain_relief * 100).toFixed(0)}% (${show.rain_source ?? 'forecast'})`)
-      const provinceName = tr(show.province_th, show.province_en)
-      dangerEl.title = `${label} · ${provinceName} (${show.score}/100)${cityBadge}\n${parts.join(' · ')}`
+      const provinceName = tr(showP.province_th, showP.province_en)
+      dangerEl.title = `${label} · ${provinceName} (${show.score}/100)${cityBadge}\n${parts.join(' · ')}\n${tr('แตะเพื่อดูสูตรคำนวณ', 'tap for the formula breakdown')}`
     } else {
       dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high')
       dangerEl.classList.add('band-normal')
@@ -176,6 +232,11 @@ function renderStatus(snap) {
       // already says "กำลังโหลด/LOADING" so duplicating it here is noise.
       dangerBand.textContent = tr('รอข้อมูล', '…')
       dangerEl.title = tr('กำลังโหลดข้อมูล Danger Score…', 'Loading Danger Score…')
+      const scopeEl = document.getElementById('danger-scope')
+      if (scopeEl) scopeEl.textContent = ''
     }
   }
+
+  // WHEN relief comes — hero sub-line under the national verb.
+  renderReliefLine(snap)
 }

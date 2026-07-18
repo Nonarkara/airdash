@@ -441,7 +441,9 @@ function renderPlaceCard(sel) {
   if (provRisk) {
     const bandColor = { normal: '#00933C', watch: '#F0B400', elevated: '#E86A10', high: '#A51931' }[provRisk.band]
     const rank = (store.snapshot?.risk?.provinces ?? [])
-      .filter((p) => p.province_code !== '99')
+      // Real DOPA codes are 2 digits; cross-border spillover rows (e.g.
+      // Myanmar '10499') must not count in the #rank/77 denominator.
+      .filter((p) => p.province_code && p.province_code.length === 2)
       .sort((a, b) => b.score - a.score)
       .findIndex((p) => p.province_th === sel.province_th) + 1
     html += `

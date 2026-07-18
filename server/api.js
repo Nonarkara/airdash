@@ -24,6 +24,16 @@ import { buildInsights } from './insights.js'
 import { log } from './util.js'
 import { sensorHealth } from './sensors.js'
 
+// Honest degraded-state payload for the optional LINE per-token push module
+// (linePush.js). When the module or its table is absent on a deployment the
+// /api/line/* routes answer 503 with this note instead of 500ing (and never
+// leak resolver paths or stack details to the client).
+const LINE_PUSH_UNAVAILABLE = {
+  error: 'LINE push not available',
+  note_th: 'ระบบแจ้งเตือนผ่าน LINE ยังไม่เปิดใช้งานบนเซิร์ฟเวอร์นี้',
+  note_en: 'LINE push notifications are not enabled on this deployment',
+}
+
 // Cache for /api/series/daily — its GROUP BYs scan the huge readings table and
 // would freeze the synchronous event loop on every OVERVIEW load otherwise.
 const seriesDailyCache = new Map() // days -> { at, payload }
@@ -89,7 +99,7 @@ function pivotLatest(db, source, metrics) {
   return [...byStation.values()]
 }
 
-export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, rag, faq, startedAt }) {
+export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, startedAt }) {
   return {
     'GET /api/sensors/health': (req, res) => {
       json(res, 200, sensorHealth(db))
@@ -200,6 +210,19 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, r
           }
         }
       }
+      // Fold the top cause hypothesis into each province row (same shape
+      // as /api/risk) so ranking rows can show the "WHY" chip without an
+      // extra fetch. Full ranked list + evidence lives at /api/causes.
+      if (causes) {
+        const causeMap = causes.all()
+        for (const p of risk.provinces) {
+          const c = p.province_code ? causeMap.get(p.province_code) : null
+          const top = c?.causes?.[0]
+          p.cause = top
+            ? { primary: c.primary, label_th: top.label_th, label_en: top.label_en, confidence: top.confidence }
+            : null
+        }
+      }
       // Primary layer: every AQ station with the full pollutant set.
       const air = pivotLatest(db, 'air4thai', ['pm25', 'pm10', 'o3', 'co', 'no2', 'so2', 'aqi'])
       // Rain gauges currently seeing washout-grade rain (≥5mm/24h).
@@ -246,7 +269,45 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, r
           }
         }
       }
+      // Fold the top cause hypothesis into each province row (light join —
+      // risk.js internals untouched). Full ranked list lives at /api/causes.
+      if (causes) {
+        const causeMap = causes.all()
+        for (const p of r.provinces) {
+          const c = p.province_code ? causeMap.get(p.province_code) : null
+          const top = c?.causes?.[0]
+          p.cause = top
+            ? { primary: c.primary, label_th: top.label_th, label_en: top.label_en, confidence: top.confidence }
+            : null
+        }
+      }
       return json(res, 200, r)
+    },
+
+    // ── Cause attribution — "WHY is the air bad here?" ────────────────
+    // Ranked cause hypotheses per province with confidence + evidence that
+    // cites the actual numbers used. Heuristic circumstantial reasoning
+    // from data we already hold — NOT chemical source apportionment.
+    'GET /api/causes': (req, res) => {
+      const all = [...causes.all().values()].sort((a, b) => (b.pm25 ?? -1) - (a.pm25 ?? -1))
+      json(res, 200, {
+        updated: new Date().toISOString(),
+        method_th: 'สมมติฐานสาเหตุจากหลักฐานแวดล้อม (ฤดูกาล ภูมิภาค สัดส่วน PM2.5/PM10 NO2 พยากรณ์ฝุ่นทะเลทราย ข่าว การระบายอากาศ) — ไม่ใช่การตรวจวัดองค์ประกอบทางเคมี',
+        method_en: 'Cause hypotheses from circumstantial evidence (season, region, PM2.5/PM10 ratio, NO2, CAMS dust, news, ventilation) — heuristic, not chemical source apportionment',
+        provinces: all,
+      })
+    },
+
+    // ── Patterns — "WHAT do history and geography teach?" ─────────────
+    // ?province=<code> → hour-of-day / weekday / month profiles + insights
+    // for one province. No param → national summary + per-region table.
+    'GET /api/patterns': (req, res, url) => {
+      const code = (url.searchParams.get('province') ?? '').trim()
+      if (code) {
+        if (!/^\d{1,2}$/.test(code)) return json(res, 400, { error: 'province must be a DOPA code (e.g. 50)' })
+        return json(res, 200, { updated: new Date().toISOString(), ...patterns.forProvince(code) })
+      }
+      json(res, 200, { updated: new Date().toISOString(), ...patterns.national() })
     },
 
     // Standalone Danger Score endpoint — used by the focus detail panel
@@ -1034,27 +1095,40 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, r
       if (!province_th) {
         return json(res, 400, { error: 'province_th required' })
       }
+      // The per-token push module is optional on this deployment. Load it
+      // first so a missing module is an honest 503, not a 500 that leaks
+      // the resolver's filesystem path to the client.
+      let push
+      try { push = await import('./linePush.js') } catch {
+        return json(res, 503, LINE_PUSH_UNAVAILABLE)
+      }
       // Validate the token: try a test message. If LINE rejects, the
-      // user sees a clear error.
+      // user sees a clear (but detail-free) error; the detail goes to the
+      // server log only.
       try {
-        const { sendLineNotify } = await import('./linePush.js')
-        await sendLineNotify(token, `✅ AirDash เชื่อมต่อสำเร็จ · connected to ${province_th}. จะส่งแจ้งเตือนเมื่อระดับฝุ่นถึงขั้น PROTECT NOW ขึ้นไป.`)
+        await push.sendLineNotify(token, `✅ AirDash เชื่อมต่อสำเร็จ · connected to ${province_th}. จะส่งแจ้งเตือนเมื่อระดับฝุ่นถึงขั้น PROTECT NOW ขึ้นไป.`)
       } catch (err) {
-        return json(res, 400, { error: 'LINE rejected token', detail: String(err.message ?? err) })
+        log('warn', 'LINE token validation failed', { error: String(err?.message ?? err) })
+        return json(res, 400, { error: 'LINE rejected token' })
       }
       // Idempotent: if the same token is re-subscribed, update the row.
-      const now = new Date().toISOString()
-      const existing = db.get('SELECT id FROM line_subs WHERE token = ?', token)
-      if (existing) {
-        db.run(`UPDATE line_subs SET province_th = ?, province_en = ?, lang = ?,
-                fail_count = 0, updated_at = ? WHERE id = ?`,
-          province_th, province_en ?? null, lang ?? 'th', now, existing.id)
-        return json(res, 200, { ok: true, updated: true })
+      try {
+        const now = new Date().toISOString()
+        const existing = db.get('SELECT id FROM line_subs WHERE token = ?', token)
+        if (existing) {
+          db.run(`UPDATE line_subs SET province_th = ?, province_en = ?, lang = ?,
+                  fail_count = 0, updated_at = ? WHERE id = ?`,
+            province_th, province_en ?? null, lang ?? 'th', now, existing.id)
+          return json(res, 200, { ok: true, updated: true })
+        }
+        db.run(`INSERT INTO line_subs (token, province_th, province_en, lang, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)`,
+          token, province_th, province_en ?? null, lang ?? 'th', now, now)
+        json(res, 200, { ok: true, created: true })
+      } catch (err) {
+        log('warn', 'line_subs store failed', { error: String(err?.message ?? err) })
+        return json(res, 503, LINE_PUSH_UNAVAILABLE)
       }
-      db.run(`INSERT INTO line_subs (token, province_th, province_en, lang, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?)`,
-        token, province_th, province_en ?? null, lang ?? 'th', now, now)
-      json(res, 200, { ok: true, created: true })
     },
 
     // Unsubscribe — used when a user clicks the cancel link in a push or
@@ -1065,34 +1139,57 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, r
       try { parsed = JSON.parse(body) } catch { return json(res, 400, { error: 'invalid JSON' }) }
       const { token } = parsed
       if (!token) return json(res, 400, { error: 'token required' })
-      const r = db.run('DELETE FROM line_subs WHERE token = ?', token)
-      json(res, 200, { ok: true, deleted: r.changes })
+      try {
+        const r = db.run('DELETE FROM line_subs WHERE token = ?', token)
+        json(res, 200, { ok: true, deleted: r.changes })
+      } catch {
+        return json(res, 503, LINE_PUSH_UNAVAILABLE)
+      }
     },
 
     // Diagnostic — count of active subs, last push time. Operator-facing.
     'GET /api/line/stats': (req, res) => {
-      const total = db.get('SELECT COUNT(*) AS n FROM line_subs').n
-      const last = db.kvGet('line_push_last_at')
-      json(res, 200, { total_subs: total, last_push_at: last })
+      try {
+        const total = db.get('SELECT COUNT(*) AS n FROM line_subs').n
+        const last = db.kvGet('line_push_last_at')
+        json(res, 200, { total_subs: total, last_push_at: last })
+      } catch {
+        return json(res, 503, LINE_PUSH_UNAVAILABLE)
+      }
     },
 
     // Cron-callable tick — push to anyone whose province is in
-    // elevated/high. Returns counts for ops dashboards.
+    // elevated/high. Admin-gated: an open tick would let anyone trigger
+    // the push fan-out at will.
     'POST /api/line/tick': async (req, res) => {
-      const r = await tickLinePush(db)
-      if (r.pushed > 0) db.kvSet('line_push_last_at', new Date().toISOString())
-      json(res, 200, r)
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      let push
+      try { push = await import('./linePush.js') } catch {
+        return json(res, 503, LINE_PUSH_UNAVAILABLE)
+      }
+      try {
+        const r = await push.tickLinePush(db)
+        if (r.pushed > 0) db.kvSet('line_push_last_at', new Date().toISOString())
+        json(res, 200, r)
+      } catch (err) {
+        log('warn', 'line-push tick failed', { error: String(err?.message ?? err) })
+        return json(res, 503, LINE_PUSH_UNAVAILABLE)
+      }
     },
 
     // Sample push message for the UI preview — rendered in the citizen
     // panel so the user knows exactly what kind of message they'll get.
-    'GET /api/line/preview': (req, res, url) => {
+    'GET /api/line/preview': async (req, res, url) => {
       const band = url.searchParams.get('band') || 'elevated'
       const province_th = url.searchParams.get('province_th') || 'ตราด'
       const province_en = url.searchParams.get('province_en') || 'Trat'
       const score = Number(url.searchParams.get('score')) || 76
       const lang = url.searchParams.get('lang') || 'th'
-      json(res, 200, { message: buildMessage(province_th, province_en, band, score, lang) })
+      let push
+      try { push = await import('./linePush.js') } catch {
+        return json(res, 503, LINE_PUSH_UNAVAILABLE)
+      }
+      json(res, 200, { message: push.buildMessage(province_th, province_en, band, score, lang) })
     },
 
     // ── Weekly data exports ─────────────────────────────────────────

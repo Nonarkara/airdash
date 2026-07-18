@@ -4,6 +4,7 @@ import { tr, BAND } from '../i18n.js?v=2.0.0-final'
 import { fmtNum, el } from '../fmt.js?v=2.0.0-final'
 import { flyToProvince } from '../map.js?v=2.0.0-final'
 import { showProvinceDetail } from './detail.js?v=2.0.0-final'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.0.0-final'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }
@@ -110,6 +111,10 @@ function render(snap) {
         el('span', { title: tr('ฝนช่วยล้างฝุ่นได้', 'rain washout expected') },
           `🌧 −${fmtNum(p.washout_relief_pct, 0)}%`)))
     }
+    // Cause chip — the "WHY is the air bad here" hypothesis from
+    // /api/risk's cause fold (e.g. "🔥 การเผาในที่โล่ง 70%" / "🚗 traffic").
+    const causeEl = causeChip(p.cause)
+    if (causeEl) stats.push(el('div', { class: 'line' }, causeEl))
     const card = p.card
     const expand = card ? el('div', { class: 'rank-expand', hidden: true }) : null
     if (card) {
@@ -170,6 +175,15 @@ function render(snap) {
           const wasHidden = expand.hidden
           expand.hidden = !wasHidden
           row.classList.toggle('rank-row-open', wasHidden)
+          // Lazy-load the cause evidence on first open — the ranked
+          // hypotheses + the actual numbers behind them (/api/causes).
+          if (wasHidden && !expand.dataset.causeLoaded) {
+            expand.dataset.causeLoaded = '1'
+            causesByProvince().then((map) => {
+              const block = causeEvidenceBlock(map.get(p.province_code))
+              if (block) expand.prepend(block)
+            }).catch(() => {})
+          }
         }
       },
     },
