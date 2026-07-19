@@ -15,13 +15,6 @@ const BACKEND = 'https://api-air.nonarkara.org'
 
 const JSON_TIMEOUT_MS = 30_000
 const STREAM_TIMEOUT_MS = 300_000
-const RETIRED_LINE_NOTIFY_PATHS = new Set([
-  '/api/line/subscribe',
-  '/api/line/unsubscribe',
-  '/api/line/stats',
-  '/api/line/tick',
-  '/api/line/preview',
-])
 
 function isStreaming(pathname, method) {
   return pathname === '/api/tap' || (method === 'POST' && pathname === '/api/chat')
@@ -29,15 +22,6 @@ function isStreaming(pathname, method) {
 
 export async function onRequest({ request }) {
   const url = new URL(request.url)
-  if (RETIRED_LINE_NOTIFY_PATHS.has(url.pathname)) {
-    return new Response(JSON.stringify({
-      error: 'LINE Notify integration retired',
-      alternative: 'Follow the AirDash LINE Official Account',
-    }), {
-      status: 410,
-      headers: { 'content-type': 'application/json; charset=utf-8' },
-    })
-  }
   const target = BACKEND + url.pathname + url.search
   const streaming = isStreaming(url.pathname, request.method)
   try {
