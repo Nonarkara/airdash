@@ -1,10 +1,10 @@
 // Data-source catalog panel — every pipeline, JAXA satellite layer, and export
 // endpoint for researchers who want to reuse AirDash feeds.
-import { getJson } from '../cache.js?v=2.0.0-audit3'
-import { on, store } from '../state.js?v=2.0.0-audit3'
-import { tr } from '../i18n.js?v=2.0.0-audit3'
-import { el, fmtNum } from '../fmt.js?v=2.0.0-audit3'
-import { refreshSensorHealth } from '../sensorHealth.js?v=2.0.0-audit3'
+import { getJson } from '../cache.js?v=2.0.0-audit4'
+import { on, store } from '../state.js?v=2.0.0-audit4'
+import { tr } from '../i18n.js?v=2.0.0-audit4'
+import { el, fmtNum } from '../fmt.js?v=2.0.0-audit4'
+import { refreshSensorHealth } from '../sensorHealth.js?v=2.0.0-audit4'
 
 const KIND_LABEL = {
   pipeline: { th: 'ท่อข้อมูล', en: 'pipeline' },
