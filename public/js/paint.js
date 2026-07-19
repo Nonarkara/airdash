@@ -1,9 +1,9 @@
 // Pure data-paint functions — accept a target layers object + snapshot slice.
 // Imported by map.js so the map renders risk/air/rain widgets straight from
 // the /api/snapshot stream with its own layer groups. No module-level state.
-import { emit, store } from './state.js?v=2.0.0-audit1'
-import { tr, pick, BAND, LEVEL_NAME, pm25Level } from './i18n.js?v=2.0.0-audit1'
-import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.0.0-audit1'
+import { emit, store } from './state.js?v=2.0.0-audit2'
+import { tr, pick, BAND, LEVEL_NAME, pm25Level } from './i18n.js?v=2.0.0-audit2'
+import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.0.0-audit2'
 
 const BAND_COLOR = { normal: '#00933C', watch: '#F0B400', elevated: '#E86A10', high: '#A51931' }
 

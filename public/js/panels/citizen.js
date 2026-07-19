@@ -9,12 +9,12 @@
 // Citizen mode also pins the user's "My Province" — saved to localStorage
 // so the dashboard defaults to the user's location on every visit. The
 // "เปลี่ยนจังหวัด" button opens a searchable province picker.
-import { on, store, emit } from '../state.js?v=2.0.0-audit1'
-import { tr, BAND } from '../i18n.js?v=2.0.0-audit1'
-import { el, fmtNum, ago } from '../fmt.js?v=2.0.0-audit1'
-import { getJson } from '../cache.js?v=2.0.0-audit1'
-import { flyToProvince } from '../map.js?v=2.0.0-audit1'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.0.0-audit1'
+import { on, store, emit } from '../state.js?v=2.0.0-audit2'
+import { tr, BAND } from '../i18n.js?v=2.0.0-audit2'
+import { el, fmtNum, ago } from '../fmt.js?v=2.0.0-audit2'
+import { getJson } from '../cache.js?v=2.0.0-audit2'
+import { flyToProvince } from '../map.js?v=2.0.0-audit2'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.0.0-audit2'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -71,7 +71,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.0.0-audit1').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.0.0-audit2').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -188,6 +188,16 @@ function renderEmpty() {
       tr('เพื่อดูสถานีวัดฝุ่นใกล้บ้าน + ระดับเสี่ยงเฉพาะพื้นที่',
          'See AQ stations near you + local risk level')),
     renderPicker(),
+    // On phones the header's #about-btn is hidden to save space. Surface
+    // the link inside the citizen panel so the project info is still
+    // reachable from the dashboard without scrolling the header.
+    el('a', {
+      class: 'phone-about-link',
+      href: '#', onclick: (e) => {
+        e.preventDefault()
+        document.getElementById('about-btn')?.click()
+      },
+    }, 'ⓘ ' + tr('เกี่ยวกับโครงการนี้', 'About this project')),
   )
   return [intro]
 }
@@ -323,6 +333,18 @@ function renderForProvince(province) {
     el('a', { class: 'citizen-help-btn', href: 'tel:1669' },
       el('div', { class: 'citizen-help-num' }, '1669'),
       el('div', { class: 'citizen-help-lbl' }, tr('กู้ชีพ ฉุกเฉิน', 'EMS'))),
+    // About link — only on phones (the header's about-btn is hidden
+    // there to save space). On desktop the header has its own button.
+    el('a', {
+      class: 'citizen-help-btn phone-about-link',
+      href: '#',
+      onclick: (e) => {
+        e.preventDefault()
+        document.getElementById('about-btn')?.click()
+      },
+    },
+      el('div', { class: 'citizen-help-num' }, 'ⓘ'),
+      el('div', { class: 'citizen-help-lbl' }, tr('เกี่ยวกับ', 'About'))),
   )
 
   return [...out, shareHead, shareRow, lineHead, lineCard, notifyForm, telegramForm, helpHead, helpRow, renderPickerCollapsed()]

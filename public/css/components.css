@@ -752,6 +752,14 @@
 }
 .citizen-help-btn:nth-child(2) { background: #A51931; }
 .citizen-help-btn:nth-child(3) { background: #241E4E; }
+/* About link in the help row — styled like the other hotlines so the
+   4-up row stays visually balanced. Hidden on desktop where the header
+   has its own #about-btn; visible on phones (≤480px) where the header
+   button is hidden to save space. */
+.phone-about-link { display: none; background: #2E5266 !important; }
+@media (max-width: 480px) {
+  .phone-about-link { display: flex !important; }
+}
 .citizen-help-num { font-family: var(--font-num); font-weight: 800; font-size: 18px; }
 .citizen-help-lbl { font-size: 9.5px; opacity: 0.9; margin-top: 1px; }
 
