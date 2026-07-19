@@ -369,6 +369,11 @@ html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
   background: var(--paper);
   display: flex; flex-direction: column;
   min-height: 0;                       /* allow children to scroll */
+  min-width: 0;                        /* grid item default min-width:auto
+                                          would expand the rail to its
+                                          content (rank-row, cd-pick-tile)
+                                          and overflow the 1fr track on
+                                          phones; clamp to the track */
 }
 #rail-left  { grid-area: left; border-right: 1px solid var(--rule-strong); }
 #rail-right { grid-area: right; border-left: 1px solid var(--rule-strong); }
