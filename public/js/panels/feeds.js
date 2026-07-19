@@ -1,8 +1,8 @@
 // Dust alerts + haze news lists (ข่าวฝุ่น/หมอกควัน — right rail tabs),
 // refreshed from snapshot and tap events.
-import { on, store } from '../state.js?v=2.0.0-muni1'
-import { tr } from '../i18n.js?v=2.0.0-muni1'
-import { el, ago } from '../fmt.js?v=2.0.0-muni1'
+import { on, store } from '../state.js?v=2.0.0-audit1'
+import { tr } from '../i18n.js?v=2.0.0-audit1'
+import { el, ago } from '../fmt.js?v=2.0.0-audit1'
 
 export function initFeeds() {
   on('snapshot', render)

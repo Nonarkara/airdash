@@ -1,5 +1,10 @@
 /* Fixed-viewport composition. The map is the page; rails scroll internally. */
 
+html, body { overflow-x: hidden; }   /* phones: a few children can still overflow at the
+                                         * grid seams (the .national .label's nowrap verb, the
+                                         * .searchbox input min-width); clip the page rather
+                                         * than let the user scroll horizontally. */
+
 #app {
   display: grid;
   height: 100dvh;
@@ -283,13 +288,16 @@ html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
   display: flex; align-items: center;
   padding: 8px 8px 0 0;
   flex: 1 1 auto;
-  min-width: 160px;
-  max-width: 320px;
+  min-width: 0;             /* let the flex container shrink to its grid column */
+  max-width: 380px;
   align-self: center;
   height: var(--header-h);
+  overflow: hidden;     /* contain the input on narrow viewports */
 }
 .searchbox input {
   width: 100%;
+  min-width: 0;         /* let the input shrink to its flex container */
+  max-width: 100%;
   font-family: var(--font-ui); font-size: 12.5px;
   padding: 5px 26px 5px 9px;
   background: var(--well);
@@ -506,7 +514,7 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   :root { --rail-l: 300px; --rail-r: 360px; }
 }
 @media (max-width: 1480px) {
-  .searchbox { min-width: 140px; max-width: 240px; }
+  .searchbox { min-width: 180px; max-width: 300px; }
   .focusbox select { max-width: 140px; }
 }
 @media (max-width: 1380px) {
@@ -514,7 +522,7 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   :root { --rail-l: 300px; --rail-r: 360px; }
 }
 @media (max-width: 1280px) {
-  .searchbox { min-width: 120px; max-width: 200px; }
+  .searchbox { min-width: 160px; max-width: 260px; }
   .danger { min-width: 78px; padding: 4px 8px 0 8px; }
   .danger-num { font-size: 22px; }
   :root { --rail-l: 300px; --rail-r: 360px; }
@@ -523,12 +531,13 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   #ask-btn .ask-lbl { display: none !important; }
   #ask-btn { padding: 4px 8px; }
   :root { --rail-l: 280px; --rail-r: 320px; }
+  .searchbox { min-width: 140px; max-width: 220px; }
 }
 @media (max-width: 1080px) {
   /* Brand subtitle disappears entirely — the wordmark alone is fine. */
   .brand .sub-short { display: none; }
   .focusbox { display: none; }   /* city selection moves to dashboard grid */
-  .searchbox { min-width: 100px; max-width: 180px; }
+  .searchbox { min-width: 120px; max-width: 200px; }
 }
 
 /* ── Compact view: map on top, tabbed sheet below ────────────────────────
@@ -581,10 +590,10 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   #modetoggle button { min-width: 36px; min-height: 26px; padding: 3px 5px; font-size: 10px; }
   .searchbox {
     grid-column: 1; grid-row: 2; display: flex !important;
-    width: auto; padding: 4px 4px 4px 10px; min-width: 0; max-width: none;
+    width: auto; padding: 4px 4px 4px 10px; min-width: 0; max-width: 100%;
   }
   .searchbox input, .searchbox input:focus {
-    width: 100%; max-width: none; min-height: 26px; padding: 4px 32px 4px 9px; font-size: 12px;
+    width: 100%; max-width: 100%; min-width: 0; min-height: 26px; padding: 4px 32px 4px 9px; font-size: 12px;
   }
   .searchbox #search-clear {
     right: 5px; min-width: 28px; min-height: 28px; color: var(--ink-mid);
@@ -634,17 +643,26 @@ html[lang="en"] .appfooter-line .en { display: inline; }
 @media (max-width: 480px) {
   #app { grid-template-rows: auto minmax(0, 44fr) auto minmax(0, 56fr) var(--ticker-h); }
   header {
+    /* Three columns but the auto columns are sized to content; the
+     * 1fr column should shrink to 0 if its content is wider than the
+     * viewport, and the whole grid stays in 375px. The min-width:0
+     * on each child + the overflow-x:hidden on the body below is what
+     * actually contains the cascade. */
     grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-rows: auto 32px 32px;
     height: auto;
+    overflow: hidden;
   }
   .national {
     grid-column: 1 / -1; grid-row: 1;
     height: auto; min-height: 34px; padding: 6px 10px 2px;
+    overflow: hidden;
   }
+  .national .label { overflow: hidden; }
   .national .label .verb-th {
     font-size: 14.5px; line-height: 1.15;
-    white-space: normal; overflow: visible; text-overflow: clip;
+    white-space: normal; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%;
   }
   .danger {
     grid-column: 1; grid-row: 2;
@@ -653,9 +671,14 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   .danger-scope { max-width: 84px; }
   #ask-btn { grid-column: 2; grid-row: 2; }
   #modetoggle { grid-column: 3; grid-row: 2; }
-  .searchbox { grid-column: 1 / 3; grid-row: 3; }
+  .searchbox { grid-column: 1 / 3; grid-row: 3; max-width: 100%; min-width: 0; overflow: hidden; }
+  .searchbox input { max-width: 100%; min-width: 0; }
   #langtoggle { grid-column: 3; grid-row: 3; }
-  #about-btn { display: none; }  /* fine print lives in the footer on phones */
+  /* #about-btn still shows on phones but shrunk to icon-only — fine print
+     (project description, team, license) is one tap away, not behind
+     a hidden button. The label .lbl is hidden below, the ⓘ stays. */
+  #about-btn { padding: 3px 6px; min-height: 26px; }
+  #about-btn .lbl { display: none; }
 }
 
 /* ── Compare Places overlay — the redesigned split view. ────────────

@@ -1885,6 +1885,8 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
 .place-card {
   overflow-y: auto; flex: 1; min-height: 0;
   background: var(--paper);
+  max-width: 100%;    /* never exceed the rail / viewport */
+  box-sizing: border-box;
 }
 .place-loading {
   padding: 20px; text-align: center; font-size: 13px; color: var(--ink-mid);
@@ -2120,7 +2122,8 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
   }
   .search-results {
     position: fixed; top: 92px; left: 10px; right: 10px;
-    width: auto; max-height: min(55vh, 420px);
+    width: auto; max-width: calc(100vw - 20px);
+    max-height: min(55vh, 420px);
   }
 }
 
