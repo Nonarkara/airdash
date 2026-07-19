@@ -5,7 +5,13 @@
   background: var(--well);
   cursor: pointer;
   border-left: 4px solid transparent;
+  min-width: 0;        /* let the flex row shrink to the bottom sheet
+                          width — without this, the cause-chip's
+                          natural width pushes the row to ~480px and
+                          overflows the 320px phone viewport */
 }
+.rank-row .stats { min-width: 0; max-width: 45%; }
+.rank-row .stats .cause-chip { max-width: 100%; }
 .rank-row:hover { background: var(--well-dim); }
 .rank-row.b-high     { border-left-color: var(--band-high); }
 .rank-row.b-elevated { border-left-color: var(--band-elevated); }
