@@ -99,7 +99,7 @@ function pivotLatest(db, source, metrics) {
   return [...byStation.values()]
 }
 
-export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, startedAt }) {
+export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, startedAt }) {
   return {
     'GET /api/sensors/health': (req, res) => {
       json(res, 200, sensorHealth(db))
@@ -1095,7 +1095,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
       const body = await readBody(req).catch(() => ({}))
       let parsed
       try { parsed = JSON.parse(body) } catch { return json(res, 400, { error: 'invalid JSON' }) }
-      const { token, province_th, province_en, lang } = parsed
+      const { token, province_th, province_en, province_code, lang, lat, lng } = parsed
       if (!token || typeof token !== 'string' || token.length < 8) {
         return json(res, 400, { error: 'token required' })
       }
@@ -1122,15 +1122,21 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
       try {
         const now = new Date().toISOString()
         const existing = db.get('SELECT id FROM line_subs WHERE token = ?', token)
+        const latN = Number.isFinite(Number(lat)) ? Number(lat) : null
+        const lngN = Number.isFinite(Number(lng)) ? Number(lng) : null
         if (existing) {
-          db.run(`UPDATE line_subs SET province_th = ?, province_en = ?, lang = ?,
-                  fail_count = 0, updated_at = ? WHERE id = ?`,
-            province_th, province_en ?? null, lang ?? 'th', now, existing.id)
+          db.run(`UPDATE line_subs SET province_th = ?, province_en = ?, province_code = ?,
+                  lat = ?, lng = ?, lang = ?, fail_count = 0, updated_at = ?
+                  WHERE id = ?`,
+            province_th, province_en ?? null, province_code ?? null,
+            latN, lngN, lang ?? 'th', now, existing.id)
           return json(res, 200, { ok: true, updated: true })
         }
-        db.run(`INSERT INTO line_subs (token, province_th, province_en, lang, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)`,
-          token, province_th, province_en ?? null, lang ?? 'th', now, now)
+        db.run(`INSERT INTO line_subs
+                  (token, province_th, province_en, province_code, lat, lng, lang, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          token, province_th, province_en ?? null, province_code ?? null,
+          latN, lngN, lang ?? 'th', now, now)
         json(res, 200, { ok: true, created: true })
       } catch (err) {
         log('warn', 'line_subs store failed', { error: String(err?.message ?? err) })
@@ -1197,6 +1203,159 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
         return json(res, 503, LINE_PUSH_UNAVAILABLE)
       }
       json(res, 200, { message: push.buildMessage(province_th, province_en, band, score, lang) })
+    },
+
+    // ── LINE inbound webhook ─────────────────────────────────────────
+    // LINE POSTs every follower event (follow, unfollow, message, location,
+    // image) here. We process image / location / text events as citizen haze
+    // reports (held pending for operator moderation). Signature is verified
+    // inside lineWebhook.js against the same line_channel_secret stored for
+    // the OA push. The endpoint URL must be registered with LINE via
+    //   PUT /v2/bot/channel/webhook/endpoint  →  https://api-air.nonarkara.org/api/line/webhook
+    // LINE has a 1s timeout, so the handler does only the cheapest work
+    // inline and fire-and-forgets the rest via queueMicrotask.
+    'POST /api/line/webhook': async (req, res) => {
+      let raw
+      try { raw = await readBody(req, 1024 * 1024) } catch { return json(res, 413, { error: 'body too large' }) }
+      const sig = req.headers['x-line-signature']
+      let mod
+      try { mod = await import('./lineWebhook.js') } catch { return json(res, 503, { error: 'webhook not available' }) }
+      try {
+        const out = await mod.processLineWebhook(db, raw, sig)
+        // Always return 200 unless the HMAC explicitly failed — LINE
+        // retries on non-2xx, and a 401 just means more load for the same
+        // discarded body.
+        if (out?.status === 401) return json(res, 401, { error: 'signature mismatch' })
+        json(res, 200, { ok: true, processed: out?.processed ?? 0 })
+      } catch (err) {
+        log('warn', 'webhook handler failed', { error: String(err?.message ?? err) })
+        json(res, 200, { ok: true }) // still 200 — see note above
+      }
+    },
+
+    // ── LINE admin: configure channel id + secret ────────────────────
+    // Operator stores the LINE Messaging API channel id + secret here.
+    // The server mints a 30-day channel access token via OAuth
+    // client_credentials and auto-refreshes it 5 days before expiry.
+    // The secret is NEVER returned by the GET handler — only a masked
+    // suffix for the operator to confirm which credential is loaded.
+    'GET /api/admin/line-config': (req, res) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      const id = db.kvGet('line_channel_id') ?? ''
+      const secret = db.kvGet('line_channel_secret') ?? ''
+      const token = db.kvGet('line_channel_token') ?? ''
+      const masked = (s) => s ? `${s.slice(0, 3)}…${s.slice(-3)}` : ''
+      json(res, 200, {
+        channel_id: id,
+        channel_secret_masked: masked(secret),
+        has_token: Boolean(token),
+        token_minted_at: db.kvGet('line_token_minted_at'),
+        last_push: db.kvGet('line_last_push'),
+      })
+    },
+
+    'POST /api/admin/line-config': async (req, res) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      let body
+      try { body = JSON.parse(await readBody(req)) } catch { return json(res, 400, { error: 'invalid JSON' }) }
+      const { channel_id, channel_secret, channel_token } = body
+      if (channel_id) db.kvSet('line_channel_id', String(channel_id).trim())
+      if (channel_secret) db.kvSet('line_channel_secret', String(channel_secret).trim())
+      // Optional direct token override (legacy 30-day fixed tokens).
+      if (channel_token) {
+        db.kvSet('line_channel_token', String(channel_token).trim())
+        db.kvSet('line_token_minted_at', String(Date.now()))
+      }
+      // Try to mint immediately so the operator sees the result right away.
+      let mintResult = null
+      if (line?.mintToken) {
+        const t = await line.mintToken().catch(() => null)
+        mintResult = { ok: Boolean(t) }
+      }
+      json(res, 200, { ok: true, minted: mintResult })
+    },
+
+    'GET /api/admin/line-status': (req, res) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      const status = line?.status ? line.status() : { has_token: Boolean(db.kvGet('line_channel_token')) }
+      // Sub counts for the admin dashboard
+      let subCounts = { total: 0, active: 0 }
+      try {
+        subCounts.total = db.get('SELECT COUNT(*) AS n FROM line_subs').n
+        subCounts.active = db.get('SELECT COUNT(*) AS n FROM line_subs WHERE active = 1').n
+      } catch {}
+      json(res, 200, { ...status, subs: subCounts })
+    },
+
+    // ── Citizen reports moderation (admin) ──────────────────────────
+    // Lists pending reports for the operator to approve or reject.
+    'GET /api/admin/line-reports': async (req, res, url) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      let mod
+      try { mod = await import('./lineWebhook.js') } catch { return json(res, 503, { error: 'webhook not available' }) }
+      const status = url.searchParams.get('status') || 'pending'
+      const limit = clamp(url.searchParams.get('limit'), 1, 200, 50)
+      const offset = clamp(url.searchParams.get('offset'), 0, 10_000, 0)
+      const reports = mod.listReports(db, { status, limit, offset })
+      // Re-write image_path to a public /api/reports/image/<id> URL so the
+      // admin UI doesn't need filesystem access.
+      json(res, 200, {
+        reports: reports.map((r) => ({
+          ...r,
+          image_url: r.image_path ? `/api/admin/line-reports/image/${r.id}` : null,
+        })),
+        limit, offset,
+      })
+    },
+
+    // Streams the image file for one report. Gated to admin — images
+    // contain whatever citizens pointed their phone at.
+    'GET /api/admin/line-reports/image/:id': async (req, res, url) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      const id = Number(url.searchParams.get(':id'))
+      if (!Number.isFinite(id)) return json(res, 400, { error: 'invalid id' })
+      const row = db.get(`SELECT image_path FROM line_reports WHERE id = ?`, id)
+      if (!row?.image_path) return json(res, 404, { error: 'no image' })
+      sendFile(res, row.image_path, { contentType: 'image/jpeg', cacheControl: 'private, max-age=60' })
+    },
+
+    'POST /api/admin/line-reports/:id/decide': async (req, res, url) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      const id = Number(url.searchParams.get(':id'))
+      if (!Number.isFinite(id)) return json(res, 400, { error: 'invalid id' })
+      let body
+      try { body = JSON.parse(await readBody(req)) } catch { return json(res, 400, { error: 'invalid JSON' }) }
+      let mod
+      try { mod = await import('./lineWebhook.js') } catch { return json(res, 503, { error: 'webhook not available' }) }
+      try {
+        const out = mod.decideReport(db, id, { status: body?.status, note: body?.note })
+        json(res, 200, { ok: true, report: out })
+      } catch (err) {
+        json(res, 400, { error: String(err?.message ?? err) })
+      }
+    },
+
+    // Public read of approved reports — a citizen who's curious which
+    // neighborhoods other users have flagged today. No PII; user_hash is
+    // stripped at the SQL layer.
+    'GET /api/reports': (req, res, url) => {
+      const limit = clamp(url.searchParams.get('limit'), 1, 50, 20)
+      const since = url.searchParams.get('since') // ISO timestamp filter
+      let rows
+      try {
+        if (since) {
+          rows = db.all(
+            `SELECT id, kind, message, lat, lng, province_code, province_th, province_en, created_at
+             FROM line_reports WHERE status = 'approved' AND created_at > ?
+             ORDER BY id DESC LIMIT ?`, since, limit)
+        } else {
+          rows = db.all(
+            `SELECT id, kind, message, lat, lng, province_code, province_th, province_en, created_at
+             FROM line_reports WHERE status = 'approved'
+             ORDER BY id DESC LIMIT ?`, limit)
+        }
+      } catch { rows = [] }
+      json(res, 200, { reports: rows, count: rows.length })
     },
 
     // ── Weekly data exports ─────────────────────────────────────────

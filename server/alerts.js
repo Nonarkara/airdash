@@ -31,6 +31,17 @@ export function createAlerts(db, bus, { line = null } = {}) {
     // Severe alerts also fan out to LINE followers (batched; no-op when the
     // OA token isn't configured).
     line?.notifyAlert({ severity, message_th, message_en })
+    // Per-subscriber push (LINE Notify tokens). Lazily imported so the
+    // optional module never blocks the alert engine's hot path on a
+    // deployment that hasn't enabled it.
+    if ((severity ?? 0) >= 2) {
+      import('./linePush.js').then(({ notifySubscribersForAlert }) => {
+        notifySubscribersForAlert(db, {
+          severity, message_th, message_en,
+          province_th: station.province_th, province_en: station.province_en,
+        }).catch((err) => log('warn', 'line-push alert fan-out failed', { error: String(err?.message ?? err) }))
+      }).catch(() => { /* linePush not available — silently skip */ })
+    }
     return true
   }
 

@@ -58,7 +58,7 @@ const scheduler = createScheduler({
   sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise, aqHistory],
 })
 
-const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, startedAt }))
+const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, startedAt }))
 
 scheduler.start()
 scheduleRetention(db)

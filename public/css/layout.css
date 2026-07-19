@@ -847,6 +847,38 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   text-decoration: none;
   background: var(--paper);
 }
+
+/* LINE notification section — two parallel opt-in paths (OA broadcast
+   vs per-token Notify). Side-by-side grid on desktop, stacked on phone. */
+.about-line-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  margin-top: 14px;
+}
+.about-line-col {
+  padding: 14px; border: 1px solid var(--rule-strong);
+  border-left: 4px solid #00C300;
+  background: rgba(0,194,0,0.04);
+}
+.about-line-col .about-line-col, .about-line-col:nth-child(2) { border-left-color: #00A000; }
+.about-line-tag {
+  display: inline-block; padding: 2px 8px;
+  background: #00C300; color: #fff; font-family: var(--font-num);
+  font-size: 10px; letter-spacing: 0.05em;
+}
+.about-line-col h4 { margin: 8px 0 6px; font-size: 14px; color: var(--ink); }
+.about-line-col p { font-size: 12px; line-height: 1.55; color: var(--ink-mid); }
+.about-line-cta {
+  display: inline-block; padding: 7px 14px; margin-top: 8px;
+  background: #00C300; color: #fff;
+  font-size: 12px; font-weight: 700; text-decoration: none;
+}
+.about-line-cta:hover { background: #00A800; }
+.about-line-cta.secondary { background: var(--paper); color: var(--ink); border: 1px solid var(--rule-strong); }
+.about-line-cta.secondary:hover { background: var(--bg-soft); }
+.about-line-fine { font-size: 11px; opacity: 0.6; margin-top: 12px; font-style: italic; }
+@media (max-width: 720px) {
+  .about-line-grid { grid-template-columns: 1fr; }
+}
 .about-links a:hover { background: var(--th-navy); color: var(--ink-inv); }
 
 .about-fineprint {

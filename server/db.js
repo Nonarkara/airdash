@@ -201,6 +201,33 @@ CREATE TABLE IF NOT EXISTS chat_faq (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_faq_lang ON chat_faq(lang, approved, served_count DESC);
 
+-- ── LINE per-token push subscribers — citizens who paste a LINE Notify
+-- token (or accept OA-permissioned message routing) so the server can
+-- deliver severe PM2.5 / AQI alerts to ONE user at a time. The token is
+-- the LINE Notify access token the user copied at notify-bot.line.me; the
+-- OA-broadcast path (server/line.js) is a different channel and never
+-- touches this table. fail_count is the running tally of failed pushes
+-- (token revoked, rate limited) — a sub with 5+ failures is auto-purged
+-- so the table never fills with dead tokens. last_notified_at is the
+-- per-(token, province) cooldown timestamp that prevents a haze episode
+-- from spamming a user with 30 alerts in an hour.
+CREATE TABLE IF NOT EXISTS line_subs (
+  id INTEGER PRIMARY KEY,
+  token TEXT NOT NULL UNIQUE,         -- LINE Notify access token (one per subscriber)
+  province_th TEXT,                    -- chosen by the user in the citizen panel
+  province_en TEXT,
+  province_code TEXT,                  -- 2-digit code (joins to stations, gazetteer)
+  lat REAL, lng REAL,                  -- optional coordinates (for radius match future)
+  lang TEXT DEFAULT 'th',              -- 'th' | 'en'
+  last_notified_at TEXT,               -- ISO timestamp of the last push to this token
+  fail_count INTEGER DEFAULT 0,        -- consecutive send failures (auto-purge at 5)
+  active INTEGER DEFAULT 1,            -- 0 = opted out via cancel link
+  created_at TEXT NOT NULL,
+  updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_line_subs_active ON line_subs(active, last_notified_at);
+CREATE INDEX IF NOT EXISTS idx_line_subs_province ON line_subs(province_code) WHERE active = 1;
+
 `
 
 // Additive column migrations for tables that predate a field — CREATE TABLE
