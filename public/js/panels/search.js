@@ -241,7 +241,7 @@ async function bootCityFromUrl() {
 // City mode: while a place card is open it owns the whole left rail — a
 // mayor following their ?city= link cares about THEIR city, not the national
 // ranking. Everything comes back when the card closes.
-const RAIL_SIBLINGS = ['ranking', 'detail', 'forecast-strip', 'whatif']
+const RAIL_SIBLINGS = ['ranking', 'detail', 'city-dashboard', 'forecast-strip', 'whatif']
 function setCityMode(onMode) {
   for (const id of RAIL_SIBLINGS) {
     const n = document.getElementById(id)
