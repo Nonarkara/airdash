@@ -338,7 +338,7 @@ html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
 .langtoggle button:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 .langtoggle button.active { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 
-#about-btn, #split-btn {
+#about-btn, #split-btn, #flooddash-btn {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 4px 8px;
   background: var(--well);
@@ -356,9 +356,10 @@ html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
   height: fit-content;
   margin-top: auto;
   margin-bottom: auto;
+  text-decoration: none;
 }
-#about-btn:hover, #split-btn:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
-#about-btn .lbl, #split-btn .lbl { display: inline; }
+#about-btn:hover, #split-btn:hover, #flooddash-btn:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+#about-btn .lbl, #split-btn .lbl, #flooddash-btn .lbl { display: inline; }
 /* Compare Places is a desktop power feature — the overlay's multi-pane
    grid needs width; hide the trigger on compact screens. */
 @media (max-width: 1100px) { #split-btn { display: none; } }
@@ -651,11 +652,21 @@ html[lang="en"] .appfooter-line .en { display: inline; }
      * 1fr column should shrink to 0 if its content is wider than the
      * viewport, and the whole grid stays in 375px. The min-width:0
      * on each child + the overflow-x:hidden on the body below is what
-     * actually contains the cascade. */
+     * actually contains the cascade.
+     *
+     * NOTE: must explicitly set `display: grid` here — the base rule
+     * uses `display: flex`, and without this override the grid
+     * template columns/rows are dead code, the searchbox uses its
+     * content min-width (380px+ for the Thai placeholder) and the
+     * whole header overflows the viewport to ~480px. The langtoggle
+     * and modetoggle then sit at L=397, completely off-screen, and
+     * the user can neither switch language nor mode. */
+    display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-rows: auto 32px 32px;
     height: auto;
     overflow: hidden;
+    max-width: 100vw;
   }
   .national {
     grid-column: 1 / -1; grid-row: 1;
@@ -678,11 +689,12 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   .searchbox { grid-column: 1 / 3; grid-row: 3; width: 100%; max-width: 100%; min-width: 0; flex: none; padding: 4px 4px 4px 10px; overflow: hidden; }
   .searchbox input { max-width: 100%; min-width: 0; }
   #langtoggle { grid-column: 3; grid-row: 3; }
-  /* Hide the header's about-btn on phones — the ⓘ would otherwise
+  /* Hide the header's about-btn (and the FloodDash sister-link, same
+     class of non-essential utility button) on phones — they'd otherwise
      get auto-placed into row 4 (since rows 1-3 are full) and add a
      26px row to the already-tall header. The about link is
      surfaced in the citizen panel + footer on small screens. */
-  #about-btn { display: none; }
+  #about-btn, #flooddash-btn { display: none; }
   .phone-about-link { display: inline-flex !important; }
 }
 

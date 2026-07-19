@@ -1,7 +1,7 @@
 // SSE tap client with a liveness watchdog — built for weeks of uptime.
 // EventSource auto-reconnects, but a silently-dead socket doesn't error, so a
 // watchdog recreates the connection when heartbeats stop arriving.
-import { emit, store } from './state.js?v=2.0.0-audit4'
+import { emit, store } from './state.js?v=2.0.0-audit5'
 
 const WATCHDOG_MS = 60_000
 let es = null

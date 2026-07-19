@@ -1,10 +1,10 @@
 // Left rail: live province watch ranking. Click → fly map + station detail.
-import { on, store } from '../state.js?v=2.0.0-audit4'
-import { tr, BAND } from '../i18n.js?v=2.0.0-audit4'
-import { fmtNum, el } from '../fmt.js?v=2.0.0-audit4'
-import { flyToProvince } from '../map.js?v=2.0.0-audit4'
-import { showProvinceDetail } from './detail.js?v=2.0.0-audit4'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.0.0-audit4'
+import { on, store } from '../state.js?v=2.0.0-audit5'
+import { tr, BAND } from '../i18n.js?v=2.0.0-audit5'
+import { fmtNum, el } from '../fmt.js?v=2.0.0-audit5'
+import { flyToProvince } from '../map.js?v=2.0.0-audit5'
+import { showProvinceDetail } from './detail.js?v=2.0.0-audit5'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.0.0-audit5'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }
