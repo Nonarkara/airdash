@@ -1,30 +1,30 @@
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.0.0-heatmap1'
-import { paintChrome } from './i18n.js?v=2.0.0-heatmap1'
-import { startTap } from './sse.js?v=2.0.0-heatmap1'
-import { initMap, invalidateMap } from './map.js?v=2.0.0-heatmap1'
-import { initHeader } from './panels/header.js?v=2.0.0-heatmap1'
-import { initRanking } from './panels/ranking.js?v=2.0.0-heatmap1'
-import { initForecast } from './panels/forecast.js?v=2.0.0-heatmap1'
-import { initWhatIf } from './panels/whatif.js?v=2.0.0-heatmap1'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.0.0-heatmap1'
-import { initTap } from './panels/tap.js?v=2.0.0-heatmap1'
-import { initSources } from './panels/sources.js?v=2.0.0-heatmap1'
-import { initHistory } from './panels/history.js?v=2.0.0-heatmap1'
-import { initInsights } from './panels/insights.js?v=2.0.0-heatmap1'
-import { initAnalytics } from './panels/analytics.js?v=2.0.0-heatmap1'
-import { initFeeds } from './panels/feeds.js?v=2.0.0-heatmap1'
-import { initChat } from './panels/chat.js?v=2.0.0-heatmap1'
-import { initCitizen } from './panels/citizen.js?v=2.0.0-heatmap1'
-import { initWaterways } from './panels/waterways.js?v=2.0.0-heatmap1'
-import { initFocus } from './panels/focus.js?v=2.0.0-heatmap1'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-heatmap1'
-import { initSplit } from './panels/split.js?v=2.0.0-heatmap1'
-import { initLibrary } from './panels/library.js?v=2.0.0-heatmap1'
-import { initResearch } from './panels/research.js?v=2.0.0-heatmap1'
-import { initSearch } from './panels/search.js?v=2.0.0-heatmap1'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.0.0-heatmap1'
+import { on, emit, store, setLang } from './state.js?v=2.0.0-mobile1'
+import { paintChrome } from './i18n.js?v=2.0.0-mobile1'
+import { startTap } from './sse.js?v=2.0.0-mobile1'
+import { initMap, invalidateMap } from './map.js?v=2.0.0-mobile1'
+import { initHeader } from './panels/header.js?v=2.0.0-mobile1'
+import { initRanking } from './panels/ranking.js?v=2.0.0-mobile1'
+import { initForecast } from './panels/forecast.js?v=2.0.0-mobile1'
+import { initWhatIf } from './panels/whatif.js?v=2.0.0-mobile1'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.0.0-mobile1'
+import { initTap } from './panels/tap.js?v=2.0.0-mobile1'
+import { initSources } from './panels/sources.js?v=2.0.0-mobile1'
+import { initHistory } from './panels/history.js?v=2.0.0-mobile1'
+import { initInsights } from './panels/insights.js?v=2.0.0-mobile1'
+import { initAnalytics } from './panels/analytics.js?v=2.0.0-mobile1'
+import { initFeeds } from './panels/feeds.js?v=2.0.0-mobile1'
+import { initChat } from './panels/chat.js?v=2.0.0-mobile1'
+import { initCitizen } from './panels/citizen.js?v=2.0.0-mobile1'
+import { initWaterways } from './panels/waterways.js?v=2.0.0-mobile1'
+import { initFocus } from './panels/focus.js?v=2.0.0-mobile1'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-mobile1'
+import { initSplit } from './panels/split.js?v=2.0.0-mobile1'
+import { initLibrary } from './panels/library.js?v=2.0.0-mobile1'
+import { initResearch } from './panels/research.js?v=2.0.0-mobile1'
+import { initSearch } from './panels/search.js?v=2.0.0-mobile1'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.0.0-mobile1'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -39,9 +39,15 @@ function safeInit(name, fn) {
 }
 
 const SNAPSHOT_MS = 5 * 60_000
+// Snapshot boot timeout. The Cloudflare Pages Function proxy has a 30s
+// timeout for non-streaming JSON, and the 779KB snapshot can be slow
+// on cellular. 10s is short enough that phone users see the retry
+// button fast (via the stuck-on-boot escape hatch), but long enough
+// to ride out a normal cold start.
+const SNAPSHOT_TIMEOUT_MS = 10_000
 
 async function loadSnapshot() {
-  const res = await fetch('/api/snapshot')
+  const res = await fetch('/api/snapshot', { cache: 'no-store', signal: AbortSignal.timeout(SNAPSHOT_TIMEOUT_MS) })
   if (!res.ok) throw new Error(`snapshot HTTP ${res.status}`)
   store.snapshot = await res.json()
   emit('snapshot', store.snapshot)
@@ -50,8 +56,10 @@ async function loadSnapshot() {
 // A single transient blip (a cold Cloudflare Tunnel connection, a server
 // restart mid-request) shouldn't strand the operator on a dead boot screen
 // during exactly the event this dashboard exists for. Retry with backoff
-// before giving up and showing the manual-retry error state.
-async function loadSnapshotWithRetry(attempts = 4, delayMs = 1200) {
+// before giving up and showing the manual-retry error state. Two retries
+// × 1.5s backoff ≈ 5s max; the stuck-on-boot escape hatch covers anything
+// longer so phone users are never stranded silently.
+async function loadSnapshotWithRetry(attempts = 2, delayMs = 1500) {
   for (let i = 0; i < attempts; i++) {
     try {
       await loadSnapshot()
@@ -80,6 +88,42 @@ function showBootError(err) {
   btn.textContent = hint
   btn.addEventListener('click', () => location.reload())
   boot.append(sign, btn)
+}
+
+// Stuck-on-boot escape hatch. If the boot is still on screen after 6s,
+// reveal the "tap to retry" prompt. Without this, a stuck boot on slow
+// cellular or a half-broken SW looks identical to "still loading" and
+// the user has no escape. The plain Retry button does a normal reload
+// (SW may serve from cache). The "clear cache" button unregisters the
+// SW and wipes caches first — useful when the SW is serving broken
+// cached HTML from a previous broken deploy. Both are wired below.
+function setupBootStuckEscape() {
+  const stuck = document.getElementById('boot-stuck')
+  if (!stuck) return
+  const reveal = () => { if (document.getElementById('boot')) stuck.hidden = false }
+  setTimeout(reveal, 6000)
+  document.getElementById('boot-retry-btn')?.addEventListener('click', () => {
+    // Bypass the SW + HTTP cache for the retry so a broken cached
+    // page is not served back to the user.
+    const url = new URL(location.href)
+    url.searchParams.set('forceReload', String(Date.now()))
+    location.replace(url.toString())
+  })
+  document.getElementById('boot-clear-btn')?.addEventListener('click', async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(regs.map((r) => r.unregister()))
+      }
+      if ('caches' in window) {
+        const names = await caches.keys()
+        await Promise.all(names.map((n) => caches.delete(n)))
+      }
+    } catch (e) { /* best-effort — still reload even if cleanup throws */ }
+    const url = new URL(location.href)
+    url.searchParams.set('forceReload', String(Date.now()))
+    location.replace(url.toString())
+  })
 }
 
 async function loadTapHistory() {
@@ -355,6 +399,10 @@ async function boot() {
   safeInit('tabs', initTabs)
   safeInit('sheet', initSheet)
   safeInit('about', initAbout)
+  // Wire the stuck-on-boot escape hatch. Runs even if every safeInit
+  // succeeded — a slow /api/snapshot on cellular can keep the boot
+  // screen up well past the point a phone user is comfortable.
+  setupBootStuckEscape()
 
   // Place search → fly the map
   on('place-select', ({ lat, lng, zoom }) => {

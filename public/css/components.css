@@ -1182,6 +1182,41 @@ body.mode-citizen .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 #boot .boot-retry:hover { background: #1a1640; }
 
+/* ── Stuck-on-boot escape hatch ───────────────────────────────────────
+   Visible after the boot has been showing for >6s (set by JS via
+   the .show-stuck class). Without this, a stuck boot on slow cellular
+   or a half-broken SW looks identical to "still loading" and the
+   user has no way out. Two actions: plain retry (reloads the page,
+   which the SW may serve from cache or network depending on its
+   state) and "clear cache & reload" which unregisters the SW +
+   wipes caches first. Both are one-tap from the boot screen. */
+#boot .boot-stuck {
+  margin: 16px auto 4px; max-width: 460px; padding: 12px 16px;
+  border: 1px solid var(--th-warn, #E86A10);
+  background: rgba(232, 106, 16, 0.06);
+  border-radius: 6px;
+  text-align: center;
+  font-family: var(--font-ui);
+}
+#boot .boot-stuck[hidden] { display: none; }
+#boot .boot-stuck .th { font-size: 12.5px; font-weight: 600; color: var(--th-warn, #E86A10); }
+#boot .boot-stuck .en { font-size: 11.5px; color: var(--ink-mid); margin-top: 4px; }
+#boot .boot-stuck .en { display: none; }
+html[lang="en"] #boot .boot-stuck .th { display: none; }
+html[lang="en"] #boot .boot-stuck .en { display: inline; }
+#boot .boot-stuck-actions { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+#boot .boot-stuck-btn {
+  padding: 7px 14px; border: 1px solid var(--th-navy);
+  background: var(--paper); color: var(--th-navy);
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  cursor: pointer; border-radius: 4px;
+}
+#boot .boot-stuck-btn:hover { background: var(--well); }
+#boot .boot-stuck-btn.primary {
+  background: var(--th-navy); color: #fff;
+}
+#boot .boot-stuck-btn.primary:hover { background: #1a1640; }
+
 /* The boot-screen explainer — answers "why is this slow?" while the
    first snapshot is still fetching. Same copy is dual-rendered (.th
    + .en) and html[lang] toggles which is visible. Keep the box
