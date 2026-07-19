@@ -29,6 +29,7 @@ const GEO = join(__dirname, '..', 'public', 'geo')
 let _tambons = null
 let _districts = null
 let _provinces = null
+let _municipalities = null
 
 function loadTambons() {
   if (_tambons) return _tambons
@@ -59,6 +60,43 @@ function loadProvinces() {
     byCode: new Map(raw.map((p) => [p.provinceCode, p])),
   }
   return _provinces
+}
+
+// เทศบาล / อบต. / อบจ. (local-government municipalities). DOPA's open
+// mirror only ships province/district/tambon — the DLA (Dept of Local
+// Administration) registry isn't mirrored yet, so we ship a curated
+// public/geo/municipalities.json with the major ones and prefix-strip
+// เทศบาล/อบต. for the long tail. A 2026-talk-grade entry covers any
+// city the user is likely to search for; new ones can be added by
+// appending to the JSON.
+function loadMunicipalities() {
+  if (_municipalities) return _municipalities
+  let raw = { municipalities: [] }
+  try {
+    raw = JSON.parse(readFileSync(join(GEO, 'municipalities.json'), 'utf8'))
+  } catch {
+    // File missing or unreadable — fall through to empty list; the
+    // prefix-stripper below still resolves เทศบาล<X> via the tambon
+    // table.
+    _municipalities = { list: [], byName: new Map(), byTambon: new Map() }
+    return _municipalities
+  }
+  const list = raw.municipalities ?? []
+  // Index by lowercase Thai name + lowercase English name for fast lookup.
+  const byName = new Map()
+  for (const m of list) {
+    byName.set(m.name_th.toLowerCase(), m)
+    if (m.name_en) byName.set(m.name_en.toLowerCase(), m)
+  }
+  // Index by tambon code so เทศบาล<cover tambon> style queries can be
+  // routed back to a known municipality when the typed name doesn't
+  // match the curated list.
+  const byTambon = new Map()
+  for (const m of list) {
+    for (const t of (m.tambon_codes ?? [])) byTambon.set(t, m)
+  }
+  _municipalities = { list, byName, byTambon, source: raw.source ?? 'curated' }
+  return _municipalities
 }
 
 function trName(en, th, lang) {
@@ -170,11 +208,179 @@ export function searchTambons(q, lang = 'en', limit = 12) {
     })
 }
 
+// เทศบาล / อบต. / อบจ. search. Three layers:
+//   1. Exact match in the curated municipalities.json (most major cities).
+//   2. Prefix-strip "เทศบาล<X>" / "อบต.<X>" / "อบจ.<X>" and re-search
+//      the gazetteer (any tambon/district can be a municipality area).
+//   3. Substring search across all curated municipality names.
+//
+// Returns objects shaped like the rest of the gazetteer (name_th/en,
+// province_th/en, lat/lng, zoom) so the search panel renders them
+// uniformly.
+export function searchMunicipalities(q, lang = 'en', limit = 8) {
+  q = (q ?? '').trim()
+  if (!q || q.length < 2) return []
+  const data = loadMunicipalities()
+  const ql = q.toLowerCase()
+  const results = []
+
+  // Layer 1: exact (case-insensitive) match
+  const exact = data.byName.get(ql)
+  if (exact) results.push({ row: exact, s: 200 })
+
+  // Layer 2: prefix-strip and look up remainder in the gazetteer.
+  // Common Thai prefixes the operator/user types: เทศบาลนคร, เทศบาลเมือง,
+  // เทศบาลตำบล, เทศบาล, อบต., อบจ. (TAO = Tambon Administrative
+  // Organisation, PAO = Provincial Administrative Organisation).
+  const stripPatterns = [
+    /^เทศบาลนคร/, /^เทศบาลเมือง/, /^เทศบาลตำบล/, /^เทศบาล/, /^อบต\./, /^อบจ\./,
+    /^เทศบาล\s+/, /^อบต\.\s*/, /^อบจ\.\s*/,
+  ]
+  for (const pat of stripPatterns) {
+    const stripped = q.replace(pat, '').trim()
+    if (!stripped || stripped === q) continue
+    // Try exact match on stripped name first
+    if (data.byName.has(stripped.toLowerCase())) {
+      const m = data.byName.get(stripped.toLowerCase())
+      if (!results.find((r) => r.row.id === m.id)) results.push({ row: m, s: 190 })
+    }
+    // Then gazetteer lookup — but EXACT match only on the stripped
+    // remainder. Substring search would mangle "เชียงใหม่" → tambon
+    // "ศรีเชียงใหม่" in หนองคาย (Nong Khai). The user typed a
+    // municipality name; we want a result whose name is the remainder,
+    // not a fragment of a different place that happens to contain
+    // those characters.
+    const strippedLower = stripped.toLowerCase()
+    for (const t of loadTambons().list) {
+      if (t.subdistrictNameTh.toLowerCase() === strippedLower
+          || t.subdistrictNameEn.toLowerCase() === strippedLower) {
+        // If a curated municipality already covers this tambon, the
+        // user is typing the same place with extra words — don't add
+        // the same row twice.
+        const m = data.byTambon.get(t.subdistrictCode)
+        if (m) {
+          if (!results.find((r) => r.row.id === m.id)) {
+            results.push({ row: m, s: 160, via_tambon: {
+              code: t.subdistrictCode, name_th: t.subdistrictNameTh, name_en: t.subdistrictNameEn,
+            }})
+          }
+          break
+        }
+        // No curated municipality for this tambon — synthesize a
+        // virtual เทศบาลตำบล record (most common pattern for a
+        // subdistrict-level municipality named after its tambon).
+        const district = loadDistricts().byCode.get(t.districtCode)
+        const province = loadProvinces().byCode.get(t.provinceCode)
+        if (province) {
+          const virtual = {
+            id: `VIRT-T-${t.subdistrictCode}`,
+            name_th: `เทศบาล${stripped}`,
+            name_en: `${stripped} Municipality`,
+            type: 'เทศบาล',
+            type_en: 'Municipality',
+            province_code: t.provinceCode,
+            province_th: province.provinceNameTh,
+            province_en: province.provinceNameEn,
+            center: { lat: province.lat, lng: province.lng },
+            zoom: 12,
+            virtual: true,
+            via_tambon_code: t.subdistrictCode,
+          }
+          if (!results.find((r) => r.row.id === virtual.id)) {
+            results.push({ row: virtual, s: 155, via_tambon: {
+              code: t.subdistrictCode, name_th: t.subdistrictNameTh, name_en: t.subdistrictNameEn,
+            }})
+          }
+        }
+        break
+      }
+    }
+    for (const d of loadDistricts().list) {
+      if (d.districtNameTh.toLowerCase() === strippedLower
+          || d.districtNameEn.toLowerCase() === strippedLower) {
+        // Some เทศบาลเมือง cover an entire district (e.g. เทศบาลเมืองพัทยา).
+        // We don't have a curated entry for every such case, so synthesize
+        // a virtual municipality record from the district.
+        const province = loadProvinces().byCode.get(d.provinceCode)
+        const virtual = {
+          id: `VIRT-${d.districtCode}`,
+          name_th: `เทศบาล${stripped}`,
+          name_en: `${stripped} Municipality`,
+          type: 'เทศบาล',
+          type_en: 'Municipality',
+          province_code: d.provinceCode,
+          province_th: province?.provinceNameTh ?? null,
+          province_en: province?.provinceNameEn ?? null,
+          center: province ? { lat: province.lat, lng: province.lng } : null,
+          zoom: 11,
+          virtual: true,
+        }
+        // Suppress the virtual entry when the curated list already has a
+        // municipality in the same province whose name covers the same
+        // place. (E.g. user types "เทศบาลกระทุ่มแบน" → curated 7402-T01
+        // matches; the district "กระทุ่มแบน" would also synthesize a
+        // virtual for the same province — keep the curated only.)
+        const dupOfCurated = results.find((r) =>
+          r.row.province_code === d.provinceCode
+          && r.row.name_th.replace(/^เทศบาล(นคร|เมือง|ตำบล)?/, '') === stripped
+        )
+        if (dupOfCurated) break
+        if (!results.find((r) => r.row.id === virtual.id)) {
+          results.push({ row: virtual, s: 150, via_district: {
+            code: d.districtCode, name_th: d.districtNameTh, name_en: d.districtNameEn,
+          } })
+        }
+        break
+      }
+    }
+  }
+
+  // Layer 3: substring over the curated list — partial matches so
+  // "กระทุ่ม" finds "เทศบาลกระทุ่มแบน" even when the user didn't
+  // type the full name.
+  if (results.length < limit) {
+    const have = new Set(results.map((r) => r.row.id))
+    for (const m of data.list) {
+      if (have.has(m.id)) continue
+      const lo_th = m.name_th.toLowerCase()
+      const lo_en = (m.name_en ?? '').toLowerCase()
+      const idx_th = lo_th.indexOf(ql)
+      const idx_en = lo_en.indexOf(ql)
+      if (idx_th === -1 && idx_en === -1) continue
+      const s = (idx_th === 0 || idx_en === 0) ? 100
+        : (idx_th >= 0 ? 60 - idx_th : 60 - idx_en)
+      results.push({ row: m, s })
+      if (results.length >= limit + 4) break
+    }
+  }
+
+  // Sort by score and return
+  results.sort((a, b) => b.s - a.s)
+  return results.slice(0, limit).map((r) => ({
+    kind: 'municipality',
+    id: r.row.id,
+    name_th: r.row.name_th,
+    name_en: r.row.name_en,
+    type_th: r.row.type ?? 'เทศบาล',
+    type_en: r.row.type_en ?? 'Municipality',
+    province_th: r.row.province_th,
+    province_en: r.row.province_en,
+    center_lat: r.row.center?.lat ?? null,
+    center_lng: r.row.center?.lng ?? null,
+    lat: r.row.center?.lat ?? null,
+    lng: r.row.center?.lng ?? null,
+    zoom: r.row.zoom ?? 12,
+    virtual: r.row.virtual ?? false,
+    via_tambon_code: r.via_tambon?.code ?? null,
+    via_tambon_th: r.via_tambon?.name_th ?? null,
+    via_tambon_en: r.via_tambon?.name_en ?? null,
+  }))
+}
+
 // Postal-code lookup: 5-digit code → tambon / district / province. This is
 // the other "no village left behind" path — every Thai postal code maps
 // to exactly one tambon, so users can search by typing their own zip.
-export function lookupPostal(zip, lang = 'en', limit = 5) {
-  const z = String(zip ?? '').trim()
+export function lookupPostal(zip, lang = 'en', limit = 5) {  const z = String(zip ?? '').trim()
   if (!/^\d{5}$/.test(z)) return []
   const out = []
   for (const t of loadTambons().list) {
@@ -331,6 +537,32 @@ export function searchGazetteer(db, { q = '', limit = 20, lang = 'en' } = {}) {
 
   const like = `%${q.replace(/[%_\\]/g, (c) => `\\${c}`)}%`
   const results = []
+
+  // ── Municipalities / เทศบาล / อบต. (in-memory + prefix-strip fallback) ─
+  // Highest priority: a user typing "เทศบาลกระทุ่มแบน" or "เทศบาลนครเชียงใหม่"
+  // expects a municipality result, not a tambon/district. Three layers
+  // (exact, prefix-strip + gazetteer, substring) — see searchMunicipalities.
+  for (const m of searchMunicipalities(q, lang, 5)) {
+    const prov = loadProvinces().byCode.get(Number(m.province_code))
+    results.push({
+      type: 'municipality',
+      type_th: m.type_th,
+      type_en: m.type_en,
+      name_th: m.name_th, name_en: m.name_en,
+      province_th: m.province_th, province_en: m.province_en,
+      lat: m.lat, lng: m.lng,
+      zoom: m.zoom,
+      virtual: m.virtual,
+      via_tambon_code: m.via_tambon_code,
+      via_tambon_th: m.via_tambon_th,
+      via_tambon_en: m.via_tambon_en,
+      // The place card uses `municipality_<id>` so the deep-link / city-url
+      // (which the user might bookmark) round-trips back to the same
+      // municipality result.
+      id: `municipality_${m.id}`,
+      score: 110,
+    })
+  }
 
   // ── Provinces (in-memory) ─────────────────────────────────────────────
   for (const p of searchProvinces(q, lang, 5)) {
