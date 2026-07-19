@@ -2119,7 +2119,7 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
     padding: 6px 38px 6px 9px;
   }
   .search-results {
-    position: fixed; top: 92px; left: 10px; right: 10px;
+    position: fixed; top: 108px; left: 10px; right: 10px;
     width: auto; max-width: calc(100vw - 20px);
     max-height: min(55vh, 420px);
   }
