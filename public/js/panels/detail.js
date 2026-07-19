@@ -1,13 +1,13 @@
 // Left-rail drill-down: province detail (its AQ stations) or a single
 // station with a 72-hour chart from /api/series. Charts are zero-dep canvas
 // via /js/chart.js so they re-render cheaply when new snapshots arrive.
-import { on, store } from '../state.js?v=2.0.0-audit2'
-import { tr, pick } from '../i18n.js?v=2.0.0-audit2'
-import { fmtNum, fmtClock, el } from '../fmt.js?v=2.0.0-audit2'
-import { flyToStation } from '../map.js?v=2.0.0-audit2'
-import { drawSeriesChart } from '../chart.js?v=2.0.0-audit2'
-import { provinceHealth } from '../sensorHealth.js?v=2.0.0-audit2'
-import { causeChip, causesByProvince, causeEvidenceBlock, provincePatternsBlock } from './patterns-ui.js?v=2.0.0-audit2'
+import { on, store } from '../state.js?v=2.0.0-audit3'
+import { tr, pick } from '../i18n.js?v=2.0.0-audit3'
+import { fmtNum, fmtClock, el } from '../fmt.js?v=2.0.0-audit3'
+import { flyToStation } from '../map.js?v=2.0.0-audit3'
+import { drawSeriesChart } from '../chart.js?v=2.0.0-audit3'
+import { provinceHealth } from '../sensorHealth.js?v=2.0.0-audit3'
+import { causeChip, causesByProvince, causeEvidenceBlock, provincePatternsBlock } from './patterns-ui.js?v=2.0.0-audit3'
 
 let current = null // {type:'province', p} | {type:'station', source, station, metric}
 let lastSeries = null // last fetched points so we can re-paint on lang/snapshot

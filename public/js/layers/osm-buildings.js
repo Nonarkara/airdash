@@ -5,9 +5,9 @@
 //
 // 2D footprint coloring driven by our real-time multi-source watch score —
 // a quick "how bad is the air around this block" read at street zoom.
-import { store } from '../state.js?v=2.0.0-audit2'
-import { tr } from '../i18n.js?v=2.0.0-audit2'
-import { escapeHtml } from '../fmt.js?v=2.0.0-audit2'
+import { store } from '../state.js?v=2.0.0-audit3'
+import { tr } from '../i18n.js?v=2.0.0-audit3'
+import { escapeHtml } from '../fmt.js?v=2.0.0-audit3'
 
 const BAND_COLOR = {
   high:     '#A51931',
