@@ -106,7 +106,7 @@ function pivotLatest(db, source, metrics) {
   return [...byStation.values()]
 }
 
-export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, telegram, startedAt }) {
+export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, startedAt }) {
   return {
     'GET /api/sensors/health': (req, res) => {
       json(res, 200, sensorHealth(db))
@@ -1292,6 +1292,67 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
         subCounts.active = db.get('SELECT COUNT(*) AS n FROM line_subs WHERE active = 1').n
       } catch {}
       json(res, 200, { ...status, subs: subCounts })
+    },
+
+    // Telegram broadcaster status — separate from the per-subscriber
+    // push so the admin can see "the queue has 4 alerts waiting" and
+    // "we last broadcast 12 min ago" without confusing it with the
+    // per-(chat,province) throttled push.
+    'GET /api/admin/telegram-broadcast-status': (req, res) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      const status = telegramBroadcaster?.status ? telegramBroadcaster.status() : { has_token: Boolean(db.kvGet('telegram_bot_token')) }
+      json(res, 200, status)
+    },
+
+    // Force-flush the broadcast queue. Admin-gated — useful for
+    // testing the new formatter with a real chat (or a real LINE OA)
+    // without waiting 30 min for the throttle to elapse. Accepts an
+    // optional JSON body with { alerts: [...] } to inject synthetic
+    // alerts; otherwise uses whatever's already in the queue.
+    'POST /api/admin/telegram-broadcast-flush': async (req, res) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      // The broadcaster's queue is a private closure; we can't reach
+      // it from here. Best we can do is inject synthetic alerts via
+      // notifyAlert (which queues them), then wait the minimum 5s
+      // throttle for the broadcast to fire. For testing the formatter
+      // output, use /api/admin/line-broadcast-preview instead.
+      let body
+      try { body = JSON.parse(await readBody(req)) } catch { body = {} }
+      const synthetic = Array.isArray(body.alerts) ? body.alerts : []
+      const injected = []
+      for (const a of synthetic) {
+        if (a && typeof a === 'object' && a.severity) {
+          telegramBroadcaster?.notifyAlert?.(a)
+          injected.push(a)
+        }
+      }
+      // Wait the min throttle so the queued alerts actually fire.
+      await new Promise((r) => setTimeout(r, 5500))
+      json(res, 200, { ok: true, injected: injected.length, broadcaster: telegramBroadcaster?.status?.() ?? null })
+    },
+
+    // Render the bilingual broadcast text from a list of structured
+    // alerts — same formatter the broadcaster uses. Admin preview so
+    // an operator can see "this is what users will receive" without
+    // actually pushing.
+    'POST /api/admin/broadcast-preview': async (req, res) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      let body
+      try { body = JSON.parse(await readBody(req)) } catch { return json(res, 400, { error: 'invalid JSON' }) }
+      const alerts = Array.isArray(body?.alerts) ? body.alerts : []
+      if (!alerts.length) return json(res, 400, { error: 'alerts[] required' })
+      const tg = telegramBroadcaster?.buildBroadcast
+        ? telegramBroadcaster.buildBroadcast(alerts)
+        : null
+      const ln = line?.buildBroadcast ? line.buildBroadcast(alerts) : null
+      json(res, 200, {
+        telegram: tg,
+        line: ln,
+        // Pre-baked version ready to paste into either bot for testing
+        telegram_th_html: tg?.th,
+        line_th: ln?.th,
+        line_en: ln?.en,
+      })
     },
 
     // ── Citizen reports moderation (admin) ──────────────────────────

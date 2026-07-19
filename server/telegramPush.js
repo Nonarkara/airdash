@@ -262,3 +262,198 @@ export async function notifySubscribersForAlert(db, alert) {
   }
   return { pushed, failed }
 }
+
+// ── Telegram OA-style broadcast (mirrors server/line.js) ────────────────
+// Second push channel: when an area hits "very high pollution" (severity
+// ≥ 2), a single batched message goes to EVERY active Telegram
+// subscriber — same FloodDash pattern as the LINE OA. The per-subscriber
+// push above is still the targeted path (only the user whose province
+// crossed the threshold); this is the catch-all "Thailand just got
+// worse" alert that reaches everyone, including users who haven't picked
+// a province yet.
+//
+// Why both: the per-subscriber path is the personal, low-noise daily
+// experience. The broadcaster is the loud, infrequent, "everyone should
+// know" signal — the analog of a TV emergency broadcast. Same throttle
+// (≤1 push per 30 min) so a haze episode doesn't spam every chat.
+//
+// Format mirrors LINE exactly so users who follow both see the same
+// digest — only the wrapping HTML (Telegram parse_mode) differs.
+
+const BROADCAST_MIN_GAP_MS = 30 * 60_000
+const BROADCAST_MAX_LINES = 6
+const BROADCAST_RETRY_DELAY_MS = 60_000
+const BROADCAST_MAX_QUEUE = 200
+
+// Section header tables — same wording as line.js so users see one
+// consistent voice across channels. Inline <b> for Telegram parse_mode.
+const BROADCAST_HEADERS = {
+  th: {
+    3: { pm25_level: '🔴 <b>อันตราย (ระดับ 3)</b> — PM2.5 ≥ 75 µg/m³',
+         aqi_level: '🔴 <b>AQI อันตราย (ระดับ 3)</b> — AQI ≥ 150',
+         default: '🔴 <b>อันตราย (ระดับ 3)</b>' },
+    2: { pm25_level: '🟠 <b>มีผลต่อสุขภาพ (ระดับ 2)</b> — PM2.5 ≥ 37.5 µg/m³',
+         aqi_level: '🟠 <b>AQI เกินเกณฑ์ (ระดับ 2)</b> — AQI ≥ 100',
+         default: '🟠 <b>มีผลต่อสุขภาพ (ระดับ 2)</b>' },
+  },
+  en: {
+    3: { pm25_level: '🔴 <b>Hazardous (level 3)</b> — PM2.5 ≥ 75 µg/m³',
+         aqi_level: '🔴 <b>AQI hazardous (level 3)</b> — AQI ≥ 150',
+         default: '🔴 <b>Hazardous (level 3)</b>' },
+    2: { pm25_level: '🟠 <b>Unhealthy (level 2)</b> — PM2.5 ≥ 37.5 µg/m³',
+         aqi_level: '🟠 <b>AQI past unhealthy (level 2)</b> — AQI ≥ 100',
+         default: '🟠 <b>Unhealthy (level 2)</b>' },
+  },
+}
+
+// Build the broadcast text the same way as line.js but with HTML bold
+// around the section headers + province names (Telegram parse_mode
+// reads HTML). Returns the th + en variants so a single user who has
+// both channels sees the same data either way.
+
+function buildBroadcast(alerts) {
+  const groups = new Map()
+  for (const a of alerts) {
+    const sev = a.severity ?? 2
+    const key = `${sev}:${a.rule ?? 'unknown'}`
+    if (!groups.has(key)) groups.set(key, { severity: sev, rule: a.rule, items: [] })
+    groups.get(key).items.push(a)
+  }
+  const sorted = [...groups.values()].sort((a, b) =>
+    b.severity - a.severity || (a.rule ?? '').localeCompare(b.rule ?? ''))
+
+  const out = { th: [], en: [] }
+  for (const g of sorted) {
+    // Dedupe by province — keep the worst reading per province.
+    const byProv = new Map()
+    for (const item of g.items) {
+      const k = item.province_th || item.province_en || item.station_name_th || 'unknown'
+      const cur = byProv.get(k)
+      if (!cur || (item.value ?? 0) > (cur.value ?? 0)) byProv.set(k, item)
+    }
+    const deduped = [...byProv.values()].sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+
+    const thHead = (BROADCAST_HEADERS.th[g.severity] ?? BROADCAST_HEADERS.th[2])[g.rule]
+      ?? BROADCAST_HEADERS.th[g.severity ?? 2].default
+    const enHead = (BROADCAST_HEADERS.en[g.severity] ?? BROADCAST_HEADERS.en[2])[g.rule]
+      ?? BROADCAST_HEADERS.en[g.severity ?? 2].default
+    out.th.push(thHead)
+    out.en.push(enHead)
+
+    const shown = deduped.slice(0, BROADCAST_MAX_LINES)
+    const overflow = deduped.length - shown.length
+    for (const item of shown) {
+      const provTh = item.province_th ? `จ.${escapeHtml(item.province_th)}` : (item.station_name_th ?? '—')
+      const provEn = escapeHtml(item.province_en || item.province_th || item.station_name_en || '—')
+      if (item.value != null) {
+        out.th.push(`• <b>${provTh}</b> · ${Math.round(item.value)} µg/m³`)
+        out.en.push(`• <b>${provEn}</b> · ${Math.round(item.value)} µg/m³`)
+      } else {
+        out.th.push(`• <b>${provTh}</b>`)
+        out.en.push(`• <b>${provEn}</b>`)
+      }
+    }
+    if (overflow > 0) {
+      out.th.push(`…และอีก ${overflow} จังหวัด`)
+      out.en.push(`…and ${overflow} more province${overflow === 1 ? '' : 's'}`)
+    }
+    out.th.push('')
+    out.en.push('')
+  }
+  return {
+    th: `🌫️ <b>AirDash แจ้งเตือนฝุ่น</b>\n${out.th.join('\n')}\nดูสด: https://air.nonarkara.org\nโปรดติดตามประกาศ คพ./กรมอุตุฯ`,
+    en: `🌫️ <b>AirDash dust alert</b>\n${out.en.join('\n')}\nLive: https://air.nonarkara.org\nFollow PCD/TMD announcements`,
+  }
+}
+
+export function createTelegramBroadcaster(db) {
+  let queue = []
+  let timer = null
+  let timerAt = 0
+  let sending = false
+
+  const token = () => db.kvGet('telegram_bot_token')
+
+  function schedule(delayMs) {
+    const at = Date.now() + delayMs
+    if (timer && at >= timerAt) return
+    if (timer) clearTimeout(timer)
+    timerAt = at
+    timer = setTimeout(() => { timer = null; flush() }, delayMs)
+    timer.unref?.()
+  }
+
+  async function flush() {
+    if (sending) { schedule(BROADCAST_RETRY_DELAY_MS); return }
+    if (queue.length === 0) return
+    if (!token()) return // not configured — free no-op
+    const batch = queue.splice(0)
+    sending = true
+    const tg = createTelegram(db)
+    const built = buildBroadcast(batch)
+    // Get the snapshot of active subscribers AT FLUSH TIME. A user who
+    // /stops between scheduling and the flush won't be in this list.
+    let subs
+    try {
+      subs = db.all(
+        `SELECT id, chat_id, lang FROM telegram_subs WHERE active = 1`)
+    } catch (err) {
+      log('error', 'telegram broadcaster: subs query failed', { error: String(err?.message ?? err) })
+      sending = false
+      return
+    }
+    if (!subs.length) {
+      log('info', 'telegram broadcaster: no active subs, dropped batch', { alerts: batch.length })
+      sending = false
+      return
+    }
+    let ok = 0, fail = 0, blocked = 0
+    for (const sub of subs) {
+      // Send the user's preferred language. Falls back to Thai.
+      const text = sub.lang === 'en' ? built.en : built.th
+      try {
+        await tg.sendMessage(sub.chat_id, text)
+        ok++
+      } catch (err) {
+        fail++
+        // 403 = user blocked the bot. Purge so the next flush doesn't
+        // waste a send on a dead chat. 401 = bot-wide auth failure —
+        // stop the whole batch (other chats will also fail).
+        if (err.status === 401) {
+          log('error', 'telegram broadcaster: bot auth failed — aborting batch', { status: err.status })
+          sending = false
+          return
+        }
+        if (err.status === 403) {
+          db.run(`DELETE FROM telegram_subs WHERE id = ?`, sub.id)
+          blocked++
+        }
+        log('warn', 'telegram broadcaster send failed', { chat_id: sub.chat_id, status: err.status, error: String(err?.message ?? err) })
+      }
+    }
+    db.kvSet('telegram_broadcast_last_at', String(Date.now()))
+    log('info', 'Telegram broadcast sent', { alerts: batch.length, chats: ok, failed: fail, blocked })
+    sending = false
+  }
+
+  /** Queue a severe alert; batched into ≤1 broadcast per 30 minutes. */
+  function notifyAlert(alert) {
+    if (!token()) return // not configured — free no-op
+    if ((alert.severity ?? 0) < 2) return
+    queue.push(alert)
+    if (queue.length > BROADCAST_MAX_QUEUE) queue.shift()
+    const last = Number(db.kvGet('telegram_broadcast_last_at') ?? 0)
+    schedule(Math.max(5_000, BROADCAST_MIN_GAP_MS - (Date.now() - last)))
+  }
+
+  return {
+    notifyAlert,
+    buildBroadcast,
+    configured: () => Boolean(token()),
+    status: () => ({
+      has_token: Boolean(token()),
+      last_push: db.kvGet('telegram_broadcast_last_at'),
+      queue_depth: queue.length,
+    }),
+  }
+}

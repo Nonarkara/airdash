@@ -11,13 +11,13 @@
 //
 // All coloring follows the AQI palette so the only saturated color band
 // on the page tells one consistent story.
-import { on, store, setLang } from '../state.js?v=2.0.0-tg1'
-import { tr } from '../i18n.js?v=2.0.0-tg1'
-import { openInsightsPane } from '../sensorHealth.js?v=2.0.0-tg1'
-import { riskCi } from '../confidence.js?v=2.0.0-tg1'
-import { getJson } from '../cache.js?v=2.0.0-tg1'
-import { flyToProvince } from '../map.js?v=2.0.0-tg1'
-import { showProvinceDetail } from './detail.js?v=2.0.0-tg1'
+import { on, store, setLang } from '../state.js?v=2.0.0-bcast1'
+import { tr } from '../i18n.js?v=2.0.0-bcast1'
+import { openInsightsPane } from '../sensorHealth.js?v=2.0.0-bcast1'
+import { riskCi } from '../confidence.js?v=2.0.0-bcast1'
+import { getJson } from '../cache.js?v=2.0.0-bcast1'
+import { flyToProvince } from '../map.js?v=2.0.0-bcast1'
+import { showProvinceDetail } from './detail.js?v=2.0.0-bcast1'
 
 // AQI-derived 5-level palette — the same gradient the top stripe uses.
 // Watch (yellow) keeps dark text for contrast.

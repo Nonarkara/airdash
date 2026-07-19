@@ -31,6 +31,7 @@ import pcdNoise from './sources/pcd-noise.js'
 import aqHistory from './sources/aq-history.js'
 import { createLine } from './line.js'
 import { createTelegram } from './telegram.js'
+import { createTelegramBroadcaster } from './telegramPush.js'
 
 const startedAt = Date.now()
 log('info', 'airdash starting', { node: process.version, pid: process.pid })
@@ -39,7 +40,8 @@ const db = openDb()
 const bus = createBus(db)
 const line = createLine(db)
 const telegram = createTelegram(db)
-const alerts = createAlerts(db, bus, { line, telegram })
+const telegramBroadcaster = createTelegramBroadcaster(db)
+const alerts = createAlerts(db, bus, { line, telegramBroadcaster })
 const washout = createWashout(db)
 const riskEngine = createRisk(db, washout)
 const danger = createDanger(db, { riskEngine, washout })
@@ -60,7 +62,7 @@ const scheduler = createScheduler({
   sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise, aqHistory],
 })
 
-const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, telegram, startedAt }))
+const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, startedAt }))
 
 scheduler.start()
 scheduleRetention(db)

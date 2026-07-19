@@ -28,6 +28,57 @@ const MAX_LINES_PER_PUSH = 6
 const RETRY_DELAY_MS = 60_000        // reschedule after a fully-failed send
 const MAX_QUEUE = 200                // backstop: never grow unbounded if LINE is down for days
 
+// Bilingual section headers for the broadcast groups — same severity
+// table the citizen panel + danger engine use, so a push feels
+// consistent with what the user sees in the dashboard. The "rule"
+// (pm25_level, aqi_level, washout_rain) gives the section a name so
+// two rules at the same severity still get separate sub-headings —
+// matches the FloodDash "น้ำล้นตลิ่ง (ระดับ 5)" / "น้ำมาก (ระดับ 4)"
+// pattern where event-type AND level define the section.
+const SEVERITY_HEADERS = {
+  th: {
+    3: { pm25_level: '🔴 อันตราย (ระดับ 3) — PM2.5 ≥ 75 µg/m³',
+         aqi_level: '🔴 AQI อันตราย (ระดับ 3) — AQI ≥ 150',
+         default: '🔴 อันตราย (ระดับ 3)' },
+    2: { pm25_level: '🟠 มีผลต่อสุขภาพ (ระดับ 2) — PM2.5 ≥ 37.5 µg/m³',
+         aqi_level: '🟠 AQI เกินเกณฑ์ (ระดับ 2) — AQI ≥ 100',
+         default: '🟠 มีผลต่อสุขภาพ (ระดับ 2)' },
+  },
+  en: {
+    3: { pm25_level: '🔴 Hazardous (level 3) — PM2.5 ≥ 75 µg/m³',
+         aqi_level: '🔴 AQI hazardous (level 3) — AQI ≥ 150',
+         default: '🔴 Hazardous (level 3)' },
+    2: { pm25_level: '🟠 Unhealthy (level 2) — PM2.5 ≥ 37.5 µg/m³',
+         aqi_level: '🟠 AQI past unhealthy (level 2) — AQI ≥ 100',
+         default: '🟠 Unhealthy (level 2)' },
+  },
+}
+
+function sectionHeaderTh(severity, rule) {
+  const lvl = SEVERITY_HEADERS.th[severity] ?? SEVERITY_HEADERS.th[2]
+  return lvl[rule] ?? lvl.default
+}
+function sectionHeaderEn(severity, rule) {
+  const lvl = SEVERITY_HEADERS.en[severity] ?? SEVERITY_HEADERS.en[2]
+  return lvl[rule] ?? lvl.default
+}
+
+// One bullet = "จ.เชียงใหม่ · 85 µg/m³" or "จ.เชียงใหม่ (PM2.5 85)".
+// Falls back gracefully when the structured fields are absent — the
+// legacy per-station message_th is still useful for the bullet text.
+function bulletTh(item) {
+  const prov = item.province_th ? `จ.${item.province_th}` : (item.station_name_th ?? '—')
+  if (item.value != null) return `${prov} · ${Math.round(item.value)} µg/m³`
+  if (item.message_th) return `${prov} · ${item.message_th}`
+  return prov
+}
+function bulletEn(item) {
+  const prov = item.province_en || item.province_th || item.station_name_en || '—'
+  if (item.value != null) return `${prov} · ${Math.round(item.value)} µg/m³`
+  if (item.message_en) return `${prov} · ${item.message_en}`
+  return prov
+}
+
 // Auto-refresh: LINE's client_credentials token lives 30 days. Re-mint well
 // before expiry so it never dies silently mid-season. A 30-day token that
 // stops working during a haze episode is exactly the failure this system
@@ -124,6 +175,68 @@ export function createLine(db) {
     timer.unref?.()
   }
 
+  // Build the broadcast text the FloodDash way: group by severity band
+  // (3 = hazardous, 2 = unhealthy, 1 = notable), dedupe by province so a
+  // haze episode with 8 stations in Chiang Mai shows one bullet, and
+  // overflow past MAX_LINES_PER_PUSH becomes "…และอีก N จังหวัด".
+  // Returns { th, en } so callers (the Telegram broadcaster mirrors
+  // this) can pick the right language.
+  function buildBroadcast(alerts) {
+    // Group by (severity, rule) so e.g. PM2.5 ≥ 75 and AQI ≥ 100 each
+    // get their own sub-section under the same severity header. This
+    // matches the FloodDash screenshot exactly: "น้ำล้นตลิ่ง (ระดับ 5)"
+    // and "น้ำมาก (ระดับ 4)" are separate sections under the same level.
+    const groups = new Map()
+    for (const a of alerts) {
+      const sev = a.severity ?? 2
+      const key = `${sev}:${a.rule ?? 'unknown'}`
+      if (!groups.has(key)) groups.set(key, { severity: sev, rule: a.rule, items: [] })
+      groups.get(key).items.push(a)
+    }
+    // Order by severity desc, then rule alphabetically for stability.
+    const sorted = [...groups.values()].sort((a, b) =>
+      b.severity - a.severity || (a.rule ?? '').localeCompare(b.rule ?? ''))
+
+    // Build bilingual sections.
+    const out = { th: [], en: [] }
+    for (const g of sorted) {
+      // Dedupe by province: keep the worst reading per province so a
+      // province with 8 stations crossing the threshold still shows
+      // ONE bullet (FloodDash pattern). The worst value wins.
+      const byProv = new Map() // province_th → { value, item }
+      for (const item of g.items) {
+        const k = item.province_th || item.province_en || item.station_name_th || 'unknown'
+        const cur = byProv.get(k)
+        if (!cur || (item.value ?? 0) > (cur.value ?? 0)) byProv.set(k, item)
+      }
+      const deduped = [...byProv.values()].sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+
+      // Section header — language-mirrored.
+      const thHead = sectionHeaderTh(g.severity, g.rule)
+      const enHead = sectionHeaderEn(g.severity, g.rule)
+      out.th.push(thHead)
+      out.en.push(enHead)
+
+      // Items.
+      const shown = deduped.slice(0, MAX_LINES_PER_PUSH)
+      const overflow = deduped.length - shown.length
+      for (const item of shown) {
+        out.th.push('• ' + bulletTh(item))
+        out.en.push('• ' + bulletEn(item))
+      }
+      if (overflow > 0) {
+        out.th.push(`…และอีก ${overflow} จังหวัด`)
+        out.en.push(`…and ${overflow} more province${overflow === 1 ? '' : 's'}`)
+      }
+      out.th.push('') // blank line between groups
+      out.en.push('')
+    }
+    return {
+      th: `🌫️ AirDash แจ้งเตือนฝุ่น\n${out.th.join('\n')}\nดูสด: https://air.nonarkara.org\nโปรดติดตามประกาศ คพ./กรมอุตุฯ`,
+      en: `🌫️ AirDash dust alert\n${out.en.join('\n')}\nLive: https://air.nonarkara.org\nFollow PCD/TMD announcements`,
+    }
+  }
+
   async function flush() {
     if (sending) { schedule(RETRY_DELAY_MS); return } // a send is already in flight
     if (queue.length === 0) return
@@ -136,9 +249,12 @@ export function createLine(db) {
     // version. On failure we return this exact batch to the front.
     const batch = queue.splice(0)
     sending = true
-    const lines = batch.slice(0, MAX_LINES_PER_PUSH).map((a) => `• ${a.message_th}`)
-    if (batch.length > MAX_LINES_PER_PUSH) lines.push(`…และอีก ${batch.length - MAX_LINES_PER_PUSH} รายการ`)
-    const text = `🌫️ AirDash แจ้งเตือนฝุ่น\n${lines.join('\n')}\n\nดูสด: https://air.nonarkara.org\nโปรดติดตามประกาศ คพ./กรมอุตุฯ · ป้องกันทันที PROTECT NOW`
+    const built = buildBroadcast(batch)
+    // LINE OA follows the user's lang setting; LINE's `language` field on
+    // the broadcast endpoint is unreliable across regions, so we send BOTH
+    // languages back-to-back as a single message. 5000-char cap on LINE
+    // broadcast — both versions are well under it.
+    const text = `${built.th}\n\n— — —\n\n${built.en}`
     const body = JSON.stringify({ messages: [{ type: 'text', text }] })
     const headers = { 'content-type': 'application/json', authorization: `Bearer ${t}` }
     try {
@@ -198,6 +314,10 @@ export function createLine(db) {
     canPush,
     ensureFreshToken,
     mintToken,
+    /** Build the bilingual broadcast text from a list of structured alerts
+     *  — exposed so the Telegram broadcaster (and admin preview) can
+     *  reuse the same FloodDash-style formatter. */
+    buildBroadcast,
     /** Operator diagnostic — for the admin panel /api/admin/line-status. */
     status: () => ({
       has_token: Boolean(token()),

@@ -17,16 +17,16 @@
  *     so a stale airdash-v3 / v4 / ... cache can never serve broken JS.
  */
 
-const CACHE = 'airdash-v14';
+const CACHE = 'airdash-v15';
 
 const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/css/tokens.css?v=2.0.0-tg1',
-  '/css/layout.css?v=2.0.0-tg1',
-  '/css/components.css?v=2.0.0-tg1',
-  '/css/city-dashboard.css?v=2.0.0-tg1',
-  '/js/main.js?v=2.0.0-tg1',
+  '/css/tokens.css?v=2.0.0-bcast1',
+  '/css/layout.css?v=2.0.0-bcast1',
+  '/css/components.css?v=2.0.0-bcast1',
+  '/css/city-dashboard.css?v=2.0.0-bcast1',
+  '/js/main.js?v=2.0.0-bcast1',
   // New modules added in Phase 1. The SW does NOT precache every panel
   // (the install event is fragile if any 404s), but the runtime cache
   // picks them up on first load via stale-while-revalidate.

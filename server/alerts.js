@@ -4,7 +4,7 @@
 import { CONFIG } from './config.js'
 import { log } from './util.js'
 
-export function createAlerts(db, bus, { line = null, telegram = null } = {}) {
+export function createAlerts(db, bus, { line = null, telegramBroadcaster = null } = {}) {
   const cooldownMs = CONFIG.thresholds.alertCooldownMs
 
   function inCooldown(key, now) {
@@ -30,24 +30,35 @@ export function createAlerts(db, bus, { line = null, telegram = null } = {}) {
       payload: { rule, metric, value, prev, province_th: station.province_th, province_en: station.province_en },
     })
     // Severe alerts also fan out to LINE followers (batched; no-op when the
-    // OA token isn't configured).
-    line?.notifyAlert({ severity, message_th, message_en })
-    // Per-subscriber push (LINE Notify + Telegram). Lazily imported so
-    // the optional modules never block the alert engine's hot path on a
-    // deployment that hasn't enabled them. Telegram is the primary path
-    // (free, no monthly cap) — LINE Notify is the fallback for users
-    // who already have a Notify token.
+    // OA token isn't configured). The structured fields (rule, source,
+    // value, province_*) let the broadcast formatter group by severity
+    // and dedupe by province the same way FloodDash does.
+    const structured = {
+      severity, message_th, message_en,
+      rule, source, metric, value, prev,
+      province_th: station.province_th,
+      province_en: station.province_en,
+      station_name_th: station.name_th,
+      station_name_en: station.name_en,
+    }
+    line?.notifyAlert(structured)
+    // Telegram broadcast (per-subscriber sendMessage). Same structured
+    // payload — the broadcaster groups by severity and dedupes by
+    // province so a haze episode doesn't spam every subscriber with
+    // one message per station.
+    telegramBroadcaster?.notifyAlert?.(structured)
+    // Per-subscriber push (LINE Notify + Telegram per-chat). Lazily
+    // imported so the optional modules never block the alert engine's
+    // hot path on a deployment that hasn't enabled them. Telegram is
+    // the primary path (free, no monthly cap) — LINE Notify is the
+    // fallback for users who already have a Notify token.
     if ((severity ?? 0) >= 2) {
-      const alertCtx = {
-        severity, message_th, message_en,
-        province_th: station.province_th, province_en: station.province_en,
-      }
       import('./telegramPush.js').then(({ notifySubscribersForAlert }) => {
-        notifySubscribersForAlert(db, alertCtx)
+        notifySubscribersForAlert(db, structured)
           .catch((err) => log('warn', 'telegram-push alert fan-out failed', { error: String(err?.message ?? err) }))
       }).catch(() => { /* telegramPush not available — silently skip */ })
       import('./linePush.js').then(({ notifySubscribersForAlert }) => {
-        notifySubscribersForAlert(db, alertCtx)
+        notifySubscribersForAlert(db, structured)
           .catch((err) => log('warn', 'line-push alert fan-out failed', { error: String(err?.message ?? err) }))
       }).catch(() => { /* linePush not available — silently skip */ })
     }

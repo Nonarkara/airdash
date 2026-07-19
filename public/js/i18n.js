@@ -1,6 +1,6 @@
 // Bilingual helper — Thai first, always. Signage shows both; dynamic text
 // follows the selected language.
-import { store } from './state.js?v=2.0.0-tg1'
+import { store } from './state.js?v=2.0.0-bcast1'
 
 export function tr(th, en) {
   return store.lang === 'th' ? th : en
