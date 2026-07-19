@@ -30,6 +30,7 @@ import gistdaPm25 from './sources/gistda-pm25.js'
 import pcdNoise from './sources/pcd-noise.js'
 import aqHistory from './sources/aq-history.js'
 import { createLine } from './line.js'
+import { createTelegram } from './telegram.js'
 
 const startedAt = Date.now()
 log('info', 'airdash starting', { node: process.version, pid: process.pid })
@@ -37,7 +38,8 @@ log('info', 'airdash starting', { node: process.version, pid: process.pid })
 const db = openDb()
 const bus = createBus(db)
 const line = createLine(db)
-const alerts = createAlerts(db, bus, { line })
+const telegram = createTelegram(db)
+const alerts = createAlerts(db, bus, { line, telegram })
 const washout = createWashout(db)
 const riskEngine = createRisk(db, washout)
 const danger = createDanger(db, { riskEngine, washout })
@@ -58,7 +60,7 @@ const scheduler = createScheduler({
   sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise, aqHistory],
 })
 
-const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, startedAt }))
+const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, telegram, startedAt }))
 
 scheduler.start()
 scheduleRetention(db)
@@ -75,6 +77,17 @@ import('./linePush.js').then(({ tickLinePush }) => {
     }).catch((e) => log('warn', 'line-push tick failed', { error: String(e?.message ?? e) }))
   }, 5 * 60_000).unref()
 }).catch(() => { /* linePush not available — silently skip */ })
+
+// Telegram push tick — same cadence and shape as LINE, but Telegram
+// (free, unlimited) takes the bulk of the traffic. Same dynamic-import
+// pattern so the optional module never blocks boot.
+import('./telegramPush.js').then(({ tickTelegramPush }) => {
+  setInterval(() => {
+    tickTelegramPush(db).then((r) => {
+      if (r.pushed > 0 || r.failed > 0) log('info', 'telegram-push tick', r)
+    }).catch((e) => log('warn', 'telegram-push tick failed', { error: String(e?.message ?? e) }))
+  }, 5 * 60_000).unref()
+}).catch(() => { /* telegramPush not available — silently skip */ })
 
 // Weekly data export — every Sunday at 02:00 (Asia/Bangkok), dump every
 // DB table to a .tar.gz under data/exports/. The last 8 weeks are kept.

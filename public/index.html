@@ -15,10 +15,10 @@
 <meta name="twitter:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230E4A5E'/%3E%3Ccircle cx='11.5' cy='4.5' r='2.5' fill='%233A8A6E'/%3E%3Cpath d='M2 8h12M2 10.5h9M2 13h12' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round' opacity='0.9'/%3E%3Ccircle cx='13' cy='10.5' r='1' fill='%23C8453A'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/css/tokens.css?v=2.0.0-line1">
-<link rel="stylesheet" href="/css/layout.css?v=2.0.0-line1">
-<link rel="stylesheet" href="/css/components.css?v=2.0.0-line1">
-<link rel="stylesheet" href="/css/city-dashboard.css?v=2.0.0-line1">
+<link rel="stylesheet" href="/css/tokens.css?v=2.0.0-tg1">
+<link rel="stylesheet" href="/css/layout.css?v=2.0.0-tg1">
+<link rel="stylesheet" href="/css/components.css?v=2.0.0-tg1">
+<link rel="stylesheet" href="/css/city-dashboard.css?v=2.0.0-tg1">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
 <script type="application/ld+json">
@@ -666,12 +666,12 @@
       </div>
     </section>
 
-    <!-- LINE notification — two parallel opt-in paths so the user picks
-         the one that matches how they want to be reached. -->
+    <!-- LINE notification — three parallel opt-in paths so the user
+         picks the one that matches how they want to be reached. -->
     <section class="about-card about-line">
-      <div class="eyebrow" data-th="รับแจ้งเตือนฝุ่นทาง LINE" data-en="DUST ALERTS ON LINE">รับแจ้งเตือนฝุ่นทาง LINE</div>
-      <p data-th="AirDash มีช่องทางแจ้งเตือนผ่าน LINE สองรูปแบบ — เลือกแบบที่เหมาะกับคุณ:" data-en="AirDash has two LINE alert paths — pick the one that suits you:">
-        AirDash มีช่องทางแจ้งเตือนผ่าน LINE สองรูปแบบ — เลือกแบบที่เหมาะกับคุณ:
+      <div class="eyebrow" data-th="รับแจ้งเตือนฝุ่นทาง LINE & Telegram" data-en="DUST ALERTS ON LINE & TELEGRAM">รับแจ้งเตือนฝุ่นทาง LINE & Telegram</div>
+      <p data-th="AirDash มีช่องทางแจ้งเตือนสามแบบ — เลือกแบบที่เหมาะกับคุณ:" data-en="AirDash has three alert paths — pick the one that suits you:">
+        AirDash มีช่องทางแจ้งเตือนสามแบบ — เลือกแบบที่เหมาะกับคุณ:
       </p>
       <div class="about-line-grid">
         <div class="about-line-col">
@@ -684,15 +684,23 @@
         </div>
         <div class="about-line-col">
           <div class="about-line-tag">B · Notify</div>
-          <h4 data-th="แจ้งเตือนเฉพาะจังหวัดของคุณ" data-en="Alerts for your province only">แจ้งเตือนเฉพาะจังหวัดของคุณ</h4>
-          <p data-th="วาง LINE Notify token ในแถบ "พื้นที่ฉัน" (EASY mode) เพื่อรับการแจ้งเตือนเฉพาะจังหวัดที่คุณเลือก สูงสุด 1 ข้อความ/3 ชม. · มีลิงก์ยกเลิกในทุกข้อความ · ไม่เก็บข้อมูลส่วนตัว" data-en="Paste a LINE Notify token in the MY AREA tab to get alerts for YOUR province only. Max 1 push/3 h · every message has a cancel link · no personal data stored.">
-            วาง LINE Notify token ในแถบ "พื้นที่ฉัน" (EASY mode) เพื่อรับการแจ้งเตือนเฉพาะจังหวัดที่คุณเลือก สูงสุด 1 ข้อความ/3 ชม. · มีลิงก์ยกเลิกในทุกข้อความ · ไม่เก็บข้อมูลส่วนตัว
+          <h4 data-th="LINE Notify — เฉพาะจังหวัด" data-en="LINE Notify — your province">LINE Notify — เฉพาะจังหวัด</h4>
+          <p data-th="วาง LINE Notify token ในแถบ "พื้นที่ฉัน" (EASY mode) เพื่อรับการแจ้งเตือนเฉพาะจังหวัดที่คุณเลือก สูงสุด 1 ข้อความ/3 ชม. · มีลิงก์ยกเลิกในทุกข้อความ" data-en="Paste a LINE Notify token in the MY AREA tab to get alerts for YOUR province only. Max 1 push/3 h · every message has a cancel link.">
+            วาง LINE Notify token ในแถบ "พื้นที่ฉัน" (EASY mode) เพื่อรับการแจ้งเตือนเฉพาะจังหวัดที่คุณเลือก สูงสุด 1 ข้อความ/3 ชม. · มีลิงก์ยกเลิกในทุกข้อความ
           </p>
           <a class="about-line-cta secondary" href="https://notify-bot.line.me/en/" target="_blank" rel="noopener" data-th="ขอ token จาก LINE Notify →" data-en="Get a token from LINE Notify →">ขอ token จาก LINE Notify →</a>
         </div>
+        <div class="about-line-col about-line-col-tg">
+          <div class="about-line-tag tg">C · Telegram</div>
+          <h4 data-th="บอท Air (Nong Air)" data-en="Air bot (Nong Air)">บอท Air (Nong Air)</h4>
+          <p data-th="ฟรี ไม่จำกัดข้อความ — เปิดบอท @AirDash_bot แล้วกด Start บอทจะถามจังหวัดที่ต้องการ · มีคำสั่ง /stop ยกเลิกได้ทุกเมื่อ · แนะนำสำหรับทุกคน" data-en="Free, no message cap — open @AirDash_bot and hit Start. The bot will ask which province you want. /stop anytime. Recommended for everyone.">
+            ฟรี ไม่จำกัดข้อความ — เปิดบอท @AirDash_bot แล้วกด Start บอทจะถามจังหวัดที่ต้องการ · มีคำสั่ง /stop ยกเลิกได้ทุกเมื่อ · แนะนำสำหรับทุกคน
+          </p>
+          <a class="about-line-cta tg" href="https://t.me/AirDash_bot" target="_blank" rel="noopener" data-th="เปิด Telegram แล้วคุยกับ Air →" data-en="Open Telegram and chat with Air →">เปิด Telegram แล้วคุยกับ Air →</a>
+        </div>
       </div>
-      <p class="about-line-fine" data-th="ทั้งสองช่องทางฟรี · AirDash เป็นโครงการไม่แสวงกำไรภายใต้ depa" data-en="Both channels are free · AirDash is a non-profit project under depa.">
-        ทั้งสองช่องทางฟรี · AirDash เป็นโครงการไม่แสวงกำไรภายใต้ depa
+      <p class="about-line-fine" data-th="ทุกช่องทางฟรี · LINE OA และ LINE Notify ใช้ token ของผู้ใช้เอง ไม่มีค่าใช้จ่าย · AirDash เป็นโครงการไม่แสวงกำไรภายใต้ depa" data-en="All channels free · LINE OA + Notify use the user's own tokens, no fees · AirDash is a non-profit project under depa.">
+        ทุกช่องทางฟรี · LINE OA และ LINE Notify ใช้ token ของผู้ใช้เอง ไม่มีค่าใช้จ่าย · AirDash เป็นโครงการไม่แสวงกำไรภายใต้ depa
       </p>
     </section>
 
@@ -748,7 +756,7 @@
   // layers during the service-worker handover. The shell name must match
   // the new CACHE name in sw.js so the migration only runs when the SW
   // itself is upgrading.
-  const shell = 'airdash-v13'
+  const shell = 'airdash-v14'
   const migrated = `ad-shell-ready:${shell}`
   const registrations = 'serviceWorker' in navigator
     ? await navigator.serviceWorker.getRegistrations()
@@ -765,7 +773,7 @@
       .map((name) => caches.delete(name)))
     location.reload()
   } else {
-    await import('/js/main.js?v=2.0.0-line1')
+    await import('/js/main.js?v=2.0.0-tg1')
   }
 </script>
 </body>

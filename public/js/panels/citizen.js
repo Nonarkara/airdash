@@ -9,12 +9,12 @@
 // Citizen mode also pins the user's "My Province" — saved to localStorage
 // so the dashboard defaults to the user's location on every visit. The
 // "เปลี่ยนจังหวัด" button opens a searchable province picker.
-import { on, store, emit } from '../state.js?v=2.0.0-line1'
-import { tr, BAND } from '../i18n.js?v=2.0.0-line1'
-import { el, fmtNum, ago } from '../fmt.js?v=2.0.0-line1'
-import { getJson } from '../cache.js?v=2.0.0-line1'
-import { flyToProvince } from '../map.js?v=2.0.0-line1'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.0.0-line1'
+import { on, store, emit } from '../state.js?v=2.0.0-tg1'
+import { tr, BAND } from '../i18n.js?v=2.0.0-tg1'
+import { el, fmtNum, ago } from '../fmt.js?v=2.0.0-tg1'
+import { getJson } from '../cache.js?v=2.0.0-tg1'
+import { flyToProvince } from '../map.js?v=2.0.0-tg1'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.0.0-tg1'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -71,7 +71,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.0.0-line1').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.0.0-tg1').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -302,6 +302,14 @@ function renderForProvince(province) {
   // version for someone who only wants their own province.
   const notifyForm = renderNotifyForm(province)
 
+  // Telegram bot (@AirDash_bot) — second push channel. Citizens /start the
+  // bot to link their chat, then bind province + language. Telegram is
+  // free + effectively unlimited, so it's the recommended channel for
+  // anyone who can install Telegram. The form below auto-generates a
+  // 6-char binding code, watches for the /start, then asks for the
+  // province choice.
+  const telegramForm = renderTelegramForm(province)
+
   // "I need help" — one-tap hotlines
   const helpHead = el('div', { class: 'citizen-section-head' },
     el('span', {}, tr('🆘 สายด่วน', '🆘 hotlines')))
@@ -317,7 +325,7 @@ function renderForProvince(province) {
       el('div', { class: 'citizen-help-lbl' }, tr('กู้ชีพ ฉุกเฉิน', 'EMS'))),
   )
 
-  return [...out, shareHead, shareRow, lineHead, lineCard, notifyForm, helpHead, helpRow, renderPickerCollapsed()]
+  return [...out, shareHead, shareRow, lineHead, lineCard, notifyForm, telegramForm, helpHead, helpRow, renderPickerCollapsed()]
 }
 
 // Thai AQI 2023 colour anchor for a PM2.5 value (µg/m³).
@@ -468,6 +476,172 @@ function renderNotifyForm(province) {
     status,
   )
   return el('div', { class: 'citizen-line-subscribe' }, form)
+}
+
+// Telegram bot (@AirDash_bot) — second push channel. UX is auto-bind:
+//   1. Tap "Connect on Telegram" → opens t.me/AirDash_bot?start=<code>
+//   2. The user hits Start in the bot, bot stores chat_id + code
+//   3. Dashboard polls every 3s for the /start to land
+//   4. Once the chat is detected, the province picker appears
+//   5. User confirms province + language → /api/telegram/bind
+//   6. Bot greets the user in their chosen language
+//
+// Three states the form cycles through:
+//   A) idle: "Connect on Telegram" button with deeplink
+//   B) waiting: "Waiting for you to tap Start in the bot…"
+//   C) ready: province picker + Bind button
+function renderTelegramForm(province) {
+  const status = el('div', { class: 'citizen-tg-status' })
+  const actions = el('div', { class: 'citizen-tg-actions' })
+  const provinceRow = el('div', { class: 'citizen-tg-province', hidden: true })
+  const bindBtn = el('button', {
+    class: 'citizen-tg-bind', type: 'button', hidden: true,
+    onclick: async () => {
+      bindBtn.disabled = true
+      bindBtn.textContent = tr('กำลังเชื่อมต่อ…', 'Linking…')
+      try {
+        const res = await fetch('/api/telegram/bind', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: state.chatId,
+            province_th: province.th,
+            province_en: province.en,
+            province_code: province.code,
+            lang: store.lang || 'th',
+          }),
+          signal: AbortSignal.timeout(15_000),
+        })
+        const body = await res.json().catch(() => ({}))
+        if (res.ok) {
+          status.replaceChildren(el('span', { class: 'citizen-tg-ok' },
+            tr('✅ เชื่อมต่อสำเร็จ — บอท Air จะส่งข้อความยืนยันใน Telegram ของคุณ',
+               '✅ linked — the bot Air will send a confirmation message in your Telegram')))
+          bindBtn.textContent = tr('เชื่อมต่อแล้ว ✓', 'Linked ✓')
+          stopPolling()
+        } else {
+          status.replaceChildren(el('span', { class: 'citizen-tg-err' },
+            body?.error ? tr(`เชื่อมต่อไม่สำเร็จ · ${body.error}`, `Link failed · ${body.error}`) :
+              tr('เชื่อมต่อไม่สำเ็จ โปรดลองอีกครั้ง', 'Link failed — please try again')))
+          bindBtn.disabled = false
+          bindBtn.textContent = tr('เชื่อมต่อจังหวัดนี้', 'Link this province')
+        }
+      } catch (err) {
+        status.replaceChildren(el('span', { class: 'citizen-tg-err' },
+          tr('เครือข่ายมีปัญหา · ลองอีกครั้ง', 'Network error · try again')))
+        bindBtn.disabled = false
+        bindBtn.textContent = tr('เชื่อมต่อจังหวัดนี้', 'Link this province')
+      }
+    },
+  }, tr('เชื่อมต่อจังหวัดนี้', 'Link this province'))
+
+  const state = { code: null, deeplink: null, chatId: null, pollTimer: null }
+  const openLink = el('a', {
+    class: 'citizen-tg-open', target: '_blank', rel: 'noopener',
+    onclick: () => { setTimeout(() => enterWaiting(), 600) },
+  }, tr('เปิด Telegram →', 'Open Telegram →'))
+  openLink.href = '#'
+
+  const enterIdle = () => {
+    state.code = null
+    state.chatId = null
+    status.replaceChildren()
+    actions.replaceChildren(openLink)
+    provinceRow.hidden = true
+    bindBtn.hidden = true
+  }
+  const enterWaiting = () => {
+    actions.replaceChildren(
+      el('span', { class: 'citizen-tg-waiting' },
+        el('span', { class: 'citizen-tg-pulse' }),
+        tr('รอคุณกด Start ในบอท…', 'waiting for you to tap Start in the bot…')))
+    startPolling()
+  }
+  const enterReady = (chatId) => {
+    state.chatId = chatId
+    stopPolling()
+    status.replaceChildren(el('span', { class: 'citizen-tg-ok' },
+      tr('เห็นบอทแล้ว — เลือกจังหวัดเพื่อเริ่มรับแจ้งเตือน',
+         'bot connected — pick the province to start receiving alerts')))
+    provinceRow.hidden = false
+    bindBtn.hidden = false
+    bindBtn.disabled = false
+    actions.replaceChildren(
+      el('span', { class: 'citizen-tg-state' },
+        tr('พร้อมเชื่อมต่อแล้ว — กดปุ่มด้านล่าง', 'ready — tap the button below')))
+  }
+  const startPolling = () => {
+    if (state.pollTimer) return
+    let attempts = 0
+    const poll = async () => {
+      attempts++
+      try {
+        const r = await fetch(`/api/telegram/stats?_t=${Date.now()}`, { cache: 'no-store' })
+        // The stats endpoint doesn't tell us WHICH chat landed, but
+        // it's a cheap liveness probe. The real detection happens in
+        // the bot webhook → bind endpoint. We poll up to 60× (3 min)
+        // before giving up.
+        if (attempts > 60) { stopPolling(); return }
+        // Ask the server whether this code has a chat bound. We do
+        // that by hitting a tiny diagnostic that returns the chat_id
+        // for a code (only when the chat is waiting for binding).
+        const cr = await fetch(`/api/telegram/code-status?code=${encodeURIComponent(state.code || '')}`, { cache: 'no-store' })
+        if (cr.ok) {
+          const body = await cr.json()
+          if (body?.chat_id) {
+            enterReady(body.chat_id)
+            return
+          }
+        }
+      } catch {}
+      state.pollTimer = setTimeout(poll, 3000)
+    }
+    state.pollTimer = setTimeout(poll, 1500)
+  }
+  const stopPolling = () => {
+    if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null }
+  }
+
+  // Initial: ask the server for a binding code.
+  const init = async () => {
+    try {
+      const r = await fetch('/api/telegram/binding-code', { cache: 'no-store' })
+      if (!r.ok) {
+        // Bot not configured → silent no-op (the section is hidden).
+        wrap.hidden = true
+        return
+      }
+      const body = await r.json()
+      state.code = body.code
+      state.deeplink = body.deeplink
+      openLink.href = body.deeplink
+      enterIdle()
+    } catch {
+      wrap.hidden = true
+    }
+  }
+
+  const wrap = el('div', { class: 'citizen-tg-subscribe', hidden: true },
+    el('div', { class: 'citizen-tg-head' },
+      el('span', { class: 'citizen-tg-head-icon' }, '✈️'),
+      el('div', { class: 'citizen-tg-head-text' },
+        el('div', { class: 'citizen-tg-head-th' },
+          tr('แจ้งเตือนผ่าน Telegram (ฟรี ไม่จำกัดข้อความ)',
+             'Alerts via Telegram (free, no message cap)')),
+        el('div', { class: 'citizen-tg-head-en' },
+          tr('แตะปุ่มเพื่อเปิด @AirDash_bot แล้วกด Start · แนะนำสำหรับคนที่ใช้ Telegram',
+             'Tap to open @AirDash_bot and hit Start · recommended if you use Telegram')),
+      ),
+    ),
+    actions,
+    provinceRow,
+    bindBtn,
+    status,
+  )
+  // Bind cleanup so we don't leak the poll timer when the panel re-paints.
+  wrap.addEventListener('cleanup', stopPolling, { once: true })
+  init()
+  return wrap
 }
 function smsButton(province, band, score) {
   const text = encodeURIComponent(buildShareText(province, band, score))

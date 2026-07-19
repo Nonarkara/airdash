@@ -34,6 +34,13 @@ const LINE_PUSH_UNAVAILABLE = {
   note_en: 'LINE push notifications are not enabled on this deployment',
 }
 
+// Same idea for the Telegram per-chat push module (telegramPush.js).
+const TELEGRAM_PUSH_UNAVAILABLE = {
+  error: 'Telegram push not available',
+  note_th: 'ระบบแจ้งเตือนผ่าน Telegram ยังไม่เปิดใช้งานบนเซิร์ฟเวอร์นี้',
+  note_en: 'Telegram push notifications are not enabled on this deployment',
+}
+
 // Cache for /api/series/daily — its GROUP BYs scan the huge readings table and
 // would freeze the synchronous event loop on every OVERVIEW load otherwise.
 const seriesDailyCache = new Map() // days -> { at, payload }
@@ -99,7 +106,7 @@ function pivotLatest(db, source, metrics) {
   return [...byStation.values()]
 }
 
-export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, startedAt }) {
+export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, telegram, startedAt }) {
   return {
     'GET /api/sensors/health': (req, res) => {
       json(res, 200, sensorHealth(db))
@@ -1356,6 +1363,178 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
         }
       } catch { rows = [] }
       json(res, 200, { reports: rows, count: rows.length })
+    },
+
+    // ── Telegram push (per-chat) ─────────────────────────────────────
+    // Second push channel because LINE's free tier caps at 300
+    // messages/month. Telegram Bot API is free and effectively
+    // unlimited for 1-to-1 messages. Citizens link their Telegram
+    // chat by tapping t.me/AirDash_bot?start=<code> — the webhook
+    // (POST /api/telegram/webhook) catches the /start and stores
+    // chat_id + code; the citizen then picks province + language
+    // here and the binding is finalised.
+    //
+    // 503 fallback: the module is optional on this deployment
+    // (the bot token may not be set yet). A missing module answers
+    // 503 with an honest note rather than 500ing.
+
+    // Generate a 6-char binding code for the citizen panel's
+    // "Connect on Telegram" button. The user then taps the link,
+    // the bot catches /start <code>, and the chat becomes bindable
+    // from /api/telegram/bind (called when the citizen picks
+    // province + language).
+    'GET /api/telegram/binding-code': async (req, res) => {
+      let push
+      try { push = await import('./telegramPush.js') } catch { return json(res, 503, TELEGRAM_PUSH_UNAVAILABLE) }
+      if (!db.kvGet('telegram_bot_token')) return json(res, 503, TELEGRAM_PUSH_UNAVAILABLE)
+      const code = push.generateBindingCode(db)
+      json(res, 200, { code, bot: 'AirDash_bot', deeplink: `https://t.me/AirDash_bot?start=${code}` })
+    },
+
+    // Bind a chat_id to a province + language. Called by the
+    // citizen panel after the user has /start <code>'d the bot.
+    // Idempotent: re-binding the same chat just updates the row.
+    'POST /api/telegram/bind': async (req, res) => {
+      const body = await readBody(req).catch(() => ({}))
+      let parsed
+      try { parsed = JSON.parse(body) } catch { return json(res, 400, { error: 'invalid JSON' }) }
+      const { chat_id, province_th, province_en, province_code, lang } = parsed
+      if (!Number.isFinite(Number(chat_id))) return json(res, 400, { error: 'chat_id required (integer)' })
+      if (!province_th) return json(res, 400, { error: 'province_th required' })
+      let push
+      try { push = await import('./telegramPush.js') } catch { return json(res, 503, TELEGRAM_PUSH_UNAVAILABLE) }
+      try {
+        const out = push.bindChat(db, {
+          chatId: Number(chat_id),
+          province_th, province_en, province_code, lang,
+        })
+        json(res, 200, out)
+      } catch (err) {
+        log('warn', 'telegram bind failed', { error: String(err?.message ?? err) })
+        json(res, 400, { error: String(err?.message ?? err) })
+      }
+    },
+
+    // Sample push message for the UI preview — the citizen panel
+    // shows "this is what you'll get" so the user knows the format
+    // before tapping the bot link.
+    'GET /api/telegram/preview': (req, res, url) => {
+      const band = url.searchParams.get('band') || 'elevated'
+      const province_th = url.searchParams.get('province_th') || 'เชียงใหม่'
+      const province_en = url.searchParams.get('province_en') || 'Chiang Mai'
+      const score = Number(url.searchParams.get('score')) || 76
+      const lang = url.searchParams.get('lang') || 'th'
+      // Read the buildMessage export — we need a tiny shim because
+      // dynamic import() is async but the handler is sync. The push
+      // module exports buildMessage as a pure function; we can call
+      // it without a live bot token.
+      import('./telegramPush.js').then(({ buildMessage }) => {
+        json(res, 200, { message: buildMessage(province_th, province_en, band, score, lang) })
+      }).catch(() => json(res, 503, TELEGRAM_PUSH_UNAVAILABLE))
+    },
+
+    // Diagnostic — count of active subs, last push time. Operator-facing.
+    'GET /api/telegram/stats': (req, res) => {
+      try {
+        const total = db.get('SELECT COUNT(*) AS n FROM telegram_subs').n
+        const active = db.get('SELECT COUNT(*) AS n FROM telegram_subs WHERE active = 1').n
+        const last = db.kvGet('telegram_push_last_at')
+        json(res, 200, { total_subs: total, active_subs: active, last_push_at: last })
+      } catch { return json(res, 503, TELEGRAM_PUSH_UNAVAILABLE) }
+    },
+
+    // Code-status poll: the citizen panel asks "has my binding code
+    // been claimed by a chat yet?" every 3s after the user taps the
+    // deeplink. Once the bot catches /start <code>, the chat_id is
+    // here and the client switches to the province picker.
+    'GET /api/telegram/code-status': (req, res, url) => {
+      try {
+        const code = url.searchParams.get('code')?.toUpperCase()
+        if (!code) return json(res, 400, { error: 'code required' })
+        const row = db.get(
+          `SELECT chat_id, province_th, lang FROM telegram_subs
+           WHERE binding_code = ? LIMIT 1`, code)
+        if (!row) return json(res, 200, { ready: false })
+        json(res, 200, { ready: true, chat_id: row.chat_id, province_th: row.province_th, lang: row.lang })
+      } catch { return json(res, 503, TELEGRAM_PUSH_UNAVAILABLE) }
+    },
+
+    // Webhook entry — Telegram POSTs every update here. We must
+    // return 200 fast (Telegram gives up after ~30s and the update
+    // is then redelivered). Heavy work (DB writes) is sync but
+    // fast; Telegram sendMessage replies are fire-and-forget so
+    // the 200 goes out before any reply send completes.
+    'POST /api/telegram/webhook': async (req, res) => {
+      let raw
+      try { raw = await readBody(req, 1024 * 1024) } catch { return json(res, 413, { error: 'body too large' }) }
+      let parsed
+      try { parsed = JSON.parse(raw) } catch { return json(res, 400, { error: 'invalid JSON' }) }
+      let mod
+      try { mod = await import('./telegramWebhook.js') } catch { return json(res, 503, { error: 'webhook not available' }) }
+      try {
+        // The module handles everything async-internally. We always
+        // return 200 even on internal errors so Telegram doesn't
+        // hammer us with retries.
+        await mod.processTelegramUpdate(db, parsed)
+        json(res, 200, { ok: true })
+      } catch (err) {
+        log('warn', 'telegram webhook handler failed', { error: String(err?.message ?? err) })
+        json(res, 200, { ok: true })
+      }
+    },
+
+    // Cron-callable tick — admin-gated to keep a misbehaving client
+    // from triggering the fan-out at will. Same shape as the LINE
+    // tick: returns {pushed, failed, scanned}.
+    'POST /api/telegram/tick': async (req, res) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      let push
+      try { push = await import('./telegramPush.js') } catch { return json(res, 503, TELEGRAM_PUSH_UNAVAILABLE) }
+      try {
+        const r = await push.tickTelegramPush(db)
+        if (r.pushed > 0) db.kvSet('telegram_push_last_at', new Date().toISOString())
+        json(res, 200, r)
+      } catch (err) {
+        log('warn', 'telegram-push tick failed', { error: String(err?.message ?? err) })
+        return json(res, 503, TELEGRAM_PUSH_UNAVAILABLE)
+      }
+    },
+
+    // ── Telegram admin: configure bot token ─────────────────────────
+    // Operator pastes the BotFather token here. The server stores it
+    // in the DB kv table, registers the webhook URL, and refreshes
+    // the command list. The token is NEVER returned by the GET
+    // handler — only a masked suffix.
+    'GET /api/admin/telegram-config': (req, res) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      const token = db.kvGet('telegram_bot_token') ?? ''
+      const masked = (s) => s ? `${s.slice(0, 4)}…${s.slice(-4)}` : ''
+      const status = telegram?.status ? telegram.status() : { has_token: Boolean(token) }
+      json(res, 200, {
+        token_masked: masked(token),
+        webhook_url: db.kvGet('telegram_webhook_url'),
+        ...status,
+      })
+    },
+
+    'POST /api/admin/telegram-config': async (req, res) => {
+      if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
+      let body
+      try { body = JSON.parse(await readBody(req)) } catch { return json(res, 400, { error: 'invalid JSON' }) }
+      const { bot_token, webhook_url } = body
+      if (bot_token) db.kvSet('telegram_bot_token', String(bot_token).trim())
+      if (webhook_url) db.kvSet('telegram_webhook_url', String(webhook_url).trim())
+      // Probe + register webhook + set commands.
+      let probe = null
+      if (telegram?.canPush) probe = await telegram.canPush()
+      let webhook = null
+      const whUrl = db.kvGet('telegram_webhook_url')
+      if (whUrl && telegram?.registerWebhook) {
+        try { webhook = await telegram.registerWebhook(whUrl) } catch (err) {
+          webhook = { ok: false, error: String(err?.message ?? err) }
+        }
+      }
+      json(res, 200, { ok: true, bot: probe, webhook })
     },
 
     // ── Weekly data exports ─────────────────────────────────────────

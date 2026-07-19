@@ -2,8 +2,9 @@
 // and pushes severity-coded events into the tap. Upward crossings only, with
 // a per-station cooldown so a station oscillating on a threshold can't spam.
 import { CONFIG } from './config.js'
+import { log } from './util.js'
 
-export function createAlerts(db, bus, { line = null } = {}) {
+export function createAlerts(db, bus, { line = null, telegram = null } = {}) {
   const cooldownMs = CONFIG.thresholds.alertCooldownMs
 
   function inCooldown(key, now) {
@@ -31,15 +32,23 @@ export function createAlerts(db, bus, { line = null } = {}) {
     // Severe alerts also fan out to LINE followers (batched; no-op when the
     // OA token isn't configured).
     line?.notifyAlert({ severity, message_th, message_en })
-    // Per-subscriber push (LINE Notify tokens). Lazily imported so the
-    // optional module never blocks the alert engine's hot path on a
-    // deployment that hasn't enabled it.
+    // Per-subscriber push (LINE Notify + Telegram). Lazily imported so
+    // the optional modules never block the alert engine's hot path on a
+    // deployment that hasn't enabled them. Telegram is the primary path
+    // (free, no monthly cap) — LINE Notify is the fallback for users
+    // who already have a Notify token.
     if ((severity ?? 0) >= 2) {
+      const alertCtx = {
+        severity, message_th, message_en,
+        province_th: station.province_th, province_en: station.province_en,
+      }
+      import('./telegramPush.js').then(({ notifySubscribersForAlert }) => {
+        notifySubscribersForAlert(db, alertCtx)
+          .catch((err) => log('warn', 'telegram-push alert fan-out failed', { error: String(err?.message ?? err) }))
+      }).catch(() => { /* telegramPush not available — silently skip */ })
       import('./linePush.js').then(({ notifySubscribersForAlert }) => {
-        notifySubscribersForAlert(db, {
-          severity, message_th, message_en,
-          province_th: station.province_th, province_en: station.province_en,
-        }).catch((err) => log('warn', 'line-push alert fan-out failed', { error: String(err?.message ?? err) }))
+        notifySubscribersForAlert(db, alertCtx)
+          .catch((err) => log('warn', 'line-push alert fan-out failed', { error: String(err?.message ?? err) }))
       }).catch(() => { /* linePush not available — silently skip */ })
     }
     return true

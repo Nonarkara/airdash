@@ -228,6 +228,36 @@ CREATE TABLE IF NOT EXISTS line_subs (
 CREATE INDEX IF NOT EXISTS idx_line_subs_active ON line_subs(active, last_notified_at);
 CREATE INDEX IF NOT EXISTS idx_line_subs_province ON line_subs(province_code) WHERE active = 1;
 
+-- ── Telegram per-chat subscribers — second push channel because LINE's
+-- free tier caps at 300 messages/month, and a busy haze season will blow
+-- through that in a few days. Telegram Bot API is free + effectively
+-- unlimited for one-to-one messages. Citizens link their chat by tapping
+-- /start in @AirDash_bot — the webhook (server/telegramWebhook.js) stores
+-- the chat_id + binding code; the citizen then picks province + language
+-- in the dashboard. The binding_code is the temporary handshake token that
+-- ties a Telegram chat to an AirDash session without ever asking the user
+-- to copy a chat_id by hand. last_notified_at is the per-(chat, province)
+-- cooldown so a haze episode doesn't spam a user with 20 messages/hour.
+CREATE TABLE IF NOT EXISTS telegram_subs (
+  id INTEGER PRIMARY KEY,
+  chat_id INTEGER NOT NULL UNIQUE,     -- Telegram chat id (one row per chat)
+  binding_code TEXT UNIQUE,            -- 6-char handshake token; nullable after binding
+  user_handle TEXT,                    -- @username if the user has one (display only)
+  first_name TEXT,
+  province_th TEXT,
+  province_en TEXT,
+  province_code TEXT,
+  lang TEXT DEFAULT 'th',              -- 'th' | 'en'
+  last_notified_at TEXT,               -- ISO timestamp of the last push to this chat
+  fail_count INTEGER DEFAULT 0,        -- consecutive send failures (auto-purge at 5)
+  active INTEGER DEFAULT 1,            -- 0 = opted out via /stop
+  created_at TEXT NOT NULL,
+  updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_telegram_subs_active ON telegram_subs(active, last_notified_at);
+CREATE INDEX IF NOT EXISTS idx_telegram_subs_province ON telegram_subs(province_code) WHERE active = 1;
+CREATE INDEX IF NOT EXISTS idx_telegram_subs_binding ON telegram_subs(binding_code) WHERE binding_code IS NOT NULL;
+
 `
 
 // Additive column migrations for tables that predate a field — CREATE TABLE

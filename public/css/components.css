@@ -818,6 +818,58 @@
 .citizen-line-ok { color: #006A00; font-weight: 700; }
 .citizen-line-err { color: #A51931; font-weight: 600; }
 
+/* Telegram bot (@AirDash_bot) — second push channel. Three states the
+   form cycles through (idle → waiting → ready). Visual mirrors the LINE
+   subscribe card but with Telegram's brand colour (sky blue) instead
+   of green. */
+.citizen-tg-subscribe {
+  margin: 0 12px 12px; padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-left: 4px solid #2AABEE;
+  background: rgba(42,171,238,0.04);
+}
+.citizen-tg-head { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px 4px; }
+.citizen-tg-head-icon { font-size: 18px; line-height: 1; padding-top: 1px; }
+.citizen-tg-head-text { flex: 1; min-width: 0; }
+.citizen-tg-head-th { font-weight: 700; font-size: 12.5px; line-height: 1.35; }
+.citizen-tg-head-en { font-size: 10.5px; opacity: 0.7; margin-top: 2px; line-height: 1.35; }
+.citizen-tg-actions { display: flex; align-items: center; gap: 12px; padding: 4px 12px 10px; }
+.citizen-tg-open {
+  display: inline-block; padding: 8px 14px; background: #2AABEE; color: #fff;
+  font-size: 12.5px; font-weight: 700; text-decoration: none;
+  min-height: 32px;
+}
+.citizen-tg-open:hover { background: #1E96D1; }
+.citizen-tg-waiting {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 10px; background: var(--bg-soft); border: 1px solid var(--rule);
+  font-size: 11.5px;
+}
+.citizen-tg-pulse {
+  width: 8px; height: 8px; border-radius: 50%; background: #2AABEE;
+  animation: citizen-tg-blink 1.2s ease-in-out infinite;
+}
+@keyframes citizen-tg-blink { 0%, 100% { opacity: 0.3 } 50% { opacity: 1 } }
+.citizen-tg-state { font-size: 11.5px; color: var(--ink); opacity: 0.75; }
+.citizen-tg-province {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 12px 8px; padding: 6px 10px;
+  background: var(--bg-soft); border: 1px solid var(--rule);
+}
+.citizen-tg-province-label { font-size: 9.5px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.05em; }
+.citizen-tg-province-name { font-weight: 700; font-size: 12.5px; }
+.citizen-tg-bind {
+  display: inline-block; margin: 0 12px 10px;
+  padding: 8px 14px; background: #2AABEE; color: #fff; border: 0;
+  font: inherit; font-weight: 700; font-size: 12px; cursor: pointer;
+  min-height: 32px;
+}
+.citizen-tg-bind:hover:not(:disabled) { background: #1E96D1; }
+.citizen-tg-bind:disabled { background: #88C7E5; cursor: progress; }
+.citizen-tg-status { padding: 0 12px 10px; min-height: 14px; font-size: 11px; line-height: 1.4; }
+.citizen-tg-ok { color: #006A00; font-weight: 700; }
+.citizen-tg-err { color: #A51931; font-weight: 600; }
+
 .citizen-picker-wrap { padding: 8px 12px 12px; border-top: 1px solid var(--rule); }
 .citizen-picker-search {
   width: 100%; padding: 6px 8px; margin-bottom: 6px;
