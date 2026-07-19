@@ -287,11 +287,11 @@ function renderForProvince(province) {
   const lineHead = el('div', { class: 'citizen-section-head' },
     el('span', {}, tr('📲 รับแจ้งเตือนฝุ่นทาง LINE', '📲 dust alerts on LINE')))
   const lineCard = el('a', {
-    class: 'citizen-line-follow', href: 'https://line.me/R/ti/p/@airdash',
+    class: 'citizen-line-follow', href: 'https://line.me/R/ti/p/@630xxaki',
     target: '_blank', rel: 'noopener',
   },
     el('span', { class: 'citizen-line-mark' }, 'LINE'),
-    el('span', {}, tr('เพิ่มเพื่อน @airdash — แจ้งเตือนเมื่อฝุ่นถึงขั้นต้องป้องกัน', 'Add @airdash — alerts when dust hits PROTECT NOW')),
+    el('span', {}, tr('เพิ่มเพื่อน @630xxaki — แจ้งเตือนเมื่อฝุ่นถึงขั้นต้องป้องกัน', 'Add @630xxaki — alerts when dust hits PROTECT NOW')),
     el('span', { 'aria-hidden': 'true' }, '→'),
   )
 
