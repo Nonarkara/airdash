@@ -360,6 +360,11 @@ html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
 }
 #about-btn:hover, #split-btn:hover, #flooddash-btn:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 #about-btn .lbl, #split-btn .lbl, #flooddash-btn .lbl { display: inline; }
+/* Sister-project link gets its own accent (flood blue) instead of looking
+   like just another utility button — it's a different KIND of link (leaves
+   the app entirely), so it earns a little visual distinction. */
+#flooddash-btn { border-color: #0039A6; color: #0039A6; }
+#flooddash-btn:hover { background: #0039A6; color: #fff; border-color: #0039A6; }
 /* Compare Places is a desktop power feature — the overlay's multi-pane
    grid needs width; hide the trigger on compact screens. */
 @media (max-width: 1100px) { #split-btn { display: none; } }
@@ -891,6 +896,29 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   font-size: 12.5px; font-weight: 600;
   text-decoration: none;
   background: var(--paper);
+}
+
+/* Sister-project card (FloodDash) — flood-blue accent, distinct from the
+   partner-agency cards above it, so it reads as "a different dashboard"
+   rather than another funding credit. */
+.about-sister { border-left: 4px solid #0039A6; background: rgba(0,57,166,0.04); }
+.about-sister-row { display: flex; align-items: center; gap: 16px; margin-top: 10px; }
+.about-sister-icon { font-size: 32px; flex: none; line-height: 1; }
+.about-sister-text { flex: 1; min-width: 0; }
+.about-sister-text .th { font-weight: 700; font-size: 14px; color: var(--ink); }
+.about-sister-text .en {
+  font-family: var(--font-num); font-size: 10.5px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-mid); margin-top: 2px;
+}
+.about-sister-text p { font-size: 12px; color: var(--ink-mid); margin-top: 6px; line-height: 1.5; }
+.about-sister-cta {
+  display: inline-block; padding: 7px 14px; flex: none;
+  background: #0039A6; color: #fff;
+  font-size: 12px; font-weight: 700; text-decoration: none;
+}
+.about-sister-cta:hover { background: #002c80; }
+@media (max-width: 560px) {
+  .about-sister-row { flex-direction: column; align-items: flex-start; }
 }
 
 /* LINE / Telegram notification section — three parallel opt-in paths
