@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a1224"/><stop offset="1" stop-color="#040814"/>
+    </linearGradient>
+    <linearGradient id="good" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00933C"/><stop offset="1" stop-color="#3A8A6E"/></linearGradient>
+    <linearGradient id="watch" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F0B400"/><stop offset="1" stop-color="#C8B560"/></linearGradient>
+    <linearGradient id="elevated" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#E86A10"/><stop offset="1" stop-color="#C8453A"/></linearGradient>
+    <linearGradient id="high" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#A51931"/><stop offset="1" stop-color="#6B2D5C"/></linearGradient>
+  </defs>
+  <rect width="1200" height="480" fill="url(#bg)"/>
+
+  <text x="40" y="40" fill="#F0EDE5" font-size="22" font-weight="800" letter-spacing="-0.01em">Danger Score — formula and band</text>
+  <text x="40" y="62" fill="#8A95AA" font-size="12">The headline number for "is it safe to be outside RIGHT NOW"</text>
+
+  <!-- ========== Formula box ========== -->
+  <g transform="translate(40, 100)">
+    <rect width="620" height="160" rx="10" fill="#0F1830" stroke="#5BA8C7" stroke-width="1.2"/>
+    <text x="20" y="28" fill="#5BA8C7" font-size="11" font-weight="700" letter-spacing="0.12em">DANGER SCORE FORMULA</text>
+    <text x="20" y="64" fill="#F0EDE5" font-size="22" font-weight="800" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+      danger = pm_base × (1 + h) × (1 + m) × (1 + n) × (1 − r)
+    </text>
+    <text x="20" y="92" fill="#8A95AA" font-size="11" letter-spacing="0.04em">clamped to 0..100 · per province · refreshed every 5 minutes</text>
+    <g font-size="11" fill="#F0EDE5">
+      <text x="20"  y="118">pm_base : PM2.5 → 0..100 from Thai AQI 2023 breakpoints [15, 25, 37.5, 75, 100, 150]</text>
+      <text x="20"  y="134">h : heat amp   = max(0, (T − 28) / 7) × 0.30   cap 30% — Scortichini 2022 (620 cities)</text>
+      <text x="20"  y="150">m : hum  amp   = max(0, (RH − 60) / 30) × 0.25 cap 25% — Liu 2023 hygroscopic growth</text>
+    </g>
+  </g>
+
+  <!-- ========== Side amps (right of formula) ========== -->
+  <g transform="translate(680, 100)">
+    <rect width="480" height="160" rx="10" fill="#0F1830" stroke="#5BA8C7" stroke-width="1.2"/>
+    <text x="20" y="28" fill="#5BA8C7" font-size="11" font-weight="700" letter-spacing="0.12em">CONTINUED</text>
+    <g font-size="11" fill="#F0EDE5">
+      <text x="20" y="54">n : noise amp = max(0, (Leq − 55) / 30) × 0.30  cap 30% — WHO 53 dB Lden</text>
+      <text x="20" y="74">r : rain relief from forecast mm · 1mm=5%, 5mm=20%, 15mm=30%, 35mm=40%</text>
+      <text x="20" y="94">: every amplifier caps at 30% so no single dimension dominates</text>
+      <text x="20" y="114">: scored at province level · 78 cells of the country</text>
+      <text x="20" y="134">: scored for the active city (drill-down) OR worst nationally (default)</text>
+    </g>
+  </g>
+
+  <!-- ========== Band chart ========== -->
+  <g transform="translate(40, 290)">
+    <text x="0" y="0" fill="#5BA8C7" font-size="11" font-weight="700" letter-spacing="0.12em">BANDS</text>
+    <g font-size="12" font-weight="700">
+      <rect x="0"   y="14" width="265" height="60" rx="6" fill="url(#good)"/>
+      <text x="14"  y="38" fill="#06241A">NORMAL · ปกติ</text>
+      <text x="14"  y="58" fill="#06241A" font-weight="500" font-size="11">0 – 19 · clean air · no action</text>
+
+      <rect x="275" y="14" width="265" height="60" rx="6" fill="url(#watch)"/>
+      <text x="289" y="38" fill="#3A2E00">WATCH · เฝ้าระวัง</text>
+      <text x="289" y="58" fill="#3A2E00" font-weight="500" font-size="11">20 – 44 · sensitive groups take note</text>
+
+      <rect x="550" y="14" width="265" height="60" rx="6" fill="url(#elevated)"/>
+      <text x="564" y="38" fill="#3A1500">ELEVATED · เสี่ยงสูง</text>
+      <text x="564" y="58" fill="#3A1500" font-weight="500" font-size="11">45 – 69 · limit outdoor exertion</text>
+
+      <rect x="825" y="14" width="335" height="60" rx="6" fill="url(#high)"/>
+      <text x="839" y="38" fill="#FFFFFF">CRITICAL · วิกฤต</text>
+      <text x="839" y="58" fill="#FFFFFF" font-weight="500" font-size="11">70 – 100 · N95 + stay indoors</text>
+    </g>
+  </g>
+
+  <!-- Footer / example -->
+  <g transform="translate(40, 410)">
+    <text x="0" y="0" fill="#5BA8C7" font-size="11" font-weight="700" letter-spacing="0.12em">EXAMPLE · BANGKOK · NOW</text>
+    <text x="0" y="20" fill="#F0EDE5" font-size="11">PM2.5 = 33 µg/m³ → pm_base 36 · T = 26.7 °C → h 0 · RH = 91 % → m 0.25 · noise 71.8 dB → n 0.17 · rain forecast 5.4 mm → r 0.20</text>
+    <text x="0" y="40" fill="#F0B400" font-size="13" font-weight="800">= 36 × 1.25 × 1.17 × 0.80 ≈ 42 → band WATCH · label "Be cautious / ระวัง"</text>
+  </g>
+</svg>

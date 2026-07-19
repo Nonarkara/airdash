@@ -1,0 +1,85 @@
+%% AirDash frontend component tree (public/js/)
+%% Renders natively on github.com via mermaid
+flowchart TD
+  INDEX["index.html<br/>#boot · #app · #ticker · #appfooter · #about-overlay"]
+  MAIN["main.js · boot()<br/>all inits + boot lifecycle"]
+  STATE["state.js<br/>store · on · emit · setLang"]
+
+  subgraph HEADER["Top bar (header)"]
+    H1["header.js<br/>national verb + danger chip<br/>i18n-aware"]
+    H2["focus.js<br/>?city= deep-link + dropdown<br/>(top-bar v2)"]
+    H3["search.js<br/>70k+ places · place card<br/>share-link"]
+  end
+
+  subgraph MAP["Map (center)"]
+    M1["map.js · initMap()<br/>Leaflet + 4 layers"]
+    M2["layers/osm-buildings.js"]
+    M3["layers/province-boundaries.js"]
+    M4["layers/satellite.js"]
+    M5["layers/pm25-heatmap.js (new)"]
+    M6["layers/news-fire.js (new)"]
+  end
+
+  subgraph LEFT["Left rail"]
+    L1["ranking.js<br/>78 province rows · JMA verb · CI"]
+    L2["detail.js<br/>drill-down · 6 nearest stations<br/>+ danger breakdown"]
+    L3["forecast.js<br/>3-day forecast strip · +24/48/72h"]
+    L4["whatif.js<br/>rain slider · 'what if' scrubber"]
+    L5["city-dashboard.js<br/>7-city morphed view · accent SVG"]
+  end
+
+  subgraph RIGHT["Right rail (11 panels)"]
+    R1["analytics.js · OVERVIEW<br/>3 KPI · 3 top-5 · 14-day chart<br/>rain chart · regional donut"]
+    R2["citizen.js · MY AREA<br/>4 questions for non-tech users"]
+    R3["alerts.js · ALERTS<br/>critical alerts · countdown"]
+    R4["waterways.js · WASHOUT<br/>rain relief · ENSO state"]
+    R5["history.js · HISTORY<br/>14-day archive · CSV export"]
+    R6["insights.js · SIGNALS<br/>stuck sensors · 24h trends"]
+    R7["sources.js · DATA<br/>9 pipelines · health"]
+    R8["tap.js · TAP<br/>live event stream (100s)"]
+    R9["news.js · NEWS<br/>haze news · bilingual"]
+    R10["library.js · LIBRARY<br/>bilingual research corpus"]
+    R11["chat.js · ASK<br/>bilingual RAG QA"]
+  end
+
+  subgraph SHELL["Cross-cutting"]
+    S1["tap.js · SSE /api/tap<br/>drives every panel"]
+    S2["i18n.js · tr() · BAND · pm25Level<br/>paintChrome()"]
+    S3["fmt.js · el() · fmtNum() · escapeHtml"]
+    S4["cache.js · getJson() (5-min TTL)"]
+    S5["sensorHealth.js · polling"]
+    S6["confidence.js · riskCi()"]
+    S7["sse.js · startTap()"]
+  end
+
+  subgraph FOOTER["Footer"]
+    F1["renderTicker() in main.js<br/>alerts · worst PM2.5 · news"]
+    F2["appfooter 3 lines<br/>disclaimer · standards · core idea"]
+  end
+
+  INDEX --> MAIN
+  MAIN --> STATE
+  MAIN --> HEADER & MAP & LEFT & RIGHT & FOOTER
+  MAIN --> SHELL
+  STATE --> S2
+  HEADER --> STATE
+  MAP --> STATE
+  LEFT --> STATE
+  RIGHT --> STATE
+  RIGHT -.-> S1
+  SHELL --> S1
+
+  classDef entry fill:#3A8A6E,stroke:#0E4A5E,color:#06241A,stroke-width:2px
+  classDef header fill:#0F1830,stroke:#5BA8C7,color:#F0EDE5
+  classDef map fill:#0F1830,stroke:#F0B400,color:#F0EDE5
+  classDef left fill:#0F1830,stroke:#C8453A,color:#F0EDE5
+  classDef right fill:#0F1830,stroke:#7A6FB8,color:#F0EDE5
+  classDef shell fill:#241E4E,stroke:#7A6FB8,color:#F0EDE5
+  classDef footer fill:#0F1830,stroke:#3A8A6E,color:#F0EDE5
+  class INDEX,MAIN,STATE entry
+  class H1,H2,H3 header
+  class M1,M2,M3,M4,M5,M6 map
+  class L1,L2,L3,L4,L5 left
+  class R1,R2,R3,R4,R5,R6,R7,R8,R9,R10,R11 right
+  class S1,S2,S3,S4,S5,S6,S7 shell
+  class F1,F2 footer

@@ -3,9 +3,9 @@
 // evidence) and analytics.js (national patterns). Vanilla DOM via el(),
 // bilingual via tr()/L, zero deps. Every block is honest about its
 // heuristic nature — the server method_* strings travel with the data.
-import { tr } from '../i18n.js?v=2.0.0-mobile1'
-import { fmtNum, el } from '../fmt.js?v=2.0.0-mobile1'
-import { getJson } from '../cache.js?v=2.0.0-mobile1'
+import { tr } from '../i18n.js?v=2.0.0-hero1'
+import { fmtNum, el } from '../fmt.js?v=2.0.0-hero1'
+import { getJson } from '../cache.js?v=2.0.0-hero1'
 
 // One icon per cause hypothesis id (server/causes.js vocabulary).
 export const CAUSE_ICON = {

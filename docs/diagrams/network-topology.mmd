@@ -1,0 +1,40 @@
+%% AirDash network topology — Mac mini to phone browser
+%% Renders natively on github.com via mermaid
+flowchart TB
+  subgraph MAC["🖥 AirDash Mac mini (24/7)"]
+    direction TB
+    S1["launchd · com.airdash.server<br/>Node.js :8341"]
+    S2["launchd · com.airdash.tunnel<br/>cloudflared → Cloudflare edge"]
+    S3["launchd · com.airdash.watchdog<br/>5-min restart on crash"]
+    SQL[("SQLite WAL<br/>~50 MB<br/>130k+ readings")]
+    S1 --> SQL
+  end
+
+  subgraph CF["☁ Cloudflare edge (free tier)"]
+    direction TB
+    T1["Named tunnel<br/>api-air.nonarkara.org"]
+    F1["Pages Function<br/>functions/api/[[path]].js<br/>proxies /api/* 1:1"]
+    P1["Pages static<br/>air.nonarkara.org<br/>HTML/CSS/JS/SW"]
+  end
+
+  subgraph PHONE["📱 Phone browser"]
+    direction TB
+    B1["Boot screen<br/>(stuck-escape-hatch after 6s)"]
+    B2["App shell<br/>(+ SW cache)"]
+    B3["SSE tap stream<br/>(/api/tap)"]
+  end
+
+  MAC -- "port 8341" --> S2
+  S2 == "HTTPS / WebSocket" ==> T1
+  T1 --> F1
+  P1 -- "static assets" --> PHONE
+  F1 -- "/api/*" --> B2
+  F1 -- "SSE /api/tap" --> B3
+  B1 --> B2
+
+  classDef mac fill:#0a1224,stroke:#3A8A6E,color:#F0EDE5
+  classDef cf fill:#1F2A4A,stroke:#F38020,color:#F0EDE5
+  classDef phone fill:#241E4E,stroke:#7A6FB8,color:#F0EDE5
+  class S1,S2,S3,SQL mac
+  class T1,F1,P1 cf
+  class B1,B2,B3 phone

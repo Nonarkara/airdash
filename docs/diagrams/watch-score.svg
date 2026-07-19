@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a1224"/><stop offset="1" stop-color="#040814"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="480" fill="url(#bg)"/>
+
+  <text x="40" y="40" fill="#F0EDE5" font-size="22" font-weight="800" letter-spacing="-0.01em">Watch Score — long-horizon composite</text>
+  <text x="40" y="62" fill="#8A95AA" font-size="12">The longer-horizon counterpart to the Danger Score. Trends matter more than now.</text>
+
+  <!-- Formula -->
+  <g transform="translate(40, 100)">
+    <rect width="1120" height="90" rx="10" fill="#0F1830" stroke="#5BA8C7" stroke-width="1.2"/>
+    <text x="20" y="26" fill="#5BA8C7" font-size="11" font-weight="700" letter-spacing="0.12em">SCORE</text>
+    <text x="20" y="58" fill="#F0EDE5" font-size="20" font-weight="800" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+      watch = 0.40·pm  +  0.10·other  +  0.15·trend  +  0.20·forecast  +  0.15·ventilation
+    </text>
+    <text x="20" y="80" fill="#8A95AA" font-size="11">clamped 0..100 · lower is better · carries a 95% confidence interval</text>
+  </g>
+
+  <!-- The 5 component cards -->
+  <g transform="translate(40, 220)">
+    <text x="0" y="0" fill="#5BA8C7" font-size="11" font-weight="700" letter-spacing="0.12em">FIVE COMPONENTS</text>
+
+    <g transform="translate(0, 18)">
+      <rect width="210" height="180" rx="8" fill="#0F1830" stroke="#3A8A6E" stroke-width="1.2"/>
+      <text x="14" y="26" fill="#3A8A6E" font-size="22" font-weight="800">40%</text>
+      <text x="14" y="48" fill="#F0EDE5" font-size="13" font-weight="700">PM2.5</text>
+      <text x="14" y="68" fill="#8A95AA" font-size="10">live + composite</text>
+      <text x="14" y="86" fill="#F0EDE5" font-size="10">· max of all stations in province</text>
+      <text x="14" y="100" fill="#F0EDE5" font-size="10">· PM10, O3, NO2 also tracked</text>
+      <text x="14" y="116" fill="#F0EDE5" font-size="10">· Thai AQI 2023 breakpoints</text>
+      <text x="14" y="138" fill="#5BA8C7" font-size="10" font-weight="700">SOURCE</text>
+      <text x="14" y="152" fill="#F0EDE5" font-size="10">PCD / Air4Thai</text>
+      <text x="14" y="166" fill="#F0EDE5" font-size="10">+ GISTDA sat fusion</text>
+    </g>
+
+    <g transform="translate(220, 18)">
+      <rect width="210" height="180" rx="8" fill="#0F1830" stroke="#5BA8C7" stroke-width="1.2"/>
+      <text x="14" y="26" fill="#5BA8C7" font-size="22" font-weight="800">10%</text>
+      <text x="14" y="48" fill="#F0EDE5" font-size="13" font-weight="700">Other pollutants</text>
+      <text x="14" y="68" fill="#8A95AA" font-size="10">O3, NO2, SO2, CO, PM10</text>
+      <text x="14" y="86" fill="#F0EDE5" font-size="10">· per-pollutant sub-score</text>
+      <text x="14" y="100" fill="#F0EDE5" font-size="10">· smoke vs traffic vs industry</text>
+      <text x="14" y="116" fill="#F0EDE5" font-size="10">· weighted by WHO AQG</text>
+      <text x="14" y="138" fill="#5BA8C7" font-size="10" font-weight="700">SOURCE</text>
+      <text x="14" y="152" fill="#F0EDE5" font-size="10">PCD multi-pollutant</text>
+      <text x="14" y="166" fill="#F0EDE5" font-size="10">NO₂, O₃ stations</text>
+    </g>
+
+    <g transform="translate(440, 18)">
+      <rect width="210" height="180" rx="8" fill="#0F1830" stroke="#F0B400" stroke-width="1.2"/>
+      <text x="14" y="26" fill="#F0B400" font-size="22" font-weight="800">15%</text>
+      <text x="14" y="48" fill="#F0EDE5" font-size="13" font-weight="700">Trend (6 h)</text>
+      <text x="14" y="68" fill="#8A95AA" font-size="10">is it getting worse?</text>
+      <text x="14" y="86" fill="#F0EDE5" font-size="10">· Δ PM2.5 over 6 h</text>
+      <text x="14" y="100" fill="#F0EDE5" font-size="10">· rising fast → higher score</text>
+      <text x="14" y="116" fill="#F0EDE5" font-size="10">· rising slowly → flat score</text>
+      <text x="14" y="138" fill="#5BA8C7" font-size="10" font-weight="700">SOURCE</text>
+      <text x="14" y="152" fill="#F0EDE5" font-size="10">readings history table</text>
+      <text x="14" y="166" fill="#F0EDE5" font-size="10">last 6 hours</text>
+    </g>
+
+    <g transform="translate(660, 18)">
+      <rect width="210" height="180" rx="8" fill="#0F1830" stroke="#C8453A" stroke-width="1.2"/>
+      <text x="14" y="26" fill="#E86A10" font-size="22" font-weight="800">20%</text>
+      <text x="14" y="48" fill="#F0EDE5" font-size="13" font-weight="700">Forecast (72 h)</text>
+      <text x="14" y="68" fill="#8A95AA" font-size="10">is it going to get worse?</text>
+      <text x="14" y="86" fill="#F0EDE5" font-size="10">· max(pm25_fc_24/48/72h)</text>
+      <text x="14" y="100" fill="#F0EDE5" font-size="10">· + dust_fc_24h if Saharan</text>
+      <text x="14" y="116" fill="#F0EDE5" font-size="10">· − rain relief (deducted)</text>
+      <text x="14" y="138" fill="#5BA8C7" font-size="10" font-weight="700">SOURCE</text>
+      <text x="14" y="152" fill="#F0EDE5" font-size="10">CAMS / Copernicus</text>
+      <text x="14" y="166" fill="#F0EDE5" font-size="10">Open-Meteo air-quality</text>
+    </g>
+
+    <g transform="translate(880, 18)">
+      <rect width="240" height="180" rx="8" fill="#0F1830" stroke="#5BA8C7" stroke-width="1.2"/>
+      <text x="14" y="26" fill="#5BA8C7" font-size="22" font-weight="800">15%</text>
+      <text x="14" y="48" fill="#F0EDE5" font-size="13" font-weight="700">Ventilation</text>
+      <text x="14" y="68" fill="#8A95AA" font-size="10">can the air clear itself?</text>
+      <text x="14" y="86" fill="#F0EDE5" font-size="10">· wind speed fc km/h</text>
+      <text x="14" y="100" fill="#F0EDE5" font-size="10">· stagnation penalty when</text>
+      <text x="14" y="116" fill="#F0EDE5" font-size="10">  wind &lt; 6 km/h + no rain</text>
+      <text x="14" y="138" fill="#5BA8C7" font-size="10" font-weight="700">SOURCE</text>
+      <text x="14" y="152" fill="#F0EDE5" font-size="10">Open-Meteo wind</text>
+      <text x="14" y="166" fill="#F0EDE5" font-size="10">+ rain prob forecast</text>
+    </g>
+  </g>
+
+  <g transform="translate(40, 430)">
+    <text x="0" y="0" fill="#8A95AA" font-size="11">Confidence interval is the standard error across stations in a province, scaled by 1.96. Provinces with one station get a wider CI; multi-station provinces get a tighter one.</text>
+  </g>
+</svg>

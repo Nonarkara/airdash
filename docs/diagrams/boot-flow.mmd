@@ -1,0 +1,53 @@
+%% AirDash boot sequence — what happens between tap-to-open and dashboard painted
+%% Renders natively on github.com via mermaid
+sequenceDiagram
+  autonumber
+  actor U as Phone user
+  participant SW as Service Worker<br/>airdash-v11
+  participant CF as Cloudflare Pages
+  participant FN as Pages Function<br/>/api/[[path]].js
+  participant T as Cloudflare Tunnel
+  participant M as AirDash Mac<br/>(Node :8341)
+  participant DB as SQLite<br/>(4,887 stations)
+
+  U->>SW: Tap bookmark or type URL
+  Note over SW: NETWORK-FIRST for navigations
+  SW->>CF: GET / (navigation)
+  CF-->>SW: 200 OK · index.html
+  Note over SW: skipWaiting + clients.claim
+  SW-->>U: HTML · starts parse
+
+  U->>CF: import('/js/main.js?v=…')
+  CF-->>U: 16 KB main.js
+
+  U->>CF: import('./panels/*.js', …)
+  Note over U: ~30 module imports,<br/>all 15-30 KB each
+  CF-->>U: parallel fetches (gzip)
+
+  U->>U: HTML parsed → boot screen
+  U->>U: T+0.1s: paint chrome, initMap, initHeader,<br/>initRanking, initDetail, etc.
+  U->>U: T+0.4s: all panels bound to listeners
+
+  U->>CF: GET /api/snapshot
+  CF->>FN: proxy /api/snapshot
+  FN->>T: HTTPS over tunnel
+  T->>M: fetch http://localhost:8341/api/snapshot
+  M->>DB: SELECT readings + risk + danger
+  DB-->>M: 779 KB raw JSON
+  M-->>T: response (gzip → 93 KB)
+  T-->>FN: response
+  FN-->>CF: response
+  CF-->>U: 93 KB gzipped
+  U->>U: T+1.4s: parse JSON, emit('snapshot', data)
+
+  U->>U: renderStatus() → danger chip live<br/>renderTicker() → alerts crawl<br/>initMap() → 4,887 station markers
+
+  U->>U: T+1.6s: boot div removed,<br/>announceReady() → screen-reader live region
+
+  U->>U: startTap() → SSE /api/tap
+  U->>CF: EventSource('/api/tap')
+  CF->>FN: proxy /api/tap
+  FN->>T: tunnel stream
+  T->>M: GET /api/tap
+  M-->>T: text/event-stream
+  Note over U,M: every new event<br/>renders as a row in real time

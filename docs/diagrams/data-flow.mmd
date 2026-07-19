@@ -1,0 +1,69 @@
+%% AirDash data flow — sources to browser
+%% Renders natively on github.com via mermaid
+flowchart LR
+  %% ============ External sources (live) ============
+  subgraph SOURCES["9 live data sources"]
+    PCD["PCD / Air4Thai<br/>4,400+ stations · 1h"]
+    TMD["TMD<br/>weather forecast · 12h"]
+    HII["HII / สสน.<br/>4,200+ rain gauges · 10min"]
+    OM["Open-Meteo<br/>weather + air-quality · 3h"]
+    CAMS["CAMS / Copernicus<br/>PM2.5 forecast · 3h"]
+    GISTDA["GISTDA<br/>sat + ground PM2.5 · 1h"]
+    NOI["PCD Noise<br/>27 stations · 30min"]
+    IMERG["NASA IMERG<br/>satellite rain · 30min"]
+    ENSO["NOAA CPC<br/>ENSO index · 12h"]
+  end
+
+  %% ============ Ingest + scoring (the Mac) ============
+  subgraph ENGINE["AirDash engine · 24/7 Mac · launchd 3 services"]
+    direction TB
+    AD["Source adapters (9)<br/>fetch · parse · pivot<br/>upsert to SQLite"]
+    SQL[("SQLite<br/>readings · stations · alerts<br/>news · rag_docs · library")]
+
+    RISK["Risk engine<br/>Watch Score 0-100<br/>5 components + 95% CI"]
+    DANGER["Danger engine<br/>pm + heat + hum + noise − rain<br/>clamped 0-100, 4 caps at 30%"]
+    WASHOUT["Washout engine<br/>forecast rain × probability<br/>→ expected PM2.5 relief"]
+    RAG["RAG / library<br/>bilingual QA from 87 docs"]
+    TAP["Tap (live event bus)<br/>in-process EventEmitter"]
+
+    API["REST API<br/>/api/snapshot · /api/danger · /api/risk<br/>/api/focus · /api/tap (SSE) · /api/library"]
+  end
+
+  %% ============ Edge (Cloudflare) ============
+  subgraph EDGE["Cloudflare edge"]
+    TUNNEL["Named tunnel<br/>api-air.nonarkara.org"]
+    FN["Pages Function<br/>/api/[[path]].js<br/>30s JSON / 5min stream"]
+    PAGES["Pages static<br/>air.nonarkara.org<br/>HTML+CSS+JS+SW"]
+  end
+
+  %% ============ Browser ============
+  subgraph BROWSER["Browser (Chrome / Safari / Firefox)"]
+    BOOT["Boot screen<br/>+ stuck-on-boot escape hatch<br/>+ forceReload bypass"]
+    APP["App shell<br/>Header · Map · Left rail · Right rail · Ticker"]
+    SW["Service Worker airdash-v11<br/>network-first nav · SWR assets<br/>NEVER caches /api/"]
+  end
+
+  %% ===== Edges =====
+  SOURCES == "HTTPS / JSON" ==> AD
+  AD --> SQL
+  SQL --> RISK & DANGER & WASHOUT & RAG
+  TAP <-. "emit alerts/news/snap" .- RISK
+  RISK & DANGER & WASHOUT & RAG --> API
+  API == "gzip JSON / SSE" ==> TUNNEL
+  TUNNEL --> FN
+  PAGES -. "static assets<br/>?v=2.0.0-mobile1" .-> BROWSER
+  FN == "/api/* proxied" ==> APP
+  APP <-. "SSE /api/tap" .- TUNNEL
+  BOOT --> APP
+  SW -. intercepts .-> APP
+  SW -. caches HTML/CSS/JS .-> PAGES
+
+  %% ===== Style =====
+  classDef src fill:#0E4A5E,stroke:#3A8A6E,color:#F0EDE5
+  classDef eng fill:#0F1830,stroke:#5BA8C7,color:#F0EDE5
+  classDef edge fill:#1F2A4A,stroke:#F38020,color:#F0EDE5
+  classDef browser fill:#241E4E,stroke:#7A6FB8,color:#F0EDE5
+  class PCD,TMD,HII,OM,CAMS,GISTDA,NOI,IMERG,ENSO src
+  class AD,SQL,RISK,DANGER,WASHOUT,RAG,TAP,API eng
+  class TUNNEL,FN,PAGES edge
+  class BOOT,APP,SW browser

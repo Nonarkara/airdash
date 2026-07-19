@@ -18,7 +18,7 @@
 // radius is tuned for "readable at province zoom", not modelled from
 // atmospheric dispersion. No dependency added: hand-rolled canvas layer in
 // the same style as the vendored Leaflet the rest of the map uses.
-import { pm25Color } from '../paint.js?v=2.0.0-mobile1'
+import { pm25Color } from '../paint.js?v=2.0.0-hero1'
 
 const MIN_RADIUS_PX = 28
 const MAX_RADIUS_PX = 70

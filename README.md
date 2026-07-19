@@ -1,14 +1,33 @@
+<p align="center">
+  <img src="public/img/hero-1200.png" alt="DR NON'S AIRDASH — Thailand's Air Quality Dashboard" width="100%">
+</p>
+
 # AIRDASH
 
 ## เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · Thailand Air Quality & Dust Watch
 
-> **An operating system for air-quality decision making — for mayors, city
-> administrators, district officials, and citizens.** Not a demo. Not a
+> **Real-time data. Real impact. Better air. Better tomorrow.**
+> An operating system for air-quality decision making — for mayors, city
+> administrators, district officials, and citizens. Not a demo. Not a
 > dashboard. Every figure is real-time from Thai government sources, every
 > number carries a confidence interval, and the first thing on screen is
 > always the action the user should take.
 
-**Live:** [air.nonarkara.org](https://air.nonarkara.org) · **Mirror:** [air-ami.pages.dev](https://air-ami.pages.dev)
+<p align="center">
+  <strong>🇹🇭 Live:</strong> <a href="https://air.nonarkara.org">air.nonarkara.org</a> ·
+  <strong>🔀 Fork it:</strong> <a href="https://github.com/Nonarkara/airdash/fork">github.com/Nonarkara/airdash</a> ·
+  <strong>📐 System architecture:</strong> <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> ·
+  <strong>🇹🇭 ฉบับภาษาไทย:</strong> <a href="README.th.md">README.th.md</a>
+</p>
+
+<p align="center">
+  <img alt="9 live data sources" src="https://img.shields.io/badge/data_sources-9-3A8A6E?style=flat-square">
+  <img alt="4,887 stations" src="https://img.shields.io/badge/stations-4,887-3A8A6E?style=flat-square">
+  <img alt="78 provinces" src="https://img.shields.io/badge/provinces-78-3A8A6E?style=flat-square">
+  <img alt="130,830 readings" src="https://img.shields.io/badge/readings-130,830-3A8A6E?style=flat-square">
+  <img alt="$0/mo cloud" src="https://img.shields.io/badge/cloud-$0%2Fmo-0E4A5E?style=flat-square">
+  <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-241E4E?style=flat-square">
+</p>
 
 ---
 

@@ -1,0 +1,127 @@
+%% AirDash SQLite schema (WAL mode, ~50 MB at steady state)
+%% Renders natively on github.com via mermaid
+erDiagram
+  readings {
+    int id PK
+    text source
+    text station_key
+    text province_code
+    real pm25
+    real pm10
+    real o3
+    real no2
+    real so2
+    real co
+    int aqi
+    real rain_24h
+    real rain_1h
+    real temp_c
+    real rh_pct
+    real wind_kmh
+    real noise_leq_db
+    int ts_unix
+  }
+  stations {
+    text station_key PK
+    text name_th
+    text name_en
+    text province_code FK
+    real lat
+    real lng
+    text source
+    int last_seen_unix
+    int active
+  }
+  provinces {
+    text code PK
+    text name_th
+    text name_en
+    text region_th
+    text region_en
+    real lat
+    real lng
+    real area_km2
+  }
+  alerts {
+    int id PK
+    text kind
+    int severity
+    text province_code FK
+    text message_th
+    text message_en
+    text station_key FK
+    int created_unix
+  }
+  news_items {
+    int id PK
+    text feed
+    text title
+    text link
+    int published_unix
+    int fetched_unix
+  }
+  rag_docs {
+    text doc_key PK
+    text title_th
+    text title_en
+    text body_th
+    text body_en
+    text source_url
+    int updated_unix
+  }
+  library_articles {
+    text article_key PK
+    text section
+    text title_th
+    text title_en
+    text body_th
+    text body_en
+    int updated_unix
+  }
+  focus_areas {
+    text id PK
+    text name_th
+    text name_en
+    text province_th
+    text center_lat
+    real center_lng
+    int zoom
+    text blurb_th
+    text blurb_en
+    text accent_svg
+  }
+  daily_aggregates {
+    text date PK
+    real pm25_max
+    real pm25_avg
+    real unhealthy
+    real very_unhealthy
+    real rain_max
+  }
+  sources_state {
+    text source PK
+    text label_th
+    text label_en
+    int interval_ms
+    int last_run_unix
+    int last_ok_unix
+    int failures
+    text last_error
+  }
+  sessions_log {
+    int id PK
+    text path
+    text method
+    int status
+    int ms
+    int at_unix
+  }
+
+  provinces ||--o{ stations : "has"
+  provinces ||--o{ readings : "summarized by"
+  provinces ||--o{ alerts : "context"
+  stations ||--o{ readings : "produces"
+  stations ||--o{ alerts : "triggers"
+  stations ||--o{ focus_areas : "may be a"
+  daily_aggregates ||--|| readings : "summarized from"
+  rag_docs ||--o{ library_articles : "referenced by"

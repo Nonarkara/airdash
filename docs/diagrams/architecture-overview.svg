@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a1224"/>
+      <stop offset="1" stop-color="#040814"/>
+    </linearGradient>
+    <linearGradient id="thai" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3A8A6E"/>
+      <stop offset="1" stop-color="#0E4A5E"/>
+    </linearGradient>
+    <linearGradient id="thai-2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0E4A5E"/>
+      <stop offset="1" stop-color="#241E4E"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F0B400"/>
+      <stop offset="1" stop-color="#E86A10"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E86A10"/>
+      <stop offset="1" stop-color="#A51931"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+  <rect width="1200" height="600" fill="url(#bg)"/>
+
+  <!-- Title -->
+  <text x="40" y="44" fill="#F0EDE5" font-size="22" font-weight="800" letter-spacing="-0.01em">AirDash — System Architecture</text>
+  <text x="40" y="68" fill="#8A95AA" font-size="12" letter-spacing="0.04em">Live data from 7+ Thai government pipelines · served from a 24/7 Mac · 779 KB first paint · 0 mock data</text>
+
+  <!-- ============== LEFT: Data sources (7+ boxes) ============== -->
+  <g transform="translate(40, 110)">
+    <text x="0" y="-6" fill="#5BA8C7" font-size="11" font-weight="700" letter-spacing="0.14em">DATA SOURCES · LIVE</text>
+    <!-- Source pills -->
+    <g font-size="11" font-weight="600">
+      <rect x="0"   y="10" width="180" height="32" rx="4" fill="#0E4A5E"/>
+      <text x="10"  y="30" fill="#F0EDE5">PCD / Air4Thai · 4,400+ stations</text>
+
+      <rect x="0"   y="50" width="180" height="32" rx="4" fill="#0E4A5E"/>
+      <text x="10"  y="70" fill="#F0EDE5">TMD · Thai Met Dept</text>
+
+      <rect x="0"   y="90" width="180" height="32" rx="4" fill="#0E4A5E"/>
+      <text x="10"  y="110" fill="#F0EDE5">HII · 4,200+ rain gauges</text>
+
+      <rect x="0"   y="130" width="180" height="32" rx="4" fill="#0E4A5E"/>
+      <text x="10"  y="150" fill="#F0EDE5">Open-Meteo · weather forecast</text>
+
+      <rect x="0"   y="170" width="180" height="32" rx="4" fill="#0E4A5E"/>
+      <text x="10"  y="190" fill="#F0EDE5">CAMS / Copernicus · dust</text>
+
+      <rect x="0"   y="210" width="180" height="32" rx="4" fill="#0E4A5E"/>
+      <text x="10"  y="230" fill="#F0EDE5">GISTDA · sat + ground PM2.5</text>
+
+      <rect x="0"   y="250" width="180" height="32" rx="4" fill="#0E4A5E"/>
+      <text x="10"  y="270" fill="#F0EDE5">PCD Noise · 27 stations</text>
+
+      <rect x="0"   y="290" width="180" height="32" rx="4" fill="#0E4A5E"/>
+      <text x="10"  y="310" fill="#F0EDE5">NASA IMERG · sat rain</text>
+
+      <rect x="0"   y="330" width="180" height="32" rx="4" fill="#0E4A5E"/>
+      <text x="10"  y="350" fill="#F0EDE5">NOAA CPC · ENSO</text>
+    </g>
+  </g>
+
+  <!-- arrows from sources to engine -->
+  <g stroke="#5BA8C7" stroke-width="1.5" fill="none" opacity="0.65">
+    <path d="M 220 140 L 280 285" />
+    <path d="M 220 180 L 280 290" />
+    <path d="M 220 220 L 280 295" />
+    <path d="M 220 260 L 280 300" />
+    <path d="M 220 300 L 280 305" />
+    <path d="M 220 340 L 280 310" />
+    <path d="M 220 380 L 280 315" />
+    <path d="M 220 420 L 280 320" />
+    <path d="M 220 460 L 280 325" />
+  </g>
+
+  <!-- ============== CENTER: Engine box (the Mac) ============== -->
+  <g transform="translate(280, 95)">
+    <rect x="0" y="0" width="280" height="430" rx="10" fill="#0F1830" stroke="#5BA8C7" stroke-width="1.5"/>
+    <text x="140" y="22" text-anchor="middle" fill="#F0EDE5" font-size="14" font-weight="800" letter-spacing="0.04em">AIRDASH ENGINE</text>
+    <text x="140" y="40" text-anchor="middle" fill="#8A95AA" font-size="10" letter-spacing="0.12em">24/7 MAC MINI · launchd 3 SERVICES</text>
+
+    <!-- 9 Source adapters -->
+    <g transform="translate(14, 60)">
+      <rect width="252" height="28" rx="4" fill="url(#thai-2)"/>
+      <text x="10" y="18" fill="#F0EDE5" font-size="11" font-weight="600">⤓ Source adapters (9)</text>
+      <text x="244" y="18" text-anchor="end" fill="#5BA8C7" font-size="10" font-weight="600">10 min – 12 h</text>
+    </g>
+
+    <!-- SQLITE -->
+    <g transform="translate(14, 100)">
+      <rect width="252" height="40" rx="4" fill="#1F2A4A" stroke="#3A4F8A" stroke-width="1"/>
+      <text x="10" y="18" fill="#F0EDE5" font-size="11" font-weight="700">SQLite</text>
+      <text x="10" y="32" fill="#8A95AA" font-size="9.5">130,830 readings · 4,887 stations · 87 RAG docs</text>
+    </g>
+
+    <!-- Risk + Danger engines -->
+    <g transform="translate(14, 152)">
+      <rect width="120" height="58" rx="4" fill="url(#thai)"/>
+      <text x="10" y="18" fill="#F0EDE5" font-size="11" font-weight="800">RISK ENGINE</text>
+      <text x="10" y="32" fill="#F0EDE5" font-size="9.5">Watch Score 0–100</text>
+      <text x="10" y="46" fill="#A8C0C0" font-size="9">5 components · confidence CI</text>
+    </g>
+    <g transform="translate(146, 152)">
+      <rect width="120" height="58" rx="4" fill="url(#amber)"/>
+      <text x="10" y="18" fill="#2A1A05" font-size="11" font-weight="800">DANGER SCORE</text>
+      <text x="10" y="32" fill="#2A1A05" font-size="9.5">PM + heat + hum + noise − rain</text>
+      <text x="10" y="46" fill="#2A1A05" font-size="9">peer-reviewed</text>
+    </g>
+
+    <!-- Washout + RAG + Tap -->
+    <g transform="translate(14, 222)">
+      <rect width="80" height="44" rx="4" fill="#0E2A3E" stroke="#3A8A6E" stroke-width="1"/>
+      <text x="40" y="16" text-anchor="middle" fill="#5BA8C7" font-size="10" font-weight="700">WASHOUT</text>
+      <text x="40" y="32" text-anchor="middle" fill="#F0EDE5" font-size="9">rain relief</text>
+    </g>
+    <g transform="translate(100, 222)">
+      <rect width="80" height="44" rx="4" fill="#241E4E" stroke="#7A6FB8" stroke-width="1"/>
+      <text x="40" y="16" text-anchor="middle" fill="#C2B8E5" font-size="10" font-weight="700">RAG</text>
+      <text x="40" y="32" text-anchor="middle" fill="#F0EDE5" font-size="9">bilingual QA</text>
+    </g>
+    <g transform="translate(186, 222)">
+      <rect width="80" height="44" rx="4" fill="#0E2A3E" stroke="#E86A10" stroke-width="1"/>
+      <text x="40" y="16" text-anchor="middle" fill="#F0B400" font-size="10" font-weight="700">TAP</text>
+      <text x="40" y="32" text-anchor="middle" fill="#F0EDE5" font-size="9">live events</text>
+    </g>
+
+    <!-- API endpoints -->
+    <g transform="translate(14, 280)">
+      <text x="0" y="0" fill="#5BA8C7" font-size="10" font-weight="700" letter-spacing="0.12em">REST API</text>
+      <text x="0" y="16" fill="#F0EDE5" font-size="10">/api/snapshot (779 KB · 5-min TTL)</text>
+      <text x="0" y="30" fill="#F0EDE5" font-size="10">/api/danger · /api/risk · /api/washout</text>
+      <text x="0" y="44" fill="#F0EDE5" font-size="10">/api/focus · /api/focus/:id</text>
+      <text x="0" y="58" fill="#F0EDE5" font-size="10">/api/tap (SSE stream)</text>
+    </g>
+
+    <!-- The Mac -->
+    <g transform="translate(14, 360)">
+      <rect width="252" height="56" rx="6" fill="#0a1224" stroke="#3A4F8A" stroke-width="1"/>
+      <text x="10" y="18" fill="#8A95AA" font-size="10" font-weight="600">3 launchd services</text>
+      <text x="10" y="32" fill="#F0EDE5" font-size="9.5">com.airdash.server · com.airdash.tunnel · com.airdash.watchdog</text>
+      <text x="10" y="46" fill="#5BA8C7" font-size="9">5-min restart on crash · tunnel auto-reconnect</text>
+    </g>
+  </g>
+
+  <!-- arrows from engine to API/tunnel -->
+  <g stroke="#3A8A6E" stroke-width="1.5" fill="none" opacity="0.7">
+    <path d="M 560 400 L 600 400" />
+  </g>
+
+  <!-- ============== RIGHT TOP: Cloudflare tunnel ============== -->
+  <g transform="translate(600, 130)">
+    <rect width="160" height="80" rx="6" fill="#F38020" fill-opacity="0.16" stroke="#F38020" stroke-width="1.2"/>
+    <text x="80" y="22" text-anchor="middle" fill="#F38020" font-size="10" font-weight="800">CLOUDFLARE TUNNEL</text>
+    <text x="80" y="40" text-anchor="middle" fill="#F0EDE5" font-size="10" font-weight="600">api-air.nonarkara.org</text>
+    <text x="80" y="56" text-anchor="middle" fill="#8A95AA" font-size="9">encrypted, no port-forward</text>
+    <text x="80" y="70" text-anchor="middle" fill="#8A95AA" font-size="9">HTTPS only, free tier</text>
+  </g>
+
+  <!-- ============== RIGHT MIDDLE: Pages function proxy ============== -->
+  <g transform="translate(600, 240)">
+    <rect width="160" height="80" rx="6" fill="#F4811F" fill-opacity="0.10" stroke="#F38020" stroke-width="1.2" stroke-dasharray="4 3"/>
+    <text x="80" y="22" text-anchor="middle" fill="#F38020" font-size="10" font-weight="800">PAGES FUNCTION</text>
+    <text x="80" y="40" text-anchor="middle" fill="#F0EDE5" font-size="10" font-weight="600">/api/[[path]].js</text>
+    <text x="80" y="56" text-anchor="middle" fill="#8A95AA" font-size="9">proxies every /api/* to tunnel</text>
+    <text x="80" y="70" text-anchor="middle" fill="#8A95AA" font-size="9">30s JSON / 5min stream</text>
+  </g>
+
+  <!-- arrow from tunnel to function -->
+  <path d="M 680 210 L 680 240" stroke="#F38020" stroke-width="1.5" fill="none" opacity="0.7"/>
+
+  <!-- ============== RIGHT TOP: Pages static (assets) ============== -->
+  <g transform="translate(600, 360)">
+    <rect width="160" height="60" rx="6" fill="#F38020" fill-opacity="0.10" stroke="#F38020" stroke-width="1.2"/>
+    <text x="80" y="20" text-anchor="middle" fill="#F38020" font-size="10" font-weight="800">PAGES STATIC</text>
+    <text x="80" y="36" text-anchor="middle" fill="#F0EDE5" font-size="10" font-weight="600">air.nonarkara.org</text>
+    <text x="80" y="50" text-anchor="middle" fill="#8A95AA" font-size="9">HTML + CSS + JS + SW</text>
+  </g>
+
+  <!-- ============== RIGHT: Browser ============== -->
+  <g transform="translate(820, 130)">
+    <rect width="340" height="430" rx="10" fill="#0F1830" stroke="#5BA8C7" stroke-width="1.5"/>
+    <text x="170" y="22" text-anchor="middle" fill="#F0EDE5" font-size="14" font-weight="800" letter-spacing="0.04em">BROWSER · CHROME / SAFARI / FIREFOX</text>
+    <text x="170" y="40" text-anchor="middle" fill="#8A95AA" font-size="10" letter-spacing="0.12em">ZERO-INSTALL · PWA-CAPABLE · WORKS ON PHONE</text>
+
+    <!-- App layout -->
+    <g transform="translate(14, 60)">
+      <rect width="312" height="40" rx="4" fill="url(#thai-2)"/>
+      <text x="10" y="16" fill="#F0EDE5" font-size="10" font-weight="700">HEADER · national verb + danger chip</text>
+      <text x="10" y="30" fill="#8A95AA" font-size="9">"ติดตามสถานการณ์ / STAY INFORMED"</text>
+    </g>
+    <g transform="translate(14, 110)">
+      <rect width="152" height="120" rx="4" fill="#0a1224" stroke="#3A4F8A" stroke-width="1"/>
+      <text x="76" y="20" text-anchor="middle" fill="#5BA8C7" font-size="10" font-weight="700">LEFT RAIL</text>
+      <text x="10" y="36" fill="#F0EDE5" font-size="9">78 provinces</text>
+      <text x="10" y="50" fill="#F0EDE5" font-size="9">3-DAY FORECAST</text>
+      <text x="10" y="64" fill="#F0EDE5" font-size="9">WHAT-IF (rain slider)</text>
+      <text x="10" y="78" fill="#F0EDE5" font-size="9">7-city dashboard</text>
+      <text x="10" y="92" fill="#F0EDE5" font-size="9">hotlines · alert cards</text>
+    </g>
+    <g transform="translate(174, 110)">
+      <rect width="152" height="120" rx="4" fill="#0a1224" stroke="#3A4F8A" stroke-width="1"/>
+      <text x="76" y="20" text-anchor="middle" fill="#5BA8C7" font-size="10" font-weight="700">MAP</text>
+      <text x="76" y="36" text-anchor="middle" fill="#F0EDE5" font-size="9">Leaflet · 4,887 stations</text>
+      <text x="76" y="50" text-anchor="middle" fill="#F0EDE5" font-size="9">+ PM2.5 heatmap</text>
+      <text x="76" y="64" text-anchor="middle" fill="#F0EDE5" font-size="9">+ rain radar</text>
+      <text x="76" y="78" text-anchor="middle" fill="#F0EDE5" font-size="9">+ fire / news pins</text>
+      <text x="76" y="92" text-anchor="middle" fill="#F0EDE5" font-size="9">touch &amp; keyboard OK</text>
+    </g>
+    <g transform="translate(14, 240)">
+      <rect width="312" height="40" rx="4" fill="#241E4E"/>
+      <text x="10" y="16" fill="#F0EDE5" font-size="10" font-weight="700">RIGHT RAIL · 11 panels (TH + EN)</text>
+      <text x="10" y="30" fill="#C2B8E5" font-size="9">overview · alerts · washout · sources · news · library · chat</text>
+    </g>
+    <g transform="translate(14, 290)">
+      <rect width="312" height="40" rx="4" fill="#0a1224" stroke="#3A4F8A" stroke-width="1"/>
+      <text x="10" y="16" fill="#F0EDE5" font-size="10" font-weight="700">SSE TAP · live event stream</text>
+      <text x="10" y="30" fill="#5BA8C7" font-size="9">server → browser over Pages function proxy</text>
+    </g>
+    <g transform="translate(14, 340)">
+      <rect width="312" height="76" rx="4" fill="#1F2A4A" stroke="#3A8A6E" stroke-width="1"/>
+      <text x="10" y="16" fill="#3A8A6E" font-size="10" font-weight="700">SERVICE WORKER (airdash-v11)</text>
+      <text x="10" y="30" fill="#F0EDE5" font-size="9.5">network-first for navigations</text>
+      <text x="10" y="44" fill="#F0EDE5" font-size="9.5">?forceReload=N bypasses cache</text>
+      <text x="10" y="58" fill="#F0EDE5" font-size="9.5">stale-while-revalidate for assets</text>
+      <text x="10" y="71" fill="#5BA8C7" font-size="9">NEVER caches /api/ — live data is sacred</text>
+    </g>
+  </g>
+
+  <!-- arrows: tunnel → function → browser, static → browser -->
+  <g stroke="#F38020" stroke-width="1.5" fill="none" opacity="0.7">
+    <path d="M 760 280 L 820 280"/>
+  </g>
+  <g stroke="#F38020" stroke-width="1.5" fill="none" opacity="0.7" stroke-dasharray="3 3">
+    <path d="M 680 420 L 820 420" />
+  </g>
+
+  <!-- Footer legend -->
+  <g transform="translate(40, 560)">
+    <rect width="240" height="22" rx="3" fill="#0E4A5E" opacity="0.6"/>
+    <text x="8" y="15" fill="#5BA8C7" font-size="10" font-weight="700">AIRDASH 24/7</text>
+    <text x="80" y="15" fill="#F0EDE5" font-size="10">· 78 provinces · 4,887 stations · 130,830 readings</text>
+  </g>
+  <g transform="translate(290, 560)">
+    <rect width="240" height="22" rx="3" fill="#0E4A5E" opacity="0.6"/>
+    <text x="8" y="15" fill="#5BA8C7" font-size="10" font-weight="700">FIRST PAINT</text>
+    <text x="80" y="15" fill="#F0EDE5" font-size="10">· &lt; 2 s on phone · 779 KB gz snapshot</text>
+  </g>
+  <g transform="translate(540, 560)">
+    <rect width="240" height="22" rx="3" fill="#0E4A5E" opacity="0.6"/>
+    <text x="8" y="15" fill="#5BA8C7" font-size="10" font-weight="700">COST</text>
+    <text x="80" y="15" fill="#F0EDE5" font-size="10">· $0/mo infra · THB 30k/mo burn</text>
+  </g>
+  <g transform="translate(790, 560)">
+    <rect width="370" height="22" rx="3" fill="#0E4A5E" opacity="0.6"/>
+    <text x="8" y="15" fill="#5BA8C7" font-size="10" font-weight="700">LATENCY</text>
+    <text x="80" y="15" fill="#F0EDE5" font-size="10">· Mac→Tunnel→CF→Browser · p50 1.4 s · p99 6 s</text>
+  </g>
+</svg>
