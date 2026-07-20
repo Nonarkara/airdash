@@ -43,6 +43,13 @@ export const CONFIG = {
     pm25Hazardous: 150,
     aqiUnhealthy: 100,       // Air4Thai composite AQI
     rainWashout24h: 5,       // mm/24h at which washout becomes meaningful
+    // TMD 24h rainfall categories (กรมอุตุนิยมวิทยา): ฝนหนัก heavy 35–90 mm,
+    // ฝนหนักมาก very heavy >90 mm. "notable" is AirDash's own bar for a gauge
+    // worth a datum event on the tap — well below heavy, but unusual in the
+    // dry season and the level where washout is clearly underway.
+    rainNotable24h: 10,
+    rainHeavy24h: 35,
+    rainVeryHeavy24h: 90,
     alertCooldownMs: 6 * HOUR,
   },
 
@@ -63,6 +70,29 @@ export const CONFIG = {
   // 20–44 cautious, 45–69 dangerous, 70+ very dangerous. See danger.js.
   danger: {
     bands: { watch: 20, elevated: 45, high: 70 },
+  },
+
+  // Science engine — health/medicine/economics/ecology/atmospheric metrics.
+  // Every constant here is cited in knowledge/health-science.md and surfaced
+  // to the UI via /api/science meta.formulas ("science receipts").
+  science: {
+    cacheMs: MINUTE,
+    cigUgPerDay: 22,            // 1 cigarette ≈ one day at 22 µg/m³ PM2.5 (Müller & Müller 2014 / Berkeley Earth)
+    minutesPerCig: 11,          // ~11 min of life per cigarette (Spiegelhalter 2012 microlives)
+    rrPer10ug: 1.0068,          // +0.68% all-cause daily mortality per +10 µg/m³ (Liu et al. 2019, NEJM, 652 cities)
+    who24hPm25: 15,             // WHO 2021 AQG 24h PM2.5 guideline (counterfactual for excess risk)
+    whoAnnualPm25: 5,           // WHO 2021 AQG annual PM2.5 guideline (AQLI counterfactual)
+    aqliYearsPerUg: 0.098,      // AQLI/EPIC: sustained +10 µg/m³ ≈ −0.98 yr life expectancy
+    thaiDailyMortalityRate: 1.97e-5, // Thai crude mortality ≈ 7.2/1000/yr ÷ 365
+    vslThb: 15_000_000,         // conservative Thai VSL (literature range ~3–30M THB)
+    morbidityMultiplier: 1.2,   // morbidity adds ~20% on top of mortality cost
+    airBreathedM3PerDay: 11,    // adult reference ventilation (kid ~8)
+    defaultRh: 0.65,            // fallback RH fraction for the visibility estimate
+    visibilityK: 3912,          // Koschmieder constant (km·Mm⁻¹)
+    extinctionPerUg: 3.0,       // Mm⁻¹ dry extinction per µg/m³ PM2.5
+    aot40Bands: { moderate: 210, elevated: 700 }, // ppb·h per 7 days (WHO/CLRTAP-scaled)
+    playBudget: { baseMin: 60, minMin: 5, maxMin: 480 }, // dose-equivalence at WHO 24h guideline
+    gistdaFreshHours: 26,       // GISTDA fusion is hourly but can lag; allow a day before gap-filling fails
   },
 
   // Dust/burning season window (northern haze peaks Feb–Apr).

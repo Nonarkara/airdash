@@ -58,6 +58,21 @@ export function provinceByName(nameTh, nameEn) {
   return idx.get(normTh(nameTh)) ?? idx.get(normEn(nameEn)) ?? null
 }
 
+let _codeSet = null
+
+/**
+ * True when `code` is a valid Thai DOPA province code present in the registry
+ * (10–96). Geocoded gauges sometimes land outside Thailand (e.g. an HII rain
+ * gauge geocoded to Myanmar gets code 10499) — engines that build per-province
+ * rows must filter through this so foreign pseudo-provinces never leak into
+ * rankings, rollups, or population-weighted aggregates.
+ */
+export function isThaiProvinceCode(code) {
+  if (code === null || code === undefined) return false
+  if (!_codeSet) _codeSet = new Set(allProvinces().map((p) => p.province_code))
+  return _codeSet.has(String(code))
+}
+
 let _byLengthDesc = null
 
 /**

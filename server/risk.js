@@ -12,6 +12,7 @@
 // It also persists a snapshot in kv so the UI can show trend arrows.
 import { CONFIG } from './config.js'
 import { nationalVerdict, provinceVerdict } from './verdict.js'
+import { isThaiProvinceCode } from './provinces.js'
 
 const FRESH_PM_HOURS = 6
 const FRESH_FC_HOURS = 13
@@ -174,6 +175,11 @@ export function createRisk(db, washout) {
     const provinces = new Map()
     const prov = (row) => {
       if (!row.province_code && !row.province_th) return null
+      // Never mint rows for codes outside the Thai DOPA registry (10–96):
+      // border gauges geocode abroad (e.g. an HII rain gauge in Myanmar
+      // carries pseudo-code 10499) and used to leak into the province
+      // ranking as a 78th "province".
+      if (row.province_code && !isThaiProvinceCode(row.province_code)) return null
       const key = row.province_code ?? row.province_th
       let p = provinces.get(key)
       if (!p) {

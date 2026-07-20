@@ -24,8 +24,11 @@ const FRESHNESS_MS = {
   thaiwater_rain: 4 * 3600_000,  // 10-min cadence → 4 h grace
   openmeteo: 7 * 3600_000,       // 3-h forecast refresh → 7 h grace
   openmeteo_aq: 7 * 3600_000,    // CAMS runs are 12-hourly upstream; poll is 3 h
+  openmeteo_aq_hist: 7 * 24 * 3600_000, // daily CAMS history backfill — a week of grace
   enso: 48 * 3600_000,           // ONI revises monthly; the poll is 12-hourly
   imerg: 6 * 3600_000,           // half-hourly with ~4 h upstream latency
+  gistda_pm25: 3 * 3600_000,     // hourly GISTDA fusion → 3 h grace
+  pcd_noise: 36 * 3600_000,      // daily Leq product — 36 h grace
 }
 
 // Recent window we scan for flatline detection. Wide enough to hold well over

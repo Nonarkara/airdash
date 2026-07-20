@@ -7,7 +7,8 @@ const buckets = new Map() // key -> { count, resetAt }
 
 function clientIp(req) {
   // Traffic arrives via air.nonarkara.org (Pages) -> Pages Function proxy
-  // -> api-air.nonarkara.org (tunnel) -> here. Cloudflare rewrites
+  // (functions/api/[[path]].js, which forwards the request unchanged) ->
+  // api-air.nonarkara.org (tunnel) -> here. Cloudflare rewrites
   // cf-connecting-ip at EACH hop to the immediate peer, so by the time a
   // request reaches us that header is the Pages Function's own egress IP —
   // identical for every visitor — which would bucket all real users
@@ -17,10 +18,14 @@ function clientIp(req) {
   // IMPORTANT: the FIRST entry is client-controlled — a client that sends
   // its own X-Forwarded-For header gets it *prepended* by every proxy, so
   // keying on hops[0] lets an attacker pick a fresh bucket per request and
-  // bypass the limiter entirely. Key on the last UNTRUSTED hop instead:
-  // the rightmost entry was appended by our own trusted edge, so the entry
-  // just before it is the peer that edge actually saw — the closest thing
-  // to a real client identity we can trust.
+  // bypass the limiter entirely. The LAST entry is equally useless here:
+  // it is the Pages Function's egress IP (shared by all visitors), appended
+  // by the Cloudflare edge in front of api-air.nonarkara.org. The defensible
+  // choice for THIS topology is the last UNTRUSTED hop, hops[length-2]:
+  // the address our trusted edge actually observed connecting — the real
+  // visitor. (If the Pages proxy is ever removed, re-evaluate: behind a
+  // single trusted proxy the right key becomes the last hop, and with no
+  // proxy at all the socket remote address.)
   const xff = req.headers['x-forwarded-for']
   if (xff) {
     const hops = xff.split(',').map((s) => s.trim()).filter(Boolean)

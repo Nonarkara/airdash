@@ -50,6 +50,8 @@
 // question. The research paper Section 2 walks through each coefficient.
 import { CONFIG } from './config.js'
 import { num } from './util.js'
+import { reliefFraction } from './washout-curve.js'
+import { isThaiProvinceCode } from './provinces.js'
 
 const FRESH_HOURS = 6
 const FRESH_FC_HOURS = 13
@@ -141,37 +143,30 @@ function noiseAmp(leq) {
 }
 
 /**
- * Rain relief (0–0.45 max, returns 0..0.45 of pm_base to subtract).
- * Two sources, whichever yields more relief:
+ * Rain relief (0–0.40 max, returns the fraction of the amplified score to
+ * subtract). Two sources, whichever yields more relief:
  *   • Observed 24h rain from HII gauges (rain already in the air).
  *   • Forecast 24h rain amount × probability from Open-Meteo.
  *
- * Curve (from below-cloud scavenging studies, Henzing 2006; Wang 2010):
- *   1 mm  →  ~5%  reduction (5 min after onset, ~Λ = 1e-5 s⁻¹)
- *   5 mm  →  ~20% reduction
- *  15 mm  →  ~30%
- *  35+ mm →  ~40%
+ * The mm→% mapping is the shared curve in washout-curve.js (8/20/30/40) —
+ * danger.js previously carried a divergent 5/20/30/40 copy, so the Danger
+ * Score and the Washout engine disagreed about the same rain event.
  */
 function rainRelief(rainObs24, rainFc24, rainProb24) {
   // Already-raining always wins. If gauges show 5+ mm in the last 24h,
   // the air is currently being washed, period.
   if (rainObs24 !== null && Number.isFinite(rainObs24) && rainObs24 >= 5) {
-    return { relief: reliefCurve(rainObs24), source: 'observed' }
+    return { relief: reliefFraction(rainObs24), source: 'observed' }
   }
   // Forecast rain must clear BOTH the amount bar and the probability bar.
   if (rainFc24 === null || rainProb24 === null) return { relief: 0, source: null }
   if (rainFc24 < 1 || rainProb24 < 25) return { relief: 0, source: null }
   // Probability-weighted: a 60% chance of 10 mm is worse than 100% of 10 mm.
+  // The probability weighting is the ONLY discount — the old code multiplied
+  // the curved result by another 0.85 "because probability < 1", which
+  // double-counted the uncertainty the weighting already applied.
   const weighted = rainFc24 * (rainProb24 / 100)
-  return { relief: reliefCurve(weighted) * 0.85, source: 'forecast' } // 0.85x because probability < 1
-}
-
-function reliefCurve(mm) {
-  if (!Number.isFinite(mm) || mm < 1) return 0
-  if (mm < 5) return 0.05
-  if (mm < 15) return 0.20
-  if (mm < 35) return 0.30
-  return 0.40
+  return { relief: reliefFraction(weighted), source: 'forecast' }
 }
 
 function band(score) {
@@ -238,6 +233,10 @@ export function createDanger(db, { riskEngine, washout }) {
 
     const provinces = new Map()
     const get = (code, th, en) => {
+      // Only real Thai provinces (DOPA 10–96 in the registry). Gauges
+      // geocoded across a border (Myanmar HII gauge → code 10499) must not
+      // mint pseudo-province rows in the danger ranking.
+      if (!isThaiProvinceCode(code)) return null
       let p = provinces.get(code)
       if (!p) {
         p = {
@@ -252,27 +251,31 @@ export function createDanger(db, { riskEngine, washout }) {
       return p
     }
 
-    for (const r of pmRows) get(r.province_code, r.province_th, r.province_en).pm25_pcd = num(r.value)
-    for (const r of gistRows) get(r.province_code, r.province_th, r.province_en).pm25_gistda = num(r.value)
+    for (const r of pmRows) { const p = get(r.province_code, r.province_th, r.province_en); if (p) p.pm25_pcd = num(r.value) }
+    for (const r of gistRows) { const p = get(r.province_code, r.province_th, r.province_en); if (p) p.pm25_gistda = num(r.value) }
     for (const r of wxRows) {
       const p = get(r.province_code, r.province_th, r.province_en)
+      if (!p) continue
       if (r.metric === 'temp_c') p.temp_c = num(r.value)
       else if (r.metric === 'rh_pct') p.rh_pct = num(r.value)
     }
     for (const r of fcRows) {
       const p = get(r.province_code, r.province_th, r.province_en)
+      if (!p) continue
       if (r.metric === 'precip_fc_d0') p.rain_fc_24 = num(r.value)
       else if (r.metric === 'precip_prob_24h') p.rain_prob_24 = num(r.value)
     }
     for (const r of rainRows) {
-      get(r.province_code, r.province_th, r.province_en).rain_obs_24 = num(r.value)
+      const p = get(r.province_code, r.province_th, r.province_en)
+      if (p) p.rain_obs_24 = num(r.value)
     }
     // Noise: we want MAX Leq across all stations in a province (worst
     // case), and a count so the UI can flag "from N stations" when
     // more than one. freshByProvince already MAX-aggregates; we count
     // separately via a second query.
     for (const r of noiseRows) {
-      get(r.province_code, r.province_th, r.province_en).noise_leq_db = num(r.value)
+      const p = get(r.province_code, r.province_th, r.province_en)
+      if (p) p.noise_leq_db = num(r.value)
     }
     const noiseCounts = db.all(
       `SELECT s.province_code, COUNT(DISTINCT s.station_key) AS n
@@ -315,13 +318,23 @@ export function createDanger(db, { riskEngine, washout }) {
       const danger = Math.max(0, Math.min(100, Math.round(raw)))
       const bandName = band(danger)
 
-      // Forward-looking: if CAMS says PM2.5 doubles in 48h and there's
-      // no rain on the way, flag the danger trajectory so the UI can
-      // surface "GETTING WORSE".
+      // Forward-looking danger: the SAME composite formula with the CAMS
+      // PM2.5 forecast as the PM input. Base-definition decision (documented
+      // here because the old code mixed bases silently): the live score's PM
+      // base is max(worst Air4Thai station, GISTDA grid) — observed truth —
+      // while the forecast can only ever come from the CAMS model centroid;
+      // CAMS publishes no "current" analysis field we could score against.
+      // So trend_24h is explicitly "danger at the CAMS forecast level vs
+      // danger at the observed level, with an IDENTICAL modifier set": same
+      // heat/hum/noise amplifiers and the SAME full rain relief on both
+      // sides (the old code halved the relief for the forecast and left the
+      // base switch undocumented, so trend mixed a model-vs-observation bias
+      // with the actual trajectory). A residual CAMS-vs-station bias can
+      // still lean the trend — it is a heuristic arrow, not a prediction.
       const cams = riskByCode.get(p.province_code)
       const camsWorst = Math.max(cams?.pm25_fc_24h ?? 0, cams?.pm25_fc_48h ?? 0)
       const dangerFc = camsWorst > 0 ? Math.round(Math.min(100,
-        pmBaseScore(camsWorst) * (1 + heat) * (1 + hum) * (1 + noise) * (1 - relief * 0.5))) : danger
+        pmBaseScore(camsWorst) * (1 + heat) * (1 + hum) * (1 + noise) * (1 - relief))) : danger
       const trend = dangerFc - danger
 
       out.push({

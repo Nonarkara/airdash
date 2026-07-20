@@ -16,18 +16,18 @@
 // This is a heuristic from published washout ratios, not dispersion modelling
 // — the UI says so wherever these numbers show.
 import { num } from './util.js'
+import { reliefPct } from './washout-curve.js'
+import { isThaiProvinceCode } from './provinces.js'
 
 const FRESH_PM_HOURS = 6
 const FRESH_FC_HOURS = 13
 const FRESH_RAIN_HOURS = 26
 
 // Expected PM2.5 reduction (%) if the forecast 24h rain amount actually falls.
+// The curve itself lives in washout-curve.js — the single shared mapping used
+// by every engine (danger.js previously carried a divergent 5/20/30/40 copy).
 export function reliefIfRainPct(mm) {
-  if (mm === null || !Number.isFinite(mm) || mm < 1) return 0
-  if (mm < 5) return 8
-  if (mm < 15) return 20
-  if (mm < 35) return 30
-  return 40
+  return reliefPct(mm)
 }
 
 // Washout band: amount AND probability must both clear the bar.
@@ -105,6 +105,10 @@ export function createWashout(db) {
 
     const out = new Map()
     const entry = (row) => {
+      // Skip gauges geocoded outside Thailand (e.g. HII stations across the
+      // Myanmar border carry pseudo-codes like 10499) — never let them
+      // mint a fake province row.
+      if (!isThaiProvinceCode(row.province_code)) return null
       let e = out.get(row.province_code)
       if (!e) {
         e = {
@@ -123,11 +127,13 @@ export function createWashout(db) {
     // Worst fresh PM2.5 station per province — the air a resident actually breathes.
     for (const row of pmRows) {
       const e = entry(row)
+      if (!e) continue
       const v = num(row.value)
       if (v !== null && (e.pm25 === null || v > e.pm25)) e.pm25 = v
     }
     for (const row of fcRows) {
       const e = entry(row)
+      if (!e) continue
       const v = num(row.value)
       if (v === null) continue
       if (row.metric === 'precip_fc_d0') { e.rain_fc_24 = v; e.fc_days[0].mm = v }
@@ -143,6 +149,7 @@ export function createWashout(db) {
     // CAMS PM2.5 forecast per province — worse_before_better input.
     for (const row of camsRows) {
       const e = entry(row)
+      if (!e) continue
       const v = num(row.value)
       if (v === null) continue
       if (row.metric === 'pm25_fc_24h') e.pm25_fc_24h = v
@@ -151,6 +158,7 @@ export function createWashout(db) {
     // Max observed 24h rain gauge per province — is washout already underway?
     for (const row of rainRows) {
       const e = entry(row)
+      if (!e) continue
       const v = num(row.value)
       if (v !== null && (e.rain_obs_24 === null || v > e.rain_obs_24)) e.rain_obs_24 = v
     }

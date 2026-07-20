@@ -53,7 +53,10 @@ export default {
           obs_time, fetched_at, now,
         })
         added += newCount
-        if (newCount > 0 && rain24 !== null && rain24 >= t.rainVeryHeavy24h) {
+        // Notable = past AirDash's "worth a tap event" bar (10 mm/24h), not
+        // TMD's very-heavy category — rainy-season gauges cross 90 mm rarely,
+        // and 10 mm is already decisive washout for the dust situation.
+        if (newCount > 0 && rain24 !== null && rain24 >= t.rainNotable24h) {
           notable.push({ station, rain24, rain1: num(row.rain_1h) })
         }
       }
@@ -70,7 +73,7 @@ export default {
       for (const n of notable.sort((a, b) => b.rain24 - a.rain24).slice(0, 5)) {
         bus.publish({
           kind: 'datum', source: 'thaiwater_rain', station_key: n.station.station_key,
-          severity: n.rain24 >= t.rainCritical24h ? 3 : 2,
+          severity: n.rain24 >= t.rainVeryHeavy24h ? 3 : 2,
           title_th: `ฝน ${n.rain24.toFixed(0)} มม./24ชม. ${n.station.name_th} จ.${n.station.province_th ?? '—'}`,
           title_en: `Rain ${n.rain24.toFixed(0)} mm/24h at ${n.station.name_en}, ${n.station.province_en ?? '—'}`,
           payload: { rain_24h: n.rain24, rain_1h: n.rain1 },

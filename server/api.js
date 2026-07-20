@@ -106,7 +106,7 @@ function pivotLatest(db, source, metrics) {
   return [...byStation.values()]
 }
 
-export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, startedAt }) {
+export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }) {
   return {
     'GET /api/sensors/health': (req, res) => {
       json(res, 200, sensorHealth(db))
@@ -157,6 +157,38 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
         'content-disposition': `attachment; filename="airdash-dead-sensors-${new Date().toISOString().slice(0, 10)}.csv"`,
       })
       res.end(csv)
+    },
+
+    // ── Science engine — research-backed health/economics/ecology math ────
+    // National + all-77-province rollup with "science receipts" (formulas,
+    // constants, citations) for the UI formula wall. 60s TTL inside the
+    // engine; this handler is a thin pass-through like /api/risk.
+    'GET /api/science': (req, res) => {
+      if (!science) return json(res, 503, { error: 'science engine not available' })
+      json(res, 200, science.get())
+    },
+
+    // Personal exposure card: one profile, one place, one activity.
+    //   ?pm25=<number>     explicit value wins over everything
+    //   ?province=<code>   DOPA code — uses that province's current PM2.5
+    //   ?profile=kid|teen|adult|athlete|senior|pregnant|asthma
+    //   ?outdoorMin=<n>    minutes outdoors (default 60)
+    //   ?activity=rest|moderate|heavy
+    'GET /api/science/personal': (req, res, url) => {
+      if (!science) return json(res, 503, { error: 'science engine not available' })
+      const pmRaw = url.searchParams.get('pm25')
+      const pm25 = pmRaw === null || pmRaw === '' ? null : Number(pmRaw)
+      if (pm25 !== null && !Number.isFinite(pm25)) return json(res, 400, { error: 'pm25 must be a number' })
+      const outRaw = url.searchParams.get('outdoorMin')
+      const outdoorMin = outRaw === null || outRaw === '' ? undefined : Number(outRaw)
+      if (outdoorMin !== undefined && !Number.isFinite(outdoorMin)) return json(res, 400, { error: 'outdoorMin must be a number' })
+      json(res, 200, science.personal({
+        pm25,
+        province: url.searchParams.get('province') ?? undefined,
+        profile: url.searchParams.get('profile') ?? 'adult',
+        outdoorMin,
+        activity: url.searchParams.get('activity') ?? 'rest',
+      }))
     },
 
     'GET /api/health': (req, res) => {
