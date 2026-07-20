@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AIRDASH — เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · Thailand Air Quality & Dust Watch</title>
+<meta name="description" content="ข้อมูลเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทยแบบเรียลไทม์ พร้อมค่าฝุ่นรายสถานี ความเสี่ยงรายจังหวัด และโอกาสฝนช่วยล้างฝุ่น · Live Thailand air quality, local PM2.5 risk and rain-washout outlook.">
+<link rel="canonical" href="https://air.nonarkara.org/ops.html">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://air.nonarkara.org/ops.html">
+<meta property="og:title" content="AIRDASH — Thailand Air Quality & Dust Watch">
+<meta property="og:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="AIRDASH — Thailand Air Quality & Dust Watch">
+<meta name="twitter:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230E4A5E'/%3E%3Ccircle cx='11.5' cy='4.5' r='2.5' fill='%233A8A6E'/%3E%3Cpath d='M2 8h12M2 10.5h9M2 13h12' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round' opacity='0.9'/%3E%3Ccircle cx='13' cy='10.5' r='1' fill='%23C8453A'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/css/tokens.css?v=2.0.0-audit5">
+<link rel="stylesheet" href="/css/layout.css?v=2.0.0-audit5">
+<link rel="stylesheet" href="/css/components.css?v=2.0.0-audit5">
+<link rel="stylesheet" href="/css/city-dashboard.css?v=2.0.0-audit5">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0E4A5E">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"AirDash","url":"https://air.nonarkara.org/","description":"Live Thailand air quality and dust watch — PM2.5, local risk and rain-washout outlook."}
+</script>
+</head>
+<body>
+
+<div id="boot" role="status" aria-live="polite" aria-busy="true" aria-label="กำลังโหลดข้อมูลสด · Loading live data">
+  <div class="sign" style="text-align:center">
+    <div class="th" style="font-size:26px;font-weight:800;letter-spacing:-0.01em;font-family:Manrope,'Sarabun',sans-serif">AIR<span style="color:#3A8A6E">·</span><span style="color:#0E4A5E">DASH</span></div>
+    <div class="en" data-i18n="กำลังเชื่อมต่อข้อมูลสด…|Connecting live pipelines…">connecting live pipelines · กำลังเชื่อมต่อข้อมูลสด</div>
+  </div>
+  <div class="bar"><div></div></div>
+  <div class="boot-explainer th" data-th="ทุกตัวเลขที่นี่เป็นเรียลไทม์จากหน่วยงานภาครัฐ ไม่มีข้อมูลจำลอง — เพราะฉะนั้นการโหลดครั้งแรกอาจใช้เวลาสักครู่ เราดึงข้อมูลสดให้เร็วที่สุดเท่าที่ระบบจะทำได้">
+    ทุกตัวเลขที่นี่เป็นเรียลไทม์จากหน่วยงานภาครัฐ ไม่มีข้อมูลจำลอง — เพราะฉะนั้นการโหลดครั้งแรกอาจใช้เวลาสักครู่ เราดึงข้อมูลสดให้เร็วที่สุดเท่าที่ระบบจะทำได้
+  </div>
+  <!-- Stuck-on-boot escape hatch. Hidden by default; revealed after
+       6 seconds of being stuck. Critical for phone users on slow
+       cellular — they can tap to force a hard refresh, or use the
+       second link to clear the service worker + cache. Without
+       this, a stuck boot looks identical to "still loading" and
+       the user has no way out without typing the URL bar. -->
+  <div class="boot-stuck" id="boot-stuck" hidden>
+    <div class="th" data-th="โหลดนานผิดปกติ? — แตะเพื่อลองใหม่ หรือล้างแคชแล้วโหลดใหม่">โหลดนานผิดปกติ? — แตะเพื่อลองใหม่</div>
+    <div class="en" data-en="Still loading? — tap to retry, or clear cache and reload.">Still loading? — tap to retry, or clear cache and reload.</div>
+    <div class="boot-stuck-actions">
+      <button id="boot-retry-btn" type="button" class="boot-stuck-btn primary" data-i18n="ลองใหม่|Retry">ลองใหม่</button>
+      <button id="boot-clear-btn" type="button" class="boot-stuck-btn" data-i18n="ล้างแคชแล้วโหลดใหม่|Clear cache &amp; reload">ล้างแคชแล้วโหลดใหม่</button>
+    </div>
+  </div>
+  <div class="boot-explainer en" data-en="Every figure here is real-time from Thai government sources — no mock data, ever. That means the first load can take a moment; we pull live feeds as fast as the system allows.">
+    Every figure here is real-time from Thai government sources — no mock data, ever. That means the first load can take a moment; we pull live feeds as fast as the system allows.
+  </div>
+  <!-- Sponsor / data-source logos. The boot screen is the first thing a
+       user sees, so it's the right place to surface who's behind the data
+       and who's funding the work. Three tiers:
+         1. Steward     — depa (under whom the project lives)
+         2. Partner     — Smart City Thailand Office, Axiom+ReTL
+         3. Standards   — SLIC, RCAD
+         4. Data        — PCD/Air4Thai, TMD, HII rain gauges, Open-Meteo,
+                          CAMS/Copernicus, NOAA CPC, NASA GIBS/GPM,
+                          RainViewer, JAXA GSMaP (text-based until we have
+                          proper logos to swap in)
+       The HTML order matches visual weight; the CSS uses .boot-sponsors
+       with three flex rows that wrap on narrow viewports. Each logo
+       has alt text in Thai and English for screen readers. -->
+  <div class="boot-sponsors" aria-label="ผู้สนับสนุนและแหล่งข้อมูล · Sponsors and data sources">
+    <div class="boot-sponsor-row boot-sponsor-row--steward">
+      <span class="boot-sponsor-label" data-th="ดำเนินการโดย · STEWARD">ดำเนินการโดย · STEWARD</span>
+      <a class="boot-sponsor" href="https://depa.or.th" target="_blank" rel="noopener">
+        <img src="/img/depa.png" alt="depa — Digital Economy Promotion Agency">
+        <span>depa<br><small>Digital Economy Promotion Agency</small></span>
+      </a>
+    </div>
+    <div class="boot-sponsor-row boot-sponsor-row--partner">
+      <span class="boot-sponsor-label" data-th="พันธมิตร · PARTNERS">พันธมิตร · PARTNERS</span>
+      <a class="boot-sponsor" href="https://smartcitythailand.or.th" target="_blank" rel="noopener">
+        <img src="/img/smart-city-th.png" alt="Smart City Thailand Office">
+        <span>Smart City Thailand</span>
+      </a>
+      <span class="boot-sponsor" data-th="Axiom + ReTL — The Reason To Live Company">
+        <img src="/img/axiom-retl.png" alt="Axiom + ReTL">
+        <span>Axiom + ReTL</span>
+      </span>
+    </div>
+    <div class="boot-sponsor-row boot-sponsor-row--standards">
+      <span class="boot-sponsor-label" data-th="มาตรฐาน · STANDARDS">มาตรฐาน · STANDARDS</span>
+      <span class="boot-sponsor" data-th="SLIC — Smart Living Industry Cluster">
+        <img src="/img/slic.webp" alt="SLIC">
+        <span>SLIC</span>
+      </span>
+      <span class="boot-sponsor" data-th="RCAD — Research and Innovation Acceleration Agency">
+        <img src="/img/rcad-mark.svg" alt="RCAD">
+        <span>RCAD</span>
+      </span>
+    </div>
+    <div class="boot-sponsor-row boot-sponsor-row--data">
+      <span class="boot-sponsor-label" data-th="ข้อมูลจาก · DATA">ข้อมูลจาก · DATA</span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="PCD / Air4Thai · คพ. · กรมควบคุมมลพิษ" data-en="PCD / Air4Thai · Pollution Control Department">PCD / Air4Thai<br><small>คพ. · คุณภาพอากาศ</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="TMD · กรมอุตุนิยมวิทยา" data-en="TMD · Thai Meteorological Department">TMD<br><small>อุตุฯ · พยากรณ์อากาศ</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="HII / สสน. · สถานีวัดฝน" data-en="HII · Hydro-Informatics Institute rain gauges">HII / สสน.<br><small>สถานีวัดฝน</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="Open-Meteo · พยากรณ์อากาศ" data-en="Open-Meteo · weather forecast">Open-Meteo<br><small>พยากรณ์อากาศ</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="CAMS / Copernicus · พยากรณ์ฝุ่น" data-en="CAMS / Copernicus · air-quality forecast">CAMS / Copernicus<br><small>พยากรณ์ฝุ่น</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="NOAA CPC · ดัชนี ENSO" data-en="NOAA CPC · ENSO index">NOAA CPC<br><small>ดัชนี ENSO</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="NASA GIBS / GPM · ดาวเทียม" data-en="NASA GIBS / GPM · satellite">NASA GIBS / GPM<br><small>ดาวเทียม</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="RainViewer · เรดาร์ฝน" data-en="RainViewer · rain radar">RainViewer<br><small>เรดาร์ฝน</small></span>
+      <span class="boot-sponsor boot-sponsor--text" data-th="JAXA GSMaP · ฝนดาวเทียม" data-en="JAXA GSMaP · satellite rain">JAXA GSMaP<br><small>ฝนดาวเทียม</small></span>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="aqistripe"></div>
+
+    <div class="brand">
+      <h1 class="name">AIR<span class="dot">·</span><span class="accent">DASH</span></h1>
+      <div class="sub" data-i18n="เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย|Thailand Air Quality & Dust Watch · 24/7 live data">เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · 24/7 LIVE DATA</div>
+      <div class="sub-short" data-i18n="PM2.5 · AQI · 24/7 สด|PM2.5 · AQI · 24/7 LIVE">PM2.5 · AQI · 24/7 สด</div>
+    </div>
+
+    <div class="national" id="national">
+      <div class="plate" id="national-plate">–</div>
+      <div class="label">
+        <div class="verb-th" id="national-th">กำลังโหลด…</div>
+        <div class="verb-en" id="national-en">LOADING…</div>
+      </div>
+      <div class="national-secondary">
+        <div class="national-why" id="national-why"></div>
+        <div class="national-season" id="national-season" hidden></div>
+        <div class="national-relief" id="national-relief" hidden></div>
+      </div>
+    </div>
+
+    <!-- DANGER SCORE — the headline number for "is it safe to be outside
+         RIGHT NOW". Lives in the top bar because it answers the question
+         every parent, coach and elderly reader actually has. Color follows
+         the AQI palette; number is the 0–100 composite (PM + heat amp +
+         humidity amp − rain relief). -->
+    <button type="button" class="danger" id="danger-hero"
+         data-i18n-title="Danger Score: PM2.5 + heat amp + humidity amp − rain relief — research-backed composite, 0-100">
+      <div class="danger-label">
+        <span class="th" data-i18n="ดัชนีอันตราย|DANGER">ดัชนีอันตราย</span>
+        <span class="en">DANGER</span>
+      </div>
+      <div class="danger-num" id="danger-num">–</div>
+      <div class="danger-band" id="danger-band">–</div>
+      <div class="danger-scope" id="danger-scope"></div>
+    </button>
+
+    <!-- Single ASK AI icon button (was a full-width hero form). Tapping
+         opens the chat overlay directly, no second click. -->
+    <button id="ask-btn" type="button"
+            data-i18n-title="ถาม AI · Ask AI anything|Ask AI anything about the air"
+            aria-label="ถาม AI · Ask AI anything">
+      <span class="ask-icon" aria-hidden="true">💬</span>
+      <span class="ask-lbl th" data-i18n="ถาม AI|Ask AI">ถาม AI</span>
+      <span class="ask-lbl en">ASK AI</span>
+    </button>
+
+    <div class="searchbox" id="place-search-container">
+      <input id="place-search" type="search" autocomplete="off"
+             aria-label="ค้นหาสถานที่ · Search places" aria-controls="search-results" aria-autocomplete="list" aria-expanded="false"
+             data-i18n-ph="ค้นหาสถานที่ จังหวัด อำเภอ…|Search places, provinces, districts…"
+             placeholder="ค้นหาสถานที่ จังหวัด อำเภอ…">
+      <button id="search-clear" type="button" aria-label="ล้างการค้นหา · Clear search" title="ล้างการค้นหา / clear search">✕</button>
+      <div class="search-results" id="search-results" role="listbox" aria-label="ผลการค้นหา · Search results" style="display:none"></div>
+    </div>
+
+    <!-- Focus dropdown — small compact select that lets the user jump to
+         a focus area (the country overview, the 7 dust-prone cities, or
+         any province) without leaving the top bar. Defaults to "All
+         Thailand" so the boot always lands on a sensible state. The
+         dropdown is wired in focus.js — selecting an option fires a
+         'focus' event that flies the map, scopes the ranking rail, and
+         updates the URL. Optional element: the focus mechanism still
+         works via the city-picker grid in city-dashboard.js if the
+         dropdown is removed. -->
+    <div class="focusbox" id="focusbox">
+      <select id="focus-select" aria-label="โฟกัสพื้นที่ · Focus area" data-i18n-title="โฟกัสพื้นที่|focus area"></select>
+      <button id="back-to-thailand" type="button" hidden
+        data-i18n-title="กลับสู่ภาพรวมทั้งประเทศ|back to All Thailand view"
+        data-i18n="← ทั้งประเทศ|← All Thailand">← ทั้งประเทศ</button>
+    </div>
+
+    <div class="langtoggle" id="langtoggle">
+      <button data-lang="th" type="button" aria-pressed="false">ไทย</button>
+      <button data-lang="en" type="button" aria-pressed="false">EN</button>
+    </div>
+
+    <div class="langtoggle" id="modetoggle" title="โหมดการแสดงผล / view mode">
+      <button data-mode="citizen" type="button" aria-pressed="false" data-i18n="ง่าย|EASY">ง่าย</button>
+      <button data-mode="operator" type="button" aria-pressed="false" data-i18n="เต็ม|FULL">เต็ม</button>
+    </div>
+
+    <!-- Compare Places trigger — re-added after the top-bar v2 redesign
+         silently dropped it (the whole split-view overlay was unreachable).
+         Wired in split.js. Hidden in citizen mode and on compact widths. -->
+    <button id="split-btn" type="button"
+            data-i18n-title="เปรียบเทียบพื้นที่แบบแบ่งจอ|compare places side-by-side">⊞ <span class="lbl" data-i18n="เทียบพื้นที่|Compare">เทียบพื้นที่</span></button>
+
+    <!-- Back to the front door — the new "Air Story" narrative front page
+         lives at /. Operators landing here from a shared link should always
+         be one tap away from the public-friendly experience. -->
+    <a id="home-btn" href="/"
+       data-i18n-title="กลับไปหน้าแรก (Air Story — เล่าเรื่องอากาศวันนี้)|Back to the front door (Air Story — today's air as a story)">🌬 <span class="lbl" data-i18n="หน้าแรก|Home">หน้าแรก</span></a>
+
+    <!-- Sister-project link — AirDash and FloodDash share the same backbone
+         and steward (depa / Smart City Thailand Office); a mayor watching
+         dust today may need flood data next monsoon, so the two dashboards
+         link to each other rather than making the reader hunt for a URL. -->
+    <a id="flooddash-btn" href="https://flood.nonarkara.org" target="_blank" rel="noopener"
+       data-i18n-title="ไปที่ฟลัดแดช (เฝ้าระวังน้ำท่วม)|Open FloodDash (flood watch, sister project)">🌊 <span class="lbl">FloodDash</span></a>
+
+    <button id="about-btn" data-i18n-title="เกี่ยวกับโครงการ|about this project">ⓘ <span class="lbl" data-i18n="เกี่ยวกับ|About">เกี่ยวกับ</span></button>
+  </header>
+
+  <aside class="rail" id="rail-left">
+    <div class="panel-head">
+      <div class="eyebrow" id="left-eyebrow" data-i18n="จัดอันดับเฝ้าระวัง · สด|PROVINCE WATCH RANKING · LIVE">PROVINCE WATCH RANKING · LIVE</div>
+      <div class="sign">
+        <div class="th" data-i18n="จัดอันดับเฝ้าระวังรายจังหวัด|Province watch ranking">จัดอันดับเฝ้าระวังรายจังหวัด</div>
+        <div class="en" id="risk-method-note" data-i18n="PM2.5 40% · มลพิษอื่น 10% · แนวโน้ม 15% · พยากรณ์ 20% · การระบายอากาศ 15% — ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์|PM2.5 40% · other pollutants 10% · trend 15% · forecast 20% · ventilation 15% — indicator, not a prediction">PM2.5 40% · มลพิษอื่น 10% · แนวโน้ม 15% · พยากรณ์ 20% · การระบายอากาศ 15% — ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์</div>
+      </div>
+    </div>
+    <div class="scroll" id="ranking"></div>
+    <div class="scroll" id="detail" style="display:none"></div>
+    <div class="place-card" id="place-card" style="display:none"></div>
+    <!-- City Dashboard — morphed view when a focus city is selected.
+         Shows/hides itself based on focus state. Sits between the place
+         card and the forecast strip so it flows naturally. -->
+    <div id="city-dashboard" style="display:none"></div>
+    <div id="forecast-strip" class="forecast-strip"></div>
+    <div id="whatif" class="whatif-box"></div>
+  </aside>
+
+  <main id="map" aria-label="แผนที่สถานการณ์ฝุ่นประเทศไทย · Thailand air quality situation map"></main>
+
+  <!-- Compare Places overlay — the redesigned split view.
+       Replaces the old side-by-side clone of the main map. Up to 4 panes
+       (2/3/4 selector) each with a search input that finds any of 70k+
+       places via /api/search. The data bar on the left shows a card per
+       selected place with JMA verb, score+CI, PM2.5, rain chance, forecast,
+       washout — so the comparison reads at a glance.
+       The data bar IS the customized left rail: when this overlay opens,
+       the regular left rail is hidden behind it. Closing restores it. -->
+  <div id="places-overlay" hidden>
+    <div class="places-head">
+      <div class="places-title sign">
+        <span class="th">เปรียบเทียบตำแหน่ง</span>
+        <span class="en">COMPARE PLACES</span>
+      </div>
+      <div class="places-actions" id="places-actions">
+        <span class="pane-count-lbl">จำนวนช่อง</span>
+        <button data-panes="2" class="active" type="button">2</button>
+        <button data-panes="3" type="button">3</button>
+        <button data-panes="4" type="button">4</button>
+        <button id="split-close" type="button" title="ปิดหน้าต่างเปรียบเทียบ / close compare view">✕ <span class="lbl">ปิด</span></button>
+      </div>
+    </div>
+    <div class="places-body">
+      <aside class="places-data-bar" id="places-data-bar" aria-label="data bar"></aside>
+      <div class="places-grid panes-2" id="places-grid"></div>
+    </div>
+  </div>
+
+  <aside class="rail" id="rail-right">
+    <div class="tabs" id="righttabs" role="tablist" aria-label="ข้อมูลสถานการณ์ฝุ่น · Situation panels">
+      <button data-pane="analytics" class="active" role="tab" id="tab-analytics" aria-selected="true" aria-controls="pane-analytics">ภาพรวม<br><span class="en-lbl">OVERVIEW</span></button>
+      <button data-pane="citizen" role="tab" id="tab-citizen" aria-selected="false" aria-controls="pane-citizen">พื้นที่ฉัน<br><span class="en-lbl">MY AREA</span></button>
+      <button data-pane="alerts" role="tab" id="tab-alerts" aria-selected="false" aria-controls="pane-alerts">เตือน <span class="cnt" id="alert-cnt"></span><br><span class="en-lbl">ALERTS</span></button>
+      <button data-pane="chat" role="tab" id="tab-chat" aria-selected="false" aria-controls="pane-chat">ถาม AI<br><span class="en-lbl">ASK</span></button>
+      <button data-pane="waterways" role="tab" id="tab-waterways" aria-selected="false" aria-controls="pane-waterways">ฝนล้างฝุ่น<br><span class="en-lbl">WASHOUT</span></button>
+      <button data-pane="history" role="tab" id="tab-history" aria-selected="false" aria-controls="pane-history">ประวัติ<br><span class="en-lbl">HISTORY</span></button>
+      <button data-pane="insights" role="tab" id="tab-insights" aria-selected="false" aria-controls="pane-insights">สัญญาณ<br><span class="en-lbl">SIGNALS</span></button>
+      <button data-pane="sources" role="tab" id="tab-sources" aria-selected="false" aria-controls="pane-sources">แหล่งข้อมูล<br><span class="en-lbl">DATA</span></button>
+      <button data-pane="tap" role="tab" id="tab-tap" aria-selected="false" aria-controls="pane-tap">ข้อมูลเข้า<br><span class="en-lbl">TAP</span></button>
+      <button data-pane="news" role="tab" id="tab-news" aria-selected="false" aria-controls="pane-news">ข่าว<br><span class="en-lbl">NEWS</span></button>
+      <button data-pane="library" role="tab" id="tab-library" aria-selected="false" aria-controls="pane-library">ห้องสมุด<br><span class="en-lbl">LIBRARY</span></button>
+    </div>
+
+    <div class="tabpane active" data-pane="analytics" role="tabpanel" id="pane-analytics" aria-labelledby="tab-analytics">
+      <div class="scroll" id="analytics"></div>
+    </div>
+
+    <!-- Citizen panel — what ordinary people need to see (audience-specific
+         mode, audit Tier 2 #7). Surfaces 4 questions: am I safe / what do I
+         do / where do I go / how do I tell my family. -->
+    <div class="tabpane" data-pane="citizen" role="tabpanel" id="pane-citizen" aria-labelledby="tab-citizen" hidden>
+      <div class="scroll" id="citizen"></div>
+    </div>
+
+    <div class="tabpane" data-pane="waterways" role="tabpanel" id="pane-waterways" aria-labelledby="tab-waterways" hidden>
+      <div class="scroll" id="waterways"></div>
+    </div>
+
+    <div class="tabpane" data-pane="tap" role="tabpanel" id="pane-tap" aria-labelledby="tab-tap" hidden>
+      <div class="tap-paused" id="tap-paused" style="display:none"></div>
+      <div class="scroll" id="tap"></div>
+    </div>
+
+    <div class="tabpane" data-pane="sources" role="tabpanel" id="pane-sources" aria-labelledby="tab-sources" hidden>
+      <div class="scroll" id="sources"></div>
+    </div>
+
+    <div class="tabpane" data-pane="insights" role="tabpanel" id="pane-insights" aria-labelledby="tab-insights" hidden>
+      <div class="scroll" id="insights"></div>
+    </div>
+
+    <div class="tabpane" data-pane="history" role="tabpanel" id="pane-history" aria-labelledby="tab-history" hidden>
+      <div class="scroll" id="history"></div>
+    </div>
+
+    <div class="tabpane" data-pane="library" role="tabpanel" id="pane-library" aria-labelledby="tab-library" hidden>
+      <div class="scroll" id="library"></div>
+    </div>
+
+    <div class="tabpane" data-pane="alerts" role="tabpanel" id="pane-alerts" aria-labelledby="tab-alerts" hidden>
+      <div class="scroll" id="alerts"></div>
+    </div>
+
+    <div class="tabpane" data-pane="news" role="tabpanel" id="pane-news" aria-labelledby="tab-news" hidden>
+      <div class="scroll" id="news"></div>
+    </div>
+
+    <div class="tabpane" data-pane="chat" role="tabpanel" id="pane-chat" aria-labelledby="tab-chat" hidden>
+      <div id="chat-log"></div>
+      <div class="chat-status" id="chat-status"></div>
+      <form id="chat-form">
+        <input id="chat-input" autocomplete="off"
+               data-i18n-ph="ถามสถานการณ์ฝุ่น…|Ask about the air quality…"
+               placeholder="ถามสถานการณ์ฝุ่น… / ask about the air quality…">
+        <button id="chat-send" type="submit" data-i18n="ส่ง|Send">ส่ง</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Mobile bottom-sheet nav. Horizontally scrollable (see layout.css) so
+       every pane stays reachable on a phone — OVERVIEW first because the
+       severity-first surface (SEVERE NOW, worst tiles) must exist on
+       mobile too. Citizen mode CSS strips this to MY AREA/RISK/ALERTS. -->
+  <nav id="sheettabs" aria-label="แผงข้อมูล · Dashboard sections">
+    <button data-sheet="citizen">พื้นที่ฉัน<br><span class="en-lbl">MY AREA</span></button>
+    <button data-sheet="risk" class="active">เสี่ยง<br><span class="en-lbl">RISK</span></button>
+    <button data-sheet="analytics">ภาพรวม<br><span class="en-lbl">OVERVIEW</span></button>
+    <button data-sheet="waterways">ล้างฝุ่น<br><span class="en-lbl">WASHOUT</span></button>
+    <button data-sheet="alerts">เตือน<br><span class="en-lbl">ALERTS</span></button>
+    <button data-sheet="chat">ถาม<br><span class="en-lbl">ASK</span></button>
+    <button data-sheet="history">ประวัติ<br><span class="en-lbl">HISTORY</span></button>
+    <button data-sheet="insights">สัญญาณ<br><span class="en-lbl">SIGNALS</span></button>
+    <button data-sheet="news">ข่าว<br><span class="en-lbl">NEWS</span></button>
+    <button data-sheet="tap">เข้า<br><span class="en-lbl">TAP</span></button>
+    <button data-sheet="sources">ข้อมูล<br><span class="en-lbl">DATA</span></button>
+    <button data-sheet="library">คู่มือ<br><span class="en-lbl">LIB</span></button>
+  </nav>
+
+  <div id="ticker">
+    <div class="live"><span class="pip"></span> LIVE</div>
+    <div class="track"><div class="crawl" id="crawl"></div></div>
+  </div>
+
+</div>
+
+<!-- Fine-print footer. Three short lines:
+     1) real-time disclaimer (data may have reception issues, use judgement)
+     2) system standards (sources, freshness, station count, no mock data)
+     3) the project's core idea (best-effort computations to map out
+        possibilities of saving lives). Lives below the ticker so it never
+        steals height from the live map. -->
+<footer id="appfooter" class="appfooter">
+  <div class="appfooter-line appfooter-disclaimer">
+    <span class="th" data-th="เรียลไทม์เท่าที่ระบบจะทำได้ — ข้อมูลอาจมีข้อผิดพลาดจากระบบรับสัญญาณ โปรดใช้วิจารณญาณในการตัดสินใจ เราพยายามอย่างสุดความสามารถเพื่อคำนวณจากข้อมูลที่ดีที่สุดที่มีอยู่ ณ ขณะนั้น">เรียลไทม์เท่าที่ระบบจะทำได้ — ข้อมูลอาจมีข้อผิดพลาดจากระบบรับสัญญาณ โปรดใช้วิจารณญาณในการตัดสินใจ เราพยายามอย่างสุดความสามารถเพื่อคำนวณจากข้อมูลที่ดีที่สุดที่มีอยู่ ณ ขณะนั้น</span>
+    <span class="en" data-en="Real-time as the system allows. Data may have reception issues, so use judgement in any decision. We work as hard as we can to compute from the best data available at the moment.">Real-time as the system allows. Data may have reception issues, so use judgement in any decision. We work as hard as we can to compute from the best data available at the moment.</span>
+  </div>
+  <div class="appfooter-line appfooter-standards">
+    <span class="th" data-th="มาตรฐานระบบ · 7 แหล่งข้อมูลสด · ดึงทุก 10 นาที–3 ชม. · สถานีเฝ้าระวัง 4,400+ แห่ง · 0 ข้อมูลจำลอง · ทุกค่าถูกบันทึกลง SQLite เพื่อตรวจสอบย้อนหลัง">มาตรฐานระบบ · 7 แหล่งข้อมูลสด · ดึงทุก 10 นาที–3 ชม. · สถานีเฝ้าระวัง 4,400+ แห่ง · 0 ข้อมูลจำลอง · ทุกค่าถูกบันทึกลง SQLite เพื่อตรวจสอบย้อนหลัง</span>
+    <span class="en" data-en="System standards · 7 live data sources · refreshed every 10 min–3 h · 4,400+ monitored stations · 0 mock data · every reading persisted to SQLite for full audit trail">System standards · 7 live data sources · refreshed every 10 min–3 h · 4,400+ monitored stations · 0 mock data · every reading persisted to SQLite for full audit trail</span>
+  </div>
+  <div class="appfooter-line appfooter-core">
+    <span class="th" data-th="แก่นของระบบนี้ · คำนวณจากข้อมูลที่ดีที่สุดที่หาได้ เพื่อหาแนวทางปกป้องสุขภาพและรักษาชีวิต — นี่คือเป้าหมายสูงสุดของ AirDash">แก่นของระบบนี้ · คำนวณจากข้อมูลที่ดีที่สุดที่หาได้ เพื่อหาแนวทางปกป้องสุขภาพและรักษาชีวิต — นี่คือเป้าหมายสูงสุดของ AirDash</span>
+    <span class="en" data-en="Core idea of this system · compute from the best data we can find, to map out the possibilities of protecting health and saving lives — that is AirDash's highest goal.">Core idea of this system · compute from the best data we can find, to map out the possibilities of protecting health and saving lives — that is AirDash's highest goal.</span>
+  </div>
+</footer>
+
+<div id="about-overlay" hidden>
+  <div class="about-head">
+    <div class="sign">
+      <span class="th">เกี่ยวกับโครงการ</span>
+      <span class="en">ABOUT THIS PROJECT</span>
+    </div>
+    <div class="about-tabs">
+      <button class="about-tab active" data-about-pane="about">เกี่ยวกับ<br><span class="en-lbl">ABOUT</span></button>
+      <button class="about-tab" data-about-pane="research">เอกสารวิจัย<br><span class="en-lbl">RESEARCH PAPER</span></button>
+    </div>
+    <button id="about-close">✕ <span class="lbl">ปิด</span></button>
+  </div>
+
+  <div class="about-body about-pane active" data-about-pane="about">
+    <!-- Hero image — the project poster. Same artwork as the GitHub README hero.
+         Lives at the top of the about panel so a first-time visitor who
+         opens About sees the project identity immediately. Sits above the
+         owner card so the photo and bio don't have to fight for attention. -->
+    <section class="about-hero">
+      <img src="/img/hero-thumb.png" alt="Dr Non's AIRDASH — Thailand's Air Quality Dashboard"
+           loading="lazy" width="1200" height="800">
+    </section>
+    <!-- Owner block: Dr Non Arkaraprasertkul -->
+    <section class="about-card about-owner">
+      <img class="about-portrait" src="/img/portrait.jpg" alt="ดร.นน อัครประเสริฐกุล · Dr Non Arkaraprasertkul" width="96" height="96">
+      <div class="about-text">
+        <div class="about-name">ดร.นน อัครประเสริฐกุล</div>
+        <div class="about-name-en">Dr Non Arkaraprasertkul</div>
+        <div class="about-role" data-th="ผู้เชี่ยวชาญอาวุโส ฝ่ายส่งเสริมเมืองอัจฉริยะ สำนักงานส่งเสริมเศรษฐกิจดิจิทัล (depa)" data-en="Senior Expert, Smart City Promotion Department · Digital Economy Promotion Agency (depa)">
+          ผู้เชี่ยวชาญอาวุโส ฝ่ายส่งเสริมเมืองอัจฉริยะ สำนักงานส่งเสริมเศรษฐกิจดิจิทัล (depa)
+        </div>
+        <div class="about-blurb" data-th="ผู้ริเริ่มและดูแลโครงการ AirDash — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์สำหรับประเทศไทย เพื่อให้ทุกจังหวัดเข้าถึงข้อมูลสถานการณ์ฝุ่นจากแหล่งข้อมูลภาครัฐได้อย่างโปร่งใส ผ่านสำนักงานเมืองอัจฉริยะประเทศไทย (Smart City Thailand Office)" data-en="Initiator and steward of AirDash — a real-time, openly-sourced air-quality watch built so every Thai province can read the same PM2.5 situation picture from official public data, delivered under the Smart City Thailand Office (depa).">
+          ผู้ริเริ่มและดูแลโครงการ AirDash — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์สำหรับประเทศไทย เพื่อให้ทุกจังหวัดเข้าถึงข้อมูลสถานการณ์ฝุ่นจากแหล่งข้อมูลภาครัฐได้อย่างโปร่งใส ผ่านสำนักงานเมืองอัจฉริยะประเทศไทย (Smart City Thailand Office)
+        </div>
+      </div>
+    </section>
+
+    <!-- Bio: condensed background, education, awards -->
+    <section class="about-card about-bio">
+      <div class="eyebrow" data-th="ประวัติ · การศึกษา · รางวัล" data-en="BIO · EDUCATION · AWARDS">ประวัติ · การศึกษา · รางวัล</div>
+      <p class="bio-intro" data-th="นักวิชาการสหสาขาที่เชื่อมระหว่างสถาปัตยกรรม มานุษยวิทยา และนโยบายดิจิทัล — จบปริญญาเอกจากฮาร์วาร์ด ปริญญาโทจากออกซ์ฟอร์ดและ MIT และเป็นผู้ก่อตั้งโครงการเมืองอัจฉริยะระดับชาติของไทย" data-en="Multi-disciplinary scholar bridging architecture, anthropology, and digital public policy — PhD from Harvard, graduate work at Oxford and MIT, and the founder of Thailand's first national smart-city program.">
+        นักวิชาการสหสาขาที่เชื่อมระหว่างสถาปัตยกรรม มานุษยวิทยา และนโยบายดิจิทัล — จบปริญญาเอกจากฮาร์วาร์ด ปริญญาโทจากออกซ์ฟอร์ดและ MIT และเป็นผู้ก่อตั้งโครงการเมืองอัจฉริยะระดับชาติของไทย
+      </p>
+      <div class="bio-cols">
+        <div class="bio-block">
+          <h4 data-th="การศึกษา" data-en="Education">การศึกษา</h4>
+          <ul>
+            <li data-th="Ph.D. สาขามานุษยวิทยา — Harvard University" data-en="Ph.D. in Anthropology — Harvard University">Ph.D. สาขามานุษยวิทยา — Harvard University</li>
+            <li data-th="M.A. สาขามานุษยวิทยา — Harvard University" data-en="M.A. in Anthropology — Harvard University">M.A. สาขามานุษยวิทยา — Harvard University</li>
+            <li data-th="ปริญญาโท MPhil สาขาจีนศึกษาสมัยใหม่ — University of Oxford" data-en="Master of Philosophy (MPhil) in Modern Chinese Studies — University of Oxford">ปริญญาโท MPhil สาขาจีนศึกษาสมัยใหม่ — University of Oxford</li>
+            <li data-th="SMArchS + Graduate Certificate in Urban Design — MIT" data-en="SMArchS + Graduate Certificate in Urban Design — MIT">SMArchS + Graduate Certificate in Urban Design — MIT</li>
+            <li data-th="สถาปัตยกรรมบัณฑิต (เกียรตินิยมอันดับ 1) — ประเทศไทย" data-en="Bachelor of Architecture (First-Class Honours) — Thailand">สถาปัตยกรรมบัณฑิต (เกียรตินิยมอันดับ 1) — ประเทศไทย</li>
+          </ul>
+        </div>
+        <div class="bio-block">
+          <h4 data-th="รางวัลและทุน" data-en="Awards &amp; Fellowships">รางวัลและทุน</h4>
+          <ul>
+            <li data-th="Fulbright Scholarship (อันดับ 1 ของไทย) — ไป MIT" data-en="Fulbright Scholarship (ranked first in Thailand) — to MIT">Fulbright Scholarship (อันดับ 1 ของไทย) — ไป MIT</li>
+            <li data-th="Harvard-Yenching Doctoral Fellowship (2008–2012)" data-en="Harvard-Yenching Doctoral Fellowship (2008–2012)">Harvard-Yenching Doctoral Fellowship (2008–2012)</li>
+            <li data-th="Certificate of Distinction in Teaching — Harvard (2013)" data-en="Certificate of Distinction in Teaching — Harvard (2013)">Certificate of Distinction in Teaching — Harvard (2013)</li>
+            <li data-th="Smart City Expo World Congress — DX Award" data-en="Smart City Expo World Congress — DX Award">Smart City Expo World Congress — DX Award</li>
+            <li data-th="World Expo Hackathon Winner (UAE)" data-en="World Expo Hackathon Winner (UAE)">World Expo Hackathon Winner (UAE)</li>
+            <li data-th="Global Postdoctoral Fellowship — NYU Shanghai (2014–2016)" data-en="Global Postdoctoral Fellowship — NYU Shanghai (2014–2016)">Global Postdoctoral Fellowship — NYU Shanghai (2014–2016)</li>
+            <li data-th="C.V. Starr Foundation Fellowship — Asian Cultural Council (2005–2007)" data-en="C.V. Starr Foundation Fellowship — Asian Cultural Council (2005–2007)">C.V. Starr Foundation Fellowship — Asian Cultural Council (2005–2007)</li>
+            <li data-th="Visiting Professor — U. of South Florida (Gibbons) · Jagiellonian U., Poland" data-en="Visiting Professor — U. of South Florida (Gibbons) · Jagiellonian U., Poland">Visiting Professor — U. of South Florida (Gibbons) · Jagiellonian U., Poland</li>
+          </ul>
+        </div>
+      </div>
+      <p class="bio-extra" data-th="กลับมาทำงานที่ depa เพื่อก่อตั้งโครงการเมืองอัจฉริยะระดับชาติของไทย — พัฒนากรอบนโยบายที่ยืดหยุ่น และยกระดับความรู้ดิจิทัลของเจ้าหน้าที่ท้องถิ่นกว่า 5,000 คน เคยสอนที่ MIT · NYU · Fudan · University of Sydney — ติดต่อ: non.ar@depa.or.th" data-en="Returned to depa to establish Thailand's first official national smart-city program — built resilient digital frameworks and trained over 5,000 local-government officials. Has taught at MIT, NYU, Fudan, and the University of Sydney. Contact: non.ar@depa.or.th">
+        กลับมาทำงานที่ depa เพื่อก่อตั้งโครงการเมืองอัจฉริยะระดับชาติของไทย — พัฒนากรอบนโยบายที่ยืดหยุ่น และยกระดับความรู้ดิจิทัลของเจ้าหน้าที่ท้องถิ่นกว่า 5,000 คน เคยสอนที่ MIT · NYU · Fudan · University of Sydney — ติดต่อ: non.ar@depa.or.th
+      </p>
+    </section>
+
+    <!-- Why this is personal — the story behind AirDash.
+         Section structure:
+           1. Hero quote (large, italic, AQI-left-accent)
+           2. Father / Shanghai / BMA paragraphs
+           3. Three philosophy points (numbered cards)
+           4. FloodDash connection callout
+           5. Closing line
+         Photo placeholders for the father and Shanghai 2013 are reserved
+         at /img/father.jpg and /img/shanghai-2013.jpg — drop files in and
+         they appear automatically (no markup change needed). -->
+    <section class="about-card about-personal">
+      <!-- Hero quote — the reason this project was started. -->
+      <div class="about-hero-quote">
+        <div class="quote-mark" aria-hidden="true">"</div>
+        <p class="quote-text" data-th="ถ้าหายใจไม่ออก แล้วจะทำอะไรได้" data-en="If you can't breathe, what else can you do?">
+          ถ้าหายใจไม่ออก แล้วจะทำอะไรได้
+        </p>
+        <div class="quote-attr" data-th="— เหตุผลที่เริ่มสร้าง AirDash" data-en="— the reason AirDash was started">
+          — เหตุผลที่เริ่มสร้าง AirDash
+        </div>
+      </div>
+
+      <!-- Personal story prose — photos are interleaved INSIDE the text.
+           The text is the story; the photos are visual punctuation. Each
+           photo is a small floated figure (max ~280px) that the
+           surrounding paragraph text wraps around. Nothing is full-width,
+           nothing dominates the text. -->
+      <div class="about-story">
+        <div class="eyebrow" data-th="ทำไมโครงการนี้เป็นเรื่องส่วนตัว" data-en="WHY THIS PROJECT IS PERSONAL">
+          ทำไมโครงการนี้เป็นเรื่องส่วนตัว
+        </div>
+
+        <p>
+          <figure class="about-photo about-photo--right">
+            <img src="/photos/Dad%20and%20me%201981.JPG" alt="Dad and me · 1981" loading="lazy">
+            <figcaption data-th="พ่อกับผม · 1981 — เขาสูบบุหรี่ตอนหนุ่ม มีปัญหาปอดตั้งแต่เด็ก ท่านไม่เคยเห็น AirDash" data-en="Dad and me · 1981 — he smoked when young and had lung problems from childhood. He never saw AirDash.">
+              Dad and me · 1981 — เขาสูบบุหรี่ตอนหนุ่ม มีปัญหาปอดตั้งแต่เด็ก ท่านไม่เคยเห็น AirDash
+            </figcaption>
+          </figure>
+          <span data-th="AirDash เกิดจากความสูญเสียส่วนตัว — พ่อผมสูบบุหรี่ตอนหนุ่ม และมีปัญหาปอดตั้งแต่เด็ก ในยุคที่การแพทย์ยังไม่ก้าวหน้า ท่านอยู่กับอากาศที่ไม่ดีในกรุงเทพฯ ตลอดช่วงชีวิตทำงาน ท่านเสียชีวิตก่อนวัยอันควรในช่วงต้นของวัยหกสิบ เพื่อนร่วมงานและเพื่อนฝูงหลายคนก็เจ็บป่วยหนักหรือเสียชีวิตด้วยปัญหาที่เริ่มต้นจากคุณภาพอากาศที่แย่ ผมเศร้าทุกครั้งที่เห็นข่าวคนที่ไม่เคยสูบบุหรี่เสียชีวิตเพราะฝุ่น" data-en="AirDash was born from a personal loss. My father smoked when he was young, and had lung problems from a young age — in an era when medicine wasn't advanced. He lived with bad air in Bangkok his entire working life. He passed away prematurely, in his early sixties. Many of his friends and colleagues also fell seriously ill, or died, from problems that started with bad air quality. It made me sad every time I saw news of someone who never smoked dying from the particles.">AirDash เกิดจากความสูญเสียส่วนตัว — พ่อผมสูบบุหรี่ตอนหนุ่ม และมีปัญหาปอดตั้งแต่เด็ก ในยุคที่การแพทย์ยังไม่ก้าวหน้า ท่านอยู่กับอากาศที่ไม่ดีในกรุงเทพฯ ตลอดช่วงชีวิตทำงาน ท่านเสียชีวิตก่อนวัยอันควรในช่วงต้นของวัยหกสิบ เพื่อนร่วมงานและเพื่อนฝูงหลายคนก็เจ็บป่วยหนักหรือเสียชีวิตด้วยปัญหาที่เริ่มต้นจากคุณภาพอากาศที่แย่ ผมเศร้าทุกครั้งที่เห็นข่าวคนที่ไม่เคยสูบบุหรี่เสียชีวิตเพราะฝุ่น</span>
+        </p>
+
+        <!-- The 3 father photos are inlined into the Shanghai paragraph
+             below as small floated figures, alternating left/right. -->
+
+        <p>
+          <figure class="about-photo about-photo--left">
+            <img src="/photos/With%20Dad%20and%20Mom%20in%20Buriram%20where%20Dad%20was%20Governor%20and%20Mom%20ran%20Red%20Cross%202006.jpg" alt="With Dad and Mom in Buriram where Dad was Governor and Mom ran Red Cross · 2006" loading="lazy">
+            <figcaption data-th="กับพ่อและแม่ที่บุรีรัมย์ · 2006 — พ่อเป็นผู้ว่าราชการ แม่ดูแลกิจการสภากาชาด" data-en="With Dad and Mom in Buriram where Dad was Governor and Mom ran Red Cross · 2006">
+              With Dad and Mom in Buriram where Dad was Governor and Mom ran Red Cross · 2006
+            </figcaption>
+          </figure>
+          <figure class="about-photo about-photo--right">
+            <img src="/photos/With%20Dad%20at%20MIT%202006.jpg" alt="With Dad at MIT · 2006" loading="lazy">
+            <figcaption data-th="กับพ่อที่ MIT · 2006 — ตอนผมเรียนปริญญาโทที่สหรัฐอเมริกา" data-en="With Dad at MIT · 2006 — when I was doing my master's in the United States">
+              With Dad at MIT · 2006
+            </figcaption>
+          </figure>
+          <figure class="about-photo about-photo--left">
+            <img src="/photos/With%20Dad%20in%20Minister%20of%20Interior%20Bangkok%202007.JPG" alt="With Dad in Minister of Interior Bangkok · 2007" loading="lazy">
+            <figcaption data-th="กับพ่อที่กระทรวงมหาดไทย · 2007 — ท่านยังรับใช้ประเทศ" data-en="With Dad in Minister of Interior Bangkok · 2007 — he was still serving the country">
+              With Dad in Minister of Interior Bangkok · 2007
+            </figcaption>
+          </figure>
+          <span data-th="ผมอยู่เซี่ยงไฮ้ตั้งแต่ 2013 ถึง 2016 และได้เจอวิกฤตคุณภาพอากาศที่เลวร้ายที่สุดในประวัติศาสตร์เมือง เมื่อ Shanghai Daily รายงานค่า PM2.5 เกิน 200 ในตัวเมือง และข้างนอกก็เต็มไปด้วยฝุ่นราวกับโลกกำลังจะแตก มันทำให้ผมคิดเรื่องสิทธิขั้นพื้นฐานที่เราทุกคนควรมี — และผมหมายถึงขั้นพื้นฐานที่สุด ถ้าหายใจไม่ออก แล้วจะทำอะไรได้" data-en="I lived in Shanghai from 2013 to 2016, and I experienced the worst air quality crisis in the city's history — when Shanghai Daily reported PM2.5 above 200 in the city, and outside it was so dusty it felt like the world was coming to an end. It got me thinking about the basic rights we should all have — and I mean the most basic. If you can't breathe, what else can you do?">ผมอยู่เซี่ยงไฮ้ตั้งแต่ 2013 ถึง 2016 และได้เจอวิกฤตคุณภาพอากาศที่เลวร้ายที่สุดในประวัติศาสตร์เมือง เมื่อ Shanghai Daily รายงานค่า PM2.5 เกิน 200 ในตัวเมือง และข้างนอกก็เต็มไปด้วยฝุ่นราวกับโลกกำลังจะแตก มันทำให้ผมคิดเรื่องสิทธิขั้นพื้นฐานที่เราทุกคนควรมี — และผมหมายถึงขั้นพื้นฐานที่สุด ถ้าหายใจไม่ออก แล้วจะทำอะไรได้</span>
+        </p>
+
+        <!-- The Going out in Shanghai 2013 photo is now inlined into the
+             BMA paragraph (floated right). The two 'feature' photos
+             below — the red alert cityscape and the 2014 same-view
+             composite — are the visual climax of the Shanghai section.
+             They're the only images allowed to take more than ~280px. -->
+
+        <!-- The red alert day. The Shanghai government told everyone not to
+             leave home and to close windows. The skyline was a flat grey.
+             This is the photo the founder took from his apartment. -->
+        <figure class="about-photo about-photo--feature">
+          <img src="/photos/From%20Dr%20Non%20Shanghai%20apartment%20window%20when%20red%20alert%20told%20people%20not%20to%20leabe%20home%20and%20close%20windows.JPG" alt="From Dr Non Shanghai apartment window when red alert told people not to leave home and close windows" loading="lazy">
+          <figcaption data-th="จากหน้าต่างห้องเช่าที่เซี่ยงไฮ้ — วันที่ทางการเซี่ยงไฮ้ประกาศ 'แดง' ให้คนอยู่บ้าน ปิดหน้าต่าง" data-en="From my Shanghai apartment window — the day the city issued a 'red alert' telling people to stay home and close windows">
+            From my Shanghai apartment window when red alert told people not to leave home and close windows
+          </figcaption>
+        </figure>
+
+        <!-- Same view, two days apart. The two-image composite is built into
+             the file. Captions below name the dates so the reader sees
+             how the same skyline can disappear overnight. -->
+        <figure class="about-photo about-photo--feature">
+          <img src="/photos/From%20Dr.Non's%20Shanghai%20apartment%20window%202014.jpg" alt="From Dr.Non's Shanghai apartment window · 2014 — same view on two different days" loading="lazy">
+          <figcaption data-th="จากหน้าต่างเดียวกัน · 2014 — ภาพบนวันที่อากาศดี ภาพล่างวันที่ฝุ่นปกคลุม เป็นเมืองเดียวกัน เป็นมุมมองเดียวกัน" data-en="From the same window · 2014 — top: a clear day. Bottom: a day when the smog closed in. Same city, same view, hours apart.">
+            From my Shanghai apartment window · 2014 — same view, two different days
+          </figcaption>
+        </figure>
+
+        <p>
+          <figure class="about-photo about-photo--right">
+            <img src="/photos/Going%20out%20in%20Shanghai%202013.jpg" alt="Going out in Shanghai · 2013" loading="lazy">
+            <figcaption data-th="ออกไปข้างนอกในเซี่ยงไฮ้ · 2013 — ต้องใส่หน้ากากทุกครั้ง" data-en="Going out in Shanghai · 2013 — every step outside required a respirator">
+              Going out in Shanghai · 2013
+            </figcaption>
+          </figure>
+          <span data-th="ผมเข้าใจว่ามันเป็นปัญหาที่ซับซ้อน — นักการเมือง เช่น ผู้บริหารเมืองใหญ่อย่างกรุงเทพมหานคร (ใช่ ผมกำลังพูดถึง BMA ยักษ์ใหญ่) ไม่ได้ทำอะไรมาก ด้วยเหตุผลต่าง ๆ นา ๆ และนั่นคือเหตุผลที่พวกเราในฐานะผู้อยู่อาศัยเสีย 2–3 ปีของอายุขัยไป — และตัวพวกเขาเองก็เสียด้วย เพราะเราหายใจอากาศเดียวกัน ใช่ไหม" data-en="I understand the problem is complex — politicians, like the administrations of big cities such as Bangkok Metropolitan Administration (yes, I am talking about the mammoth BMA) don't do much, for whatever reasons. And that's how we, the residents, lose 2–3 years of our life expectancy — and theirs too, because we all breathe the same air. Aren't we?">ผมเข้าใจว่ามันเป็นปัญหาที่ซับซ้อน — นักการเมือง เช่น ผู้บริหารเมืองใหญ่อย่างกรุงเทพมหานคร (ใช่ ผมกำลังพูดถึง BMA ยักษ์ใหญ่) ไม่ได้ทำอะไรมาก ด้วยเหตุผลต่าง ๆ นา ๆ และนั่นคือเหตุผลที่พวกเราในฐานะผู้อยู่อาศัยเสีย 2–3 ปีของอายุขัยไป — และตัวพวกเขาเองก็เสียด้วย เพราะเราหายใจอากาศเดียวกัน ใช่ไหม</span>
+        </p>
+      </div>
+
+      <!-- Three philosophy points — the design contract. -->
+      <div class="about-philosophy">
+        <div class="eyebrow" data-th="ปรัชญา · 3 เหตุผลของ AirDash" data-en="THE PHILOSOPHY · THREE REASONS">
+          ปรัชญา · 3 เหตุผลของ AirDash
+        </div>
+        <ol class="philosophy-list">
+          <li class="phil-item">
+            <div class="phil-num">01</div>
+            <div class="phil-body">
+              <h4 data-th="ลงมือทำเอง" data-en="TAKING IT INTO MY OWN HANDS">
+                ลงมือทำเอง
+              </h4>
+              <p data-th="นักการเมืองและรัฐบาลช้าเกินไป และชีวิตของเราถูกเกินไปสำหรับพวกเขาที่จะสนใจ — ผมจะลองด้วยวิธีที่ถูกที่สุดและได้ผลที่สุด: ระบบดิจิทัล" data-en="Politicians and governments are too slow, and our lives are too cheap for them to consider. I'll try the cheapest and most effective way: a digital system.">
+                นักการเมืองและรัฐบาลช้าเกินไป และชีวิตของเราถูกเกินไปสำหรับพวกเขาที่จะสนใจ — ผมจะลองด้วยวิธีที่ถูกที่สุดและได้ผลที่สุด: ระบบดิจิทัล
+              </p>
+            </div>
+          </li>
+          <li class="phil-item">
+            <div class="phil-num">02</div>
+            <div class="phil-body">
+              <h4 data-th="อากาศเป็นสิทธิขั้นพื้นฐาน" data-en="AIR IS A BASIC RIGHT">
+                อากาศเป็นสิทธิขั้นพื้นฐาน
+              </h4>
+              <p data-th="เราต้องปกป้องมัน และข้อมูลนี้จะพิสูจน์ทุกอย่างที่เราต้องการจะพิสูจน์" data-en="We have to protect it. And this data will prove everything we need to prove.">
+                เราต้องปกป้องมัน และข้อมูลนี้จะพิสูจน์ทุกอย่างที่เราต้องการจะพิสูจน์
+              </p>
+            </div>
+          </li>
+          <li class="phil-item">
+            <div class="phil-num">03</div>
+            <div class="phil-body">
+              <h4 data-th="เร่งด่วนกว่าโลกร้อน — คุณตายได้" data-en="MORE IMMEDIATE THAN GLOBAL WARMING — YOU CAN DIE">
+                เร่งด่วนกว่าโลกร้อน — คุณตายได้
+              </h4>
+              <p data-th="เราควรจะเดินทางและทำสิ่งต่าง ๆ โดยสร้างปัญหาให้ปอดน้อยลง — เรื่องนี้เร่งด่วนกว่าโลกร้อนเสียอีก เพราะคุณตายได้" data-en="We should be able to travel and do things while creating fewer problems for our lungs — this is more immediate than global warming. You can die.">
+                เราควรจะเดินทางและทำสิ่งต่าง ๆ โดยสร้างปัญหาให้ปอดน้อยลง — เรื่องนี้เร่งด่วนกว่าโลกร้อนเสียอีก เพราะคุณตายได้
+              </p>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <!-- FloodDash connection — AirDash inherits architecture but ships a
+           more stylish look. -->
+      <div class="about-flooddash">
+        <div class="flooddash-mark">
+          <div class="fd-tag">FLOODDASH</div>
+          <div class="fd-arrow" aria-hidden="true">→</div>
+          <div class="fd-tag fd-tag-air">AIRDASH</div>
+        </div>
+        <p data-th="AirDash ใช้สถาปัตยกรรมเดียวกับ FloodDash (flood.nonarkara.org) ซึ่งผมก็สร้างไว้ด้วยเช่นกัน — เล่นคำกับ DoorDash และใช้ระบบหลังบ้านชุดเดียวกัน แต่ออกแบบให้ดูดีกว่า เพราะถ้าเครื่องมือนี้ดูไม่น่าเชื่อถือ คนก็จะไม่ใช้" data-en="AirDash is built on the same architecture as FloodDash (flood.nonarkara.org), which I also build — a play on words with DoorDash, and the same single-process backend. But the look is redesigned to be more stylish. Because if the tool doesn't look credible, people won't use it.">
+          AirDash ใช้สถาปัตยกรรมเดียวกับ FloodDash (flood.nonarkara.org) ซึ่งผมก็สร้างไว้ด้วยเช่นกัน — เล่นคำกับ DoorDash และใช้ระบบหลังบ้านชุดเดียวกัน แต่ออกแบบให้ดูดีกว่า เพราะถ้าเครื่องมือนี้ดูไม่น่าเชื่อถือ คนก็จะไม่ใช้
+        </p>
+      </div>
+
+      <!-- Closing line — the personal contract. -->
+      <p class="about-closing" data-th="นี่คือเรื่องส่วนตัว ผมอยากพิสูจน์ว่าคนเพียงหนึ่งคนสามารถแก้ปัญหาที่รัฐบาลทำไม่ได้" data-en="This is personal. I want to prove that one person can solve a problem an administration cannot.">
+        นี่คือเรื่องส่วนตัว ผมอยากพิสูจน์ว่าคนเพียงหนึ่งคนสามารถแก้ปัญหาที่รัฐบาลทำไม่ได้
+      </p>
+    </section>
+
+    <!-- Selected papers: most-cited academic works -->
+    <section class="about-card about-papers">
+      <div class="eyebrow" data-th="ผลงานวิชาการที่ถูกอ้างอิงสูง" data-en="MOST-CITED ACADEMIC WORKS">ผลงานวิชาการที่ถูกอ้างอิงสูง</div>
+      <p class="papers-meta" data-th="h-index 12 · Google Scholar" data-en="h-index 12 · Google Scholar">h-index 12 · Google Scholar</p>
+      <ol class="papers-list">
+        <li class="paper">
+          <div class="paper-head">
+            <span class="paper-title" data-th="Gentrification and its contentment: มุมมองทางมานุษยวิทยาต่อที่อยู่อาศัย มรดก และการเปลี่ยนแปลงทางสังคมในเซี่ยงไฮ้" data-en="Gentrification and its contentment: An anthropological perspective on housing, heritage and urban social change in Shanghai">Gentrification and its contentment: An anthropological perspective on housing, heritage and urban social change in Shanghai</span>
+            <span class="paper-cites">80+</span>
+          </div>
+          <div class="paper-venue" data-th="วารสารวิชาการด้านเมืองศึกษา" data-en="Urban Studies journal">Urban Studies journal</div>
+          <a class="paper-link" href="https://scholar.google.com/citations?user=cKPauPQAAAAJ&hl=en" target="_blank" rel="noopener" data-th="ดูใน Google Scholar →" data-en="View on Google Scholar →">ดูใน Google Scholar →</a>
+        </li>
+        <li class="paper">
+          <div class="paper-head">
+            <span class="paper-title" data-th="Gentrifying heritage: การอนุรักษ์โบราณสถานในฐานะตัวเร่ง gentrification ในเซี่ยงไฮ้" data-en="Gentrifying heritage: how historic preservation drives gentrification in urban Shanghai">Gentrifying heritage: how historic preservation drives gentrification in urban Shanghai</span>
+          </div>
+          <div class="paper-venue" data-th="วารสารด้านการอนุรักษ์เมือง" data-en="Urban Heritage & Conservation">Urban Heritage &amp; Conservation</div>
+          <a class="paper-link" href="https://www.researchgate.net/publication/324587991_Gentrifying_heritage_how_historic_preservation_drives_gentrification_in_urban_Shanghai" target="_blank" rel="noopener" data-th="ดูใน ResearchGate →" data-en="View on ResearchGate →">ดูใน ResearchGate →</a>
+        </li>
+        <li class="paper">
+          <div class="paper-head">
+            <span class="paper-title" data-th="Gentrification from within: การเปลี่ยนแปลงทางสังคมเมืองในฐานะกระบวนการทางมานุษยวิทยา" data-en="Gentrification from within: urban social change as anthropological process">Gentrification from within: urban social change as anthropological process</span>
+          </div>
+          <div class="paper-venue">Asian Anthropology</div>
+          <a class="paper-link" href="https://www.researchgate.net/publication/301599238_Gentrification_from_within_urban_social_change_as_anthropological_process" target="_blank" rel="noopener" data-th="ดูใน ResearchGate →" data-en="View on ResearchGate →">ดูใน ResearchGate →</a>
+        </li>
+        <li class="paper">
+          <div class="paper-head">
+            <span class="paper-title" data-th="Towards modern urban housing: การนิยามใหม่ของ lilong เซี่ยงไฮ้" data-en="Towards modern urban housing: redefining Shanghai's lilong">Towards modern urban housing: redefining Shanghai's lilong</span>
+          </div>
+          <div class="paper-venue">Journal of Urbanism</div>
+          <a class="paper-link" href="https://www.academia.edu/1121370/Toward_Shanghais_urban_housing_Re_defining_Shanghais_Lilong" target="_blank" rel="noopener" data-th="ดูใน Academia.edu →" data-en="View on Academia.edu →">ดูใน Academia.edu →</a>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Partner logos: depa + Smart City Thailand Office -->
+    <section class="about-card about-partners">
+      <div class="about-partner">
+        <img src="/img/depa.png" alt="depa — Digital Economy Promotion Agency" class="partner-logo partner-depa">
+        <div class="partner-text">
+          <div class="th">สำนักงานส่งเสริมเศรษฐกิจดิจิทัล</div>
+          <div class="en">Digital Economy Promotion Agency (depa)</div>
+          <div class="partner-meta">กระทรวงดิจิทัลเพื่อเศรษฐกิจและสังคม · Ministry of Digital Economy and Society</div>
+        </div>
+      </div>
+      <div class="about-partner">
+        <img src="/img/smart-city-th.png" alt="สำนักงานเมืองอัจฉริยะประเทศไทย · Smart City Thailand Office" class="partner-logo partner-sct">
+        <div class="partner-text">
+          <div class="th">สำนักงานเมืองอัจฉริยะประเทศไทย</div>
+          <div class="en">Smart City Thailand Office</div>
+          <div class="partner-meta">Ladprao Hills, Bangkok · <a href="https://smartcitythailand.or.th" target="_blank" rel="noopener">smartcitythailand.or.th</a></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sister project — FloodDash shares the same backbone and steward.
+         The header chip (#flooddash-btn) hides on phones like #about-btn
+         does, so this card is the one guaranteed way every visitor,
+         including mobile, can find the link to the other dashboard. -->
+    <section class="about-card about-sister">
+      <div class="eyebrow" data-th="โครงการพี่น้อง" data-en="SISTER PROJECT">โครงการพี่น้อง</div>
+      <div class="about-sister-row">
+        <div class="about-sister-icon" aria-hidden="true">🌊</div>
+        <div class="about-sister-text">
+          <div class="th">FloodDash — เฝ้าระวังน้ำท่วมประเทศไทย</div>
+          <div class="en">Thailand Flood Watch</div>
+          <p data-th="ระบบเฝ้าระวังน้ำท่วมแบบเรียลไทม์ สร้างจากโครงสร้างเดียวกับ AirDash และดูแลโดยทีมเดียวกันภายใต้สำนักงานเมืองอัจฉริยะประเทศไทย — เฝ้าระวังฝุ่นวันนี้ อาจต้องเฝ้าระวังน้ำท่วมหน้ามรสุม" data-en="Real-time flood monitoring built on the same backbone as AirDash and stewarded by the same team under the Smart City Thailand Office — watching dust today, you may need flood data next monsoon.">
+            ระบบเฝ้าระวังน้ำท่วมแบบเรียลไทม์ สร้างจากโครงสร้างเดียวกับ AirDash และดูแลโดยทีมเดียวกันภายใต้สำนักงานเมืองอัจฉริยะประเทศไทย — เฝ้าระวังฝุ่นวันนี้ อาจต้องเฝ้าระวังน้ำท่วมหน้ามรสุม
+          </p>
+        </div>
+        <a class="about-sister-cta" href="https://flood.nonarkara.org" target="_blank" rel="noopener"
+           data-th="เปิด FloodDash →" data-en="Open FloodDash →">เปิด FloodDash →</a>
+      </div>
+    </section>
+
+    <!-- LINE notification — three parallel opt-in paths so the user
+         picks the one that matches how they want to be reached. -->
+    <section class="about-card about-line">
+      <div class="eyebrow" data-th="รับแจ้งเตือนฝุ่นทาง LINE & Telegram" data-en="DUST ALERTS ON LINE & TELEGRAM">รับแจ้งเตือนฝุ่นทาง LINE & Telegram</div>
+      <p data-th="AirDash มีช่องทางแจ้งเตือนสามแบบ — เลือกแบบที่เหมาะกับคุณ:" data-en="AirDash has three alert paths — pick the one that suits you:">
+        AirDash มีช่องทางแจ้งเตือนสามแบบ — เลือกแบบที่เหมาะกับคุณ:
+      </p>
+      <div class="about-line-grid">
+        <div class="about-line-col">
+          <div class="about-line-tag">A · OA</div>
+          <h4 data-th="เพิ่มเพื่อน AirDash OA" data-en="Follow the AirDash OA">เพิ่มเพื่อน AirDash OA</h4>
+          <p data-th="ทุกครั้งที่มีสถานการณ์ฝุ่นรุนแรงระดับประเทศ คุณจะได้รับข้อความสรุปแบบย่อ (≤ 1 ข้อความ/30 นาที) ไม่ต้องสมัคร ไม่เก็บข้อมูลใด ๆ" data-en="Whenever there's a national-level severe haze episode, you get a short digest push (≤ 1 push/30 min). No signup, no data collected.">
+            ทุกครั้งที่มีสถานการณ์ฝุ่นรุนแรงระดับประเทศ คุณจะได้รับข้อความสรุปแบบย่อ (≤ 1 ข้อความ/30 นาที) ไม่ต้องสมัคร ไม่เก็บข้อมูลใด ๆ
+          </p>
+          <a class="about-line-cta" href="https://line.me/R/ti/p/@630xxaki" target="_blank" rel="noopener" data-th="เปิด LINE แล้วเพิ่มเพื่อน →" data-en="Open LINE and add @630xxaki →">เปิด LINE แล้วเพิ่มเพื่อน →</a>
+        </div>
+        <div class="about-line-col">
+          <div class="about-line-tag">B · Notify</div>
+          <h4 data-th="LINE Notify — เฉพาะจังหวัด" data-en="LINE Notify — your province">LINE Notify — เฉพาะจังหวัด</h4>
+          <p data-th="วาง LINE Notify token ในแถบ "พื้นที่ฉัน" (EASY mode) เพื่อรับการแจ้งเตือนเฉพาะจังหวัดที่คุณเลือก สูงสุด 1 ข้อความ/3 ชม. · มีลิงก์ยกเลิกในทุกข้อความ" data-en="Paste a LINE Notify token in the MY AREA tab to get alerts for YOUR province only. Max 1 push/3 h · every message has a cancel link.">
+            วาง LINE Notify token ในแถบ "พื้นที่ฉัน" (EASY mode) เพื่อรับการแจ้งเตือนเฉพาะจังหวัดที่คุณเลือก สูงสุด 1 ข้อความ/3 ชม. · มีลิงก์ยกเลิกในทุกข้อความ
+          </p>
+          <a class="about-line-cta secondary" href="https://notify-bot.line.me/en/" target="_blank" rel="noopener" data-th="ขอ token จาก LINE Notify →" data-en="Get a token from LINE Notify →">ขอ token จาก LINE Notify →</a>
+        </div>
+        <div class="about-line-col about-line-col-tg">
+          <div class="about-line-tag tg">C · Telegram</div>
+          <h4 data-th="บอท Air (Nong Air)" data-en="Air bot (Nong Air)">บอท Air (Nong Air)</h4>
+          <p data-th="ฟรี ไม่จำกัดข้อความ — เปิดบอท @AirDash_bot แล้วกด Start บอทจะถามจังหวัดที่ต้องการ · มีคำสั่ง /stop ยกเลิกได้ทุกเมื่อ · แนะนำสำหรับทุกคน" data-en="Free, no message cap — open @AirDash_bot and hit Start. The bot will ask which province you want. /stop anytime. Recommended for everyone.">
+            ฟรี ไม่จำกัดข้อความ — เปิดบอท @AirDash_bot แล้วกด Start บอทจะถามจังหวัดที่ต้องการ · มีคำสั่ง /stop ยกเลิกได้ทุกเมื่อ · แนะนำสำหรับทุกคน
+          </p>
+          <a class="about-line-cta tg" href="https://t.me/AirDash_bot" target="_blank" rel="noopener" data-th="เปิด Telegram แล้วคุยกับ Air →" data-en="Open Telegram and chat with Air →">เปิด Telegram แล้วคุยกับ Air →</a>
+        </div>
+      </div>
+      <p class="about-line-fine" data-th="ทุกช่องทางฟรี · LINE OA และ LINE Notify ใช้ token ของผู้ใช้เอง ไม่มีค่าใช้จ่าย · AirDash เป็นโครงการไม่แสวงกำไรภายใต้ depa" data-en="All channels free · LINE OA + Notify use the user's own tokens, no fees · AirDash is a non-profit project under depa.">
+        ทุกช่องทางฟรี · LINE OA และ LINE Notify ใช้ token ของผู้ใช้เอง ไม่มีค่าใช้จ่าย · AirDash เป็นโครงการไม่แสวงกำไรภายใต้ depa
+      </p>
+    </section>
+
+    <!-- Methodology pointer -->
+    <section class="about-card">
+      <div class="eyebrow" data-th="วิธีใช้งาน · แหล่งข้อมูล · เอกสารวิจัย" data-en="USAGE · SOURCES · RESEARCH PAPER">วิธีใช้งาน · แหล่งข้อมูล · เอกสารวิจัย</div>
+      <p data-th="AirDash ดึงข้อมูลจาก 7 แหล่งสาธารณะทุก 10 นาที–3 ชม. (คพ./Air4Thai · อุตุฯ · สสน. · Open-Meteo · CAMS/Copernicus · NOAA · NASA GPM · RainViewer · ข่าว RSS) — ไม่มีการจำลองข้อมูล ทุกค่าที่วัดได้ถูกเก็บลง SQLite เพื่อวิเคราะห์รูปแบบระยะยาว ดูรายละเอียดเต็มได้ที่เอกสารวิชาการในโฟลเดอร์ knowledge/" data-en="AirDash streams 7 public sources every 10 min–3 h (PCD/Air4Thai · TMD · HII · Open-Meteo · CAMS/Copernicus · NOAA · NASA GPM · RainViewer · news RSS) — nothing is mocked; every reading is persisted to SQLite for long-horizon pattern analysis. Full methodology in the paper under knowledge/.">
+        AirDash ดึงข้อมูลจาก 7 แหล่งสาธารณะทุก 10 นาที–3 ชม. (คพ./Air4Thai · อุตุฯ · สสน. · Open-Meteo · CAMS/Copernicus · NOAA · NASA GPM · RainViewer · ข่าว RSS) — ไม่มีการจำลองข้อมูล ทุกค่าที่วัดได้ถูกเก็บลง SQLite เพื่อวิเคราะห์รูปแบบระยะยาว ดูรายละเอียดเต็มได้ที่เอกสารวิชาการในโฟลเดอร์ knowledge/
+      </p>
+      <div class="about-links">
+        <a href="#" id="research-paper-link" data-th="อ่านเอกสารวิชาการ →" data-en="Read the research paper →">อ่านเอกสารวิชาการ →</a>
+        <a href="https://github.com/Nonarkara/AirDash-Blueprint" target="_blank" rel="noopener" data-th="สร้างเองได้ → Build Your Own" data-en="Build Your Own →">Build Your Own →</a>
+        <a href="https://depa.or.th" target="_blank" rel="noopener" data-th="depa.or.th" data-en="depa.or.th">depa.or.th</a>
+        <a href="https://smartcitythailand.or.th" target="_blank" rel="noopener" data-th="smartcitythailand.or.th" data-en="smartcitythailand.or.th">smartcitythailand.or.th</a>
+      </div>
+    </section>
+
+    <div class="about-fineprint" data-th="© 2026 ดร.นน อัครประเสริฐกุล · สงวนลิขสิทธิ์ · ข้อมูลจากหน่วยงานภาครัฐเป็นของผู้ให้บริการแต่ละแห่ง · โครงการนี้จัดทำภายใต้สำนักงานส่งเสริมเศรษฐกิจดิจิทัล (depa) และสำนักงานเมืองอัจฉริยะประเทศไทย" data-en="© 2026 Dr Non Arkaraprasertkul · All rights reserved · Data sourced from each respective Thai government agency · Produced under the Digital Economy Promotion Agency (depa) and the Smart City Thailand Office.">
+      © 2026 ดร.นน อัครประเสริฐกุล · สงวนลิขสิทธิ์ · ข้อมูลจากหน่วยงานภาครัฐเป็นของผู้ให้บริการแต่ละแห่ง · โครงการนี้จัดทำภายใต้สำนักงานส่งเสริมเศรษฐกิจดิจิทัล (depa) และสำนักงานเมืองอัจฉริยะประเทศไทย
+    </div>
+  </div>
+
+  <div class="about-body about-pane" data-about-pane="research">
+    <div class="research-scroll" id="research-content"></div>
+  </div>
+</div>
+
+<div id="library-overlay" hidden>
+  <div class="library-head">
+    <div class="sign">
+      <span class="th">ห้องสมุดฝุ่น</span>
+      <span class="en">THE AIR LIBRARY</span>
+      <span class="doc-title"></span>
+    </div>
+    <div class="library-head-actions">
+      <button id="library-expand" title="เต็มจอ / Fullscreen">⛶</button>
+      <button id="library-close">✕ <span class="lbl">ปิด</span></button>
+    </div>
+  </div>
+  <div class="lib-reader">
+    <div class="lib-article"></div>
+    <div class="lib-nav">
+      <button id="library-prev" hidden>◀ <span data-i18n="ก่อนหน้า|Previous">ก่อนหน้า</span></button>
+      <button id="library-next" hidden><span data-i18n="ถัดไป|Next">ถัดไป</span> ▶</button>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/leaflet/leaflet.js"></script>
+<script type="module">
+  // The FloodDash-era shell (and any older AirDash shell) must be cleared
+  // once so returning users never run old flood-era language or removed map
+  // layers during the service-worker handover. The shell name must match
+  // the new CACHE name in sw.js so the migration only runs when the SW
+  // itself is upgrading.
+  const shell = 'airdash-v22'
+  const migrated = `ad-shell-ready:${shell}`
+  const registrations = 'serviceWorker' in navigator
+    ? await navigator.serviceWorker.getRegistrations()
+    : []
+  const cacheNames = 'caches' in window ? await caches.keys() : []
+  const hasOldShell = cacheNames.some((name) =>
+    (name.startsWith('flooddash-') || name.startsWith('airdash-')) && name !== shell)
+
+  if (!sessionStorage.getItem(migrated) && (registrations.length || hasOldShell)) {
+    sessionStorage.setItem(migrated, '1')
+    await Promise.all(registrations.map((registration) => registration.unregister()))
+    await Promise.all(cacheNames
+      .filter((name) => (name.startsWith('flooddash-') || name.startsWith('airdash-')) && name !== shell)
+      .map((name) => caches.delete(name)))
+    location.reload()
+  } else {
+    await import('/js/main.js?v=2.0.0-audit5')
+  }
+</script>
+</body>
+</html>

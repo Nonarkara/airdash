@@ -338,7 +338,7 @@ html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
 .langtoggle button:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 .langtoggle button.active { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 
-#about-btn, #split-btn, #flooddash-btn {
+#about-btn, #split-btn, #flooddash-btn, #home-btn {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 4px 8px;
   background: var(--well);
@@ -358,8 +358,13 @@ html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
   margin-bottom: auto;
   text-decoration: none;
 }
-#about-btn:hover, #split-btn:hover, #flooddash-btn:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
-#about-btn .lbl, #split-btn .lbl, #flooddash-btn .lbl { display: inline; }
+#about-btn:hover, #split-btn:hover, #flooddash-btn:hover, #home-btn:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+#about-btn .lbl, #split-btn .lbl, #flooddash-btn .lbl, #home-btn .lbl { display: inline; }
+/* Back-to-front-door chip — the new "Air Story" front page lives at /;
+   the chip uses the clean-air sage accent (it stays inside the app, so
+   it's a softer distinction than the outbound FloodDash link). */
+#home-btn { border-color: var(--th-sage); color: var(--th-sage); }
+#home-btn:hover { background: var(--th-sage); color: #fff; border-color: var(--th-sage); }
 /* Sister-project link gets its own accent (flood blue) instead of looking
    like just another utility button — it's a different KIND of link (leaves
    the app entirely), so it earns a little visual distinction. */

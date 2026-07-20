@@ -40,7 +40,7 @@ async function ensureDaily() {
 }
 
 function bandColor(band) {
-  return { normal: '#00933C', watch: '#F0B400', elevated: '#E86A10', high: '#A51931' }[band] || '#948C7F'
+  return { normal: '#3A8A6E', watch: '#D8893A', elevated: '#C8453A', high: '#6B2D5C' }[band] || '#7E8E9A'
 }
 
 function topN(provs, key, n = 5, asc = false) {
@@ -106,11 +106,11 @@ async function render(snap) {
       { th: 'PM2.5 สูงสุดตอนนี้', en: 'WORST PM2.5 NOW',
         value: worst?.ug != null ? fmtNum(worst.ug, 0) + ' µg' : '—',
         sub: worst ? L(worst.province_th ?? '', worst.province_en ?? worst.province_th ?? '') : L('ไม่มีข้อมูล', 'no data'),
-        color: '#A51931' },
+        color: '#C8453A' },
       { th: 'จังหวัดฝุ่นเกินเกณฑ์', en: 'DUST LOAD',
         value: dustLoadPct + '%',
         sub: L(`${dustyCount} / ${dustSampled} จังหวัด ≥ 25 µg/m³`, `${dustyCount} / ${dustSampled} provinces ≥ 25 µg/m³`),
-        color: '#5C6BC0' },
+        color: '#2D7A8C' },
       { th: 'คะแนนเฉลี่ยทั้งประเทศ', en: 'NATIONAL AVG RISK',
         value: fmtNum(avgRisk, 0) + '/100',
         sub: L(`${elevatedCount} จังหวัด ≥ เสี่ยงสูง`, `${elevatedCount} provinces at elevated+`),
@@ -136,12 +136,12 @@ async function render(snap) {
   requestAnimationFrame(() => {
     const bar = host.querySelector('#ana-bar')
     if (bar) drawBarChart(bar, pmSeries, {
-      color: '#241E4E', altColor: '#A51931', valueLabel: true, yMax: Math.max(maxPmDaily * 1.1, 50),
+      color: '#0E4A5E', altColor: '#C8453A', valueLabel: true, yMax: Math.max(maxPmDaily * 1.1, 50),
     })
 
     const rainBar = host.querySelector('#ana-rain')
     if (rainBar) drawBarChart(rainBar, rainSeries, {
-      color: '#0039A6', altColor: '#E86A10', valueLabel: true, yMax: Math.max(maxRainDaily * 1.1, 50),
+      color: '#2D7A8C', altColor: '#D8893A', valueLabel: true, yMax: Math.max(maxRainDaily * 1.1, 50),
     })
 
     const donut = host.querySelector('#ana-donut')
@@ -165,11 +165,11 @@ function regionOfCode(code) {
 
 function regionDist(provs) {
   const order = [
-    { id: 'north',     key: 'ภาคเหนือ',            en: 'North',     color: '#241E4E' },
-    { id: 'central',   key: 'ภาคกลาง',             en: 'Central',   color: '#A51931' },
-    { id: 'northeast', key: 'ภาคตะวันออกเฉียงเหนือ', en: 'Northeast', color: '#E86A10' },
-    { id: 'south',     key: 'ภาคใต้',              en: 'South',     color: '#F0B400' },
-    { id: 'bkk',       key: 'กรุงเทพมหานคร',       en: 'Bangkok',   color: '#00933C' },
+    { id: 'north',     key: 'ภาคเหนือ',            en: 'North',     color: '#0E4A5E' },
+    { id: 'central',   key: 'ภาคกลาง',             en: 'Central',   color: '#C8453A' },
+    { id: 'northeast', key: 'ภาคตะวันออกเฉียงเหนือ', en: 'Northeast', color: '#D8893A' },
+    { id: 'south',     key: 'ภาคใต้',              en: 'South',     color: '#3A8A6E' },
+    { id: 'bkk',       key: 'กรุงเทพมหานคร',       en: 'Bangkok',   color: '#6B2D5C' },
   ]
   return order.map((o) => {
     const regionProvs = provs.filter((p) => regionOfCode(p.province_code) === o.id)

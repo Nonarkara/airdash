@@ -18,11 +18,11 @@
 // missing values (null/undefined) break the line — we draw a NaN gap.
 import { fmtNum } from './fmt.js?v=2.0.0-audit5'
 
-const NAVY = '#241E4E'
+const NAVY = '#0E4A5E'   // AirDash deep-teal ink (was FloodDash #241E4E)
 const INK = NAVY
-const INK_MID = '#66605a'
-const INK_LOW = '#9a938a'
-const RULE = 'rgba(36,30,78,0.10)'
+const INK_MID = '#4A6273'
+const INK_LOW = '#7E8E9A'
+const RULE = 'rgba(14,74,94,0.10)'
 const AXIS = '#948C7F'
 
 export function drawSeriesChart(canvas, points, opts = {}) {
@@ -31,8 +31,8 @@ export function drawSeriesChart(canvas, points, opts = {}) {
   if (filtered.length < 1) return false
   const {
     color = NAVY,
-    dangerColor = '#A51931',
-    watchColor = '#E86A10',
+    dangerColor = '#C8453A',
+    watchColor = '#D8893A',
     padding = 18,
     showAxes = true,
     showNow = true,
@@ -238,7 +238,7 @@ export function drawBarChart(canvas, data, opts = {}) {
   if (!canvas || !data?.length) return false
   const {
     color = NAVY,
-    altColor = '#E86A10',
+    altColor = '#D8893A',
     showGrid = true,
     hiDPI = true,
     valueLabel = true,
@@ -326,7 +326,7 @@ export function drawBarChart(canvas, data, opts = {}) {
 // ── Donut chart — regional distribution of risk / count / etc. ──
 // `slices`: [{ label, value, color }] — color defaults to the band palette.
 // opts: showCenter (default true) shows total in middle.
-const SLICE_COLORS = ['#241E4E', '#A51931', '#E86A10', '#F0B400', '#00933C', '#6FA8D8', '#1D66A8', '#0E7C7B']
+const SLICE_COLORS = ['#0E4A5E', '#C8453A', '#D8893A', '#3A8A6E', '#6B2D5C', '#2D7A8C', '#C8B560', '#7B96A0']
 export function drawDonut(canvas, slices, opts = {}) {
   if (!canvas || !slices?.length) return false
   const { showCenter = true, hiDPI = true } = opts
