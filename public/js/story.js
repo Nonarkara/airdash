@@ -5,10 +5,11 @@
 // back to /api/science (with an honestly-labelled fallback so the page never
 // renders empty while the science API is still deploying).
 // ────────────────────────────────────────────────────────────────────────────
-import { store, on, setLang } from './state.js?v=2.0.0-fresh1'
+import { store, on, setLang, emit } from './state.js?v=2.0.0-fresh1'
 import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.0.0-fresh1'
 import { getJson } from './cache.js?v=2.0.0-fresh1'
 import { fmtNum, escapeHtml } from './fmt.js?v=2.0.0-fresh1'
+import { initDataFreshness } from './dataFreshness.js?v=2.0.0-fresh1'
 
 const $ = (sel) => document.querySelector(sel)
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -572,10 +573,18 @@ async function boot() {
   paintChrome()
 
   // Snapshot powers the sky chapter (stagnation, causes, 72h outlook).
-  // Arrives whenever it arrives — never blocks the story.
+  // Arrives whenever it arrives — never blocks the story. The emit also
+  // wakes up the data-freshness pill in the footer so the story's
+  // freshness signal comes from the same source the operator dashboard
+  // uses.
   getJson('/api/snapshot', 60_000)
-    .then((s) => { snapshot = s; renderSky() })
+    .then((s) => { snapshot = s; store.snapshot = s; renderSky(); emit('snapshot', s) })
     .catch(() => {})
+
+  // Start the freshness pill immediately in "connecting" state so the
+  // footer line is honest while the snapshot is in flight. initDataFreshness
+  // is idempotent; calling it more than once is fine.
+  try { initDataFreshness() } catch {}
 
   resolveLocation()
 }

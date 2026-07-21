@@ -266,6 +266,12 @@ body.story {
   color: var(--ink-low); font-size: 12.5px; line-height: 1.7;
 }
 .story-footer .srcline { color: var(--ink-mid); }
+.story-footer .data-freshness {
+  /* Re-use the operator-dashboard pill colors. The base styles live in
+     layout.css; here we just nudge the line to sit naturally inside the
+     story footer (a touch more breathing room above). */
+  margin: 6px 0 2px;
+}
 
 /* Small screens: tighten the breathing stage so the number never wraps hard */
 @media (max-width: 520px) {
