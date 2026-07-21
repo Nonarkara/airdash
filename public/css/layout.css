@@ -107,6 +107,55 @@ header {
 }
 html[lang="th"] .brand .sub-short { letter-spacing: 0.01em; text-transform: none; font-weight: 500; }
 
+/* Data freshness pill — the honest "is what I'm looking at actually
+   current?" signal. Color-coded: green < 15 min, amber 15–30 min, red
+   > 30 min. The pill sits inside the brand area as its own line so it
+   doesn't compete with the wordmark; on tight viewports we hide the
+   long sub and keep just the pill, which carries the freshness story
+   on its own. */
+.data-freshness {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 6px 2px;
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: help;
+  /* Stop the pill from pushing the wordmark around on very narrow
+     screens — the brand is a flex column and we want the wordmark
+     and pill to stack naturally. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+}
+.data-freshness--ok {
+  background: rgba(46, 139, 87, 0.10);
+  color: #2E8B57;
+  border-color: rgba(46, 139, 87, 0.30);
+}
+.data-freshness--warn {
+  background: rgba(200, 69, 58, 0.10);
+  color: #A5402E;
+  border-color: rgba(200, 69, 58, 0.35);
+}
+.data-freshness--stale {
+  background: rgba(107, 45, 92, 0.14);
+  color: #6B2D5C;
+  border-color: rgba(107, 45, 92, 0.40);
+  font-weight: 700;
+}
+.data-freshness--loading {
+  background: rgba(120, 130, 145, 0.10);
+  color: var(--ink-mid);
+  border-color: rgba(120, 130, 145, 0.25);
+}
+
 .national {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 14px 0 14px;
@@ -554,6 +603,10 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   .brand .sub-short { display: none; }
   .focusbox { display: none; }   /* city selection moves to dashboard grid */
   .searchbox { min-width: 120px; max-width: 200px; }
+  /* Freshness pill stays — the user still needs to know "is this number
+     current?" even when there's no room for the long subtitle. The
+     wordmark + pill combo is the entire brand on a phone. */
+  .brand .data-freshness { display: inline-block; }
 }
 
 /* ── Compact view: map on top, tabbed sheet below ────────────────────────
