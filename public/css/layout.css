@@ -604,15 +604,15 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   .focusbox { display: none; }   /* city selection moves to dashboard grid */
   .searchbox { min-width: 120px; max-width: 200px; }
   /* On phone the brand block is hidden entirely (see the 1100px layout
-     switch below) so the in-brand freshness pill goes with it. We
-     re-show the pill as a fixed corner overlay so the user still gets
-     the "is this current?" signal even on a 320px viewport. The corner
-     placement avoids the densely packed header and is tappable for the
-     long-form truth. */
+     switch below) so the in-brand freshness pill went with it. The pill
+     is now a sibling of .brand (not a child), so we can re-attach it as
+     a fixed bottom-right overlay and keep the "is this current?" signal
+     visible even at 320px width. */
   .data-freshness {
     position: fixed;
     bottom: calc(var(--ticker-h, 32px) + 8px);
     right: 8px;
+    left: auto;
     z-index: 600;
     margin: 0;
     font-size: 10px;

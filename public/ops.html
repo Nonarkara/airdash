@@ -119,12 +119,14 @@
       <h1 class="name">AIR<span class="dot">·</span><span class="accent">DASH</span></h1>
       <div class="sub" data-i18n="เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย|Thailand Air Quality & Dust Watch · 24/7 live data">เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · 24/7 LIVE DATA</div>
       <div class="sub-short" data-i18n="PM2.5 · AQI · 24/7 สด|PM2.5 · AQI · 24/7 LIVE">PM2.5 · AQI · 24/7 สด</div>
-      <!-- Data freshness pill — the honest "is this number current?" signal.
-           Color-coded: green = <15 min, amber = 15–30 min, red = >30 min.
-           The clock is the source's local time (Asia/Bangkok), so it
-           matches the time stamped on the readings. -->
-      <div class="data-freshness" id="data-freshness" role="status" aria-live="polite"></div>
     </div>
+    <!-- Data freshness pill — the honest "is this number current?" signal.
+         Color-coded: green = <15 min, amber = 15–30 min, red = >30 min.
+         Sits as a sibling of the brand block (NOT inside it) so it can
+         survive the phone's brand-hide rule and re-attach as a fixed
+         corner overlay on narrow viewports. The clock is the source's
+         local time (Asia/Bangkok), matching the timestamp on readings. -->
+    <div class="data-freshness" id="data-freshness" role="status" aria-live="polite"></div>
 
     <div class="national" id="national">
       <div class="plate" id="national-plate">–</div>
