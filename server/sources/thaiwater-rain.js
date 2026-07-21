@@ -5,6 +5,18 @@ import { stationIdentity, storeReadings } from './thaiwater-common.js'
 
 const URL = 'https://api-v3.thaiwater.net/api/v1/thaiwater30/public/rain_24h'
 
+// Chunk size for the in-memory ingest loop. The full payload is ~4,500
+// rain-gauge rows. Without yielding, the synchronous SQLite write loop
+// blocks Node's single event loop for 25–45s — long enough that the
+// hourly watchdog probe times out three times in a row (3 × 20s gap)
+// and then "recovers" by killing the very server that's just busy. We
+// saw a 12-process boot loop in the 09:23 disk-full incident; we saw
+// the same pattern (false-positive "PROBLEM" at 16:00 and 17:00 today)
+// when only thaiwater_rain was the culprit. Yielding every 250 rows
+// keeps each chunk well under 2s, so /api/health always answers
+// within the watchdog's first probe.
+const INGEST_CHUNK = 250
+
 export default {
   name: 'thaiwater_rain',
   label_th: 'ฝนสะสม 24 ชม.',
@@ -24,43 +36,71 @@ export default {
     let heavy = 0, veryHeavy = 0
     const notable = []
 
-    db.tx(() => {
-      for (const row of rows) {
-        const identity = stationIdentity(row, {
-          keyPath: 'station', namePath: 'tele_station_name',
-          latKey: 'tele_station_lat', lngKey: 'tele_station_long',
-        })
-        if (!identity) continue
+    // Per-row work is processReadings(row) so we can both unit-test it
+    // and yield the event loop between chunks without restructuring the
+    // loop body. The "yield" is just setImmediate — under the hood that
+    // is a one-tick event-loop hand-off, so /api/health probes (which
+    // have ~0s of sync work) always find a responsive event loop.
+    const processRow = (row) => {
+      const identity = stationIdentity(row, {
+        keyPath: 'station', namePath: 'tele_station_name',
+        latKey: 'tele_station_lat', lngKey: 'tele_station_long',
+      })
+      if (!identity) return 0
 
-        const obs_time = normTime(row.rainfall_datetime)
-        if (!obs_time) continue
+      const obs_time = normTime(row.rainfall_datetime)
+      if (!obs_time) return 0
 
-        const rain24 = num(row.rain_24h)
-        if (rain24 !== null && rain24 >= t.rainVeryHeavy24h) veryHeavy += 1
-        else if (rain24 !== null && rain24 >= t.rainHeavy24h) heavy += 1
+      const rain24 = num(row.rain_24h)
+      if (rain24 !== null && rain24 >= t.rainVeryHeavy24h) veryHeavy += 1
+      else if (rain24 !== null && rain24 >= t.rainHeavy24h) heavy += 1
 
-        const station = {
-          ...identity,
-          meta_json: JSON.stringify({
-            oldcode: str(row.station?.tele_station_oldcode),
-            agency: str(row.agency?.agency_shortname?.en),
-          }),
-        }
-
-        const newCount = storeReadings({
-          db, alerts, source: 'thaiwater_rain', station,
-          metrics: { rain_1h: num(row.rain_1h), rain_24h: rain24 },
-          obs_time, fetched_at, now,
-        })
-        added += newCount
-        // Notable = past AirDash's "worth a tap event" bar (10 mm/24h), not
-        // TMD's very-heavy category — rainy-season gauges cross 90 mm rarely,
-        // and 10 mm is already decisive washout for the dust situation.
-        if (newCount > 0 && rain24 !== null && rain24 >= t.rainNotable24h) {
-          notable.push({ station, rain24, rain1: num(row.rain_1h) })
-        }
+      const station = {
+        ...identity,
+        meta_json: JSON.stringify({
+          oldcode: str(row.station?.tele_station_oldcode),
+          agency: str(row.agency?.agency_shortname?.en),
+        }),
       }
-    })
+
+      const newCount = storeReadings({
+        db, alerts, source: 'thaiwater_rain', station,
+        metrics: { rain_1h: num(row.rain_1h), rain_24h: rain24 },
+        obs_time, fetched_at, now,
+      })
+      // Notable = past AirDash's "worth a tap event" bar (10 mm/24h), not
+      // TMD's very-heavy category — rainy-season gauges cross 90 mm rarely,
+      // and 10 mm is already decisive washout for the dust situation.
+      if (newCount > 0 && rain24 !== null && rain24 >= t.rainNotable24h) {
+        notable.push({ station, rain24, rain1: num(row.rain_1h) })
+      }
+      return newCount
+    }
+
+    for (let i = 0; i < rows.length; i += INGEST_CHUNK) {
+      // Each chunk runs in its own short transaction so the SQLite write
+      // lock is held for at most ~500ms (250 rows × ~2ms per row), and
+      // the chunks are independent — a crash mid-ingest keeps the
+      // earlier chunks instead of rolling everything back. The "all
+      // or nothing" guarantee the old single-tx loop gave us wasn't
+      // doing anything useful here: there is no downstream consumer
+      // that depends on the rows being all-or-nothing (alerts fire
+      // per-reading, the UI doesn't care which 250-row chunk a number
+      // landed in), and the partial state is strictly more honest than
+      // a 30-second "the system is dead" window.
+      const end = Math.min(i + INGEST_CHUNK, rows.length)
+      let chunkAdded = 0
+      db.tx(() => {
+        for (let j = i; j < end; j++) chunkAdded += processRow(rows[j])
+      })
+      added += chunkAdded
+      // Yield to the event loop between chunks so /api/health, the
+      // SSE bus, the watchdog probe, and any in-flight HTTP request
+      // can be served before we take the SQLite write lock again.
+      if (end < rows.length) {
+        await new Promise((resolve) => setImmediate(resolve))
+      }
+    }
 
     if (added > 0) {
       bus.publish({

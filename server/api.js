@@ -191,6 +191,19 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
       }))
     },
 
+    // Liveness probe — does ZERO DB work and no I/O, so the watchdog can
+    // tell "event loop is alive" apart from "DB is slow right now". A
+    // a 25–45s thaiwater_rain ingest used to make the previous /api/health
+    // unresponsive (synchronous event loop), which the watchdog then
+    // misread as a crashed server and killed (cf. the 09:23 boot loop
+    // and the 16:00 / 17:00 false "PROBLEM" reports). /api/ping is the
+    // canonical "is the JS event loop running?" probe.
+    'GET /api/ping': (req, res) => {
+      res.setHeader('cache-control', 'no-store')
+      res.statusCode = 200
+      res.end('pong')
+    },
+
     'GET /api/health': (req, res) => {
       const dbStats = {}
       // These tables are small (≤ tens of thousands of rows) — COUNT is fast.
