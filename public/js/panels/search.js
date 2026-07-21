@@ -327,7 +327,18 @@ async function loadPlaceDetail(r) {
       } catch { /* transient — keep showing the last good board */ }
     }, 120_000)
   } catch {
-    placeCard.innerHTML = `<div class="place-loading">${tr('โหลดข้อมูลไม่สำเร็จ', 'Failed to load')}</div>`
+    // The honest failure path — the snapshot or detail fetch blew up.
+    // Plain language + a retry button so the user isn't stranded on a
+    // blank card wondering "did the network drop, or is the dashboard
+    // broken?". Without the button, a non-technical reader has no
+    // clear next step.
+    placeCard.innerHTML = `
+      <div class="place-error">
+        <div class="place-error-msg">${tr('โหลดข้อมูลสถานที่ไม่สำเร็จ', "Couldn't load this place")}</div>
+        <button class="place-retry" type="button">${tr('ลองอีกครั้ง', 'Try again')}</button>
+      </div>`
+    const retryBtn = placeCard.querySelector('.place-retry')
+    if (retryBtn) retryBtn.addEventListener('click', () => loadPlaceCard())
   }
 }
 

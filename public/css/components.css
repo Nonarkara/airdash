@@ -1136,6 +1136,36 @@ body.mode-citizen .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   font-family: var(--font-num);
 }
 .src-links a:hover { text-decoration: underline; }
+/* Honest error states with retry. The dashboard used to render error
+   states as plain text ("Failed to load"), which left a non-technical
+   reader stranded on a dead panel with no clear next step. A small
+   button turns the dead end into a recoverable one. The styling is
+   shared across the sources panel, the place card, and the library. */
+.src-error, .place-error, .src-days-err, .lib-error {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--well-dim);
+}
+.src-days-err { flex-direction: row; align-items: center; gap: 6px; padding: 6px 0; }
+.src-error-msg, .place-error-msg, .src-days-err, .lib-error-msg {
+  font-size: 13px; color: var(--ink-mid); line-height: 1.4;
+}
+.src-retry, .place-retry, .src-days-retry, .lib-retry {
+  align-self: flex-start;
+  padding: 6px 12px;
+  background: var(--rain); color: #fff;
+  border: 0; border-radius: 3px;
+  font: 600 12px var(--font-display);
+  cursor: pointer;
+  /* 44px tap target on touch — the dashboard lives or dies by whether
+     phone users can hit this without zooming. */
+  min-height: 32px;
+}
+.src-retry:hover, .place-retry:hover, .src-days-retry:hover, .lib-retry:hover {
+  background: #1B5E78;
+}
 .src-api { background: var(--well-dim); padding: 2px 5px; font-size: 10.5px; }
 .src-days { margin-top: 8px; font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .src-day {

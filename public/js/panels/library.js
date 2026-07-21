@@ -44,7 +44,15 @@ async function renderToc(container) {
   try {
     if (!toc) toc = await getJson(`/api/library/toc?lang=${store.lang}`, 5 * 60_000)
   } catch {
-    container.replaceChildren(el('div', { class: 'wx-method' }, tr('โหลดไม่สำเร็จ', 'Failed to load')))
+    // The honest failure path — the library TOC didn't load. A plain
+    // "Failed to load" line leaves the reader with no clear next step.
+    // Adding a retry button turns the dead end into a recoverable one.
+    const retry = el('button', { class: 'lib-retry', type: 'button' }, tr('ลองอีกครั้ง', 'Try again'))
+    retry.addEventListener('click', () => loadToc())
+    container.replaceChildren(
+      el('div', { class: 'wx-method' }, tr('โหลดคลังความรู้ไม่สำเร็จ', "Couldn't load the knowledge library")),
+      retry,
+    )
     return
   }
   const sections = toc?.sections ?? []
@@ -82,7 +90,12 @@ async function runSearch(container) {
     data = await getJson(`/api/library/search?q=${encodeURIComponent(query)}&lang=${store.lang}&limit=30`, 15_000)
   } catch {
     if (myToken !== searchToken) return
-    container.replaceChildren(el('div', { class: 'wx-method' }, tr('โหลดไม่สำเร็จ', 'Failed to load')))
+    const retry = el('button', { class: 'lib-retry', type: 'button' }, tr('ลองอีกครั้ง', 'Try again'))
+    retry.addEventListener('click', () => search(query))
+    container.replaceChildren(
+      el('div', { class: 'wx-method' }, tr('ค้นหาไม่สำเร็จ', 'Search failed')),
+      retry,
+    )
     return
   }
   if (myToken !== searchToken) return

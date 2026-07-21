@@ -39,7 +39,13 @@ async function load() {
     paint()
   } catch {
     const box = document.getElementById('sources')
-    if (box) box.textContent = tr('โหลดแคตตาล็อกไม่สำเร็จ', 'failed to load catalog')
+    if (!box) return
+    box.innerHTML = `
+      <div class="src-error">
+        <div class="src-error-msg">${tr('โหลดรายการแหล่งข้อมูลไม่สำเร็จ', "Couldn't load the data sources list")}</div>
+        <button class="src-retry" type="button">${tr('ลองอีกครั้ง', 'Try again')}</button>
+      </div>`
+    box.querySelector('.src-retry')?.addEventListener('click', () => load())
   }
 }
 
@@ -230,7 +236,12 @@ async function loadDays() {
       }, d)),
     )
   } catch {
-    box.textContent = tr('ไม่สามารถโหลดรายการวันได้', 'could not load day list')
+    box.innerHTML = `
+      <div class="src-days-err">
+        ${tr('โหลดรายการวันไม่สำเร็จ', "Couldn't load the day list")} ·
+        <button class="src-days-retry" type="button">${tr('ลองอีกครั้ง', 'Try again')}</button>
+      </div>`
+    box.querySelector('.src-days-retry')?.addEventListener('click', () => loadDays())
   }
 }
 
