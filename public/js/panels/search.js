@@ -1,10 +1,10 @@
 // Universal place search — search any place name (province, station, focus area)
 // and get autocomplete results. Select one → map flies there + place card opens
 // with live data: nearest AQ stations, watch score, rain-washout outlook.
-import { on, store, emit } from '../state.js?v=2.0.0-audit5'
-import { tr, pick, BAND } from '../i18n.js?v=2.0.0-audit5'
-import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.0.0-audit5'
-import { getJson } from '../cache.js?v=2.0.0-audit5'
+import { on, store, emit } from '../state.js?v=2.0.0-saphan1'
+import { tr, pick, BAND } from '../i18n.js?v=2.0.0-saphan1'
+import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.0.0-saphan1'
+import { getJson } from '../cache.js?v=2.0.0-saphan1'
 
 // Cached province centroids — fetched once, used to give postal results
 // a fly-to target. Same numbers the server's gazetteer uses (see
@@ -66,6 +66,38 @@ export function initSearch() {
   // Placeholder hint for postal code search
   const origPh = placeholder()
   searchInput.placeholder = origPh + ' · 10200'
+
+  // Keyboard-aware dropdown positioning. On a phone with the on-screen
+  // keyboard up, the static top:108px leaves the dropdown hidden behind
+  // the keyboard. Re-anchor it on focus using visualViewport so it sits
+  // just below the search input and fits between input and keyboard top.
+  const reposition = () => {
+    if (!searchInput || !searchResults) return
+    const vv = window.visualViewport
+    if (!vv) return
+    const inputRect = searchInput.getBoundingClientRect()
+    // Distance from input's bottom edge to the top of the keyboard
+    // (visualViewport.height is the visible area when keyboard is up).
+    const bottom = Math.max(8, vv.height - inputRect.bottom - 4)
+    const top = inputRect.bottom + 4
+    searchResults.style.position = 'fixed'
+    searchResults.style.top = `${top}px`
+    searchResults.style.bottom = `${bottom}px`
+    searchResults.style.left = `${Math.max(8, inputRect.left - 4)}px`
+    searchResults.style.right = `${Math.max(8, vv.width - inputRect.right - 4)}px`
+    searchResults.style.width = 'auto'
+    searchResults.style.maxHeight = 'none'
+    searchResults.style.maxWidth = 'none'
+  }
+  searchInput.addEventListener('focus', () => {
+    requestAnimationFrame(reposition)
+  })
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', reposition)
+    window.visualViewport.addEventListener('scroll', reposition)
+  }
+  window.addEventListener('resize', reposition)
+  window.addEventListener('orientationchange', reposition)
 
   // Keyboard navigation
   searchInput.addEventListener('keydown', (e) => {
@@ -179,7 +211,21 @@ function showResults(results) {
 }
 
 function hideResults() {
-  if (searchResults) searchResults.style.display = 'none'
+  if (searchResults) {
+    searchResults.style.display = 'none'
+    // Clear the keyboard-aware inline styles so the next open re-applies
+    // them via the focus listener. Otherwise the dropdown keeps the
+    // "fixed at keyboard top" coordinates from the last session even
+    // when the keyboard is gone.
+    searchResults.style.top = ''
+    searchResults.style.bottom = ''
+    searchResults.style.left = ''
+    searchResults.style.right = ''
+    searchResults.style.width = ''
+    searchResults.style.maxHeight = ''
+    searchResults.style.maxWidth = ''
+    searchResults.style.position = ''
+  }
   searchInput?.setAttribute('aria-expanded', 'false')
   searchInput?.removeAttribute('aria-activedescendant')
 }

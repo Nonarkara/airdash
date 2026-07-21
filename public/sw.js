@@ -23,12 +23,12 @@ const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/ops.html',
-  '/css/tokens.css?v=2.0.0-audit5',
-  '/css/layout.css?v=2.0.0-audit5',
-  '/css/components.css?v=2.0.0-audit5',
-  '/css/city-dashboard.css?v=2.0.0-audit5',
+  '/css/tokens.css?v=2.0.0-saphan1',
+  '/css/layout.css?v=2.0.0-saphan1',
+  '/css/components.css?v=2.0.0-saphan1',
+  '/css/city-dashboard.css?v=2.0.0-saphan1',
   '/css/story.css?v=2.1.0-story1',
-  '/js/main.js?v=2.0.0-audit5',
+  '/js/main.js?v=2.0.0-saphan1',
   '/js/story.js?v=2.1.0-story1',
   // New modules added in Phase 1. The SW does NOT precache every panel
   // (the install event is fragile if any 404s), but the runtime cache

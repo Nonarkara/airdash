@@ -45,9 +45,28 @@ function loadTambons() {
 function loadDistricts() {
   if (_districts) return _districts
   const raw = JSON.parse(readFileSync(join(GEO, 'districts.json'), 'utf8'))
+  // Bangkok's 50 เขต in districts.json had the wrong names on codes
+  // 1041–1050 (e.g. 1042 was labeled "สายไหม" when the standard DOPA
+  // numbering puts สะพานใหม่ there). Overlay a canonical Bangkok file
+  // so a search for "สะพานใหม่" or "Saphan Mai" finds the real Bangkok
+  // district — the kind of query a mayor types on their phone before
+  // giving a talk. The overlay also carries proper lat/lng centroids
+  // (the base file falls back to the province centroid, which puts
+  // every Bangkok "hit" 25 km south of where it should be).
+  let bkk = []
+  try {
+    bkk = JSON.parse(readFileSync(join(GEO, 'bangkok-districts.json'), 'utf8'))
+  } catch { /* file missing — fall back to base file */ }
+  const merged = raw.map((d) => {
+    if (d.provinceCode === 10) {
+      const o = bkk.find((x) => x.districtCode === d.districtCode)
+      if (o) return { ...d, districtNameTh: o.districtNameTh, districtNameEn: o.districtNameEn, postalCode: o.postalCode ?? d.postalCode, lat: o.lat, lng: o.lng }
+    }
+    return d
+  })
   _districts = {
-    list: raw,
-    byCode: new Map(raw.map((d) => [d.districtCode, d])),
+    list: merged,
+    byCode: new Map(merged.map((d) => [d.districtCode, d])),
   }
   return _districts
 }
@@ -182,6 +201,11 @@ export function searchDistricts(q, lang = 'en', limit = 8) {
         province_en: p?.provinceNameEn ?? null,
         province_th: p?.provinceNameTh ?? null,
         postal_code: d.postalCode,
+        // Bangkok overlay carries proper centroids; other provinces
+        // don't have district centroids yet so the caller falls back
+        // to the province centroid in searchGazetteer.
+        lat: d.lat ?? null,
+        lng: d.lng ?? null,
       }
     })
 }
@@ -582,14 +606,20 @@ export function searchGazetteer(db, { q = '', limit = 20, lang = 'en' } = {}) {
   // ── Districts (in-memory) ─────────────────────────────────────────────
   for (const d of searchDistricts(q, lang, 5)) {
     const p = loadProvinces().byCode.get(d.province_code)
+    // Bangkok uses เขต (khet) — อำเภอ reads as "amphoe" which is
+    // misleading for a capital-city district label.
+    const isBkk = d.province_code === 10
     results.push({
       type: 'district',
-      type_th: 'อำเภอ', type_en: 'District',
+      type_th: isBkk ? 'เขต' : 'อำเภอ', type_en: 'District',
       name_th: d.name_th, name_en: d.name_en,
       province_th: d.province_th, province_en: d.province_en,
-      // No district centroid yet — fly to the parent province centroid.
-      lat: p?.lat ?? null, lng: p?.lng ?? null,
-      zoom: 10,
+      // Bangkok districts have their own centroids in the overlay file
+      // (so "Saphan Mai" flies to north Bangkok, not the province
+      // centroid which is the river-mouth ~25 km south). Other
+      // provinces still fall back to the province centroid.
+      lat: d.lat ?? p?.lat ?? null, lng: d.lng ?? p?.lng ?? null,
+      zoom: 11,
     })
   }
 

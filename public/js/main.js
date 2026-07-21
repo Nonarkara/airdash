@@ -1,30 +1,30 @@
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.0.0-audit5'
-import { paintChrome } from './i18n.js?v=2.0.0-audit5'
-import { startTap } from './sse.js?v=2.0.0-audit5'
-import { initMap, invalidateMap } from './map.js?v=2.0.0-audit5'
-import { initHeader } from './panels/header.js?v=2.0.0-audit5'
-import { initRanking } from './panels/ranking.js?v=2.0.0-audit5'
-import { initForecast } from './panels/forecast.js?v=2.0.0-audit5'
-import { initWhatIf } from './panels/whatif.js?v=2.0.0-audit5'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.0.0-audit5'
-import { initTap } from './panels/tap.js?v=2.0.0-audit5'
-import { initSources } from './panels/sources.js?v=2.0.0-audit5'
-import { initHistory } from './panels/history.js?v=2.0.0-audit5'
-import { initInsights } from './panels/insights.js?v=2.0.0-audit5'
-import { initAnalytics } from './panels/analytics.js?v=2.0.0-audit5'
-import { initFeeds } from './panels/feeds.js?v=2.0.0-audit5'
-import { initChat } from './panels/chat.js?v=2.0.0-audit5'
-import { initCitizen } from './panels/citizen.js?v=2.0.0-audit5'
-import { initWaterways } from './panels/waterways.js?v=2.0.0-audit5'
-import { initFocus } from './panels/focus.js?v=2.0.0-audit5'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-audit5'
-import { initSplit } from './panels/split.js?v=2.0.0-audit5'
-import { initLibrary } from './panels/library.js?v=2.0.0-audit5'
-import { initResearch } from './panels/research.js?v=2.0.0-audit5'
-import { initSearch } from './panels/search.js?v=2.0.0-audit5'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.0.0-audit5'
+import { on, emit, store, setLang } from './state.js?v=2.0.0-saphan1'
+import { paintChrome } from './i18n.js?v=2.0.0-saphan1'
+import { startTap } from './sse.js?v=2.0.0-saphan1'
+import { initMap, invalidateMap } from './map.js?v=2.0.0-saphan1'
+import { initHeader } from './panels/header.js?v=2.0.0-saphan1'
+import { initRanking } from './panels/ranking.js?v=2.0.0-saphan1'
+import { initForecast } from './panels/forecast.js?v=2.0.0-saphan1'
+import { initWhatIf } from './panels/whatif.js?v=2.0.0-saphan1'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.0.0-saphan1'
+import { initTap } from './panels/tap.js?v=2.0.0-saphan1'
+import { initSources } from './panels/sources.js?v=2.0.0-saphan1'
+import { initHistory } from './panels/history.js?v=2.0.0-saphan1'
+import { initInsights } from './panels/insights.js?v=2.0.0-saphan1'
+import { initAnalytics } from './panels/analytics.js?v=2.0.0-saphan1'
+import { initFeeds } from './panels/feeds.js?v=2.0.0-saphan1'
+import { initChat } from './panels/chat.js?v=2.0.0-saphan1'
+import { initCitizen } from './panels/citizen.js?v=2.0.0-saphan1'
+import { initWaterways } from './panels/waterways.js?v=2.0.0-saphan1'
+import { initFocus } from './panels/focus.js?v=2.0.0-saphan1'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-saphan1'
+import { initSplit } from './panels/split.js?v=2.0.0-saphan1'
+import { initLibrary } from './panels/library.js?v=2.0.0-saphan1'
+import { initResearch } from './panels/research.js?v=2.0.0-saphan1'
+import { initSearch } from './panels/search.js?v=2.0.0-saphan1'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.0.0-saphan1'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -447,5 +447,5 @@ async function boot() {
 boot()
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}))
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=2.0.0-saphan1').catch(() => {}))
 }
