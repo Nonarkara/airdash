@@ -53,6 +53,37 @@ export const CONFIG = {
     alertCooldownMs: 6 * HOUR,
   },
 
+  // Physical bounds for each metric — readings outside [min, max] are
+  // treated as sensor errors and dropped to null, NOT pushed through
+  // (which would skew the watch score, fire false alerts, and break
+  // the "no mock data — every number is real" promise). The maxes are
+  // set comfortably above the worst real-world observation we know of
+  // (Hanoi 2019 PM2.5 ≈ 900 µg/m³, Delhi Diwali PM2.5 ≈ 1000 µg/m³,
+  //  PCD/Air4Thai Hazardous AQI = 500, PCD noise sensor ceiling = 140 dB),
+  // so anything past the bound is a sensor reading NaN/garbage, not a
+  // measurement. Each rejected value is logged once per ingest so the
+  // operator can see whether a particular station is reporting bad data
+  // — a 1-in-1000 outlier is a curiosity, ten of them from one station
+  // is a hardware problem that should be reported to PCD.
+  validityBounds: {
+    pm25:        { min:   0, max:  1200 },   // µg/m³ (Hanoi worst)
+    pm10:        { min:   0, max:  3000 },   // µg/m³
+    o3:          { min:   0, max:  1000 },   // ppb
+    no2:         { min:   0, max:  2000 },   // ppb
+    so2:         { min:   0, max:  2000 },   // ppb
+    co:          { min:   0, max:   100 },   // ppm
+    aqi:         { min:   0, max:   500 },   // Air4Thai composite cap
+    noise_leq:   { min:  20, max:   140 },   // dB(A) (sensor ceiling)
+    noise_max:   { min:  20, max:   145 },   // dB(A)
+    rain_1h:     { min:   0, max:   500 },   // mm
+    rain_24h:    { min:   0, max:  1500 },   // mm
+    temperature: { min: -50, max:    60 },   // °C
+    humidity:    { min:   0, max:   100 },   // %
+    wind_speed:  { min:   0, max:   200 },   // km/h
+    wind_gust:   { min:   0, max:   300 },   // km/h
+    pressure:    { min: 870, max:  1080 },   // hPa
+  },
+
   retention: {
     rawDays: 90,       // raw readings older than this roll up into readings_hourly
     runAtHour: 3,      // local time, quiet hours

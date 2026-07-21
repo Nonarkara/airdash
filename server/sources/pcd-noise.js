@@ -20,7 +20,7 @@
 // Cadence: 30 min. PCD refreshes daily; sub-hourly polling lets us
 // catch the morning rollover without re-hammering the upstream.
 import { CONFIG } from '../config.js'
-import { num, nowLocal } from '../util.js'
+import { num, nowLocal, validNum } from '../util.js'
 import { storeReadings } from './thaiwater-common.js'
 import { provinceByName } from '../provinces.js'
 
@@ -119,7 +119,7 @@ export default {
         // Latest entry = most recent completed 24h window.
         const latest = series[series.length - 1]
         const prev = series.length >= 2 ? series[series.length - 2] : null
-        const leq = num(latest[1])
+        const leq = validNum(latest[1], 'noise_leq', 'pcd_noise')
         if (leq === null) continue
         // Dead upstream stations keep returning the last entry of an old
         // month series; skip anything whose latest 24h window is older
@@ -149,7 +149,7 @@ export default {
           db, alerts, source: 'pcd_noise', station,
           metrics: {
             noise_leq_db: leq,
-            noise_leq_prev_db: prev ? num(prev[1]) : null,
+            noise_leq_prev_db: prev ? validNum(prev[1], 'noise_leq', 'pcd_noise') : null,
             noise_samples: latest[2],
           },
           obs_time, fetched_at, now,

@@ -4,7 +4,7 @@
 // Fetched via curl because the upstream serves an incomplete TLS chain Node's
 // fetch rejects (see util.js).
 import { CONFIG } from '../config.js'
-import { curlJson, num, str } from '../util.js'
+import { curlJson, num, str, validNum } from '../util.js'
 import { storeReadings } from './thaiwater-common.js'
 import { provinceByName } from '../provinces.js'
 
@@ -18,10 +18,15 @@ function provinceFromArea(area) {
   return str(parts.at(-1))
 }
 
-/** Air4Thai reports missing values as -1 or "-1". */
-function reading(x) {
+/** Air4Thai reports missing values as -1 or "-1", and on rare occasions
+ *  ships a wildly out-of-range value when a station's sensor hangs at
+ *  full scale (a 9,999 µg/m³ PM2.5 reading is a hardware fault, not
+ *  the worst air day in history). Combine the upstream's "missing"
+ *  sentinel with AirDash's per-metric sanity bound. */
+function reading(x, metric) {
   const n = num(x)
-  return n !== null && n >= 0 ? n : null
+  if (n === null || n < 0) return null
+  return validNum(n, metric, 'air4thai')
 }
 
 export default {
@@ -51,13 +56,13 @@ export default {
         const obs_time = `${date}T${time}`
 
         const metrics = {
-          pm25: reading(last?.PM25?.value),
-          pm10: reading(last?.PM10?.value),
-          o3: reading(last?.O3?.value),
-          co: reading(last?.CO?.value),
-          no2: reading(last?.NO2?.value),
-          so2: reading(last?.SO2?.value),
-          aqi: reading(last?.AQI?.aqi),
+          pm25: reading(last?.PM25?.value, 'pm25'),
+          pm10: reading(last?.PM10?.value, 'pm10'),
+          o3: reading(last?.O3?.value, 'o3'),
+          co: reading(last?.CO?.value, 'co'),
+          no2: reading(last?.NO2?.value, 'no2'),
+          so2: reading(last?.SO2?.value, 'so2'),
+          aqi: reading(last?.AQI?.aqi, 'aqi'),
         }
         if (metrics.aqi !== null && metrics.aqi > CONFIG.thresholds.aqiUnhealthy) unhealthy += 1
         if (metrics.pm25 !== null && (!worst || metrics.pm25 > worst.pm25)) {

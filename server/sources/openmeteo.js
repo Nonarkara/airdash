@@ -3,7 +3,7 @@
 // stagnation proxy). One multi-point call over all 77 province centroids
 // from the DOPA registry (public/geo/provinces.json).
 import { CONFIG } from '../config.js'
-import { fetchJson, nowLocal } from '../util.js'
+import { fetchJson, nowLocal, num, validNum } from '../util.js'
 import { storeReadings } from './thaiwater-common.js'
 import { allProvinces } from '../provinces.js'
 
@@ -51,18 +51,23 @@ export default {
         const val = (arr, idx) => (Array.isArray(arr) && Number.isFinite(arr[idx]) ? arr[idx] : null)
         const num = (v) => (Number.isFinite(v) ? v : null)
 
-        const sums = [0, 1, 2].map((k) => val(d.precipitation_sum, k))
+        // Sanity-bound each metric. Open-Meteo's forecast can occasionally
+        // ship a nonsense value (the wind speed units have flipped on
+        // their API more than once over the years), and a 2000 mm/day
+        // precipitation forecast or a 1000 km/h wind reading would
+        // skew the washout engine and the danger score.
+        const sums = [0, 1, 2].map((k) => validNum(val(d.precipitation_sum, k), 'rain_24h', 'openmeteo'))
         const probs = [0, 1, 2].map((k) => val(d.precipitation_probability_max, k))
-        const winds = [0, 1, 2].map((k) => val(d.wind_speed_10m_max, k))
+        const winds = [0, 1, 2].map((k) => validNum(val(d.wind_speed_10m_max, k), 'wind_speed', 'openmeteo'))
 
         // Live temperature / humidity / apparent temperature — used by the
         // Danger Score to capture heat-amplification and hygroscopic-growth
         // effects on the same air mass. Open-Meteo's `current` is the
         // model-time at request, which for our 3-hourly poll cadence is
         // fresh enough for the daily-mean score the Danger Score reports.
-        const tempC = c ? num(c.temperature_2m) : null
-        const rh = c ? num(c.relative_humidity_2m) : null
-        const apparentC = c ? num(c.apparent_temperature) : null
+        const tempC = c ? validNum(c.temperature_2m, 'temperature', 'openmeteo') : null
+        const rh = c ? validNum(c.relative_humidity_2m, 'humidity', 'openmeteo') : null
+        const apparentC = c ? validNum(c.apparent_temperature, 'temperature', 'openmeteo') : null
 
         const next48 = sums[0] !== null && sums[1] !== null ? sums[0] + sums[1] : null
         const prob48 = probs[0] !== null && probs[1] !== null ? Math.max(probs[0], probs[1]) : (probs[0] ?? probs[1])

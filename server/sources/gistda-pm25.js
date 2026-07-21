@@ -19,7 +19,7 @@
 // Cadence: 1 hour. GISTDA itself refreshes hourly; we poll hourly with a
 // small jitter so we don't hammer the same minute.
 import { CONFIG } from '../config.js'
-import { fetchJson, nowLocal, num } from '../util.js'
+import { fetchJson, nowLocal, num, validNum } from '../util.js'
 import { storeReadings } from './thaiwater-common.js'
 import { provinceByName } from '../provinces.js'
 
@@ -50,8 +50,13 @@ export default {
         // with the rest of the system. GISTDA uses the same numeric codes
         // as the PCD registry, so this lands correctly.
         const prov = provinceByName(row.pv_tn, row.pv_en)
-        const pm25 = num(row.pm25)
-        const pm25Avg24h = num(row.pm25Avg24hr)
+        // Sanity-bound the PM2.5 values: GISTDA's satellite+ground fusion
+        // occasionally returns a wildly out-of-range value (a hung sensor
+        // at a single ground station can spike a province to 9999 µg/m³).
+        // 1200 µg/m³ is comfortably above the worst real-world observation
+        // we know of, so anything past the bound is dropped, not stored.
+        const pm25 = validNum(row.pm25, 'pm25', 'gistda_pm25')
+        const pm25Avg24h = validNum(row.pm25Avg24hr, 'pm25', 'gistda_pm25')
         if (pm25 === null && pm25Avg24h === null) continue
 
         const station = {

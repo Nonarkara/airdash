@@ -1,6 +1,6 @@
 // ThaiWater aggregated national rain gauges (multi-agency, ~4,200 stations).
 import { CONFIG } from '../config.js'
-import { fetchJson, num, str, normTime } from '../util.js'
+import { fetchJson, num, str, normTime, validNum } from '../util.js'
 import { stationIdentity, storeReadings } from './thaiwater-common.js'
 
 const URL = 'https://api-v3.thaiwater.net/api/v1/thaiwater30/public/rain_24h'
@@ -51,7 +51,13 @@ export default {
       const obs_time = normTime(row.rainfall_datetime)
       if (!obs_time) return 0
 
-      const rain24 = num(row.rain_24h)
+      // Sanity-bound both rain metrics: a 1h reading over 500mm or a
+      // 24h reading over 1500mm is a sensor fault, not a 1-in-1000-year
+      // flood event. The bound is comfortably above the worst real Thai
+      // flood on record (Hat Yai 2000 ≈ 400mm/24h) so genuine extremes
+      // still pass; only garbage readings get dropped.
+      const rain1 = validNum(row.rain_1h, 'rain_1h', 'thaiwater_rain')
+      const rain24 = validNum(row.rain_24h, 'rain_24h', 'thaiwater_rain')
       if (rain24 !== null && rain24 >= t.rainVeryHeavy24h) veryHeavy += 1
       else if (rain24 !== null && rain24 >= t.rainHeavy24h) heavy += 1
 
@@ -65,14 +71,14 @@ export default {
 
       const newCount = storeReadings({
         db, alerts, source: 'thaiwater_rain', station,
-        metrics: { rain_1h: num(row.rain_1h), rain_24h: rain24 },
+        metrics: { rain_1h: rain1, rain_24h: rain24 },
         obs_time, fetched_at, now,
       })
       // Notable = past AirDash's "worth a tap event" bar (10 mm/24h), not
       // TMD's very-heavy category — rainy-season gauges cross 90 mm rarely,
       // and 10 mm is already decisive washout for the dust situation.
       if (newCount > 0 && rain24 !== null && rain24 >= t.rainNotable24h) {
-        notable.push({ station, rain24, rain1: num(row.rain_1h) })
+        notable.push({ station, rain24, rain1 })
       }
       return newCount
     }
