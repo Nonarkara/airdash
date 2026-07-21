@@ -603,10 +603,21 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   .brand .sub-short { display: none; }
   .focusbox { display: none; }   /* city selection moves to dashboard grid */
   .searchbox { min-width: 120px; max-width: 200px; }
-  /* Freshness pill stays — the user still needs to know "is this number
-     current?" even when there's no room for the long subtitle. The
-     wordmark + pill combo is the entire brand on a phone. */
-  .brand .data-freshness { display: inline-block; }
+  /* On phone the brand block is hidden entirely (see the 1100px layout
+     switch below) so the in-brand freshness pill goes with it. We
+     re-show the pill as a fixed corner overlay so the user still gets
+     the "is this current?" signal even on a 320px viewport. The corner
+     placement avoids the densely packed header and is tappable for the
+     long-form truth. */
+  .data-freshness {
+    position: fixed;
+    bottom: calc(var(--ticker-h, 32px) + 8px);
+    right: 8px;
+    z-index: 600;
+    margin: 0;
+    font-size: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+  }
 }
 
 /* ── Compact view: map on top, tabbed sheet below ────────────────────────
