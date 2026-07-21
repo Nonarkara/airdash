@@ -12,12 +12,24 @@ const KIND_LABEL = {
   reference: { th: 'อ้างอิง', en: 'reference' },
 }
 
+// Per-pipeline freshness band thresholds. The default cadence for most
+// pipelines is 10–60 min, so a pipeline that hasn't updated in 2× its
+// interval is "stale" by definition; <1× is healthy; between is aging.
+// The /api/snapshot payload already gives us the source's intervalMs
+// (so we don't hardcode cadences here), but the bands are kept simple:
+//   <1× interval  → fresh
+//   1–2× interval → aging
+//   >2× interval  → stale
+const BAND = { ok: 'ok', warn: 'warn', stale: 'stale' }
+
 let catalog = null
 
 export function initSources() {
   load()
   refreshSensorHealth().catch(() => {})
   on('sensor-health', paint)
+  on('snapshot', paint)   // re-paint when a new snapshot arrives so the
+                          // "last update X min ago" line stays current
   on('lang', paint)
 }
 
@@ -95,6 +107,81 @@ function sectionHead(title) {
   return el('div', { class: 'src-section' }, title)
 }
 
+// Plain-language age string used in the source card's "last update" line.
+// Mirrors the format the dataFreshness module uses so the operator sees
+// the same wording in the header pill and the source card.
+function ageText(ageSec, lang) {
+  if (ageSec == null || !Number.isFinite(ageSec)) {
+    return tr('ไม่ทราบ', 'unknown')
+  }
+  if (ageSec < 0) return tr('เร็วๆ นี้', 'just now')
+  if (ageSec < 120) {
+    const s = Math.floor(ageSec)
+    return lang === 'th' ? `${s} วินาทีที่แล้ว` : `${s} sec ago`
+  }
+  if (ageSec < 3600) {
+    const m = Math.floor(ageSec / 60)
+    return lang === 'th' ? `${m} นาทีที่แล้ว` : `${m} min ago`
+  }
+  const h = Math.floor(ageSec / 3600)
+  return lang === 'th' ? `${h} ชม. ที่แล้ว` : `${h} h ago`
+}
+
+// Per-pipeline freshness band — uses the source's own intervalMs from
+// the snapshot payload so a 1h pipeline and a 10-min pipeline share the
+// same band semantics (1× the cadence is the threshold, not 15 minutes).
+function pipelineBand(ageSec, intervalMs) {
+  if (ageSec == null || !Number.isFinite(ageSec)) return 'unknown'
+  if (!intervalMs) return ageSec < 15 * 60 ? 'ok' : ageSec < 60 * 60 ? 'warn' : 'stale'
+  if (ageSec < intervalMs / 1000) return 'ok'
+  if (ageSec < 2 * intervalMs / 1000) return 'warn'
+  return 'stale'
+}
+
+// Per-pipeline "last update" line. Pipeline sources have a runtime
+// status (lastOk / failures) from /api/snapshot; remote/reference
+// sources don't, so we only show the line for pipelines.
+function freshnessLine(sourceId) {
+  if (!store.snapshot?.sources) return null
+  const live = store.snapshot.sources[sourceId]
+  if (!live) return null
+  const lang = store.lang
+  const intervalMs = live.intervalMs
+  const lastOkStr = live.lastOk
+  if (!lastOkStr) {
+    return el('div', { class: 'src-fresh src-fresh--unknown' },
+      tr('ยังไม่เคยอัปเดต', 'never updated'))
+  }
+  const lastOk = new Date(lastOkStr)
+  if (!Number.isFinite(lastOk.getTime())) return null
+  const ageSec = (Date.now() - lastOk.getTime()) / 1000
+  const band = pipelineBand(ageSec, intervalMs)
+  const failures = Number(live.failures ?? 0)
+  const parts = []
+  parts.push(tr('อัปเดต', 'updated'))
+  parts.push(ageText(ageSec, lang))
+  if (failures > 0) {
+    parts.push(tr(`ผิดพลาด ${failures} ครั้งล่าสุด`, `${failures} recent failure${failures > 1 ? 's' : ''}`))
+  }
+  // Long hover truth: the source's local timestamp, the band, and the
+  // last error message if there is one. Operators investigating "why is
+  // this data old" can hover to see the actual error string instead of
+  // having to dig through the logs.
+  const clock = lastOk.toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+  const bandLabel = band === 'ok'
+    ? tr('สด', 'live')
+    : band === 'warn'
+      ? tr('เริ่มเก่า', 'aging')
+      : tr('เก่า', 'stale')
+  const hover = lang === 'th'
+    ? `อัปเดตล่าสุด ${clock} น. (เวลาไทย) — ${bandLabel}${live.lastError ? '\nข้อผิดพลาด: ' + live.lastError : ''}`
+    : `last refresh ${clock} BKK — ${bandLabel}${live.lastError ? '\nlast error: ' + live.lastError : ''}`
+  return el('div', { class: `src-fresh src-fresh--${band}`, title: hover },
+    '🕒 ', parts.join(' · '))
+}
+
 function sourceCard(s) {
   const kind = KIND_LABEL[s.kind] ?? KIND_LABEL.pipeline
   return el('div', { class: 'src-card' },
@@ -110,6 +197,10 @@ function sourceCard(s) {
       el('span', {}, tr('ความถี่', 'cadence'), ': ', tr(s.cadence_th, s.cadence_en)),
       s.metrics?.length ? el('span', {}, ' · ', s.metrics.join(', ')) : null,
     ),
+    // Per-pipeline freshness line — shows the last successful ingest
+    // for this specific source, color-coded against the source's own
+    // cadence. Remote / reference sources (no runtime status) skip it.
+    freshnessLine(s.id),
     el('div', { class: 'src-note' }, tr(s.note_th, s.note_en)),
     el('div', { class: 'src-links' },
       link(s.url, tr('แหล่งต้นทาง', 'upstream')),
