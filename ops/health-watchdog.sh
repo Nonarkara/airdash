@@ -144,9 +144,15 @@ else
 fi
 
 # ── 4. Disk space (preventive — caused a 09:23 boot loop earlier) ─────
-# df -P / gives POSIX-formatted output: a header line + 1+ data lines,
-# the "Use%" column on the data line is the percentage used.
-disk_pct=$(df -P / 2>/dev/null | awk 'NR==2 {sub("%","",$5); print $5}')
+# df -P /System/Volumes/Data gives POSIX-formatted output: a header line
+# + 1+ data lines, the "Use%" column on the data line is the percentage
+# used. Deliberately NOT `df -P /` — on macOS, `/` is the small, sealed
+# read-only system volume and almost never fills up; all real user data
+# (this project's DB, logs, npm/browser caches, everything under $HOME)
+# lives on the separate Data volume. Checking `/` reported "43% used —
+# ok" while Data was at 100%, silently masking the exact outage this
+# check exists to catch.
+disk_pct=$(df -P /System/Volumes/Data 2>/dev/null | awk 'NR==2 {sub("%","",$5); print $5}')
 if [ -z "$disk_pct" ]; then
   log "warn: could not read disk usage"
 elif [ "$disk_pct" -ge 92 ]; then
