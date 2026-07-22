@@ -375,6 +375,25 @@ export function createRisk(db, washout) {
         // scanner) can read the same picture without holding a reference
         // to the in-process cache.
         try { db.kvSet('risk_snapshot_cache', JSON.stringify(cache)) } catch {}
+        // ALSO write the slim 'risk_provinces' projection that the push
+        // ticks (linePush.js, telegramPush.js) and the Telegram bot's
+        // /province resolver (telegramWebhook.js) actually read. Their
+        // comments documented this key as "the risk module's cache" but
+        // nothing ever wrote it — leaving the 5-minute danger-reminder
+        // tick and the /province command permanently dead. Both keys are
+        // written from the same computed snapshot; risk_snapshot_cache is
+        // kept untouched for back-compat.
+        try {
+          const slim = cache.provinces.map((p) => ({
+            province_code: p.province_code,
+            province_th: p.province_th,
+            province_en: p.province_en,
+            band: p.band,
+            score: p.score,
+            pm25: p.pm25,
+          }))
+          db.kvSet('risk_provinces', JSON.stringify(slim))
+        } catch {}
       }
       return cache
     },

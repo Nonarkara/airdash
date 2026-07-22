@@ -10,6 +10,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] — 2026-07-21
+
+### Air Story front door + Science engine
+
+The front page becomes a story, the dashboard becomes Mission Control,
+and every µg/m³ gets translated into human units — with receipts.
+
+#### Added
+
+* **Air Story** (`public/index.html` + `public/css/story.css` +
+  `public/js/story.js`) — a scroll-based bilingual narrative front door
+  for smart kids and curious adults: a breathing full-viewport hero
+  circle tinted by the live Thai AQI band carrying a giant
+  cigarette-equivalents number (22 µg/m³·day ≈ 1 cigarette, Berkeley
+  Earth rule); a 7-persona selector (kid / teen / adult / athlete /
+  senior / pregnant / asthma, kid default) driving personalized dose,
+  play budget, and guidance from `/api/science/personal`; a body-journey
+  SVG; **The Wallet** (daily national haze bill via VSL, per-person
+  "haze tax", 3 freakonomics cards — the externality of field burning,
+  the information asymmetry of invisible PM2.5, present bias); **The
+  Sky** (Koschmieder visibility estimate + stagnation explainer + cause
+  chips); **The Forest** (AOT40-style ozone crop stress); a **Science
+  Receipts** formula wall rendered from `/api/science` `meta.formulas`;
+  and an **ACT** chapter (band-aware checklist, LINE OA / LINE Notify /
+  Telegram signup, link to Mission Control).
+* **Science engine** (`server/science.js`, `createScience` factory,
+  60 s TTL cache) — the health-translation layer: cigarette-equivalents,
+  life-minutes, excess mortality, AQLI life-expectancy years, the
+  national haze bill + per-person haze tax, Koschmieder visibility, and
+  AOT40-style ozone crop stress. New endpoints `GET /api/science`
+  (national + 77 provinces + persona profiles + `meta.formulas`
+  receipts) and `GET /api/science/personal?pm25|province&profile&outdoorMin&activity`.
+  Constants in `CONFIG.science`; citations include WHO 2021, Liu et al.
+  2019 (NEJM), Burnett et al. 2018 (GEMM), AQLI / EPIC U. Chicago,
+  Müller & Müller (Berkeley Earth), Koschmieder 1924, and Spiegelhalter
+  microlives.
+* **`server/populations.js`** — 77 DOPA province populations for the
+  per-capita haze economics.
+* **`server/washout-curve.js`** — the ONE shared rain-relief curve
+  (1–5 mm → 8% · 5–15 → 20% · 15–35 → 30% · 35+ → 40%), now used by
+  both `danger.js` and `washout.js` so every engine agrees.
+* **`knowledge/health-science.md`** — full formula documentation; feeds
+  the in-app Air Library via the `knowledge/*.md → rag_docs` convention.
+
+#### Changed
+
+* **Operator dashboard preserved at `/ops.html`** ("Mission Control") —
+  the former index.html (header + ranking rail + Leaflet map + 11-tab
+  right rail + ticker) with a หน้าแรก/Home chip back to `/`. Chart and
+  analytics palettes de-FloodDashed to the AirDash tokens.
+* **Palette rebrand** — the FloodDash palette (warm paper `#F6F4EF`,
+  navy `#241E4E`, Thai-flag red `#A51931`, IBM Plex Mono) is replaced by
+  light sky paper `#F4F8FB`, deep-teal ink `#0E4A5E`, sage `#3A8A6E`,
+  ochre `#D8893A`, brick `#C8453A`, purple `#6B2D5C`, and the Thai-AQI
+  5-band severity palette; Sarabun + Manrope + JetBrains Mono. Sharp
+  corners, no shadows, full automatic dark mode, and
+  `prefers-reduced-motion` support throughout.
+
+#### Fixed
+
+* TMD rain thresholds added (10 / 35 / 90 mm).
+* One shared washout relief curve (8 / 20 / 30 / 40 %) across the
+  danger, washout, forecast, and what-if engines.
+* Danger-score forecast base reconciled.
+* Non-Thai province codes filtered (78 → 77 provinces; Myanmar gauge
+  excluded).
+* Sensor freshness map completed (gistda_pm25 3 h, pcd_noise 36 h,
+  openmeteo_aq_hist 7 d).
+* Rate-limit keys computed on the last untrusted XFF hop (Cloudflare
+  Pages proxy topology).
+
+---
+
 ## [1.0.0] — 2026-07-16
 
 ### AirDash born from the FloodDash backbone

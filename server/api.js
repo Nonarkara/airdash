@@ -1213,11 +1213,26 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
     },
 
     // Diagnostic — count of active subs, last push time. Operator-facing.
+    // LINE Notify went EOL on 2025-03-31: the flat legacy fields describe
+    // the Notify per-token path ONLY and are kept for back-compat; the
+    // segregated blocks tell the truth per channel — Notify (defunct)
+    // vs OA broadcast (live, kv 'line_last_push').
     'GET /api/line/stats': (req, res) => {
       try {
         const total = db.get('SELECT COUNT(*) AS n FROM line_subs').n
         const last = db.kvGet('line_push_last_at')
-        json(res, 200, { total_subs: total, last_push_at: last })
+        json(res, 200, {
+          total_subs: total, last_push_at: last, // legacy: Notify path only
+          notify: {
+            channel_status: 'eol_2025-03-31',
+            total_subs: total,
+            last_push_at: last,
+          },
+          oa_broadcast: {
+            channel_status: 'active',
+            last_push_at: db.kvGet('line_last_push'),
+          },
+        })
       } catch {
         return json(res, 503, LINE_PUSH_UNAVAILABLE)
       }

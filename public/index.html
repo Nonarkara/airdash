@@ -14,6 +14,25 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230E4A5E'/%3E%3Ccircle cx='11.5' cy='4.5' r='2.5' fill='%233A8A6E'/%3E%3Cpath d='M2 8h12M2 10.5h9M2 13h12' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round' opacity='0.9'/%3E%3Ccircle cx='13' cy='10.5' r='1' fill='%23C8453A'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/css/tokens.css?v=2.0.0-fresh1">
 <link rel="stylesheet" href="/css/story.css?v=2.1.0-story1">
+<style>
+/* Slim live-alert strip — appears under the hero only when the air is
+   dangerous somewhere (sev≥2 alert in the last 24h) or the viewed area is
+   ≥ unhealthy. Inline here because public/css is owned elsewhere. */
+.alert-strip {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  flex-wrap: wrap; padding: 10px 16px; margin: 0;
+  font-size: 14px; line-height: 1.4; text-align: center;
+  color: #fff; background: var(--aqi-unhealthy, #c97b1e);
+}
+.alert-strip.severe { background: var(--aqi-hazardous, #b03a2e); }
+.alert-strip a { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+.alert-strip .as-msg { font-weight: 600; text-decoration: none; }
+.alert-strip .as-cta { white-space: nowrap; font-weight: 600; }
+@media (prefers-reduced-motion: no-preference) {
+  .alert-strip { animation: strip-in 400ms ease-out; }
+  @keyframes strip-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+}
+</style>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
 </head>
@@ -73,6 +92,14 @@
 
     <a class="scrollcue" href="#ch-persona"><span data-i18n="เลื่อนลงเพื่อฟังต่อ|scroll for the story">เลื่อนลงเพื่อฟังต่อ</span><span class="arrow" aria-hidden="true">↓</span></a>
   </section>
+
+  <!-- Live alert strip — hidden unless /api/alerts has an active sev≥2
+       alert in the last 24h or the viewed area is ≥ unhealthy. Filled and
+       revealed by story.js (renderAlertStrip). -->
+  <div class="alert-strip" id="alert-strip" hidden role="alert">
+    <a class="as-msg" id="alert-strip-msg" href="/ops.html"></a>
+    <a class="as-cta" href="#act-subscribe" data-i18n="รับการแจ้งเตือน →|Get alerts →">รับการแจ้งเตือน →</a>
+  </div>
 
   <!-- ── 2 · PERSONA ──────────────────────────────────────────────────── -->
   <section class="chapter persona" id="ch-persona" aria-labelledby="persona-h">
@@ -222,14 +249,19 @@
       <span class="en-sub" data-i18n="เล็ก ๆ แต่ปกป้องปอดได้จริง|SMALL MOVES THAT ACTUALLY PROTECT YOUR LUNGS">เล็ก ๆ แต่ปกป้องปอดได้จริง</span>
     </h2>
 
+    <div class="alert-links act-cta" id="act-subscribe" style="margin-bottom:16px">
+      <a href="https://line.me/R/ti/p/@630xxaki" target="_blank" rel="noopener" data-i18n="🔔 LINE OA — รับแจ้งเตือน|🔔 LINE OA — get alerts">🔔 LINE OA — รับแจ้งเตือน</a>
+      <a href="https://t.me/AirDash_bot" target="_blank" rel="noopener" data-i18n="✈️ Telegram — รับแจ้งเตือน|✈️ Telegram — get alerts">✈️ Telegram — รับแจ้งเตือน</a>
+    </div>
+
     <div class="checklist" id="checklist"></div>
 
     <div data-i18n="อยากให้เตือนก่อนฝุ่นมา? สมัครรับแจ้งเตือนฟรี|Want a heads-up before the haze? Free alerts:">อยากให้เตือนก่อนฝุ่นมา? สมัครรับแจ้งเตือนฟรี</div>
     <div class="alert-links">
-      <a href="https://line.me/R/ti/p/@630xxaki" target="_blank" rel="noopener" data-i18n="LINE OA — แจ้งเตือนฝุ่นรุนแรงระดับประเทศ|LINE OA — national severe-haze alerts">LINE OA — แจ้งเตือนฝุ่นรุนแรงระดับประเทศ</a>
-      <a href="https://notify-bot.line.me/en/" target="_blank" rel="noopener" data-i18n="LINE Notify — เฉพาะจังหวัดของคุณ|LINE Notify — your province only">LINE Notify — เฉพาะจังหวัดของคุณ</a>
+      <a href="https://line.me/R/ti/p/@630xxaki" target="_blank" rel="noopener" data-i18n="LINE OA — ช่องทางหลัก · แจ้งเตือนฝุ่นรุนแรงระดับประเทศ|LINE OA — primary channel · national severe-haze alerts">LINE OA — ช่องทางหลัก · แจ้งเตือนฝุ่นรุนแรงระดับประเทศ</a>
       <a href="https://t.me/AirDash_bot" target="_blank" rel="noopener" data-i18n="Telegram — คุยกับ AirDash Bot|Telegram — chat with the AirDash bot">Telegram — คุยกับ AirDash Bot</a>
     </div>
+    <div class="en-sub" style="font-size:13px;opacity:0.75;margin-top:6px" data-i18n="LINE OA คือช่องทางหลักของเรา — บริการ LINE Notify ปิดให้บริการแล้ว (31 มี.ค. 2025)|LINE OA is our primary channel — the LINE Notify service was retired on 31 Mar 2025">LINE OA คือช่องทางหลักของเรา — บริการ LINE Notify ปิดให้บริการแล้ว (31 มี.ค. 2025)</div>
 
     <a class="mission" href="/ops.html">
       <div class="mt" data-i18n="ห้องควบคุมภารกิจ →|Mission Control →">ห้องควบคุมภารกิจ →</div>

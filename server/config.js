@@ -139,6 +139,15 @@ export const CONFIG = {
     spikeUg6h: 60,             // PM2.5 jump in 6 h considered a suspicious spike
   },
 
+  // LINE Notify was terminated by LINE on 2025-03-31 (EOL — see
+  // https://notify-bot.line.me/closing-announce). The per-token push path
+  // (server/linePush.js) targets a defunct API, so the 5-min tick is gated
+  // off here. The module is kept for history; flip back on only if a
+  // successor channel is wired in. The LINE OA broadcast path
+  // (server/line.js, @630xxaki) is unaffected and remains the primary
+  // LINE channel.
+  lineNotifyEnabled: false,
+
   // Cloud LLM via NVIDIA NIM (free tier, OpenAI-compatible API). The API key
   // is NOT stored here (this file is committed) — it's read at runtime from
   // the NVIDIA_NIM_KEY env var, or the DB kv table ('nim_api_key', set via

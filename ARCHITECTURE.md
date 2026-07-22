@@ -17,7 +17,9 @@ A Mac mini in Bangkok polls **9 public data sources** every 10 minutes
 to 12 hours, stores 130,000+ readings in SQLite, and runs two composite
 scoring engines — a **Watch Score** (long-horizon, trend-aware, 5-component
 weighted average) and a **Danger Score** (right-now, peer-reviewed,
-PM + heat + humidity + noise − rain relief). The Mac serves a JSON
+PM + heat + humidity + noise − rain relief) — plus a **Science engine**
+that translates live PM2.5 into cigarette-equivalents, life-minutes, the
+national haze bill, and visibility for the Air Story front door. The Mac serves a JSON
 API over a **Cloudflare Tunnel**; a **Cloudflare Pages Function**
 proxies every `/api/*` to the tunnel, and the **Cloudflare Pages**
 static site serves the HTML, CSS, JS, and Service Worker to the
@@ -35,7 +37,7 @@ loads in under 2 seconds on a phone.
 | **Live data sources** | 9 | Every number on screen is from a real public source, not interpolated |
 | **Stations monitored** | 4,887 | PCD / Air4Thai + GISTDA + HII + PCD Noise + IMERG + GISTDA heatmap |
 | **Readings persisted** | 130,830 | Every reading is in SQLite for full audit trail — no mock data ever |
-| **Provinces covered** | 78 (all) | Every จังหวัด in Thailand |
+| **Provinces covered** | 77 (all) | Every จังหวัด in Thailand — non-Thai codes filtered out |
 | **First paint** | < 2 s on phone | The 779 KB snapshot gzips to 93 KB |
 | **API p50 latency** | 1.4 s | Mac → Cloudflare → browser |
 | **API p99 latency** | 6 s | Tail latency budget |
@@ -68,9 +70,10 @@ flowchart LR
     RISK["Risk engine<br/>Watch Score 0-100"]
     DANGER["Danger engine<br/>PM + heat + hum + noise − rain"]
     WASHOUT["Washout engine"]
+    SCIENCE["Science engine<br/>health translation"]
     RAG["RAG / library"]
     TAP["Tap (live event bus)"]
-    API["REST API · /api/snapshot · /api/danger · /api/risk · /api/focus · /api/tap"]
+    API["REST API · /api/snapshot · /api/danger · /api/risk · /api/science · /api/focus · /api/tap"]
   end
 
   subgraph EDGE["Cloudflare edge"]
@@ -87,8 +90,8 @@ flowchart LR
 
   SOURCES == HTTPS/JSON ==> AD
   AD --> SQL
-  SQL --> RISK & DANGER & WASHOUT & RAG
-  RISK & DANGER & WASHOUT & RAG --> API
+  SQL --> RISK & DANGER & WASHOUT & SCIENCE & RAG
+  RISK & DANGER & WASHOUT & SCIENCE & RAG --> API
   API == gzip/SSE ==> TUNNEL
   TUNNEL --> FN
   PAGES -. assets .-> BROWSER
@@ -133,10 +136,10 @@ flowchart LR
 
 ---
 
-## 4. The two scoring engines
+## 4. The scoring engines
 
-AirDash shows two numbers on every screen. They answer two different
-questions.
+AirDash shows two scores on every screen, and a third engine translates
+them into human units. They answer three different questions.
 
 ### 4.1 The Watch Score (long-horizon, trend-aware)
 
@@ -190,6 +193,30 @@ The score is **scoped** in the UI: when a user picks a city, the chip
 shows that city's danger; when no city is picked, the chip shows the
 worst province nationally.
 
+### 4.3 The Science engine (health translation)
+
+> *What does this PM2.5 actually mean for my body, my kid, my wallet?*
+
+`server/science.js` (a `createScience` factory with a 60 s TTL cache)
+turns live PM2.5 into human units for the Air Story front door:
+cigarette-equivalents (Berkeley Earth — 22 µg/m³·day ≈ 1 cigarette),
+life-minutes (Spiegelhalter microlives), excess daily mortality (Liu et
+al. 2019, NEJM, above the WHO 2021 counterfactual), AQLI
+life-expectancy years (EPIC, U. Chicago), the national haze bill and
+per-person haze tax (VSL over the 77 DOPA province populations in
+`server/populations.js`), Koschmieder visibility, and AOT40-style ozone
+crop stress. Constants live in `CONFIG.science`; every formula ships to
+the browser with its constants and citation as **Science Receipts** via
+`meta.formulas`, and the full documentation is
+`knowledge/health-science.md` (which also feeds the Air Library through
+the `knowledge/*.md → rag_docs` convention).
+
+```
+GET /api/science        → national + 77 provinces + 7 persona profiles + meta.formulas
+GET /api/science/personal?pm25|province&profile&outdoorMin&activity
+                          → personalized dose, play budget, guidance
+```
+
 ---
 
 ## 5. The Washout engine (the unique third number)
@@ -201,8 +228,9 @@ worst province nationally.
 // 2)  × rain probability       (Open-Meteo)
 // 3)  → expected mm
 // 4)  Henzing 2006 washout:   Λ = a · R^b
-// 5)  step function:
-//       1 mm  →  5 % relief
+// 5)  step function (server/washout-curve.js — the ONE shared curve,
+//     used by washout, danger, forecast and what-if alike):
+//       1 mm  →  8 % relief
 //       5 mm  → 20 %
 //      15 mm  → 30 %
 //      35 mm  → 40 % (cap)
@@ -291,10 +319,12 @@ erDiagram
 | Endpoint | Method | Returns | Caching | Size |
 |---|---|---|---|---|
 | `/api/health` | GET | liveness + uptime + source state | none | ~5 KB |
-| `/api/snapshot` | GET | full aggregate (risk + danger + 78 provinces + alerts + news) | 5-min CDN, server gzip 93 KB | 779 KB raw |
+| `/api/snapshot` | GET | full aggregate (risk + danger + 77 provinces + alerts + news) | 5-min CDN, server gzip 93 KB | 779 KB raw |
 | `/api/danger` | GET | per-province Danger Score breakdown | 1 h | ~12 KB |
 | `/api/risk` | GET | per-province Watch Score with augmented `danger` block | 5 min | ~200 KB |
 | `/api/washout` | GET | rain-washout outlook per province | 1 min | ~5 KB |
+| `/api/science` | GET | national + 77-province health translations, persona profiles, formula receipts (`meta.formulas`) | 60 s | ~100 KB |
+| `/api/science/personal?pm25\|province&profile&outdoorMin&activity` | GET | personalized dose, play budget, guidance per persona | 60 s | small |
 | `/api/focus` | GET | 8 focus areas (Thailand + 7 cities) | 1 h | ~10 KB |
 | `/api/focus/:id` | GET | full city profile + risk + danger + washout + stations + forecast | 1 min | ~50 KB |
 | `/api/tap/recent?limit=N` | GET | last N events for hydration on first paint | none | ~10 KB |
@@ -435,7 +465,8 @@ dashboard that breaks and one that survives deploys:
 
 ```mermaid
 flowchart TD
-  INDEX["index.html"]
+  STORY["index.html · Air Story (front door)"]
+  OPS["ops.html · Mission Control"]
   MAIN["main.js · boot()"]
   STATE["state.js · store · on · emit"]
 
@@ -455,7 +486,7 @@ flowchart TD
   end
 
   subgraph LEFT["Left rail"]
-    L1["ranking.js · 78 provinces"]
+    L1["ranking.js · 77 provinces"]
     L2["detail.js · drill-down"]
     L3["forecast.js · 3-day"]
     L4["whatif.js · rain slider"]
@@ -476,10 +507,15 @@ flowchart TD
     R11["chat.js · ASK"]
   end
 
-  INDEX --> MAIN
+  STORY -. "หน้าแรก/Home chip" .-> OPS
+  OPS --> MAIN
   MAIN --> HEADER & MAP & LEFT & RIGHT
   MAIN --> STATE
 ```
+
+Since the Air Story release, `index.html` is the narrative front door
+(`story.js` + `story.css`, driven by `/api/science`); the operator
+component tree below lives at `ops.html` (Mission Control).
 
 **Every panel is a single file under `public/js/panels/`.** Each
 exports a single `initX()` function. Each is wrapped in `safeInit()`
@@ -499,7 +535,12 @@ panel logs an error and the rest still load.
 | Heat amp slope | (T − 28) / 7, cap 30% | Scortichini et al. 2022 (BMJ, 620 cities) |
 | Humidity amp slope | (RH − 60) / 30, cap 25% | Liu et al. 2023 (hygroscopic PM2.5 growth) |
 | Noise amp slope | (Leq − 55) / 30, cap 30% | Kempen 2018 + WHO 2018 |
-| Washout step | 1mm=5%, 5mm=20%, 15mm=30%, 35mm=40% | Henzing 2006 Λ = aR^b |
+| Washout step | 1mm=8%, 5mm=20%, 15mm=30%, 35mm=40% (`server/washout-curve.js`, shared) | Henzing 2006 Λ = aR^b |
+| Cigarette-equivalence | 22 µg/m³·day ≈ 1 cigarette | Müller & Müller, Berkeley Earth |
+| Life-minutes | 1 cigarette ≈ 11 min (microlives) | Spiegelhalter 2012, BMJ |
+| Excess mortality | +0.68% per +10 µg/m³ above WHO 2021 24h guideline | Liu et al. 2019, NEJM |
+| AQLI life expectancy | sustained +10 µg/m³ ≈ −0.98 yr | EPIC, U. Chicago |
+| Visibility | V ≈ K / β (hygroscopic growth per Seinfeld & Pandis) | Koschmieder 1924 |
 | Watch Score weights | pm 0.40, other 0.10, trend 0.15, forecast 0.20, ventilation 0.15 | depa Scientific Committee |
 | Confidence interval | 95% (1.96 × SE / √n) | standard frequentist |
 

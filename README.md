@@ -7,11 +7,16 @@
 ## เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · Thailand Air Quality & Dust Watch
 
 > **Real-time data. Real impact. Better air. Better tomorrow.**
-> An operating system for air-quality decision making — for mayors, city
-> administrators, district officials, and citizens. Not a demo. Not a
-> dashboard. Every figure is real-time from Thai government sources, every
-> number carries a confidence interval, and the first thing on screen is
-> always the action the user should take.
+> An operating system for air-quality decision making — with two front
+> doors. **Air Story** (`/`) is a scroll-based bilingual narrative for
+> smart kids and curious adults: a breathing hero tinted by the live Thai
+> AQI band, your day in cigarette-equivalents, the national haze bill,
+> and every formula with its receipt. **Mission Control** (`/ops.html`)
+> is the preserved operator dashboard for mayors, district officials,
+> researchers, journalists, and air detectives. Every figure is real-time
+> from Thai government sources, every number carries a confidence
+> interval, and the first thing on screen is always the action the user
+> should take.
 
 <p align="center">
   <strong>🇹🇭 Live:</strong> <a href="https://air.nonarkara.org">air.nonarkara.org</a> ·
@@ -23,10 +28,10 @@
 <p align="center">
   <img alt="9 live data sources" src="https://img.shields.io/badge/data_sources-9-3A8A6E?style=flat-square">
   <img alt="4,887 stations" src="https://img.shields.io/badge/stations-4,887-3A8A6E?style=flat-square">
-  <img alt="78 provinces" src="https://img.shields.io/badge/provinces-78-3A8A6E?style=flat-square">
+  <img alt="77 provinces" src="https://img.shields.io/badge/provinces-77-3A8A6E?style=flat-square">
   <img alt="130,830 readings" src="https://img.shields.io/badge/readings-130,830-3A8A6E?style=flat-square">
   <img alt="$0/mo cloud" src="https://img.shields.io/badge/cloud-$0%2Fmo-0E4A5E?style=flat-square">
-  <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-241E4E?style=flat-square">
+  <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-0E4A5E?style=flat-square">
 </p>
 
 ---
@@ -48,6 +53,44 @@ the year.
 
 This is what every JMA-style action verb, every confidence interval, every
 hotline button, every nearest-station card, and every washout figure serves.
+
+---
+
+## 🚪 Two Experiences, One Engine
+
+### 📖 Air Story — the front door (`/`)
+
+A scroll-based bilingual narrative, not a dashboard — built for smart
+kids and curious adults. One question per chapter:
+
+* **The hero** — a full-viewport breathing circle tinted by the live
+  Thai AQI band, carrying the number everyone understands: today's
+  national PM2.5 in **cigarette-equivalents** (22 µg/m³·day ≈ 1
+  cigarette, the Berkeley Earth rule).
+* **The persona picker** — kid / teen / adult / athlete / senior /
+  pregnant / asthma (kid first — parents look for their kids). Each
+  persona gets a personalized dose, play budget, and guidance from
+  `GET /api/science/personal`.
+* **The body** — a body-journey SVG of where the particles go.
+* **The Wallet** — the daily national haze bill (value of statistical
+  life), your per-person "haze tax", and three freakonomics cards: the
+  externality of field burning, the information asymmetry of invisible
+  PM2.5, and present bias.
+* **The Sky** — a Koschmieder visibility estimate, a stagnation
+  explainer, and cause chips.
+* **The Forest** — AOT40-style ozone crop stress.
+* **Science Receipts** — every formula on the wall with its constants
+  and citation, rendered live from `/api/science` `meta.formulas`.
+* **ACT** — a band-aware checklist, alert signup (LINE OA / LINE
+  Notify / Telegram), and the bridge to Mission Control.
+
+### 🛰️ Mission Control — the operator dashboard (`/ops.html`)
+
+The original dashboard, preserved in full: header + ranking rail +
+Leaflet map + 11-tab right rail + ticker, re-paletted to the AirDash
+tokens. For mayors, district officials, researchers, journalists — and
+every air detective who wants the raw truth. A "หน้าแรก/Home" chip
+takes you back to Air Story.
 
 ---
 
@@ -142,7 +185,7 @@ English, sized to dominate the page. Pattern-match in under 500 ms
 | `normal` | 0–19 | **อากาศดี** | **GOOD AIR** | 🟢 Green |
 | `watch` | 20–44 | **ติดตามสถานการณ์** | **STAY INFORMED** | 🟡 Yellow |
 | `elevated` | 45–69 | **ลดกิจกรรมกลางแจ้ง** | **LIMIT OUTDOOR TIME** | 🟠 Orange |
-| `high` | 70+ | **ป้องกันทันที** | **PROTECT NOW** | 🔴 Thai-flag red |
+| `high` | 70+ | **ป้องกันทันที** | **PROTECT NOW** | 🔴 Brick red |
 
 AirDash deliberately does **not** issue health orders from its heuristic
 score. Health measures are shown as conditional guidance tied to official
@@ -161,6 +204,9 @@ subtitle.
 ---
 
 ## 👥 Two Ways to Use the Dashboard
+
+*These two modes live in Mission Control (`/ops.html`) — Air Story (`/`)
+needs no mode switch, because it is the citizen experience.*
 
 ### 🟢 Citizen mode (ง่าย / EASY)
 
@@ -220,7 +266,7 @@ province-boundaries choropleth.
 | NORMAL | 0–19 | 🟢 Green | Good air · live normally |
 | WATCH | 20–44 | 🟡 Yellow | Stay informed |
 | ELEVATED | 45–69 | 🟠 Orange | Limit outdoor time · signals aligning |
-| CRITICAL | 70+ | 🔴 Thai-flag red | Protect now · follow official advisories |
+| CRITICAL | 70+ | 🔴 Brick red | Protect now · follow official advisories |
 
 The PM2.5 sub-score is anchored to the **Thai AQI 2023 breakpoints
 (15 / 25 / 37.5 / 75 µg/m³)**; trend reads the 6-hour rise; forecast folds
@@ -252,11 +298,14 @@ combines what the air holds now (worst fresh PM2.5), how likely rain is,
 and how much is forecast:
 
 * `relief_if_rain_pct` — expected PM2.5 reduction IF the forecast rain falls
-  (≥5 mm ≈ 20% · ≥15 mm ≈ 30% · ≥35 mm ≈ 40%)
+  (1–5 mm ≈ 8% · 5–15 mm ≈ 20% · 15–35 mm ≈ 30% · ≥35 mm ≈ 40%)
 * `expected_relief_pct` — probability-weighted relief (the honest number)
 * `projected_pm25` — the after-rain level if it does rain
 * band — `strong` / `moderate` / `light` / `none` (amount AND probability
   must both clear the bar)
+
+One shared relief curve (`server/washout-curve.js`) feeds the washout,
+danger, forecast, and what-if engines, so the numbers always agree.
 
 The WASHOUT panel ranks provinces by who gets helped most; the WHAT-IF
 slider asks "if X mm falls in 24 h, what does each province project to?";
@@ -271,6 +320,40 @@ GET /api/whatif?rain=20
 
 ---
 
+## 🔬 The Science Engine
+
+The layer that turns µg/m³ into meaning. `server/science.js` (a
+`createScience` factory with a 60 s TTL cache) computes national and
+per-province health translations from live PM2.5, 77-province DOPA
+populations (`server/populations.js`), and constants in
+`CONFIG.science`:
+
+| Translation | Formula | Citation |
+|---|---|---|
+| Cigarette-equivalents | PM2.5 ÷ 22 | Müller & Müller, Berkeley Earth |
+| Life-minutes lost | cigs × 11 min | Spiegelhalter microlives (BMJ 2012) |
+| Excess daily mortality | +0.68% per +10 µg/m³ above the WHO 2021 24 h guideline | Liu et al. 2019 (NEJM, 652 cities); Burnett et al. 2018 (GEMM) |
+| Life expectancy lost | sustained +10 µg/m³ ≈ −0.98 yr | AQLI / EPIC, U. Chicago |
+| National haze bill + "haze tax" | VSL × attributable deaths ÷ population | value-of-statistical-life economics |
+| Visibility | V ≈ K / β | Koschmieder 1924 |
+| Ozone crop stress | AOT40-style weekly ppb·h | WHO 2021 |
+
+Every constant, formula, and citation ships to the browser as **Science
+Receipts** via `meta.formulas`, and the full documentation lives in
+[`knowledge/health-science.md`](knowledge/health-science.md) — which
+also feeds the in-app Air Library through the `knowledge/*.md →
+rag_docs` convention. On a typical good-air day the national readout is
+roughly: PM2.5 ~18 µg/m³ → ~0.8 cigarettes/day, ~9 life-minutes/day, a
+฿50M-class daily national bill, under ฿1/person haze tax, ~23 km
+visibility, AOT40 ~34 ppb·h (low).
+
+```
+GET /api/science        # national + 77 provinces + persona profiles + formula receipts
+GET /api/science/personal?province=50&profile=kid&outdoorMin=90&activity=moderate
+```
+
+---
+
 ## 💬 Ask-AI · The "moat" feature
 
 The chat answers questions about the air situation using **only** the live
@@ -278,11 +361,10 @@ data the system holds — no web search, no hallucination, no historical
 training. If the model is offline, it gracefully degrades to a structured
 live-data summary.
 
-The chat is surfaced in three places:
-1. **The hero ASK bar** — always visible, sticky below the header
-2. **The right-rail ASK tab** — full chat with history and feedback
-3. **The Air Library** — natural-language Q&A against 11 background
-   methodology chapters
+The chat lives in Mission Control in two places:
+1. **The right-rail ASK tab** — full chat with history and feedback
+2. **The Air Library** — natural-language Q&A against the background
+   methodology chapters (now including the health-science receipts)
 
 Example questions a citizen can ask:
 * "จังหวัดไหนฝุ่นแย่สุดตอนนี้" — "Which province has the worst dust right now?"
@@ -292,12 +374,15 @@ Example questions a citizen can ask:
 
 ---
 
-## 📲 LINE Official Account
+## 📲 Alerts — LINE & Telegram
 
-The citizen panel links directly to the AirDash LINE Official Account.
-Severe system alerts can be broadcast through the LINE Messaging API when
-the operator configures the channel token. AirDash never asks a citizen to
-paste a messaging token into the dashboard.
+Citizens can subscribe to AirDash alerts through three channels: the
+**LINE Official Account**, **LINE Notify**, and the **Telegram bot**.
+Severe system alerts can be broadcast through the LINE Messaging API
+when the operator configures the channel token; Telegram broadcasts use
+the bot token. AirDash never asks a citizen to paste a messaging token
+into the dashboard. Sign-up links live in the ACT chapter of Air Story
+and in Mission Control's citizen panel.
 
 ---
 
@@ -353,22 +438,24 @@ permanent hourly aggregate as CSV.
 * **Frontend:** Vanilla ES modules, vendored Leaflet, no build step
 * **AI Chat:** Cloud-routed; gracefully degrades to structured live-data
   summary when offline
-* **Push:** LINE Official Account broadcast via the Messaging API
+* **Push:** LINE Official Account + LINE Notify + Telegram bot broadcasts
 * **Deployment:** Cloudflare Pages (frontend) + Cloudflare Tunnel (backend)
 
 ---
 
 ## 🎨 Design Language
 
-**"Rams × NYC transit × Thai command"**
+**"Rams × NYC transit × Thai command" — reborn in sky and teal.**
 
-Warm paper ground (`#F6F4EF`), Thai-flag navy chrome (`#241E4E`) with the
-pentaband signature (red-white-navy-white-red). Square severity badges —
-AirDash's "subway bullet" is a square, not a circle. Sarabun for Thai,
-IBM Plex Mono for every number that changes. Radius 0. No shadows.
+Light sky-paper ground (`#F4F8FB`), deep-teal ink (`#0E4A5E`), sage
+(`#3A8A6E`), ochre (`#D8893A`), brick (`#C8453A`), and purple
+(`#6B2D5C`) — with the Thai-AQI 5-band palette for severity. Sarabun
+for Thai and UI, Manrope for display, JetBrains Mono for every number
+that changes. Sharp corners. No shadows. Full automatic dark mode, and
+`prefers-reduced-motion` stills the breathing hero.
 
-Thai-flag red (`#A51931`) appears **only** when the air is genuinely
-hazardous — it is never decorative.
+Brick red appears **only** when the air is genuinely hazardous — it is
+never decorative.
 
 ---
 
@@ -381,7 +468,7 @@ hazardous — it is never decorative.
 * `aria-label` on the citizen pin, station cards, share buttons
 * Color is never the only signal — every band has a verb and an icon
 * Focus-visible outlines on every interactive element
-* Thai font set to 11px minimum; numbers always in IBM Plex Mono
+* Thai font set to 11px minimum; numbers always in JetBrains Mono
 * Hotlines are `tel:` links — one-tap dial on mobile
 
 ---
@@ -395,6 +482,8 @@ hazardous — it is never decorative.
 | `GET /api/washout` | **Rain-Washout per province** — chance of rain, expected relief, projected PM2.5 |
 | `GET /api/wetness` | Back-compat alias → washout payload |
 | `GET /api/whatif?rain=X` | "If X mm falls in 24 h" — projected PM2.5 per province |
+| `GET /api/science` | National + 77-province health translations, persona profiles, formula receipts (`meta.formulas`) |
+| `GET /api/science/personal?pm25\|province&profile&outdoorMin&activity` | Personalized dose, play budget, and guidance per persona |
 | `GET /api/forecast` | Score projections at +24/+48/+72 h (CAMS + washout relief) |
 | `GET /api/enso` | ENSO / ONI ocean state |
 | `GET /api/series?source&station&metric&hours` | Time series for one station |

@@ -15,7 +15,7 @@
 // longer grace is honest) — without this fallback the national mean would
 // silently re-weight toward Bangkok whenever the PCD network lags.
 import { num } from './util.js'
-import { allProvinces, isThaiProvinceCode } from './provinces.js'
+import { allProvinces, isThaiProvinceCode, provinceByName } from './provinces.js'
 import { PROVINCE_POP, THAILAND_POP } from './populations.js'
 
 const FRESH_PM_HOURS = 6
@@ -484,6 +484,9 @@ export function createScience({ db, CONFIG }) {
   /**
    * Personal exposure card. PM2.5 resolution order: explicit `pm25` param
    * wins; else the named province's current value; else the national mean.
+   * `province` accepts a DOPA code OR a province name (Thai or English,
+   * trimmed, English case-insensitive) — a bare name used to silently fall
+   * back to the national mean, which read as "your province is average".
    */
   function personal({ pm25: pmParam, province: code, profile: profileId, outdoorMin, activity }) {
     const profile = PROFILES[profileId] ?? PROFILES.adult
@@ -492,7 +495,14 @@ export function createScience({ db, CONFIG }) {
 
     const snap = get()
     const explicitPm = Number.isFinite(pmParam) && pmParam >= 0 && pmParam <= 1000 ? pmParam : null
-    const provRow = code ? snap.provinces.find((p) => p.code === String(code)) ?? null : null
+    let provRow = code ? snap.provinces.find((p) => p.code === String(code).trim()) ?? null : null
+    if (!provRow && code) {
+      // Name-based resolution against the registry (th + en) before the
+      // national fallback. /api/science/personal?province=เชียงใหม่ now
+      // resolves to Chiang Mai instead of silently going national.
+      const byName = provinceByName(String(code).trim(), String(code).trim())
+      if (byName) provRow = snap.provinces.find((p) => p.code === byName.province_code) ?? null
+    }
     let pm25 = explicitPm
     let source = 'param'
     if (pm25 === null && provRow?.pm25 !== null && provRow?.pm25 !== undefined) {

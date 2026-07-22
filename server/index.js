@@ -74,7 +74,10 @@ scheduleRetention(db)
 // (token, province) per 3 h, so this is cheap even with thousands of
 // subscribers. Uses dynamic import because linePush.js pulls `node:sqlite`
 // indirectly and the lazy load keeps boot fast.
+// GATED: LINE Notify went EOL on 2025-03-31 (CONFIG.lineNotifyEnabled =
+// false) — without the gate every tick would hammer a dead API.
 import('./linePush.js').then(({ tickLinePush }) => {
+  if (!CONFIG.lineNotifyEnabled) return // LINE Notify EOL 2025-03-31 — see config.js
   setInterval(() => {
     tickLinePush(db).then((r) => {
       if (r.pushed > 0 || r.failed > 0) log('info', 'line-push tick', r)

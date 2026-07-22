@@ -1,5 +1,12 @@
 # AirDash — Design Contract (transformation from FloodDash)
 
+> **Reading guide:** the flood→air transformation notes below are
+> preserved as honest archaeology — they record how AirDash was born
+> from the FloodDash backbone. The **current** design language (2026
+> rebrand) and the two-surface product (Air Story + Mission Control)
+> are documented in *"Design language — the 2026 rebrand"* further
+> down; that section is the truth for anything visual.
+
 AirDash = เฝ้าระวังฝุ่นและคุณภาพอากาศประเทศไทย · **Thailand Air Quality Watch**.
 Same backbone as FloodDash (single Node ≥22.5 process, zero deps, SQLite WAL,
 vanilla ES-module frontend, SSE tap, bilingual TH/EN), refocused on PM2.5 /
@@ -119,7 +126,47 @@ Entry: `{ province_code, province_th, province_en, pm25, prob24, prob48, rain_fc
 - `citizen` → hotlines 1650/1422/1669, health advice per band (N95, close windows, purifier, sensitive groups), 3 nearest AQ stations, share/LINE
 - `forecast` → 48 h rain probability + CAMS PM2.5 forecast strip
 - map: AQ stations = primary markers (PM2.5-colored), RainViewer radar + GIBS stay, river/flood layers removed
-- Design language unchanged (paper ground, navy chrome, squares, Sarabun + IBM Plex Mono) — accent for `high` stays Thai-flag red `#A51931`
+- Design language: see **"Design language — the 2026 rebrand"** below. The FloodDash palette this line once described (paper ground `#F6F4EF`, navy chrome `#241E4E`, Thai-flag red `#A51931`, IBM Plex Mono) is gone — kept here only as history.
+
+## Design language — the 2026 rebrand (current truth)
+
+The FloodDash palette is gone. Current tokens:
+
+- Ground: light sky paper `#F4F8FB` · ink: deep teal `#0E4A5E`
+- Accents: sage `#3A8A6E` · ochre `#D8893A` · brick `#C8453A` (danger
+  only, never decorative) · purple `#6B2D5C`
+- Severity: the Thai-AQI 5-band palette
+- Type: Sarabun (Thai / UI) · Manrope (display) · JetBrains Mono (every
+  number that changes)
+- Shape: sharp corners, no shadows
+- Full automatic dark mode; `prefers-reduced-motion` stills the
+  breathing hero and count-ups
+
+**Two surfaces:**
+
+1. **Air Story (`public/index.html` + `css/story.css` + `js/story.js`)**
+   — the new front door and the design statement. A scroll-based
+   bilingual narrative for smart kids and curious adults: a
+   full-viewport breathing hero circle tinted by the live Thai AQI band
+   with a giant cigarette-equivalents number (22 µg/m³·day ≈ 1
+   cigarette, Berkeley Earth rule); a 7-persona selector (kid / teen /
+   adult / athlete / senior / pregnant / asthma, kid default) driving
+   personalized dose / play-budget / guidance from
+   `/api/science/personal`; a body-journey SVG; **The Wallet** (daily
+   national haze bill via VSL, per-person haze tax, 3 freakonomics
+   cards); **The Sky** (Koschmieder visibility + stagnation + cause
+   chips); **The Forest** (AOT40-style ozone crop stress); a **Science
+   Receipts** formula wall rendered from `/api/science`
+   `meta.formulas`; and an **ACT** chapter (band-aware checklist, LINE
+   OA / LINE Notify / Telegram signup, link to Mission Control).
+2. **Mission Control (`public/ops.html`)** — the former index.html,
+   preserved whole: header + ranking rail + Leaflet map + 11-tab right
+   rail + ticker, charts and analytics re-paletted from FloodDash to
+   the AirDash tokens, with a หน้าแรก/Home chip back to `/`.
+
+The flood→air transformation notes above are kept as honest
+archaeology — they describe how the system was born, not how it looks
+today.
 
 ## Score disclaimer (both languages, everywhere the score shows)
 

@@ -94,6 +94,25 @@ export function buildMessage(province_th, province_en, band, score, lang = 'th')
   )
 }
 
+// Reassuring all-clear message — mirror of telegramPush.buildAllClearMessage
+// for the (now EOL, 2025-03-31) Notify per-token path. Kept so the module's
+// alert fan-out stays semantically correct if a successor channel reuses it.
+export function buildAllClearMessage(province_th, province_en, lang = 'th') {
+  const pTh = province_th || (lang === 'en' ? 'Thailand' : 'ประเทศไทย')
+  const pEn = province_en || pTh
+  const display = lang === 'en' ? pEn : pTh
+  const body = lang === 'en'
+    ? 'PM2.5 is back below 25 µg/m³ and holding — the air has cleared. Safe to go out and enjoy the day.'
+    : 'PM2.5 ลดลงต่ำกว่า 25 µg/m³ ต่อเนื่องแล้ว — อากาศดีขึ้นแล้ว ออกไปข้างนอก ใช้ชีวิตได้ตามปกติ'
+  const live = lang === 'en' ? 'Live: https://air.nonarkara.org' : 'ดูสด: https://air.nonarkara.org'
+  return (
+    `${lang === 'en' ? '✅ Air has cleared' : '✅ อากาศดีขึ้นแล้ว'}\n` +
+    `${lang === 'en' ? 'Province' : 'จังหวัด'}: ${display}\n` +
+    `${body}\n\n` +
+    `${live}`
+  )
+}
+
 // One-shot LINE Notify send. Throws on non-2xx so the subscribe handler
 // can decide what to tell the user; alert fan-out wraps it in try/catch
 // and converts to a fail_count bump.
@@ -189,9 +208,13 @@ export async function tickLinePush(db) {
 // also want every active subscriber for that province to get a push NOW
 // (not wait up to 5 min for the next tick). The cron tick is still
 // authoritative — this is the fast path so a fresh spike feels instant.
-// `alert` is { province_th, province_en, province_code, severity, message_th, message_en }.
+// All-clear alerts (rule pm25_all_clear) ride the same path with their own
+// reassuring template and ignore the 3 h per-sub gap (their own 12 h
+// cooldown is the spam guard).
+// `alert` is { province_th, province_en, province_code, severity, rule, message_th, message_en }.
 export async function notifySubscribersForAlert(db, alert) {
-  if (!alert || (alert.severity ?? 0) < 2) return { pushed: 0, failed: 0 }
+  const isAllClear = alert?.rule === 'pm25_all_clear'
+  if (!alert || (!isAllClear && (alert.severity ?? 0) < 2)) return { pushed: 0, failed: 0 }
   if (!alert.province_th && !alert.province_en && !alert.province_code) {
     return { pushed: 0, failed: 0 }
   }
@@ -208,7 +231,7 @@ export async function notifySubscribersForAlert(db, alert) {
          province_th = ? OR
          LOWER(province_en) = LOWER(?)
        )`,
-    PER_SUB_GAP_MS,
+    isAllClear ? 0 : PER_SUB_GAP_MS,
     alert.province_code ?? '',
     alert.province_th ?? '',
     alert.province_en ?? '',
@@ -217,13 +240,15 @@ export async function notifySubscribersForAlert(db, alert) {
 
   let pushed = 0, failed = 0
   for (const sub of subs) {
-    const msg = buildMessage(
-      alert.province_th ?? sub.province_th,
-      alert.province_en ?? sub.province_en,
-      alert.severity >= 3 ? 'high' : 'elevated',
-      alert.severity >= 3 ? 80 : 60,
-      sub.lang || 'th',
-    )
+    const msg = isAllClear
+      ? buildAllClearMessage(alert.province_th ?? sub.province_th, alert.province_en ?? sub.province_en, sub.lang || 'th')
+      : buildMessage(
+        alert.province_th ?? sub.province_th,
+        alert.province_en ?? sub.province_en,
+        alert.severity >= 3 ? 'high' : 'elevated',
+        alert.severity >= 3 ? 80 : 60,
+        sub.lang || 'th',
+      )
     try {
       await sendLineNotify(sub.token, msg)
       db.run(`UPDATE line_subs SET last_notified_at = datetime('now'), fail_count = 0, updated_at = datetime('now') WHERE id = ?`, sub.id)

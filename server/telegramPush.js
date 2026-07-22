@@ -91,6 +91,38 @@ function escapeHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+// True when a send failure means the chat is permanently gone (account
+// deleted, chat never existed): Telegram answers HTTP 400 with a
+// description of "chat not found" or "user is deactivated". These are
+// purged immediately like 403s instead of burning the 5-strike budget.
+export function isDeadChat(err) {
+  if (err?.status !== 400) return false
+  return /chat not found|user is deactivated/i.test(String(err?.message ?? ''))
+}
+
+// Reassuring all-clear message — sent when a station's PM2.5 falls back
+// below 25 µg/m³ sustained (rule pm25_all_clear in alerts.js). Deliberately
+// NOT the danger template: the user who got a red push should hear the
+// good news in a calm voice. Profile-agnostic bilingual copy.
+export function buildAllClearMessage(province_th, province_en, lang = 'th') {
+  const pTh = province_th || (lang === 'en' ? 'Thailand' : 'ประเทศไทย')
+  const pEn = province_en || pTh
+  const display = lang === 'en' ? pEn : pTh
+  const provinceLabel = lang === 'en' ? 'Province' : 'จังหวัด'
+  const body = lang === 'en'
+    ? 'PM2.5 is back below 25 µg/m³ and holding — the air has cleared. Safe to go out and enjoy the day.'
+    : 'PM2.5 ลดลงต่ำกว่า 25 µg/m³ ต่อเนื่องแล้ว — อากาศดีขึ้นแล้ว ออกไปข้างนอก ใช้ชีวิตได้ตามปกติ'
+  const liveLabel = lang === 'en' ? 'Live: https://air.nonarkara.org' : 'ดูสด: https://air.nonarkara.org'
+  const stopLabel = lang === 'en' ? '/stop to unsubscribe' : '/stop เพื่อยกเลิก'
+  return (
+    `✅ <b>${lang === 'en' ? 'Air has cleared' : 'อากาศดีขึ้นแล้ว'}</b>\n` +
+    `${provinceLabel}: <b>${escapeHtml(display)}</b>\n` +
+    `${body}\n\n` +
+    `${liveLabel}\n` +
+    `<i>${stopLabel}</i>`
+  )
+}
+
 // One-shot Telegram send. Throws on non-2xx so subscribe handlers can
 // decide what to tell the user; alert fan-out wraps in try/catch and
 // converts to a fail_count bump.
@@ -194,8 +226,11 @@ export async function tickTelegramPush(db) {
       failed++
       const newCount = (sub.fail_count ?? 0) + 1
       // 401/403/429-persistent: user blocked the bot, kicked it, or
-      // repeated rate-limit. Purge so the next tick doesn't waste sends.
-      if (err.status === 401 || err.status === 403 || newCount >= MAX_FAIL_COUNT) {
+      // repeated rate-limit. 400 "chat not found" / "user is deactivated"
+      // means the account is gone — equally permanent. Purge so the next
+      // tick doesn't waste sends on dead chats; other errors keep the
+      // 5-strike logic.
+      if (err.status === 401 || err.status === 403 || isDeadChat(err) || newCount >= MAX_FAIL_COUNT) {
         db.run(`DELETE FROM telegram_subs WHERE id = ?`, sub.id)
         log('warn', 'telegram subscriber purged', { id: sub.id, status: err.status, fail_count: newCount })
       } else {
@@ -211,9 +246,14 @@ export async function tickTelegramPush(db) {
 // also want every active subscriber for that province to get a push NOW
 // (not wait up to 5 min for the next tick). The cron tick is still
 // authoritative — this is the fast path so a fresh spike feels instant.
-// `alert` is { province_th, province_en, province_code, severity, message_th, message_en }.
+// All-clear alerts (rule pm25_all_clear) ride the same path with their own
+// reassuring template; they ignore the 3 h per-sub gap (a subscriber who
+// just got a danger push SHOULD hear the all-clear right away — the
+// alert's own 12 h cooldown is the spam guard).
+// `alert` is { province_th, province_en, province_code, severity, rule, message_th, message_en }.
 export async function notifySubscribersForAlert(db, alert) {
-  if (!alert || (alert.severity ?? 0) < 2) return { pushed: 0, failed: 0 }
+  const isAllClear = alert?.rule === 'pm25_all_clear'
+  if (!alert || (!isAllClear && (alert.severity ?? 0) < 2)) return { pushed: 0, failed: 0 }
   if (!alert.province_th && !alert.province_en && !alert.province_code) {
     return { pushed: 0, failed: 0 }
   }
@@ -227,7 +267,7 @@ export async function notifySubscribersForAlert(db, alert) {
          province_th = ? OR
          LOWER(province_en) = LOWER(?)
        )`,
-    PER_SUB_GAP_MS,
+    isAllClear ? 0 : PER_SUB_GAP_MS,
     alert.province_code ?? '',
     alert.province_th ?? '',
     alert.province_en ?? '',
@@ -237,13 +277,15 @@ export async function notifySubscribersForAlert(db, alert) {
   const tg = createTelegram(db)
   let pushed = 0, failed = 0
   for (const sub of subs) {
-    const text = buildMessage(
-      alert.province_th ?? sub.province_th,
-      alert.province_en ?? sub.province_en,
-      alert.severity >= 3 ? 'high' : 'elevated',
-      alert.severity >= 3 ? 80 : 60,
-      sub.lang || 'th',
-    )
+    const text = isAllClear
+      ? buildAllClearMessage(alert.province_th ?? sub.province_th, alert.province_en ?? sub.province_en, sub.lang || 'th')
+      : buildMessage(
+        alert.province_th ?? sub.province_th,
+        alert.province_en ?? sub.province_en,
+        alert.severity >= 3 ? 'high' : 'elevated',
+        alert.severity >= 3 ? 80 : 60,
+        sub.lang || 'th',
+      )
     try {
       await tg.sendMessage(sub.chat_id, text)
       db.run(`UPDATE telegram_subs SET last_notified_at = datetime('now'), fail_count = 0, updated_at = datetime('now') WHERE id = ?`, sub.id)
@@ -251,7 +293,7 @@ export async function notifySubscribersForAlert(db, alert) {
     } catch (err) {
       failed++
       const newCount = (sub.fail_count ?? 0) + 1
-      if (err.status === 401 || err.status === 403 || newCount >= MAX_FAIL_COUNT) {
+      if (err.status === 401 || err.status === 403 || isDeadChat(err) || newCount >= MAX_FAIL_COUNT) {
         db.run(`DELETE FROM telegram_subs WHERE id = ?`, sub.id)
         log('warn', 'telegram subscriber purged (alert)', { id: sub.id, status: err.status })
       } else {
@@ -424,7 +466,9 @@ export function createTelegramBroadcaster(db) {
           sending = false
           return
         }
-        if (err.status === 403) {
+        // 403 = user blocked the bot; 400 "chat not found"/"user is
+        // deactivated" = the account is gone. Both are permanent — purge.
+        if (err.status === 403 || isDeadChat(err)) {
           db.run(`DELETE FROM telegram_subs WHERE id = ?`, sub.id)
           blocked++
         }

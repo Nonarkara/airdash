@@ -145,6 +145,35 @@ function renderHero() {
   }
 }
 
+// ── Alert strip (under the hero) ─────────────────────────────────────────
+// Shows a slim bilingual banner when /api/alerts has any active sev≥2 alert
+// in the last 24h, or when the viewed province/national band is ≥ unhealthy
+// (Thai AQI level 4+). The message links to /ops.html for details; the
+// trailing CTA jumps to the subscribe links in the ACT chapter. 5-min TTL
+// via getJson keeps it cheap; failures leave the strip hidden.
+async function renderAlertStrip() {
+  const strip = $('#alert-strip')
+  const msg = $('#alert-strip-msg')
+  if (!strip || !msg) return
+
+  let severe = false
+  try {
+    const data = await getJson('/api/alerts?limit=100', 300_000)
+    const cutoff = Date.now() - 24 * 3600_000
+    severe = (data?.alerts ?? []).some((a) =>
+      (a.severity ?? 0) >= 2 && Date.parse(a.ts ?? '') > cutoff)
+  } catch { severe = false }
+
+  const unhealthyHere = currentLevel() >= 4
+  if (!severe && !unhealthyHere) { strip.hidden = true; return }
+
+  strip.classList.toggle('severe', severe)
+  msg.textContent = severe
+    ? tr('🔴 อากาศอันตรายในบางพื้นที่ — ดูรายละเอียด', '🔴 Hazardous air in some areas — details')
+    : tr('🟠 อากาศมีผลต่อสุขภาพในพื้นที่นี้ — ดูรายละเอียด', '🟠 Unhealthy air in this area — details')
+  strip.hidden = false
+}
+
 // ── 2 · PERSONA ──────────────────────────────────────────────────────────────
 function renderPersonaChips() {
   const host = $('#persona-chips')
@@ -550,6 +579,7 @@ function renderAll() {
   renderOfflineBanner()
   buildProvinceSelect()
   renderHero()
+  renderAlertStrip()
   renderPersonaChips()
   renderPersonal()
   renderBody()
