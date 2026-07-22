@@ -1097,88 +1097,102 @@ html[lang="en"] .appfooter-line .en { display: inline; }
 }
 
 /* Photos inside the personal story.
-   Design contract: the TEXT is the story; the photos are visual
-   punctuation. Every photo is constrained to magazine-size (~240px)
-   and floated so the surrounding prose wraps around it. Nothing
-   full-width, nothing dominant — the reader should see the text
-   first and encounter the photo as a moment of 'ah, this is what
-   that felt like', not as a hero image that pushes the words off
-   the page. */
+   Design contract: the TEXT is the story; photos are rare and
+   intentional, with a clear hierarchy — never a same-weight scatter
+   of snapshots (that reads as a scrapbook, not an essay):
+     1. ONE lead photo, paired with the opening paragraph.
+     2. ONE climax photo — the visual high point, full width, its own
+        aspect ratio (never force-cropped: a portrait shot must never
+        be crushed into a landscape frame).
+     3. A single small, quiet "album" strip for supporting photos —
+        deliberately subordinate (smaller, tighter caption) so it
+        reads as a footnote gallery, not competing content.
+   Nothing is floated: floats broke down the moment more than one
+   figure landed in the same paragraph, squeezing the text into an
+   unreadable sliver. Everything below is grid-based instead. */
 .about-photo {
-  margin: 4px 0 12px;
-  text-align: left;
+  margin: 0;
+  text-align: center;
 }
 .about-photo img {
   display: block;
-  width: 100%;
-  max-width: 240px;
-  max-height: 240px;
-  object-fit: cover;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 260px;
+  margin: 0 auto;
   border: 1px solid var(--rule);
+  border-radius: 3px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
 .about-photo figcaption {
   font-family: var(--font-ui);
   font-size: 11.5px;
   line-height: 1.5;
   color: var(--ink-mid);
-  margin-top: 6px;
+  margin-top: 8px;
   font-style: italic;
   padding: 0 2px;
-}
-
-/* Float the figure so the surrounding paragraph text wraps around it.
-   --right: image on the right, text flows on the left.
-   --left: image on the left, text flows on the right.
-   The figure is always a narrow column (max-width 240px) so the
-   wrapped text has plenty of column width to stay readable. */
-.about-photo--right {
-  float: right;
-  margin: 4px 0 12px 18px;
-  shape-outside: margin-box;
-}
-.about-photo--left {
-  float: left;
-  margin: 4px 18px 12px 0;
-  shape-outside: margin-box;
-}
-
-/* A larger "feature" image, still constrained but allowed to take
-   more of the column — used for ONE image per section (the visual
-   climax), never for a strip. */
-.about-photo--feature {
-  float: none;
-  clear: both;
-  display: block;
-  margin: 16px auto;
   text-align: center;
-  max-width: 100%;
 }
+
+/* The lead photo — one figure paired with one paragraph as a
+   two-column grid: photo in a fixed-width rail, text filling the
+   rest. Stacks to a single column (photo first) on narrow viewports. */
+.story-lead {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 22px;
+  align-items: start;
+  margin: 0 0 20px;
+}
+.story-lead p { margin: 0; }
+
+/* The small, quiet supporting-photo album — deliberately subordinate:
+   smaller tiles, tighter captions, introduced by its own short label
+   so a reader understands it's a footnote gallery, not the next beat
+   of the story. */
+.story-album {
+  margin: 4px 0 22px;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+.story-album-label {
+  font-family: var(--font-num);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-low);
+  margin: 0 0 10px;
+}
+.story-album-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.story-album .about-photo img { max-height: 120px; }
+.story-album .about-photo figcaption { font-size: 10.5px; }
+
+/* The climax image — the visual high point of the section. Capped to
+   a bigger box but still never cropped: a portrait "before/after"
+   shot shows its full height instead of being crushed into a wide
+   frame sized for a landscape photo. Only ONE per section. */
+.about-photo--feature { margin: 20px auto; max-width: 100%; }
 .about-photo--feature img {
+  max-height: 460px;
   max-width: 100%;
-  max-height: 320px;
-  margin: 0 auto;
 }
 .about-photo--feature figcaption {
   font-size: 12px;
-  margin-top: 8px;
   font-style: normal;
   color: var(--ink);
 }
 
-/* On narrow viewports the float breaks down — stack the figure
-   above the paragraph at full width with a sensible max. */
-@media (max-width: 720px) {
-  .about-photo--right,
-  .about-photo--left {
-    float: none;
-    margin: 14px 0;
-    max-width: 100%;
-  }
-  .about-photo--right img,
-  .about-photo--left img {
-    max-width: 100%;
-    max-height: 280px;
-  }
+@media (max-width: 640px) {
+  .story-lead { grid-template-columns: 1fr; }
+  .story-album-grid { grid-template-columns: 1fr 1fr; }
 }
 
 /* The story prose — generous line-height and a paragraph rhythm. */
