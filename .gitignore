@@ -2,7 +2,10 @@ node_modules/
 data/*.db
 data/*.db-wal
 data/*.db-shm
+data/backups/
 logs/*.log
+logs/*.old
+logs/.watchdog-*
 # Vendored at setup time (setup.sh) — regenerated, not committed.
 public/vendor/
 public/fonts/

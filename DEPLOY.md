@@ -72,3 +72,31 @@ open https://air.nonarkara.org                    # full dashboard, live
 Every feature degrades gracefully when its token is absent: chat falls back
 to a structured live-data summary, the imerg source skips quietly, LINE
 pushes are a no-op. Tokens live in the SQLite kv table — never in git.
+
+## Backups & recovery
+
+A nightly LaunchAgent (`com.airdash.backup`, installed from
+`ops/com.airdash.backup.plist`) runs `ops/backup-db.sh` every day at **03:17**.
+It uses SQLite's online backup API (`sqlite3 data/airdash.db ".backup …"`),
+which is safe against the live WAL-mode database — the server does **not**
+need to stop. Each run:
+
+1. Writes a timestamped snapshot to `data/backups/airdash-YYYYMMDD-HHMM.db`.
+2. Verifies it with `PRAGMA integrity_check;` (a failed snapshot is kept
+   for forensics and the job exits non-zero, logged loudly).
+3. Keeps the **last 7** snapshots; older ones are deleted.
+4. Refreshes `data/backups/airdash-latest.db.gz` (gzip -9 of the newest
+   snapshot, swapped in atomically) — a single stable filename an offsite
+   sync can grab later.
+
+Progress and errors go to `logs/backup.log` (stderr to
+`logs/backup.err.log`). To run one manually: `bash ops/backup-db.sh`.
+
+**Restore:** stop the server (`launchctl unload ~/Library/LaunchAgents/com.airdash.server.plist`),
+copy the chosen snapshot back over `data/airdash.db` (remove any stale
+`data/airdash.db-wal`/`-shm` first), then start it again
+(`launchctl load ~/Library/LaunchAgents/com.airdash.server.plist`).
+
+**Known gap:** backups live on the same disk as the database — they protect
+against corruption and bad writes, not against disk/machine loss. Offsite
+sync of `data/backups/airdash-latest.db.gz` is a planned future step.

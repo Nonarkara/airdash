@@ -35,6 +35,14 @@ notify() {
 }
 up() { curl -sf --max-time 8 "$1" -o /dev/null; }
 
+# Persistent state files (in logs/, dot-prefixed so log rotation never
+# touches them):
+#   .watchdog-health-fails — consecutive /api/health failure count
+#   .watchdog-disk-warn    — date (YYYY-MM-DD) of the last 85–91% disk
+#                            notification, so it fires at most once a day
+HEALTH_STATE="/Users/axiom/AirDash/logs/.watchdog-health-fails"
+DISK_STATE="/Users/axiom/AirDash/logs/.watchdog-disk-warn"
+
 # The server is a single synchronous event loop: a 10-min-cadence ingest
 # write (or a cold boot) can freeze it for several seconds, and the hourly
 # watchdog fires at minute 0 — the exact moment those ingests run. One
@@ -87,11 +95,40 @@ problems=0
 # to consider the server healthy.
 if up_retry "http://localhost:8341/api/ping" 5 15; then
   log "ok: local server"
-  # Deeper check: is the DB responding too? Used to be a kill trigger;
-  # now a warn-only signal. If a single hourly check shows a slow DB, we
-  # log it; if two checks in a row show it, the macOS notification fires.
-  if ! up_retry "http://localhost:8341/api/health" 2 5; then
-    log "warn: /api/ping ok but /api/health slow (likely a long ingest in progress) — not killing"
+  # Deeper check: is the DB responding too? A ping-ok/health-fail pattern
+  # means the event loop is alive but something deeper is wedged (e.g.
+  # SQLite). Escalates on CONSECUTIVE hourly failures, counted in
+  # $HEALTH_STATE: 1st = log only, 2nd = macOS notification, 3rd =
+  # kickstart the server (respecting the 300s boot grace). Any success
+  # resets the counter to 0.
+  if up_retry "http://localhost:8341/api/health" 2 5; then
+    print -r -- 0 > "$HEALTH_STATE"
+  else
+    hf_prev=$(cat "$HEALTH_STATE" 2>/dev/null || true)
+    hf_prev=${hf_prev:-0}
+    [[ "$hf_prev" != <-> ]] && hf_prev=0   # tolerate empty/garbage state
+    hf_fails=$((hf_prev + 1))
+    print -r -- "$hf_fails" > "$HEALTH_STATE"
+    if [ "$hf_fails" -ge 3 ]; then
+      pid=$(pgrep -f "node server/index.js" | head -1)
+      age=$(proc_age_s "${pid:-0}")
+      if [ -n "${pid:-}" ] && [ "$age" -lt 300 ]; then
+        # Same boot-grace rule as the ping path: a process younger than
+        # 5 minutes is still warming up; kickstarting it now would just
+        # restart boot congestion.
+        log "warn: /api/health failing ($hf_fails consecutive checks) but pid=$pid is only ${age}s old (boot grace) — NOT kickstarting"
+      else
+        log "PROBLEM: /api/ping ok but /api/health failed $hf_fails consecutive checks (pid=${pid:-none}, age=${age}s) — kickstarting server"
+        launchctl kickstart -k "gui/$UID_NUM/com.airdash.server" 2>>"$LOG"
+        print -r -- 0 > "$HEALTH_STATE"
+        problems=$((problems + 1))
+      fi
+    elif [ "$hf_fails" -ge 2 ]; then
+      log "warn: /api/ping ok but /api/health failed $hf_fails consecutive checks (likely wedged DB) — notifying"
+      notify "Server alive but /api/health failing ($hf_fails checks in a row) — check logs/watchdog.log"
+    else
+      log "warn: /api/ping ok but /api/health slow (likely a long ingest in progress) — not killing"
+    fi
   fi
 else
   pid=$(pgrep -f "node server/index.js" | head -1)
@@ -161,6 +198,15 @@ elif [ "$disk_pct" -ge 92 ]; then
   problems=$((problems + 1))
 elif [ "$disk_pct" -ge 85 ]; then
   log "warn: disk ${disk_pct}% used (>= 85%)"
+  # Notify on the FIRST warn of each day only (state file holds the date
+  # of the last notification) — hourly repeats would be noise. The >=92%
+  # branch above still notifies every run via the problems counter.
+  dw_today=$(date '+%Y-%m-%d')
+  dw_last=$(cat "$DISK_STATE" 2>/dev/null || true)
+  if [ "$dw_last" != "$dw_today" ]; then
+    notify "Disk ${disk_pct}% used (warn threshold 85%) — first warning today"
+    print -r -- "$dw_today" > "$DISK_STATE"
+  fi
 else
   log "ok: disk ${disk_pct}% used"
 fi
@@ -172,6 +218,22 @@ if [ "${llm_reachable:-}" = "true" ]; then
 else
   log "info: LLM chat API unavailable (chat falls back to structured data summary — degraded, not down)"
 fi
+
+# ── 6. Log rotation (hourly, size-capped) ──────────────────────────────
+# logs/*.log grew forever (tunnel.err.log hit 520KB in 6 days). Simple
+# rotation: any .log over 10MB moves to <name>.old (overwriting the
+# previous .old) and a fresh file is started. Only *.log in logs/ — never
+# data/backups, .old files, or dotfile state. Note: long-lived processes
+# holding the file open (node, cloudflared) keep writing to the renamed
+# .old until their next restart; this still caps unbounded growth.
+MAX_LOG_BYTES=10485760
+for lf in /Users/axiom/AirDash/logs/*.log(N); do
+  lf_size=$(stat -f%z "$lf" 2>/dev/null || echo 0)
+  if [ "$lf_size" -gt "$MAX_LOG_BYTES" ]; then
+    mv -f "$lf" "$lf.old" && : > "$lf"
+    log "rotated log: $lf (${lf_size} bytes -> ${lf}.old)"
+  fi
+done
 
 if [ "$problems" -gt 0 ]; then
   notify "Unresolved issue — check logs/watchdog.log"
