@@ -995,11 +995,12 @@ html[lang="en"] .appfooter-line .en { display: inline; }
 
 /* LINE / Telegram notification section — three parallel opt-in paths
    (OA broadcast · per-token Notify · Telegram bot). 3-column grid on
-   desktop, 2-column on tablet, stacked on phone. The Telegram column
-   uses Telegram's brand colour (sky blue) so it reads as a different
-   channel at a glance. */
+   desktop, stacked on phone. Two channels: LINE OA (national broadcast)
+   and Telegram (per-province — LINE Notify filled this role until its
+   2025-03-31 retirement). The Telegram column uses Telegram's brand
+   colour (sky blue) so it reads as a different channel at a glance. */
 .about-line-grid {
-  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
   margin-top: 14px;
 }
 .about-line-col {
@@ -1007,7 +1008,6 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   border-left: 4px solid #00C300;
   background: rgba(0,194,0,0.04);
 }
-.about-line-col:nth-child(2) { border-left-color: #00A000; }
 .about-line-col-tg {
   border-left-color: #2AABEE !important;
   background: rgba(42,171,238,0.04) !important;
@@ -1026,14 +1026,9 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   font-size: 12px; font-weight: 700; text-decoration: none;
 }
 .about-line-cta:hover { background: #00A800; }
-.about-line-cta.secondary { background: var(--paper); color: var(--ink); border: 1px solid var(--rule-strong); }
-.about-line-cta.secondary:hover { background: var(--bg-soft); }
 .about-line-cta.tg { background: #2AABEE; }
 .about-line-cta.tg:hover { background: #1E96D1; }
 .about-line-fine { font-size: 11px; opacity: 0.6; margin-top: 12px; font-style: italic; }
-@media (max-width: 1080px) {
-  .about-line-grid { grid-template-columns: 1fr 1fr; }
-}
 @media (max-width: 720px) {
   .about-line-grid { grid-template-columns: 1fr; }
 }

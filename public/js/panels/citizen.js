@@ -305,19 +305,15 @@ function renderForProvince(province) {
     el('span', { 'aria-hidden': 'true' }, '→'),
   )
 
-  // Per-token push (LINE Notify) — typed by the user, scoped to their
-  // selected province, throttled to ≤1 push per 3 h, with a one-tap cancel
-  // link inside the push itself. The OA follow above is broader (every
-  // follower gets every severe alert, no targeting); this is the targeted
-  // version for someone who only wants their own province.
-  const notifyForm = renderNotifyForm(province)
-
-  // Telegram bot (@AirDash_bot) — second push channel. Citizens /start the
-  // bot to link their chat, then bind province + language. Telegram is
-  // free + effectively unlimited, so it's the recommended channel for
-  // anyone who can install Telegram. The form below auto-generates a
-  // 6-char binding code, watches for the /start, then asks for the
-  // province choice.
+  // Telegram bot (@AirDash_bot) — the targeted, per-province push channel.
+  // The OA follow above is broad (every follower gets every severe
+  // alert, no targeting); this is the version for someone who only wants
+  // alerts for their own province. (LINE Notify used to fill this role —
+  // retired 2025-03-31.) Citizens /start the bot to link their chat, then
+  // bind province + language. Free + effectively unlimited, so it's the
+  // recommended channel for anyone who can install Telegram. The form
+  // below auto-generates a 6-char binding code, watches for the /start,
+  // then asks for the province choice.
   const telegramForm = renderTelegramForm(province)
 
   // "I need help" — one-tap hotlines
@@ -347,7 +343,7 @@ function renderForProvince(province) {
       el('div', { class: 'citizen-help-lbl' }, tr('เกี่ยวกับ', 'About'))),
   )
 
-  return [...out, shareHead, shareRow, lineHead, lineCard, notifyForm, telegramForm, helpHead, helpRow, renderPickerCollapsed()]
+  return [...out, shareHead, shareRow, lineHead, lineCard, telegramForm, helpHead, helpRow, renderPickerCollapsed()]
 }
 
 // Thai AQI 2023 colour anchor for a PM2.5 value (µg/m³).
@@ -389,115 +385,6 @@ function buildShareText(province, band, score) {
 function lineButton(province, band, score) {
   const text = encodeURIComponent(buildShareText(province, band, score))
   return el('a', { class: 'citizen-share-btn line', href: `https://line.me/R/msg/text/?${text}`, target: '_blank', rel: 'noopener' }, 'LINE')
-}
-
-// Per-token LINE Notify subscribe form. Shows:
-//   - a "Get a LINE Notify token" link to notify-bot.line.me
-//   - a token input
-//   - the user's selected province (read-only, from the citizen panel)
-//   - language toggle (TH / EN — same as the dashboard)
-//   - Subscribe button → POST /api/line/subscribe
-//   - Status line (success / error)
-// State is intentionally not persisted across paints — re-entering the
-// panel from another province is a fresh "I want to subscribe" moment.
-function renderNotifyForm(province) {
-  const tokenInput = el('input', {
-    class: 'citizen-line-token',
-    type: 'text', inputmode: 'text', autocomplete: 'off', spellcheck: 'false',
-    placeholder: tr('วาง LINE Notify token …', 'Paste LINE Notify token …'),
-  })
-  // Province comes from the panel's current selection — non-editable, so
-  // the user can never subscribe to a different province than the one
-  // they're reading about. The hidden field is what the API actually
-  // receives; the visible pill is just for the user's confidence.
-  const provinceHidden = el('input', { type: 'hidden', value: province.th })
-  const provinceEnHidden = el('input', { type: 'hidden', value: province.en ?? '' })
-  const provinceCodeHidden = el('input', { type: 'hidden', value: province.code ?? '' })
-  const langHidden = el('input', { type: 'hidden', value: store.lang || 'th' })
-  const provincePill = el('div', { class: 'citizen-line-province' },
-    el('span', { class: 'citizen-line-province-label' }, tr('จังหวัด', 'Province')),
-    el('span', { class: 'citizen-line-province-name' }, tr(province.th, province.en ?? province.th)),
-  )
-  const helpLink = el('a', {
-    class: 'citizen-line-help',
-    href: 'https://notify-bot.line.me/en/',
-    target: '_blank', rel: 'noopener',
-    'data-i18n': 'ขอ token จาก LINE Notify →|Get a token from LINE Notify →',
-  }, tr('ขอ token จาก LINE Notify →', 'Get a token from LINE Notify →'))
-  const status = el('div', { class: 'citizen-line-status' })
-  const submit = el('button', {
-    class: 'citizen-line-submit', type: 'button',
-    onclick: async (e) => {
-      e.preventDefault()
-      const token = tokenInput.value.trim()
-      if (token.length < 8) {
-        status.replaceChildren(el('span', { class: 'citizen-line-err' },
-          tr('โปรดวาง token ก่อน', 'Please paste a token first')))
-        return
-      }
-      submit.disabled = true
-      submit.textContent = tr('กำลังเชื่อมต่อ…', 'Connecting…')
-      try {
-        const res = await fetch('/api/line/subscribe', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            token,
-            province_th: province.th,
-            province_en: province.en,
-            province_code: province.code,
-            lat: province.lat,
-            lng: province.lng,
-            lang: store.lang || 'th',
-          }),
-          signal: AbortSignal.timeout(15_000),
-        })
-        const body = await res.json().catch(() => ({}))
-        if (res.ok) {
-          status.replaceChildren(
-            el('span', { class: 'citizen-line-ok' },
-              tr('✅ เชื่อมต่อสำเร็จ · จะส่งแจ้งเตือนเมื่อฝุ่นถึงขั้นต้องป้องกัน (สูงสุด 1 ครั้ง/3 ชม.)',
-                 '✅ connected · you\'ll get a push when dust hits protect-now (max 1/3h)')),
-          )
-          submit.textContent = tr('เชื่อมต่อแล้ว ✓', 'Connected ✓')
-          tokenInput.value = ''
-        } else {
-          status.replaceChildren(el('span', { class: 'citizen-line-err' },
-            body?.error ? tr(`LINE ปฏิเสธ token · ${body.error}`, `LINE rejected the token · ${body.error}`) :
-              tr('LINE ปฏิเสธ token โปรดลองใหม่', 'LINE rejected the token — please try again')))
-          submit.disabled = false
-          submit.textContent = tr('เชื่อมต่อ', 'Connect')
-        }
-      } catch (err) {
-        status.replaceChildren(el('span', { class: 'citizen-line-err' },
-          tr('เครือข่ายมีปัญหา · ลองอีกครั้ง', 'Network error · try again')))
-        submit.disabled = false
-        submit.textContent = tr('เชื่อมต่อ', 'Connect')
-      }
-    },
-  }, tr('เชื่อมต่อ', 'Connect'))
-  const form = el('form', {
-    class: 'citizen-line-form',
-    onsubmit: (e) => { e.preventDefault(); submit.click() },
-  },
-    el('div', { class: 'citizen-line-head' },
-      el('span', { class: 'citizen-line-head-icon' }, '🔔'),
-      el('div', { class: 'citizen-line-head-text' },
-        el('div', { class: 'citizen-line-head-th' },
-          tr('แจ้งเตือน "ฝุ่นถึงขั้นป้องกัน" เฉพาะจังหวัดนี้',
-             '"protect now" alerts for this province only')),
-        el('div', { class: 'citizen-line-head-en' },
-          tr('รับเฉพาะจังหวัดที่เลือก · ยกเลิกได้ทุกเมื่อ · ไม่เก็บข้อมูลส่วนตัว',
-             'this province only · cancel anytime · no personal data stored')),
-      ),
-    ),
-    tokenInput,
-    provincePill,
-    provinceHidden, provinceEnHidden, provinceCodeHidden, langHidden,
-    el('div', { class: 'citizen-line-actions' }, submit, helpLink),
-    status,
-  )
-  return el('div', { class: 'citizen-line-subscribe' }, form)
 }
 
 // Telegram bot (@AirDash_bot) — second push channel. UX is auto-bind:
