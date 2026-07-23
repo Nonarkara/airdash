@@ -17,7 +17,7 @@
  *     so a stale airdash-v3 / v4 / ... cache can never serve broken JS.
  */
 
-const CACHE = 'airdash-v24';
+const CACHE = 'airdash-v25';
 
 const PRECACHE_URLS = [
   '/',

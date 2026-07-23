@@ -110,17 +110,9 @@ header {
 .header-partner-axiom-retl { height: 34px; width: auto; max-width: 112px; }
 .header-partner-slic { height: 28px; width: 28px; }
 .header-partner-rcad { height: 24px; width: auto; max-width: 104px; }
-/* The header already carries brand + national verdict + danger + search
-   + toggles; shed the plate's widest marks first, then the whole plate,
-   before anything functional has to give. Full credits stay on the boot
-   screen and in the About panel at every width. */
-@media (max-width: 1560px) {
-  .header-partner-axiom-retl, .header-partner-slic, .header-partner-rcad { display: none; }
-  .header-partners { gap: 10px; padding: 0 10px; }
-}
-@media (max-width: 1280px) {
-  .header-partners { display: none; }
-}
+/* (Header shed ladder lives at the END of this file — it must come after
+   every base display rule it overrides, or the cascade re-shows what it
+   sheds.) */
 .brand .sub {
   font-family: var(--font-display);
   font-size: 10px;
@@ -157,6 +149,9 @@ html[lang="th"] .brand .sub-short { letter-spacing: 0.01em; text-transform: none
    on its own. */
 .data-freshness {
   display: inline-block;
+  /* Same anti-crush rule as .national: keep the freshness signal
+     legible (it was squeezed to 14px in the 1101–1560px band). */
+  min-width: 104px;
   margin-top: 3px;
   padding: 1px 6px 2px;
   font-family: var(--font-num);
@@ -203,7 +198,14 @@ html[lang="th"] .brand .sub-short { letter-spacing: 0.01em; text-transform: none
   padding: 8px 14px 0 14px;
   flex: 1 1 auto;
   overflow: hidden;
-  min-width: 0;
+  /* The national verdict is the header's headline message — it must
+     never be crushed to a sliver. It used to be the ONLY flexible item
+     in the header row, so on 1101–1560px viewports it absorbed the
+     entire squeeze (measured 29px wide at 1320px — unreadable). The
+     min-width holds it legible; the shed ladder below (partners →
+     focusbox → split → button labels) releases the space instead.
+     The ≤1100px phone grid resets this to 0. */
+  min-width: 170px;
   border-right: 1px solid var(--rule);
   height: var(--header-h);
 }
@@ -463,7 +465,7 @@ html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
 #flooddash-btn:hover { background: #0039A6; color: #fff; border-color: #0039A6; }
 /* Compare Places is a desktop power feature — the overlay's multi-pane
    grid needs width; hide the trigger on compact screens. */
-@media (max-width: 1100px) { #split-btn { display: none; } }
+/* (#split-btn now sheds at ≤1380px — see the header shed ladder.) */
 
 /* ── Rails ────────────────────────────────────────────────────────────────── */
 .rail {
@@ -654,7 +656,13 @@ html[lang="en"] .appfooter-line .en { display: inline; }
      content or the ticker. */
   .data-freshness {
     position: fixed;
-    top: calc(var(--header-h, 64px) + 6px);
+    /* NOT var(--header-h): the phone header's px-fixed rows (danger /
+       toggles / search / home strip) deliberately overflow the 64px
+       grid row and reach y≈125, and the map's layers control sits at
+       y≈125–166 right under them. 174px clears the whole stack, so
+       the pill floats over map canvas instead of covering the search
+       box and the ไทย/EN toggle (measured overlap before this fix). */
+    top: 174px;
     right: 6px;
     left: auto;
     bottom: auto;
@@ -1550,4 +1558,34 @@ body.mode-citizen #pane-citizen:not([hidden]) { display: flex !important; }
 
 @media (prefers-color-scheme: dark) {
   .focusbox #focus-select { background: var(--paper); color: var(--ink); border-color: var(--rule); }
+}
+
+/* ── Header shed ladder ──────────────────────────────────────────────────
+   .national/.data-freshness hold min-widths so the verdict can never be
+   crushed into a sliver (measured 29px wide at 1320px before this) —
+   so something else must give as the header narrows: decorations first,
+   functions last. Lives at the END of the file on purpose: these rules
+   override base display rules declared above, and at equal specificity
+   the later rule wins. Full credits stay on the boot screen and in the
+   About panel at every width; the focus dropdown's city jumps stay
+   available via search and the left-rail city cards. */
+@media (max-width: 1680px) {
+  .header-partner-axiom-retl, .header-partner-slic, .header-partner-rcad { display: none; }
+  .header-partners { gap: 10px; padding: 0 10px; }
+}
+@media (max-width: 1440px) {
+  .header-partners { display: none; }
+  .focusbox { display: none; }
+}
+@media (max-width: 1380px) {
+  #split-btn { display: none; }
+}
+@media (min-width: 1101px) and (max-width: 1280px) {
+  /* Icon-only nav buttons — desktop band only: the emoji/glyph carries
+     the meaning and the title attribute keeps the full label for hover
+     and screen readers. Below 1101px the phone grid takes over and its
+     full-width strips NEED their labels (an icon-only full-width bar
+     reads as an empty box). */
+  #home-btn .lbl, #flooddash-btn .lbl, #about-btn .lbl { display: none; }
+  #home-btn, #flooddash-btn, #about-btn { padding-left: 8px; padding-right: 8px; }
 }

@@ -2,7 +2,7 @@
   <img src="public/img/hero-1200.png" alt="DR NON'S AIRDASH — Thailand's Air Quality Dashboard" width="100%">
 </p>
 
-# AIRDASH 2.0
+# AIRDASH 3.0
 
 ## เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · Thailand Air Quality & Dust Watch
 

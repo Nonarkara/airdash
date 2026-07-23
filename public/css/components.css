@@ -2718,3 +2718,45 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
   .relief-eta, .national-relief { color: var(--rain); }
   .worse-chip { color: #E5A04A; }
 }
+
+/* ── 3.0 surface language ────────────────────────────────────────────────
+   The modern rounded-and-elevated pass, enabled by removing tokens.css's
+   old universal flatness reset. Lives at the END of the file so it wins
+   ties against the base rules above. Two radii (—r-ctl controls, —r-card
+   cards), two elevations, one motion curve — applied to the highest-
+   visibility surfaces only; dense data tables stay square. */
+
+/* Header controls + nav */
+#about-btn, #split-btn, #flooddash-btn, #home-btn, #ask-btn,
+#langtoggle button, #modetoggle button,
+.searchbox input, #focus-select {
+  border-radius: var(--r-ctl);
+  transition: background-color var(--motion), color var(--motion),
+              border-color var(--motion), box-shadow var(--motion);
+}
+.danger, .national .plate { border-radius: var(--r-ctl); }
+.header-partners { border-radius: 0 0 var(--r-ctl) 0; }
+
+/* Map-floating controls */
+.legend, .radarctl, .mapctl, .mapctl-body {
+  border-radius: var(--r-ctl);
+  box-shadow: var(--elev-1);
+  overflow: hidden;   /* clip inner rows to the rounded corner */
+}
+.legend-head, .legend-close { border-radius: 0; }
+.data-freshness { box-shadow: var(--elev-1); }
+
+/* Rail + overlay cards */
+.about-card, .ana-kpi, .places-card, .story-album {
+  border-radius: var(--r-card);
+}
+
+/* Search dropdown floats over content → stronger elevation */
+.search-results { box-shadow: var(--elev-2); border-radius: var(--r-card); }
+
+/* Modern, consistent keyboard-focus ring (was browser default) */
+:focus-visible {
+  outline: 2px solid var(--th-sage);
+  outline-offset: 1px;
+  border-radius: 3px;
+}

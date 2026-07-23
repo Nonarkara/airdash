@@ -10,6 +10,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.0] — 2026-07-24
+
+### AirDash 3.0 — communication facelift + overlap-free layout
+
+The same 2.0 instrument, restyled to communicate better. No science or
+data-layer changes.
+
+#### Fixed
+
+* **Header verdict crush** — on 1101–1560px viewports the national
+  verdict block (the header's headline message) was squeezed to 29px
+  wide and the data-freshness pill to 14px, both unreadable, because
+  they were the only flexible items in the header row. Both now hold
+  min-widths, and a **shed ladder** at the end of layout.css releases
+  space instead: partner marks → partner plate + focus dropdown →
+  compare button → nav-button labels (icon-only), decorations before
+  functions. Nothing clips off-screen at any width.
+* **Phone freshness pill overlap** — the pill's fixed offset used
+  `--header-h` (64px), but the phone header's px-fixed rows deliberately
+  overflow to y≈125 and the map's layers control sits right under them;
+  the pill was covering the search box and the ไทย/EN toggle (measured
+  79×17px overlap). Now anchored at 174px, clear of the whole stack.
+
+#### Changed
+
+* **3.0 surface language** — removed tokens.css's universal
+  `border-radius: 0 !important; box-shadow: none !important` reset,
+  which had silently killed every authored radius and shadow in the
+  codebase. Added radius/elevation/motion tokens (`--r-ctl`, `--r-card`,
+  `--elev-1/2`, `--motion`) and a surface layer at the end of
+  components.css: rounded header controls and nav, elevated map-floating
+  controls (legend, radar, layer picker), rounded rail/overlay cards and
+  search dropdown, smooth hover transitions, and a consistent
+  `:focus-visible` ring. Dense data tables stay square.
+* Product generation 2.0 → **3.0** across the brand badge, boot screen,
+  titles / OG cards, PWA manifest, READMEs, and the research-paper
+  masthead (with an honest one-paragraph 3.0 note in the "What Changed"
+  section). SW shell `airdash-v24` → `airdash-v25`.
+
+---
+
 ## [2.0.0] — 2026-07-24
 
 ### Generation release — the product is now "AirDash 2.0"

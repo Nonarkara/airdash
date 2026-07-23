@@ -231,9 +231,9 @@ function svgRetention() {
 function sectionHero() {
   return `
     <div class="rp-hero">
-      <div class="rp-hero-eyebrow">RESEARCH PAPER · v2.0 — July 2026</div>
-      <h1 class="rp-hero-title" data-th="AirDash 2.0 — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย" data-en="AirDash 2.0 — A Real-Time, Open-Source Air Quality Watch for Thailand">
-        ${tr('AirDash 2.0 — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย', 'AirDash 2.0 — A Real-Time, Open-Source Air Quality Watch for Thailand')}
+      <div class="rp-hero-eyebrow">RESEARCH PAPER · v3.0 — July 2026</div>
+      <h1 class="rp-hero-title" data-th="AirDash 3.0 — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย" data-en="AirDash 3.0 — A Real-Time, Open-Source Air Quality Watch for Thailand">
+        ${tr('AirDash 3.0 — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย', 'AirDash 3.0 — A Real-Time, Open-Source Air Quality Watch for Thailand')}
       </h1>
       <div class="rp-hero-meta">
         <div><strong>Dr Non Arkaraprasertkul</strong> · ดร.นน อัครประเสริฐกุล</div>
@@ -320,6 +320,13 @@ function sectionWhatsNew() {
         ${tr(
           'ผลรวมของหกแกนนี้คือสิ่งที่ทำให้ 2.0 "ล้ำกว่า" อย่างวัดได้: ตัวเลขทุกตัวมาพร้อมที่มา (ความสด) การยืนยัน (เกณฑ์กันเซ็นเซอร์เพี้ยน) และคำแปล (หน่วยสุขภาพ/เศรษฐศาสตร์ที่คนทั่วไปเข้าใจ) — สามอย่างที่เปลี่ยนจอแสดงผลให้กลายเป็นเครื่องมือที่ใช้ตัดสินใจจริงได้',
           'The sum of these six axes is what makes 2.0 measurably more advanced: every number now arrives with provenance (freshness), corroboration (glitch-gating), and translation (health and economic units a person can act on) — the three properties that turn a display into a decision instrument.'
+        )}
+      </p>
+
+      <p data-th="รุ่น 3.0 (รุ่นปัจจุบัน) เป็นการยกระดับ 'การสื่อสาร' บนเครื่องมือ 2.0 เดิม: การันตีว่าคำตัดสินระดับประเทศบนแถบหัวจะอ่านออกเสมอทุกขนาดจอ (บันไดถอยอุปกรณ์ตกแต่งก่อนฟังก์ชัน) เลย์เอาต์มือถือที่ไม่มีกล่องทับกัน และภาษาพื้นผิวโค้งมนสมัยใหม่ทั้งระบบ — วิทยาศาสตร์และชั้นข้อมูลไม่เปลี่ยนแปลง" data-en="Version 3.0 (the current release) is a communication lift on the same 2.0 instrument: a guarantee that the header's national verdict stays readable at every viewport (a shed ladder drops decorations before functions), an overlap-free mobile layout, and a modern rounded surface language across the system — the science and data layers are unchanged.">
+        ${tr(
+          'รุ่น 3.0 (รุ่นปัจจุบัน) เป็นการยกระดับ "การสื่อสาร" บนเครื่องมือ 2.0 เดิม: การันตีว่าคำตัดสินระดับประเทศบนแถบหัวจะอ่านออกเสมอทุกขนาดจอ เลย์เอาต์มือถือที่ไม่มีกล่องทับกัน และภาษาพื้นผิวโค้งมนสมัยใหม่ทั้งระบบ — วิทยาศาสตร์และชั้นข้อมูลไม่เปลี่ยนแปลง',
+          'Version 3.0 (the current release) is a communication lift on the same 2.0 instrument: the header verdict stays readable at every viewport, the mobile layout is overlap-free, and the whole system wears a modern rounded surface language — the science and data layers are unchanged.'
         )}
       </p>
     </section>`

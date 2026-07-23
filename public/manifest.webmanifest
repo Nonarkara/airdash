@@ -1,6 +1,6 @@
 {
-  "name": "AirDash 2.0 — Thailand Air Quality & Dust Watch",
-  "short_name": "AirDash 2.0",
+  "name": "AirDash 3.0 — Thailand Air Quality & Dust Watch",
+  "short_name": "AirDash 3.0",
   "description": "Real-time PM2.5 and air-quality monitoring for Thailand · เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย",
   "start_url": "/",
   "scope": "/",
