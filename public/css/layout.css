@@ -79,6 +79,48 @@ header {
    FloodDash orange highlight. */
 .brand .name .dot { color: var(--th-sage); padding: 0 1px; }
 .brand .name .accent { color: var(--th-deep); }
+/* 2.0 badge — the visible answer to "am I on the new version?". Same
+   idea as FloodDash's ver chip, in the AirDash teal/sage identity. */
+.brand .name .ver {
+  display: inline-block; vertical-align: super;
+  margin-left: 6px; padding: 1px 6px;
+  font-family: var(--font-num);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  color: #fff; background: var(--th-deep); border-radius: 3px;
+}
+
+/* One continuous SOLID WHITE plate for the whole partner row — the same
+   set of marks FloodDash carries. Solid white (not the paper tint) on
+   purpose: several partner logos ship with a baked-in white background,
+   and on pure white those boxes melt invisibly into the plate. flex:
+   0 0 auto so the header can never squeeze the plate below its content
+   width (the "stray white box" overflow bug FloodDash hit). */
+.header-partners {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 14px;
+  align-self: stretch;
+  flex: 0 0 auto;
+  background: #FFFFFF;
+  border-right: 1px solid var(--rule);
+}
+.header-partners a { display: flex; align-items: center; line-height: 0; }
+.header-partner-logo { display: block; object-fit: contain; flex: 0 0 auto; }
+.header-partner-depa { height: 24px; width: auto; max-width: 88px; }
+.header-partner-sct { height: 30px; width: 30px; }
+.header-partner-axiom-retl { height: 34px; width: auto; max-width: 112px; }
+.header-partner-slic { height: 28px; width: 28px; }
+.header-partner-rcad { height: 24px; width: auto; max-width: 104px; }
+/* The header already carries brand + national verdict + danger + search
+   + toggles; shed the plate's widest marks first, then the whole plate,
+   before anything functional has to give. Full credits stay on the boot
+   screen and in the About panel at every width. */
+@media (max-width: 1560px) {
+  .header-partner-axiom-retl, .header-partner-slic, .header-partner-rcad { display: none; }
+  .header-partners { gap: 10px; padding: 0 10px; }
+}
+@media (max-width: 1280px) {
+  .header-partners { display: none; }
+}
 .brand .sub {
   font-family: var(--font-display);
   font-size: 10px;

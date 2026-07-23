@@ -1737,6 +1737,19 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
    Same visual language as the About pane's personal section, but a touch
    more compact (the paper is information-dense). Blockquote in the
    display font; three commitments with display numerals. */
+/* Generation note — "What changed since 1.0". A quiet teal-accent card
+   between the hero and §1; the comparison rows reuse .rp-dict-table. */
+.rp-section-v2 {
+  background: var(--well);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--th-deep);
+  padding: 22px 24px 24px;
+  margin-bottom: 28px;
+}
+.rp-section-v2 h2 { border-bottom: none; padding-bottom: 0; margin-bottom: 10px; }
+.rp-v2-table td { vertical-align: top; line-height: 1.55; }
+.rp-v2-table td:first-child { white-space: normal; }
+
 .rp-section-why {
   background: var(--well);
   border: 1px solid var(--rule);

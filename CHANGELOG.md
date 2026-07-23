@@ -10,6 +10,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0] — 2026-07-24
+
+### Generation release — the product is now "AirDash 2.0"
+
+Marks the accumulated 1.x work (science engine, Air Story front door,
+life-safety alert pipeline, data-honesty layer, ops hardening) as the
+second product generation, and makes the generation visible in the UI.
+
+#### Added
+
+* **"2.0" version badge** on the Mission Control brand (`AIR·DASH 2.0`),
+  the Air Story chrome, the boot screen, page titles / OG cards, the
+  PWA manifest, and both READMEs — the visible answer to "am I on the
+  new version?".
+* **Header partner-logo plate** on Mission Control — the same mark set
+  FloodDash carries (depa · Smart City Thailand Office · Axiom+ReTL ·
+  SLIC · RCAD) on one solid white plate, shedding progressively on
+  narrow viewports (full credits remain on the boot screen and About
+  panel at every width).
+* **Research paper: "AirDash 2.0 — What Changed Since 1.0"** — an
+  unnumbered generation section between the hero and §1 with a
+  six-axis v1.0 → v2.0 comparison table (science layer, two-audience
+  architecture, alert pipeline, data honesty, operational resilience,
+  decision ergonomics); paper masthead now reads v2.0.
+
+#### Changed
+
+* Service-worker shell bumped `airdash-v23` → `airdash-v24` so
+  returning visitors flush the old-brand shell cleanly.
+
+---
+
 ## [1.1.0] — 2026-07-21
 
 ### Air Story front door + Science engine

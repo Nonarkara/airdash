@@ -38,6 +38,14 @@ body.story {
 }
 .story-chrome .brand .dot { color: var(--th-sage); }
 .story-chrome .brand .accent { color: var(--th-deep); }
+/* Generation chip — same 2.0 badge the Mission Control header wears. */
+.story-chrome .brand .ver {
+  display: inline-block; vertical-align: super;
+  margin-left: 5px; padding: 1px 5px;
+  font-family: var(--font-num);
+  font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  color: #fff; background: var(--th-deep); border-radius: 3px;
+}
 .story-chrome .spacer { flex: 1; }
 .story-chrome .langtoggle { display: flex; gap: 0; }
 .story-chrome .langtoggle button {

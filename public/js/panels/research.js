@@ -231,9 +231,9 @@ function svgRetention() {
 function sectionHero() {
   return `
     <div class="rp-hero">
-      <div class="rp-hero-eyebrow">RESEARCH PAPER · v1.0 — July 2026</div>
-      <h1 class="rp-hero-title" data-th="AirDash — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย" data-en="AirDash — A Real-Time, Open-Source Air Quality Watch for Thailand">
-        ${tr('AirDash — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย', 'AirDash — A Real-Time, Open-Source Air Quality Watch for Thailand')}
+      <div class="rp-hero-eyebrow">RESEARCH PAPER · v2.0 — July 2026</div>
+      <h1 class="rp-hero-title" data-th="AirDash 2.0 — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย" data-en="AirDash 2.0 — A Real-Time, Open-Source Air Quality Watch for Thailand">
+        ${tr('AirDash 2.0 — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย', 'AirDash 2.0 — A Real-Time, Open-Source Air Quality Watch for Thailand')}
       </h1>
       <div class="rp-hero-meta">
         <div><strong>Dr Non Arkaraprasertkul</strong> · ดร.นน อัครประเสริฐกุล</div>
@@ -249,6 +249,80 @@ function sectionHero() {
         </p>
       </div>
     </div>`
+}
+
+function sectionWhatsNew() {
+  // Unnumbered generation note between the hero and the Introduction —
+  // deliberately outside the numbered flow so the paper's section
+  // numbering (§1 Why … §N) survives untouched. Every row is a shipped,
+  // verifiable change (CHANGELOG.md carries the full engineering log);
+  // nothing here is roadmap.
+  const row = (topic, v1, v2) => `
+    <tr>
+      <td><strong>${topic}</strong></td>
+      <td>${v1}</td>
+      <td>${v2}</td>
+    </tr>`
+  return `
+    <section class="rp-section rp-section-v2">
+      <h2 data-th="AirDash 2.0 — อะไรเปลี่ยนไปจากรุ่น 1.0" data-en="AirDash 2.0 — What Changed Since 1.0">
+        ${tr('AirDash 2.0 — อะไรเปลี่ยนไปจากรุ่น 1.0', 'AirDash 2.0 — What Changed Since 1.0')}
+      </h2>
+
+      <p data-th="รุ่น 1.0 คือแดชบอร์ดเฝ้าระวังที่พอร์ตจากโครงสร้าง FloodDash — แสดงค่าฝุ่นสดและดัชนี heuristic ได้ครบ แต่เป็น 'จอแสดงผล' เป็นหลัก รุ่น 2.0 ยกระดับเป็น 'เครื่องมือประกอบการตัดสินใจ' ด้วยการเปลี่ยนแปลงเชิงโครงสร้าง 6 ด้าน — ทุกข้อตรวจสอบได้จริงในระบบที่รันอยู่ และบันทึกไว้ใน CHANGELOG ของโครงการ" data-en="Version 1.0 was a monitoring dashboard ported from the FloodDash backbone — it displayed live readings and heuristic scores well, but it was fundamentally a display. Version 2.0 restructures it into a decision instrument along six axes — every row below is shipped, observable in the running system, and logged in the project CHANGELOG.">
+        ${tr(
+          'รุ่น 1.0 คือแดชบอร์ดเฝ้าระวังที่พอร์ตจากโครงสร้าง FloodDash — แสดงค่าฝุ่นสดและดัชนี heuristic ได้ครบ แต่เป็น "จอแสดงผล" เป็นหลัก รุ่น 2.0 ยกระดับเป็น "เครื่องมือประกอบการตัดสินใจ" ด้วยการเปลี่ยนแปลงเชิงโครงสร้าง 6 ด้าน — ทุกข้อตรวจสอบได้จริงในระบบที่รันอยู่',
+          'Version 1.0 was a monitoring dashboard ported from the FloodDash backbone — it displayed live readings and heuristic scores well, but it was fundamentally a display. Version 2.0 restructures it into a decision instrument along six axes — every row below is shipped and observable in the running system.'
+        )}
+      </p>
+
+      <table class="rp-dict-table rp-v2-table">
+        <thead><tr>
+          <th style="width:22%">${tr('ด้าน', 'Axis')}</th>
+          <th>${tr('รุ่น 1.0', 'v1.0')}</th>
+          <th>${tr('รุ่น 2.0', 'v2.0')}</th>
+        </tr></thead>
+        <tbody>
+          ${row(
+            tr('วิทยาศาสตร์สุขภาพ + เศรษฐศาสตร์', 'Health + economics science layer'),
+            tr('ค่า µg/m³ ดิบ + ดัชนี heuristic — ผู้ใช้ต้องแปลความหมายเอง', 'Raw µg/m³ + heuristic scores — the reader translates meaning themselves'),
+            tr('เอนจิน /api/science: บุหรี่เทียบเท่า · นาทีชีวิต · อัตราเสียชีวิตส่วนเกิน (Liu 2019, NEJM) · AQLI · บิลหมอกควันรายวันผ่าน VSL · ทัศนวิสัย Koschmieder · AOT40 — ทุกสูตรมี "ใบเสร็จ" อ้างอิงงานวิจัยเปิดดูได้ในหน้านี้', 'The /api/science engine: cigarette-equivalents · life-minutes · excess mortality (Liu 2019, NEJM) · AQLI · a daily haze bill via VSL · Koschmieder visibility · AOT40 crop stress — every formula ships with a citation "receipt" readable in this paper'),
+          )}
+          ${row(
+            tr('สถาปัตยกรรมสองผู้อ่าน', 'Two-audience architecture'),
+            tr('แดชบอร์ดผู้ปฏิบัติการหน้าเดียวสำหรับทุกคน', 'One operator dashboard for every audience'),
+            tr('หน้าแรกเป็น Air Story — เรื่องเล่าอากาศวันนี้แบบเลือกตัวตน (เด็ก/นักกีฬา/หญิงตั้งครรภ์/ผู้ป่วยหอบหืด ฯลฯ) — ส่วนห้องควบคุมเต็มรูปแบบย้ายมาที่ /ops.html ใช้ API สดชุดเดียวกัน', 'The front door is Air Story — a persona-driven narrative of today\'s air (kid / athlete / pregnant / asthma …) — while the full Mission Control lives at /ops.html, both reading the same live APIs'),
+          )}
+          ${row(
+            tr('ระบบแจ้งเตือนระดับความปลอดภัยชีวิต', 'Life-safety alert pipeline'),
+            tr('แจ้งเตือนข้ามเส้นเกณฑ์บนหน้าจอเท่านั้น cooldown 6 ชม. ร่วมกันทุกระดับ — สถานีที่พุ่งจาก 40 เป็น 160 ภายในช่วง cooldown จะถูกกลืนหาย', 'Screen-only threshold crossings with one shared 6 h cooldown — a station escalating 40 → 160 inside the window was silenced'),
+            tr('cooldown รับรู้ระดับความรุนแรง (การยกระดับทะลุผ่านได้เสมอ) · แจ้งเตือนระดับ 3 ต้องมีการยืนยันจากสถานีเพื่อนบ้าน/ดาวเทียม กันเซ็นเซอร์เพี้ยน (เหตุการณ์ชลบุรี 426 µg/m³ ถูกระงับและบันทึกให้ตรวจสอบ) · ข้อความ "อากาศกลับมาดีแล้ว" เมื่อค่าลดต่อเนื่อง · ส่งจริงถึงมือถือรายจังหวัดผ่าน Telegram + LINE OA · มีชุดทดสอบถดถอย 12 ข้อ', 'Severity-aware cooldown (escalations always break through) · sev-3 alerts require neighbour/satellite corroboration against sensor glitches (the Chonburi 426 µg/m³ spike is suppressed and audit-logged) · sustained all-clear pushes · real per-province delivery via Telegram + LINE OA · guarded by a 12-case regression suite'),
+          )}
+          ${row(
+            tr('ชั้นความซื่อสัตย์ของข้อมูล', 'Data-honesty layer'),
+            tr('ตัวเลขแสดงโดยไม่มีสัญญาณบอกความสดหรือคุณภาพเซ็นเซอร์', 'Numbers shown with no freshness or sensor-quality signal'),
+            tr('ป้ายความสดข้อมูลในส่วนหัว (เขียว/เหลือง/แดง) · ความสดรายไปป์ไลน์ในแคตตาล็อกแหล่งข้อมูล · เกณฑ์ sanity รายตัวชี้วัดปฏิเสธค่าขยะ · ธงคุณภาพเซ็นเซอร์ (ค้าง/แบน/หลุดโผล่/ไม่ตรงกัน) พร้อม CSV สำหรับทีมภาคสนาม · ข้อความ error ภาษาคนพร้อมปุ่มลองใหม่', 'A header data-freshness pill (green/amber/red) · per-pipeline freshness in the sources catalog · per-metric sanity bounds rejecting garbage readings · sensor-quality flags (stale / flatline / outlier / mismatch) with a CSV export for field crews · plain-language error states with retry'),
+          )}
+          ${row(
+            tr('ความทนทานเชิงปฏิบัติการ', 'Operational resilience'),
+            tr('โปรเซสเดียว ไม่มี backup — และ watchdog เฝ้าดิสก์ผิดโวลุ่ม (รายงาน "ปกติ" ขณะดิสก์จริงเต็ม 100%)', 'A single process with no backups — and a watchdog checking the wrong disk volume (reporting "ok" while the real volume hit 100%)'),
+            tr('backup SQLite รายคืนพร้อม integrity check เก็บ 7 วัน · watchdog แบบยกระดับ (แจ้งเตือน → restart พร้อมช่วงผ่อนผัน boot) · ตรวจดิสก์โวลุ่มที่ถูกต้อง · หมุนเวียน log อัตโนมัติ', 'Nightly integrity-checked SQLite backups with 7-day retention · an escalating watchdog (notify → kickstart with boot grace) · the correct data-volume disk check · automatic log rotation'),
+          )}
+          ${row(
+            tr('สรีรศาสตร์การตัดสินใจ', 'Decision ergonomics'),
+            tr('พอร์ตจากจอเดสก์ท็อป มีร่องรอยยุคน้ำท่วมหลงเหลือ', 'A desktop-first port with flood-era leftovers'),
+            tr('ดัชนีอันตราย "ตอนนี้" (PM×ความร้อน×ความชื้น×เสียง−ฝน) ตรึงบนแถบบนสุด · แถบ SEVERE NOW เรียงจากร้ายแรงก่อน · คำอธิบายแผนที่บนมือถือปิดได้เสมอ · สองภาษาเต็มระบบ · สถานะว่างที่ซื่อสัตย์เมื่ออากาศดี', 'The "right now" Danger Score (PM×heat×humidity×noise−rain) pinned to the top bar · severity-first SEVERE NOW strips · a mobile map legend that can always be dismissed · full bilingualism · honest empty states when the air is genuinely clear'),
+          )}
+        </tbody>
+      </table>
+
+      <p data-th="ผลรวมของหกแกนนี้คือสิ่งที่ทำให้ 2.0 'ล้ำกว่า' อย่างวัดได้: ตัวเลขทุกตัวมาพร้อมที่มา (ความสด) การยืนยัน (เกณฑ์กันเซ็นเซอร์เพี้ยน) และคำแปล (หน่วยสุขภาพ/เศรษฐศาสตร์ที่คนทั่วไปเข้าใจ) — สามอย่างที่เปลี่ยนจอแสดงผลให้กลายเป็นเครื่องมือที่ผู้ว่าราชการ ผู้อำนวยการโรงเรียน หรือผู้ปกครองคนหนึ่ง ใช้ตัดสินใจจริงได้" data-en="The sum of these six axes is what makes 2.0 measurably more advanced: every number now arrives with provenance (freshness), corroboration (glitch-gating), and translation (health and economic units a person can act on) — the three properties that turn a display into an instrument a governor, a school director, or a single parent can base a real decision on.">
+        ${tr(
+          'ผลรวมของหกแกนนี้คือสิ่งที่ทำให้ 2.0 "ล้ำกว่า" อย่างวัดได้: ตัวเลขทุกตัวมาพร้อมที่มา (ความสด) การยืนยัน (เกณฑ์กันเซ็นเซอร์เพี้ยน) และคำแปล (หน่วยสุขภาพ/เศรษฐศาสตร์ที่คนทั่วไปเข้าใจ) — สามอย่างที่เปลี่ยนจอแสดงผลให้กลายเป็นเครื่องมือที่ใช้ตัดสินใจจริงได้',
+          'The sum of these six axes is what makes 2.0 measurably more advanced: every number now arrives with provenance (freshness), corroboration (glitch-gating), and translation (health and economic units a person can act on) — the three properties that turn a display into a decision instrument.'
+        )}
+      </p>
+    </section>`
 }
 
 function sectionWhy() {
@@ -832,6 +906,7 @@ function paint() {
   const catalog = catalogCache
   const sections = [
     sectionHero(),
+    sectionWhatsNew(),
     sectionWhy(),
     sectionDanger(),
     sectionArchitecture(),

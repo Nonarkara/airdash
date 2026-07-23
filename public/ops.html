@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AIRDASH — เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · Thailand Air Quality & Dust Watch</title>
+<title>AIRDASH 2.0 — เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · Thailand Air Quality & Dust Watch</title>
 <meta name="description" content="ข้อมูลเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทยแบบเรียลไทม์ พร้อมค่าฝุ่นรายสถานี ความเสี่ยงรายจังหวัด และโอกาสฝนช่วยล้างฝุ่น · Live Thailand air quality, local PM2.5 risk and rain-washout outlook.">
 <link rel="canonical" href="https://air.nonarkara.org/ops.html">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://air.nonarkara.org/ops.html">
-<meta property="og:title" content="AIRDASH — Thailand Air Quality & Dust Watch">
+<meta property="og:title" content="AIRDASH 2.0 — Thailand Air Quality & Dust Watch">
 <meta property="og:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="AIRDASH — Thailand Air Quality & Dust Watch">
+<meta name="twitter:title" content="AIRDASH 2.0 — Thailand Air Quality & Dust Watch">
 <meta name="twitter:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230E4A5E'/%3E%3Ccircle cx='11.5' cy='4.5' r='2.5' fill='%233A8A6E'/%3E%3Cpath d='M2 8h12M2 10.5h9M2 13h12' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round' opacity='0.9'/%3E%3Ccircle cx='13' cy='10.5' r='1' fill='%23C8453A'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
@@ -29,7 +29,7 @@
 
 <div id="boot" role="status" aria-live="polite" aria-busy="true" aria-label="กำลังโหลดข้อมูลสด · Loading live data">
   <div class="sign" style="text-align:center">
-    <div class="th" style="font-size:26px;font-weight:800;letter-spacing:-0.01em;font-family:Manrope,'Sarabun',sans-serif">AIR<span style="color:#3A8A6E">·</span><span style="color:#0E4A5E">DASH</span></div>
+    <div class="th" style="font-size:26px;font-weight:800;letter-spacing:-0.01em;font-family:Manrope,'Sarabun',sans-serif">AIR<span style="color:#3A8A6E">·</span><span style="color:#0E4A5E">DASH</span> <span style="font-size:12px;font-weight:700;vertical-align:super;color:#fff;background:#0E4A5E;border-radius:3px;padding:1px 6px;letter-spacing:0.08em">2.0</span></div>
     <div class="en" data-i18n="กำลังเชื่อมต่อข้อมูลสด…|Connecting live pipelines…">connecting live pipelines · กำลังเชื่อมต่อข้อมูลสด</div>
   </div>
   <div class="bar"><div></div></div>
@@ -116,9 +116,28 @@
     <div class="aqistripe"></div>
 
     <div class="brand">
-      <h1 class="name">AIR<span class="dot">·</span><span class="accent">DASH</span></h1>
+      <h1 class="name">AIR<span class="dot">·</span><span class="accent">DASH</span><span class="ver">2.0</span></h1>
       <div class="sub" data-i18n="เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย|Thailand Air Quality & Dust Watch · 24/7 live data">เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · 24/7 LIVE DATA</div>
       <div class="sub-short" data-i18n="PM2.5 · AQI · 24/7 สด|PM2.5 · AQI · 24/7 LIVE">PM2.5 · AQI · 24/7 สด</div>
+    </div>
+
+    <!-- Partner marks — the same set FloodDash carries in its header, on
+         one solid white plate (several logos ship a baked-in white box;
+         on pure white they melt into a single team instead of cropped
+         rectangles). Three tiers: steward (depa), partners (Smart City
+         Thailand Office, Axiom+ReTL), standards (SLIC, RCAD). Hidden
+         progressively on narrow viewports (see layout.css) — the boot
+         screen and About panel keep the full credits everywhere. -->
+    <div class="header-partners" aria-label="Project partners">
+      <a href="https://depa.or.th" target="_blank" rel="noopener" title="สำนักงานส่งเสริมเศรษฐกิจดิจิทัล · Digital Economy Promotion Agency">
+        <img src="/img/depa-mark.png" alt="depa" class="header-partner-logo header-partner-depa" width="56" height="18">
+      </a>
+      <a href="https://smartcitythailand.or.th" target="_blank" rel="noopener" title="สำนักงานเมืองอัจฉริยะประเทศไทย · Smart City Thailand Office">
+        <img src="/img/smart-city-th-icon.png" alt="Smart City Thailand Office" class="header-partner-logo header-partner-sct" width="24" height="24">
+      </a>
+      <img src="/img/axiom-retl.png" alt="Axiom + ReTL — The Reason To Live Company" class="header-partner-logo header-partner-axiom-retl" width="68" height="36" title="Axiom + ReTL — The Reason To Live Company">
+      <img src="/img/slic.webp" alt="SLIC" class="header-partner-logo header-partner-slic" width="22" height="22" title="SLIC">
+      <img src="/img/rcad-mark.svg" alt="RCAD" class="header-partner-logo header-partner-rcad" width="90" height="24" title="RCAD — Research and Innovation Acceleration Agency for Competitiveness and Area Development">
     </div>
     <!-- Data freshness pill — the honest "is this number current?" signal.
          Color-coded: green = <15 min, amber = 15–30 min, red = >30 min.
@@ -777,7 +796,7 @@
   // layers during the service-worker handover. The shell name must match
   // the new CACHE name in sw.js so the migration only runs when the SW
   // itself is upgrading.
-  const shell = 'airdash-v23'
+  const shell = 'airdash-v24'
   const migrated = `ad-shell-ready:${shell}`
   const registrations = 'serviceWorker' in navigator
     ? await navigator.serviceWorker.getRegistrations()
