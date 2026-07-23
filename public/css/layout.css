@@ -690,7 +690,13 @@ html[lang="en"] .appfooter-line .en { display: inline; }
     align-items: center; padding: 4px 8px 0 4px;
   }
   #langtoggle button { min-width: 36px; min-height: 26px; padding: 3px 5px; font-size: 11px; }
-  .legend { display: none; }
+  /* Keep the map legend reachable on phones — it used to be hidden
+     entirely here, which left the map's colored dots and circles with
+     no key on the platform most people actually use this on. The
+     legend-body max-height + legend-close button (components.css) make
+     it safe to show: it can no longer grow past the screen and trap
+     the only close control off-screen. */
+  .legend { font-size: 10px; }
 
   #rail-left, #rail-right { display: none; }
   #rail-left.sheet-active, #rail-right.sheet-active {

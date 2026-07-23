@@ -249,10 +249,29 @@ function addLegend() {
       <div class="eyebrow" style="margin-top:6px">${tr('ข่าวไฟป่า/มลพิษ', 'FIRE & POLLUTION NEWS')}</div>
       <div class="lrow"><span class="lsw round" style="background:#A51931"></span>🔥 ${tr('ข่าวไฟป่า/การเผา', 'wildfire / open-burning news')}</div>
       <div class="lrow"><span class="lsw round" style="background:#A51931"></span>⚠ ${tr('ข่าวมลพิษอื่น + ค่าฝุ่นปัจจุบันของพื้นที่', 'other pollution news + current PM2.5 there')}</div>`
-    head.onclick = () => {
-      body.hidden = !body.hidden
-      head.setAttribute('aria-expanded', body.hidden ? 'false' : 'true')
+    // Close button at the BOTTOM of the body — the head is at the TOP of
+    // the upward-growing panel, which a mobile user reported being unable
+    // to reach to close the legend. Appended AFTER the innerHTML assignment
+    // above (innerHTML would wipe anything created into body before it).
+    const close = L.DomUtil.create('button', 'legend-close', body)
+    close.type = 'button'
+    close.textContent = tr('ปิดคำอธิบาย ✕', 'Close legend ✕')
+    const setOpen = (open) => {
+      if (open) {
+        // Fit the body inside the ACTUAL map strip. The CSS max-height
+        // (min(48vh,340px)) alone wasn't enough on mobile: the map area
+        // there is shorter than 340px, so the bottom-anchored panel grew
+        // upward past the map's top edge and put the head — the only
+        // close control — under the sticky header (real user report).
+        // 60 ≈ head height + control margins + breathing room.
+        const mapH = map.getContainer()?.clientHeight ?? 400
+        body.style.maxHeight = Math.max(120, Math.min(340, mapH - 60)) + 'px'
+      }
+      body.hidden = !open
+      head.setAttribute('aria-expanded', open ? 'true' : 'false')
     }
+    head.onclick = () => setOpen(body.hidden)
+    close.onclick = () => setOpen(false)
     return div
   }
   legendCtl.addTo(map)

@@ -1181,8 +1181,27 @@ body.mode-citizen .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   color: var(--ink); font-weight: 700;
 }
 .legend-head:hover { background: var(--well-dim); color: var(--ink); }
-.legend-body { padding: 6px 8px; border-top: 1px solid var(--rule); }
+.legend-body {
+  padding: 6px 8px; border-top: 1px solid var(--rule);
+  /* The legend anchors bottom-left and GROWS UPWARD when expanded. With no
+     height bound, a body taller than a phone screen pushed .legend-head —
+     the only toggle — off the top of the viewport, leaving mobile users
+     unable to close it (real user report, ported from FloodDash's fix for
+     the same bug). Bound it; scroll inside. */
+  max-height: min(48vh, 340px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .legend-body[hidden] { display: none; }
+/* Thumb-reachable close at the BOTTOM of the body — the head sits at the
+   top of the expanded panel, exactly where a one-handed phone grip can't
+   reach. */
+.legend-close {
+  display: block; width: 100%; margin-top: 6px; min-height: 40px;
+  border: 1px solid var(--rule); background: var(--well-dim);
+  color: var(--ink); font: inherit; font-weight: 700; cursor: pointer;
+}
+.legend-close:hover { background: var(--th-navy); color: #fff; }
 .legend .lrow { display: flex; align-items: center; gap: 6px; padding: 1.5px 0; }
 .legend .lsw { width: 11px; height: 11px; flex: none; }
 .legend .lsw.round { border-radius: 50% !important; }
