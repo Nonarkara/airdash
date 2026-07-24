@@ -1589,3 +1589,22 @@ body.mode-citizen #pane-citizen:not([hidden]) { display: flex !important; }
   #home-btn .lbl, #flooddash-btn .lbl, #about-btn .lbl { display: none; }
   #home-btn, #flooddash-btn, #about-btn { padding-left: 8px; padding-right: 8px; }
 }
+
+/* ── Collapsible phone sheet ─────────────────────────────────────────────
+   Tapping the active sheet tab again collapses the sheet (main.js adds
+   .sheet-collapsed on #app): the sheet row goes to 0 and the map takes
+   the full height between header and ticker. The chevron on the active
+   tab is the "tap again to hide" affordance. */
+@media (max-width: 1100px) {
+  #app.sheet-collapsed {
+    grid-template-rows: 64px minmax(0, 1fr) auto 0 var(--ticker-h);
+  }
+  #app.sheet-collapsed #rail-left,
+  #app.sheet-collapsed #rail-right { display: none !important; }
+  #sheettabs button.active .en-lbl::after { content: " ▾"; }
+}
+@media (max-width: 480px) {
+  #app.sheet-collapsed {
+    grid-template-rows: auto minmax(0, 1fr) auto 0 var(--ticker-h);
+  }
+}

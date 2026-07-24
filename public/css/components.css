@@ -426,7 +426,7 @@
 .danger-chip.b-high     .dc-band { color: var(--aqi-hazardous); }
 
 /* ── Station detail ──────────────────────────────────────────────────────── */
-.detail-back { margin: 10px 12px 0; }
+.detail-back { margin: 10px 12px 0; min-height: 40px; padding: 6px 12px; }
 
 /* ── Danger block in the focus detail panel ─────────────────────────────
    The user clicked a province to see what's going on. After the Air

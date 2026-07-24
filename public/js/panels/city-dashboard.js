@@ -13,6 +13,7 @@ import { tr } from '../i18n.js?v=2.0.0-fresh1'
 import { getJson } from '../cache.js?v=2.0.0-fresh1'
 import { fmtNum } from '../fmt.js?v=2.0.0-fresh1'
 import { riskCi } from '../confidence.js?v=2.0.0-fresh1'
+import { focusById } from './focus.js?v=2.0.0-fresh1'
 
 const REFRESH_MS = 5 * 60_000
 const FETCH_TTL = 60_000 // city detail cache — 1 min (data moves on ingest cadence)
@@ -211,19 +212,16 @@ async function renderCityPicker(host) {
   const tiles = areas.map((a) =>
     el('button', {
       class: `cd-pick-tile geo-${a.geography ?? 'plain'}`,
-      onclick: () => {
-        // Fire the same focus event the header dropdown uses. main.js
-        // binds the focus event to map.flyTo + ranking drill-down, so
-        // a click on the grid is identical to a click on the header.
-        emit('focus', a)
-        // Sync the dropdown so the next / focus event has consistent state.
-        const sel = document.getElementById('focus-select')
-        if (sel) sel.value = a.id
-        // URL state sync — the city page is shareable.
-        const url = new URL(window.location.href)
-        url.searchParams.set('city', a.id)
-        window.history.replaceState({}, '', url)
-      },
+      // The blurb no longer renders inside the tile (the compact grid
+      // keeps only name + terrain line) — it lives in the tooltip, and
+      // the full story appears in the city dashboard after the tap.
+      title: L(a.blurb_th, a.blurb_en),
+      // focusById is the SAME path the header dropdown takes: it flies
+      // the map, scopes the rails, and syncs the dropdown + ?city= URL.
+      // The old handler emitted the bare 'focus' event, which notified
+      // panels but never called map.flyTo — "tap a city to fly there"
+      // loaded the dashboard while the camera never moved.
+      onclick: () => focusById(a.id),
     },
       a.accent_svg
         ? el('svg', { class: 'cd-pick-accent', viewBox: '0 0 80 40', preserveAspectRatio: 'none', 'aria-hidden': 'true' },
@@ -234,7 +232,6 @@ async function renderCityPicker(host) {
         a.geography ? L(GEO_LABELS[a.geography]?.th ?? '', GEO_LABELS[a.geography]?.en ?? '') : null,
         a.region_code ? ' · ' + L(REGION_LABELS[a.region_code]?.th ?? '', REGION_LABELS[a.region_code]?.en ?? '') : null,
       ),
-      el('div', { class: 'cd-pick-blurb' }, L(a.blurb_th, a.blurb_en)),
     ))
   host.replaceChildren(
     el('div', { class: 'cd-pick-head' },

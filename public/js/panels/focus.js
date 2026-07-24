@@ -16,8 +16,25 @@ import { showProvinceDetail, hideDetail } from './detail.js?v=2.0.0-fresh1'
 
 let areas = []
 let initialised = false
+let mapRef = null
+
+/**
+ * Public focus entry for panels without a map reference (the city-picker
+ * grid). Flies the map, scopes the rails, syncs the dropdown + URL —
+ * the exact path the header dropdown takes. Before this existed the
+ * grid emitted the bare 'focus' EVENT, which notified listeners but
+ * never called applyFocus — so "Tap a city to fly there" loaded the
+ * city dashboard without ever moving the map.
+ */
+export function focusById(id) {
+  if (!mapRef) return
+  const sel = document.getElementById('focus-select')
+  if (sel) sel.value = id
+  applyFocus(id, mapRef, { source: 'grid' })
+}
 
 export async function initFocus(map) {
+  mapRef = map
   // Both elements are optional — the top bar v2 stripped the focusbox,
   // and the focus mechanism is now driven by the city-picker grid in
   // city-dashboard.js. We still look for them so a future header that

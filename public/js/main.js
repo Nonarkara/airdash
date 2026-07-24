@@ -242,21 +242,38 @@ function initTabs() {
   })
 }
 
-// Mobile: bottom sheet showing one rail at a time.
+// Mobile: bottom sheet showing one rail at a time. Tapping the ACTIVE
+// tab again collapses the sheet entirely, giving the map the full
+// height between the header and the ticker — on a phone the sheet
+// otherwise eats ~56% of the screen with no way to dismiss it.
 function initSheet() {
   const nav = document.getElementById('sheettabs')
   const left = document.getElementById('rail-left')
   const right = document.getElementById('rail-right')
+  const app = document.getElementById('app')
+  let current = null
   const apply = (which) => {
     const mobile = window.matchMedia(COMPACT_VIEW).matches
     left.classList.remove('sheet-active')
     right.classList.remove('sheet-active')
-    if (!mobile) { invalidateMap(); return }
+    if (!mobile) { app.classList.remove('sheet-collapsed'); current = null; invalidateMap(); return }
+    if (which === null) {
+      // Collapsed: no rail active, the map row expands (see
+      // #app.sheet-collapsed in layout.css). Tabs stay visible so one
+      // tap brings any panel back.
+      current = null
+      app.classList.add('sheet-collapsed')
+      nav.querySelectorAll('button').forEach((b) => b.classList.remove('active'))
+      invalidateMap()
+      return
+    }
+    app.classList.remove('sheet-collapsed')
     if (which === 'risk') { left.classList.add('sheet-active'); hideDetail() }
     else {
       right.classList.add('sheet-active')
       selectPane(which)
     }
+    current = which
     nav.querySelectorAll('button').forEach((b) =>
       b.classList.toggle('active', b.dataset.sheet === which))
     invalidateMap()
@@ -265,7 +282,8 @@ function initSheet() {
   nav.addEventListener('click', (e) => {
     const btn = e.target.closest('button')
     if (!btn) return
-    apply(btn.dataset.sheet)
+    // Same tab again → collapse; different tab → switch.
+    apply(btn.dataset.sheet === current ? null : btn.dataset.sheet)
   })
   window.matchMedia(COMPACT_VIEW).addEventListener('change', () =>
     apply(document.body.classList.contains('mode-citizen') ? 'citizen' : 'risk'))

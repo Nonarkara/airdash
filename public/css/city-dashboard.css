@@ -337,7 +337,7 @@
 }
 .cd-pick-tile {
   position: relative;
-  padding: 12px 10px 10px;
+  padding: 8px 10px 7px;
   background: var(--well);
   color: var(--ink);
   text-align: left;
@@ -345,8 +345,13 @@
   font: inherit;
   border: 0;
   overflow: hidden;
-  min-height: 110px;
-  display: flex; flex-direction: column;
+  /* Compact: name + terrain line only. The tiles used to be 110px-tall
+     cards with a 3-line blurb each — eight of them ate most of the rail
+     on laptop and most of the sheet on phone before any live data
+     appeared. The blurb now lives in the tile's title tooltip, and the
+     full story loads in the city dashboard after the tap. */
+  min-height: 48px;
+  display: flex; flex-direction: column; justify-content: center;
   transition: background 120ms;
 }
 .cd-pick-tile:hover { background: var(--paper-warm); }
@@ -360,24 +365,20 @@
 }
 .cd-pick-name {
   font-family: var(--font-display);
-  font-size: 17px; font-weight: 800; line-height: 1.1;
+  font-size: 14.5px; font-weight: 800; line-height: 1.15;
   letter-spacing: -0.01em; color: var(--ink);
-  margin-bottom: 3px; position: relative; z-index: 1;
+  margin-bottom: 1px; position: relative; z-index: 1;
 }
 .cd-pick-tile:active .cd-pick-name { color: var(--ink-inv); }
 .cd-pick-geo {
   font-family: var(--font-num);
   font-size: 9.5px; letter-spacing: 0.04em;
   color: var(--ink-low);
-  margin-bottom: 5px; position: relative; z-index: 1;
+  margin-bottom: 0; position: relative; z-index: 1;
 }
-.cd-pick-blurb {
-  font-size: 11px; line-height: 1.35; color: var(--ink-mid);
-  position: relative; z-index: 1;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.cd-pick-tile:active .cd-pick-blurb { color: rgba(255,255,255,0.85); }
+/* .cd-pick-blurb no longer renders — the compact tiles keep the blurb
+   in their title tooltip; the rule stays for any cached markup. */
+.cd-pick-blurb { display: none; }
 
 /* Geography-class background tints — subtle, just enough to group the
    grid by terrain type. Bg + accent both shift together. */
