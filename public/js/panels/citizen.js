@@ -414,6 +414,9 @@ function renderTelegramForm(province) {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             chat_id: state.chatId,
+            // Proof of ownership — the server binds only when this code
+            // is the one the bot recorded for this chat's /start.
+            code: state.code,
             province_th: province.th,
             province_en: province.en,
             province_code: province.code,

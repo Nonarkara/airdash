@@ -218,6 +218,19 @@
     <div data-i18n="สาเหตุหลักตอนนี้ (จากข้อมูลสด)|What's driving it right now (live)">สาเหตุหลักตอนนี้ (จากข้อมูลสด)</div>
     <div class="cause-chips" id="cause-chips"></div>
 
+    <!-- Dust Engines — the structural "why does this place get dusty at
+         all?", filled by story.js from /api/dust-engines. Unlike the live
+         chips above it is never empty: on a clean day in July it still
+         explains the winter inversion, the cane calendar, the basin. -->
+    <div class="engines" id="dust-engines" hidden>
+      <button class="engines-head" id="engines-toggle" type="button" aria-expanded="false" aria-controls="engines-body">
+        <span class="engines-title" data-i18n="ทำไมที่นี่ถึงมีฝุ่น|Why this place gets dusty">ทำไมที่นี่ถึงมีฝุ่น</span>
+        <span class="engines-chev" aria-hidden="true">▾</span>
+      </button>
+      <div class="engines-summary" id="engines-summary"></div>
+      <div class="engines-body" id="engines-body" hidden></div>
+    </div>
+
     <div style="margin-top:20px" data-i18n="แนวโน้ม 72 ชม. ข้างหน้า|the next 72 hours">แนวโน้ม 72 ชม. ข้างหน้า</div>
     <div class="outlook" id="outlook"></div>
   </section>

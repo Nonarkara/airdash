@@ -7,6 +7,7 @@ import { pm25Score } from './risk.js'
 import { classifyOni } from './sources/enso.js'
 import { FOCUS_AREAS, FOCUS_BY_ID } from './focus.js'
 import { SOURCES, EXPORT_INFO } from './sources-catalog.js'
+import { profileFor, DUST_PROFILE_METHOD } from './dustProfile.js'
 import { listExportDays, buildDailyExport, dailyToCsv, buildFullExport, fullToCsv } from './export.js'
 import { listWeeklyExports, getExportPath, buildWeeklyExport as buildWeeklyExportJob, startWeeklyBuild, getBuildState } from './weeklyExport.js'
 import { libraryToc, searchLibrary, libraryDoc } from './library.js'
@@ -352,6 +353,43 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
         method_th: 'สมมติฐานสาเหตุจากหลักฐานแวดล้อม (ฤดูกาล ภูมิภาค สัดส่วน PM2.5/PM10 NO2 พยากรณ์ฝุ่นทะเลทราย ข่าว การระบายอากาศ) — ไม่ใช่การตรวจวัดองค์ประกอบทางเคมี',
         method_en: 'Cause hypotheses from circumstantial evidence (season, region, PM2.5/PM10 ratio, NO2, CAMS dust, news, ventilation) — heuristic, not chemical source apportionment',
         provinces: all,
+      })
+    },
+
+    // ── Dust Engines — "why does this place get dusty AT ALL?" ────────
+    // The structural companion to /api/causes. Live attribution only
+    // fires when PM2.5 is already elevated (and, for burning, inside the
+    // Dec–Apr window), so for most of the year it correctly returns
+    // nothing — leaving the most-asked question ("why is Bangkok always
+    // dusty in winter?") unanswerable. This endpoint answers mechanism
+    // and calendar, and is available in every season.
+    // ?province=<DOPA code> → that province. No param → all archetypes.
+    'GET /api/dust-engines': (req, res, url) => {
+      const code = (url.searchParams.get('province') ?? '').trim()
+      if (code) {
+        if (!/^\d{1,2}$/.test(code)) return json(res, 400, { error: 'province must be a DOPA code (e.g. 50)' })
+        const profile = profileFor(code)
+        if (!profile) return json(res, 404, { error: 'unknown province code' })
+        return json(res, 200, {
+          updated: new Date().toISOString(),
+          method_th: DUST_PROFILE_METHOD.th, method_en: DUST_PROFILE_METHOD.en,
+          province_code: code, ...profile,
+        })
+      }
+      // No province → one entry per archetype, so a reader can browse the
+      // whole national picture without 77 near-duplicate payloads.
+      const seen = new Map()
+      for (const p of (riskEngine.get()?.provinces ?? [])) {
+        const profile = profileFor(p.province_code)
+        if (!profile || seen.has(profile.archetype)) continue
+        seen.set(profile.archetype, {
+          example_province_th: p.province_th, example_province_en: p.province_en, ...profile,
+        })
+      }
+      json(res, 200, {
+        updated: new Date().toISOString(),
+        method_th: DUST_PROFILE_METHOD.th, method_en: DUST_PROFILE_METHOD.en,
+        archetypes: [...seen.values()],
       })
     },
 
@@ -1519,14 +1557,21 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
       const body = await readBody(req).catch(() => ({}))
       let parsed
       try { parsed = JSON.parse(body) } catch { return json(res, 400, { error: 'invalid JSON' }) }
-      const { chat_id, province_th, province_en, province_code, lang } = parsed
+      const { chat_id, code, province_th, province_en, province_code, lang } = parsed
       if (!Number.isFinite(Number(chat_id))) return json(res, 400, { error: 'chat_id required (integer)' })
+      if (!code) return json(res, 400, { error: 'binding code required' })
       if (!province_th) return json(res, 400, { error: 'province_th required' })
+      // Brute-force guard: the code space is 32^6 (~1B), but the global
+      // 300/min limiter alone would still allow sustained guessing against
+      // a known chat_id. Bind attempts get their own tight budget.
+      if (!allow(req, { key: 'tg-bind', limit: 12, windowMs: 60_000 })) {
+        return json(res, 429, { error: 'too many binding attempts — wait a minute' })
+      }
       let push
       try { push = await import('./telegramPush.js') } catch { return json(res, 503, TELEGRAM_PUSH_UNAVAILABLE) }
       try {
         const out = push.bindChat(db, {
-          chatId: Number(chat_id),
+          chatId: Number(chat_id), code,
           province_th, province_en, province_code, lang,
         })
         json(res, 200, out)
@@ -1572,6 +1617,13 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
       try {
         const code = url.searchParams.get('code')?.toUpperCase()
         if (!code) return json(res, 400, { error: 'code required' })
+        // This maps a code → chat_id, so it must not be enumerable. The
+        // dashboard polls it every 3 s for at most 3 min (~60 calls), so
+        // 90/min is generous for the honest flow and far too slow to walk
+        // a 32^6 code space.
+        if (!allow(req, { key: 'tg-code-status', limit: 90, windowMs: 60_000 })) {
+          return json(res, 429, { error: 'rate limit exceeded' })
+        }
         const row = db.get(
           `SELECT chat_id, province_th, lang FROM telegram_subs
            WHERE binding_code = ? LIMIT 1`, code)

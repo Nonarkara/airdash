@@ -415,6 +415,49 @@ function renderSky() {
   }
 }
 
+// ── Dust Engines — the structural "why does this place get dusty at all?"
+// Complements the live cause chips, which are correctly empty whenever the
+// air is clean. This never is: the winter inversion over Bangkok and the
+// cane calendar in the central plains are true in July too. Collapsed by
+// default so the Sky chapter stays scannable; the summary line always
+// shows, the mechanisms open on tap.
+async function renderDustEngines() {
+  const host = $('#dust-engines')
+  const sumEl = $('#engines-summary')
+  const bodyEl = $('#engines-body')
+  const toggle = $('#engines-toggle')
+  if (!host || !sumEl || !bodyEl || !toggle) return
+
+  // Province from the current selection; with no province chosen fall back
+  // to Bangkok's archetype — it is the one most readers are asking about.
+  const code = province || '10'
+  let data = null
+  try {
+    data = await getJson(`/api/dust-engines?province=${encodeURIComponent(code)}`, 3600_000)
+  } catch { host.hidden = true; return }
+  if (!data?.engines?.length) { host.hidden = true; return }
+
+  sumEl.textContent = tr(data.summary_th, data.summary_en)
+  bodyEl.innerHTML = data.engines.map((e) => `
+    <div class="engine${e.active_now ? ' is-now' : ''}">
+      <div class="engine-t">${escapeHtml(tr(e.title_th, e.title_en))}${
+        e.active_now ? `<span class="engine-now">${tr('ช่วงนี้', 'in season')}</span>` : ''}</div>
+      <div class="engine-m">${escapeHtml(tr(e.mechanism_th, e.mechanism_en))}</div>
+    </div>`).join('') +
+    `<div class="engine-note">${escapeHtml(tr(data.method_th, data.method_en))}</div>`
+
+  if (!toggle.dataset.bound) {
+    toggle.dataset.bound = '1'
+    toggle.addEventListener('click', () => {
+      const open = bodyEl.hidden
+      bodyEl.hidden = !open
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+      toggle.classList.toggle('open', open)
+    })
+  }
+  host.hidden = false
+}
+
 // ── 6 · FOREST ───────────────────────────────────────────────────────────────
 function renderForest() {
   const host = $('#forest-body')
@@ -453,7 +496,14 @@ function renderReceipts() {
     // the fallback sample uses plain strings — render either honestly.
     const consts = f.constants == null ? ''
       : typeof f.constants === 'string' ? f.constants
-      : Object.entries(f.constants).map(([k, v]) => `${k} = ${v}`).join(' · ')
+      // A constant's value can itself be an object — the AOT40 receipt
+      // carries bands: {low, moderate, elevated}. Interpolating that
+      // directly rendered a literal "[object Object]" on the wall, so
+      // flatten one level into "bands: low <210, moderate 210–700".
+      : Object.entries(f.constants).map(([k, v]) =>
+          v !== null && typeof v === 'object' && !Array.isArray(v)
+            ? `${k}: ${Object.entries(v).map(([bk, bv]) => `${bk} ${bv}`).join(', ')}`
+            : `${k} = ${Array.isArray(v) ? v.join(', ') : v}`).join(' · ')
     return `
     <div class="formula-card">
       <h3>${escapeHtml(store.lang === 'th' ? (f.title_th ?? f.title_en ?? f.id) : (f.title_en ?? f.title_th ?? f.id))}</h3>
@@ -585,6 +635,7 @@ function renderAll() {
   renderBody()
   renderWallet()
   renderSky()
+  renderDustEngines()
   renderForest()
   renderReceipts()
   renderAct()

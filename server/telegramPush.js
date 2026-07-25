@@ -153,26 +153,38 @@ export function generateBindingCode(db) {
 // telegramWebhook.js only stores the chat_id; the province + language
 // arrive here from the dashboard). Idempotent on chat_id (re-binding
 // the same chat just updates the province).
-export function bindChat(db, { chatId, province_th, province_en, province_code, lang }) {
+export function bindChat(db, { chatId, code, province_th, province_en, province_code, lang }) {
   if (!Number.isFinite(chatId)) throw new Error('chatId required')
   if (!province_th) throw new Error('province_th required')
-  const now = new Date().toISOString()
-  const existing = db.get('SELECT id FROM telegram_subs WHERE chat_id = ?', chatId)
-  if (existing) {
-    db.run(`UPDATE telegram_subs SET province_th = ?, province_en = ?, province_code = ?,
-            lang = ?, binding_code = NULL, fail_count = 0, active = 1, updated_at = ?
-            WHERE id = ?`,
-      province_th, province_en ?? null, province_code ?? null, lang ?? 'th', now, existing.id)
-    return { ok: true, updated: true }
+  if (!code) throw new Error('binding code required')
+
+  // AUTHORIZATION — the binding code is the ONLY proof that the caller
+  // controls this chat. It is minted per browser session
+  // (/api/telegram/binding-code) and can only reach telegram_subs by the
+  // user typing /start <code> into the bot from that chat, so possessing
+  // a code that matches this chat_id proves ownership of both ends.
+  //
+  // Without this check the endpoint was an IDOR: any unauthenticated
+  // caller could POST an arbitrary chat_id and silently re-point an
+  // existing subscriber's alerts at another province — a life-safety
+  // integrity bug (a Chiang Mai subscriber during burning season would
+  // receive "air is fine" pushes for a clean province while their own
+  // air was hazardous), plus a spam-enrolment vector against the bot.
+  const owner = db.get(
+    'SELECT id, chat_id FROM telegram_subs WHERE binding_code = ?',
+    String(code).toUpperCase())
+  if (!owner || Number(owner.chat_id) !== Number(chatId)) {
+    throw new Error('binding code does not match this chat')
   }
-  // Chat arrived via /start first, so an INSERT here is the fallback
-  // for the case where the dashboard calls bindChat before the webhook
-  // has fired (race). binding_code is nullable; the webhook will fill
-  // it in.
-  db.run(`INSERT INTO telegram_subs (chat_id, binding_code, province_th, province_en, province_code, lang, created_at, updated_at)
-          VALUES (?, NULL, ?, ?, ?, ?, ?, ?)`,
-    chatId, province_th, province_en ?? null, province_code ?? null, lang ?? 'th', now, now)
-  return { ok: true, created: true }
+
+  const now = new Date().toISOString()
+  // Clearing binding_code on success makes the code single-use: a
+  // replayed or leaked code cannot re-bind the chat afterwards.
+  db.run(`UPDATE telegram_subs SET province_th = ?, province_en = ?, province_code = ?,
+          lang = ?, binding_code = NULL, fail_count = 0, active = 1, updated_at = ?
+          WHERE id = ?`,
+    province_th, province_en ?? null, province_code ?? null, lang ?? 'th', now, owner.id)
+  return { ok: true, updated: true }
 }
 
 // Cron entry point — called by server/index.js every 5 min. Walks the

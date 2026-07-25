@@ -287,3 +287,62 @@ body.story {
   .breath-stage { gap: 18px; }
   .hero { padding: 28px 18px 64px; }
 }
+
+/* ── Dust Engines ────────────────────────────────────────────────────────
+   The structural "why here" block in the Sky chapter. Collapsed by
+   default: summary always visible, mechanisms on tap — so the chapter
+   stays scannable but the full explanation is one thumb-tap away. */
+.engines {
+  margin-top: 18px;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-card, 10px);
+  background: var(--well);
+  overflow: hidden;
+}
+.engines-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 12px 14px 10px;
+  background: none; border: 0; cursor: pointer;
+  font: inherit; color: var(--ink); text-align: left;
+  min-height: 44px;                      /* thumb target */
+}
+.engines-title { font-weight: 700; font-size: 15px; }
+.engines-chev { color: var(--ink-low); transition: transform 0.18s ease; }
+.engines-head.open .engines-chev { transform: rotate(180deg); }
+.engines-summary {
+  padding: 0 14px 12px; margin: 0;
+  font-size: 14px; line-height: 1.6; color: var(--ink-mid);
+}
+.engines-body { padding: 0 14px 14px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.engine { margin-bottom: 14px; }
+.engine:last-of-type { margin-bottom: 8px; }
+.engine-t {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-weight: 700; font-size: 14px; color: var(--ink); margin-bottom: 4px;
+}
+.engine-now {
+  font-family: var(--font-num); font-size: 9.5px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: #fff; background: var(--accent);
+  padding: 2px 7px; border-radius: 999px;
+}
+.engine-m { font-size: 13.5px; line-height: 1.65; color: var(--ink-mid); }
+.engine-note {
+  margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--rule);
+  font-size: 11.5px; line-height: 1.5; color: var(--ink-low); font-style: italic;
+}
+
+/* ── 3.0 "younger" pass on the story surface ─────────────────────────────
+   Softer, rounder, friendlier — pill chips, rounded cards, a livelier
+   band chip — without touching the type scale or the data itself. */
+.cause-chips .chip {
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+.outlook .day {
+  border-radius: var(--r-card, 10px);
+}
+.bandchip { border-radius: 999px; }
+.persona-chips button { border-radius: 999px; }
+.numcell .n { letter-spacing: -0.02em; }
