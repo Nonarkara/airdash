@@ -25,6 +25,7 @@
 //   engines: [{ id, title_th/en, mechanism_th/en, months:[1..12] }],
 //   peak_months: [..] } | null
 import { CAUSE_LABELS } from './causes.js'
+import { isThaiProvinceCode } from './provinces.js'
 
 // Month sets, 1 = January.
 const DRY_BURN = [12, 1, 2, 3, 4]
@@ -163,7 +164,12 @@ const ARCHETYPES = {
 }
 
 function archetypeFor(code) {
-  if (!code) return null
+  // DOPA codes are NOT contiguous — 00, 88 and 99 look like province codes
+  // and pass a \d{1,2} format check but name no real province. Without
+  // this the module would confidently describe the "dust engines" of a
+  // place that does not exist, which is exactly the kind of quiet
+  // fabrication the rest of this codebase refuses to do.
+  if (!code || !isThaiProvinceCode(code)) return null
   if (METRO.has(code)) return 'metro'
   if (NORTH_BASIN.has(code)) return 'north_basin'
   if (NORTH_OTHER.has(code)) return 'north_other'

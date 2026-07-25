@@ -680,14 +680,25 @@ html[lang="en"] .appfooter-line .en { display: inline; }
 
 @media (max-width: 1100px) {
   #app {
-    grid-template-rows: 64px minmax(0, 44fr) auto minmax(0, 56fr) var(--ticker-h);
+    /* `auto` for the header row, not a hard 64px: the header is a
+       3-row grid here (96px) and a hardcoded height clipped its last
+       row. auto tracks whatever the header actually needs, so this
+       cannot drift out of sync again. */
+    grid-template-rows: auto minmax(0, 44fr) auto minmax(0, 56fr) var(--ticker-h);
     grid-template-columns: 1fr;
     grid-template-areas: 'header' 'map' 'tabs' 'sheet' 'ticker';
   }
-  :root { --header-h: 64px; }
+  :root { --header-h: 96px; }
   header {
     display: grid; grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-rows: 32px 32px; overflow: visible;
+    /* THREE rows, not two. .national spans rows 1–2 of column 1, so a
+       two-row grid left the searchbox (also column 1) stacked directly
+       on top of the national verdict — measured 201x48px of overlap at
+       519px wide, making the headline verdict unreadable across the
+       whole 481–1100px band (tablets, split-screen windows, landscape
+       phones). The search now owns row 3 full-width, matching what the
+       ≤480px block already does. */
+    grid-template-rows: 32px 32px 40px; overflow: visible;
   }
   .brand, header .spacer, .focusbox, .ask-hero {
     display: none !important;
@@ -722,12 +733,19 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   }
   #modetoggle button { min-width: 36px; min-height: 26px; padding: 3px 5px; font-size: 10px; }
   .searchbox {
-    grid-column: 1; grid-row: 2; display: flex !important;
+    grid-column: 1 / -1; grid-row: 3; display: flex !important;
     width: 100%; min-width: 0; max-width: 100%;
-    flex: 1 1 0%;                  /* fill the 1fr column regardless of
-                                       content — the input has its own width
-                                       rules below so this is the cap. */
-    padding: 4px 4px 4px 10px;
+    flex: none;                    /* own full-width row — no longer
+                                       competing with .national for the
+                                       1fr column. */
+    /* align-self:start + a fixed height keep the BOX the same size as the
+       input. Left to stretch, the container's border box spilled across
+       rows 2–4 (measured 96px for a 34px input) — invisible, but a
+       full-width invisible box over the toggles is a tap-stealing hazard
+       and it makes every overlap measurement lie. */
+    align-self: start;
+    height: 40px;
+    padding: 4px 8px 4px 10px;
   }
   .searchbox input, .searchbox input:focus {
     width: 100%; max-width: 100%; min-width: 0; min-height: 26px; padding: 4px 32px 4px 9px; font-size: 12px;
@@ -740,6 +758,16 @@ html[lang="en"] .appfooter-line .en { display: inline; }
     align-items: center; padding: 4px 8px 0 4px;
   }
   #langtoggle button { min-width: 36px; min-height: 26px; padding: 3px 5px; font-size: 11px; }
+  /* Every header child must be EXPLICITLY placed in this grid. Anything
+     left unplaced auto-flows into the next free cell — which is how the
+     nav buttons landed on top of the searchbox across 481–1100px. The
+     ≤480px block already hid about/flooddash for exactly this reason;
+     the rule belongs to the whole compact range, not just phones. Both
+     remain reachable: About via the citizen panel's ⓘ tile and the
+     footer, FloodDash via the About panel's sister-project card. */
+  #about-btn, #flooddash-btn { display: none; }
+  .phone-about-link { display: inline-flex !important; }
+  #home-btn { grid-column: 1 / -1; grid-row: 4; justify-self: stretch; }
   /* Keep the map legend reachable on phones — it used to be hidden
      entirely here, which left the map's colored dots and circles with
      no key on the platform most people actually use this on. The
@@ -801,7 +829,10 @@ html[lang="en"] .appfooter-line .en { display: inline; }
      * the user can neither switch language nor mode. */
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-rows: auto 32px 32px;
+    /* Row 3 is 40px to match the searchbox's fixed height (set in the
+       ≤1100px block, which also matches here) — a 32px row left the
+       input spilling 8px onto the home strip below it. */
+    grid-template-rows: auto 32px 40px;
     height: auto;
     overflow: hidden;
     max-width: 100vw;

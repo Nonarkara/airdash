@@ -10,6 +10,10 @@
   "scripts": {
     "dev": "node server/index.js",
     "start": "node server/index.js",
-    "setup": "bash setup.sh"
+    "setup": "bash setup.sh",
+    "test": "node scripts/check-consistency.mjs && node scripts/test-alerts-fixes.mjs && node scripts/test-telegram-bind.mjs",
+    "test:consistency": "node scripts/check-consistency.mjs",
+    "test:alerts": "node scripts/test-alerts-fixes.mjs",
+    "test:bind": "node scripts/test-telegram-bind.mjs"
   }
 }

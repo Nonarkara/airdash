@@ -28,6 +28,7 @@
 //   - generateBindingCode(db)      → 6-char handshake token for the
 //                                    citizen panel's "Connect on Telegram"
 //                                    button. One per dashboard session.
+import { randomInt } from 'node:crypto'
 import { log } from './util.js'
 import { createTelegram } from './telegram.js'
 
@@ -139,7 +140,14 @@ export function generateBindingCode(db) {
   for (let attempt = 0; attempt < 5; attempt++) {
     let code = ''
     for (let i = 0; i < BINDING_CODE_LEN; i++) {
-      code += BINDING_CODE_ALPHABET[Math.floor(Math.random() * BINDING_CODE_ALPHABET.length)]
+      // randomInt (CSPRNG, rejection-sampled so it is unbiased) rather
+      // than Math.random(): this code is the ONLY credential proving a
+      // caller controls a chat_id at bind time, and V8's Math.random is
+      // xorshift128+ — its internal state is recoverable from a handful
+      // of observed outputs, which would make subsequent codes
+      // predictable. Anyone can mint codes from the public endpoint, so
+      // observing outputs is free.
+      code += BINDING_CODE_ALPHABET[randomInt(BINDING_CODE_ALPHABET.length)]
     }
     const exists = db.get('SELECT 1 AS x FROM telegram_subs WHERE binding_code = ?', code)
     if (!exists) return code
