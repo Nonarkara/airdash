@@ -11,7 +11,7 @@ import { profileFor, DUST_PROFILE_METHOD } from './dustProfile.js'
 import { listExportDays, buildDailyExport, dailyToCsv, buildFullExport, fullToCsv } from './export.js'
 import { listWeeklyExports, getExportPath, buildWeeklyExport as buildWeeklyExportJob, startWeeklyBuild, getBuildState } from './weeklyExport.js'
 import { libraryToc, searchLibrary, libraryDoc } from './library.js'
-import { searchGazetteer, placeDetail, searchTambons, searchDistricts, lookupPostal, lookupPlace } from './gazetteer.js'
+import { searchGazetteer, placeDetail, searchTambons, searchDistricts, lookupPostal, lookupPlace, resolvePlaceSlug } from './gazetteer.js'
 import { provinceVerdict } from './verdict.js'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -1006,6 +1006,16 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
       // near this city even when it sits across a province border.
       detail.verdict = provinceVerdict(prov, sat, detail.nearest_air ?? detail.nearest_water)
       json(res, 200, detail)
+    },
+
+    // /<slug> deep-link resolver. Returns the same shape /api/place does
+    // for a coordinate, so the client can reuse the place-card pipeline
+    // and the URL bar stays at /<slug> for sharing.
+    'GET /api/place/slug/:slug': (req, res, url) => {
+      const slug = url.searchParams.get(':slug')
+      const result = resolvePlaceSlug(slug)
+      if (!result) return json(res, 404, { error: 'unknown place slug' })
+      json(res, 200, { result })
     },
 
     // Direct tambon / district search (sub-route of the universal search).

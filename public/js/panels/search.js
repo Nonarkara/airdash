@@ -136,7 +136,9 @@ export function initSearch() {
 
   // City deep link (?city=...) — resolve after wiring so the shared link a
   // municipality bookmarks opens directly onto their own dashboard view.
+  // Falls through to /<slug> path-based links (e.g. /Sikhio) when no ?city.
   bootCityFromUrl()
+  bootCityFromSlug()
 }
 
 async function doSearch(q) {
@@ -282,6 +284,20 @@ async function bootCityFromUrl() {
     const r = data.results?.[0]
     if (r) selectResult(r)
   } catch { /* bad or stale link — fall through to the normal national view */ }
+}
+
+// Clean /<slug> links — public/_redirects sends any path with no matching
+// static file to index.html, so by the time this runs, a non-root
+// single-segment path is a candidate place slug. Resolved server-side by
+// gazetteer.js's slug index (unambiguous by construction).
+const RESERVED_TOP_SEGMENTS = new Set(['api', 'css', 'js', 'geo', 'vendor', 'img', 'fonts', 'photos', 'ops.html'])
+async function bootCityFromSlug() {
+  const seg = location.pathname.slice(1).split('/')[0]
+  if (!seg || seg.includes('.') || RESERVED_TOP_SEGMENTS.has(seg)) return
+  try {
+    const data = await getJson(`/api/place/slug/${encodeURIComponent(seg)}`, 60_000)
+    if (data?.result) selectResult(data.result)
+  } catch { /* unknown slug — fall through to the normal national view */ }
 }
 
 // City mode: while a place card is open it owns the whole left rail — a

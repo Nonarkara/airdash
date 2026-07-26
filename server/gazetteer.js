@@ -709,3 +709,45 @@ export function lookupPlace(code, kind, lang = 'en') {
   }
   return null
 }
+// ── Slug index for clean /<place> deep links ─────────────────────────
+// Builds a lowercase-keyed map of every province/district/tambon to a
+// canonical English slug. Both the slug-by-slug and slug-by-ref helpers
+// memoize; building the index walks the same data searchGazetteer uses so
+// what a /<name> URL resolves to matches what the search bar would pick.
+const _slugIndex = new Map()        // slug -> { kind, code }
+const _slugByRef = new Map()        // "kind:code" -> slug
+
+function buildSlugIndex() {
+  if (_slugIndex.size > 0) return _slugIndex
+  const slugify = (s) => String(s ?? '').toLowerCase()
+    .replace(/^เขต/, '').replace(/^อำเภอ/, '').replace(/^จังหวัด/, '').replace(/^ตำบล/, '').replace(/^แขวง/, '')
+    .replace(/[\s\u200B-\u200D\uFEFF]+/g, '')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+  const register = (kind, code, name) => {
+    if (!name) return
+    const slug = slugify(name)
+    if (!slug) return
+    if (!_slugIndex.has(slug)) _slugIndex.set(slug, { kind, code })
+    _slugByRef.set(`${kind}:${code}`, slug)
+  }
+  for (const p of loadProvinces().list) register('province', p.provinceCode, p.provinceNameEn)
+  for (const d of loadDistricts().list) register('district', d.districtCode, d.districtNameEn)
+  for (const t of loadTambons().list) register('subdistrict', t.subdistrictCode, t.subdistrictNameEn)
+  return _slugIndex
+}
+
+// Resolve a /<slug> deep link to a place, returning the same shape as
+// searchGazetteer would for that place. Memoized on the index so the first
+// hit is O(N) and every subsequent is O(1).
+export function resolvePlaceSlug(slug) {
+  const entry = buildSlugIndex().get(String(slug ?? '').toLowerCase())
+  if (!entry) return null
+  const place = lookupPlace(entry.code, entry.kind, 'en')
+  if (!place) return null
+  return { ...place, slug: String(slug).toLowerCase() }
+}
+
+export function slugFor(kind, code) {
+  buildSlugIndex()
+  return _slugByRef.get(`${kind}:${code}`) ?? null
+}

@@ -1,0 +1,6 @@
+# SPA fallback for clean city-dashboard links like /Sikhio. Real static
+# files and the /api/* Functions route are matched before _redirects rules
+# run, so this only fires for paths with no matching asset — exactly the
+# case for a bare place slug. The boot logic in main.js resolves the slug
+# client-side via /api/place/slug/:slug.
+/*  /index.html  200
