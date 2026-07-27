@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Long-term archive for BOTH dashboards → /Volumes/Data/dash-archive.
+
+  SCHEDULE RATIONALE — the 02:00 run is the one that matters.
+  Both live systems run retention at 03:00 local (CONFIG.retention.runAtHour),
+  which rolls raw readings older than 90 days into hourly means and DELETES
+  the raw rows, and deletes events/ingest_runs outright. Archiving at 02:00
+  guarantees a full hour of margin: nothing is ever destroyed before it has
+  been copied. If you change retention.runAtHour, change this too.
+
+  The other three runs (08/14/20) keep each incremental batch small so a
+  single missed night can never turn into a multi-million-row catch-up.
+
+  Install:
+    cp ops/com.dash.archive.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.dash.archive.plist
+  Run once now:
+    launchctl kickstart -k gui/$(id -u)/com.dash.archive
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dash.archive</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>/Users/axiom/AirDash/ops/archive-longterm.mjs</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>2</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>14</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>20</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+
+  <!-- Deliberately NOT KeepAlive. This is a batch job: it should run,
+       finish, and exit. A crash-restart loop on a job that writes to a
+       possibly-unmounted USB volume is how you fill the internal disk
+       with logs and take down the live dashboards. The script already
+       exits 0 when the volume is absent. -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <!-- Lowest I/O priority: the archive must never compete with an ingest
+       or an alert fan-out for disk. It is allowed to be slow. -->
+  <key>LowPriorityIO</key>
+  <true/>
+  <key>Nice</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/axiom/AirDash/logs/archive.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/axiom/AirDash/logs/archive.err.log</string>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/axiom/AirDash</string>
+</dict>
+</plist>
