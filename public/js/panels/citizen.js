@@ -24,6 +24,7 @@ import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.0.0-f
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
+  renderTomorrowOutlook, renderTellFamily, renderPetCare,
 } from './citizenLife.js?v=2.3.0-life1'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
@@ -283,10 +284,18 @@ function renderForProvince(province) {
   const todHost = el('div', { class: 'citizen-tod-host' })
   renderTimeOfDay(province).then((node) => { if (node) todHost.append(node) }).catch(() => {})
 
-  // Mask guide + symptom checker + migrant phrases (sync).
+  // Tomorrow's outlook — async, same pattern. Hides itself when
+  // tomorrow is no worse than today (don't nag the user with
+  // "good news" they already know).
+  const tomorrowHost = el('div', { class: 'citizen-tomorrow-host' })
+  renderTomorrowOutlook(province).then((node) => { if (node) tomorrowHost.append(node) }).catch(() => {})
+
+  // Mask guide + symptom checker + migrant phrases + pet care + tell family.
   const mask = renderMaskGuide()
   const symptom = renderSymptomChecker()
   const migrant = renderMigrantPhrases(band)
+  const pet = renderPetCare(band)
+  const tellFamily = renderTellFamily(province, band)
 
   // "What am I breathing" — three nearest AQ stations (loaded async below)
   const stationHead = el('div', { class: 'citizen-section-head' },
@@ -308,6 +317,7 @@ function renderForProvince(province) {
   // (only at elevated+ bands, when they're needed).
   const out = [
     head, reliefWrap,
+    tomorrowHost,
     personaHost,
     useTimeline ? renderActionTimeline(band) : null,
     todHost,
@@ -315,7 +325,9 @@ function renderForProvince(province) {
     mask,
     stationHead, stationList,
     symptom,
+    pet,
     migrant,
+    tellFamily,
   ].filter(Boolean)
   if (province.lat != null && province.lng != null) {
     getJson(`/api/stations/nearest?lat=${province.lat}&lng=${province.lng}&limit=3`, 60_000)

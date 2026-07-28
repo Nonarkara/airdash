@@ -678,3 +678,214 @@ export async function renderTimeOfDay(province) {
   out.append(head, bar, advice)
   return out
 }
+
+// ── 7. TOMORROW'S OUTLOOK — EARLY-WARNING CALLOUT ─────────────────────────
+
+// /api/forecast includes the +24h PM2.5. When tomorrow is forecast
+// to be in a worse band than today, that's the single most important
+// signal we can give a parent or an outdoor worker: a chance to
+// prepare (buy N95 today, plan indoor activities, reschedule the
+// school field trip). The callout is hidden when tomorrow is the
+// same band or better — no point nagging people with "good news".
+export async function renderTomorrowOutlook(province) {
+  if (!province?.code) return null
+  let forecast
+  try {
+    const j = await getJson(`/api/forecast?code=${province.code}`, 5 * 60_000)
+    forecast = (j?.provinces ?? []).find((p) => String(p.code) === String(province.code))
+  } catch { forecast = null }
+  if (!forecast?.scores) return null
+  const today = forecast.scores.now
+  const t24 = forecast.scores.p24h
+  const t48 = forecast.scores.p48h
+  const bandToday = bandFor(today)
+  const band24 = bandFor(t24)
+  const band48 = bandFor(t48)
+  // Only show the callout if tomorrow is a worse band than today.
+  // "Equal" is not interesting; "better" is reassurance that lives
+  // in the time-of-day forecast. The callout is for the "I need to
+  // do something today" signal.
+  if (!worseThan(band24, bandToday) && !worseThan(band48, bandToday)) return null
+  // Build a "what to prepare today" list
+  const prepItems = prepForBand(band24)
+  const out = el('div', { class: 'citizen-tomorrow-wrap' },
+    el('div', { class: 'citizen-section-head' },
+      el('span', {}, tr('⚠️ พรุ่งนี้อากาศจะแย่ลง', '⚠️ tomorrow the air will be worse'))),
+    el('div', { class: 'citizen-tomorrow-band' },
+      el('span', { class: 'citizen-tomorrow-band-arrow' }, '→'),
+      el('span', { class: `citizen-tomorrow-band-tag b-${bandToday}` }, tr(BAND_TH[bandToday], BAND_EN[bandToday])),
+      el('span', { class: 'citizen-tomorrow-band-arrow' }, '→'),
+      el('span', { class: `citizen-tomorrow-band-tag b-${band24}` }, tr(BAND_TH[band24], BAND_EN[band24])),
+    ),
+    el('div', { class: 'citizen-tomorrow-prep-head' },
+      tr('เตรียมตัววันนี้:', 'Prepare today:')),
+    el('ul', { class: 'citizen-tomorrow-prep-list' },
+      ...prepItems.map((p) => el('li', {}, tr(p.th, p.en)))),
+  )
+  return out
+}
+
+const BAND_RANK = { normal: 0, low: 1, watch: 2, elevated: 3, high: 4 }
+const BAND_TH = { normal: 'ปกติ', low: 'ต่ำ', watch: 'เฝ้าระวัง', elevated: 'เสี่ยงสูง', high: 'วิกฤต' }
+const BAND_EN = { normal: 'NORMAL', low: 'LOW', watch: 'WATCH', elevated: 'ELEVATED', high: 'CRITICAL' }
+
+function bandFor(score) {
+  if (score == null) return 'normal'
+  if (score >= 70) return 'high'
+  if (score >= 45) return 'elevated'
+  if (score >= 20) return 'watch'
+  return 'normal'
+}
+
+function worseThan(a, b) {
+  return (BAND_RANK[a] ?? 0) > (BAND_RANK[b] ?? 0)
+}
+
+// "What to prepare today" — practical, scannable. A parent or
+// worker reading this can act on every item before bed.
+function prepForBand(band) {
+  if (band === 'high') return [
+    { th: 'ซื้อ N95 วันนี้ (ร้านยา/ออนไลน์)', en: 'Buy N95 today (pharmacy / online)' },
+    { th: 'เปลี่ยนแผน: งดกิจกรรมกลางแจ้งพรุ่งนี้', en: 'Cancel outdoor plans tomorrow' },
+    { th: 'เตรียมอาหาร/น้ำดื่มไว้ในบ้าน — ลดการออกนอก', en: 'Stock food/water at home — minimize outings' },
+    { th: 'ตรวจเครื่องฟอกอากาศ — เปลี่ยนฟิลเตอร์ถ้าเก่า', en: 'Check air purifier — replace old filter' },
+  ]
+  if (band === 'elevated') return [
+    { th: 'ซื้อ N95 ติดบ้าน', en: 'Stock N95 at home' },
+    { th: 'วางแผนกิจกรรมในร่มสำหรับเด็ก', en: 'Plan indoor activities for the kids' },
+    { th: 'เลื่อนนัดหมายกลางแจ้ง', en: 'Reschedule outdoor appointments' },
+  ]
+  if (band === 'watch') return [
+    { th: 'เช็ค N95 ที่บ้าน — ถ้าไม่มี ซื้อติดไว้', en: 'Check N95 at home — buy one if you don\'t have it' },
+    { th: 'ติดตามค่าฝุ่นเช้าพรุ่งนี้ก่อนออกจากบ้าน', en: 'Check tomorrow morning\'s PM2.5 before going out' },
+  ]
+  return []
+}
+
+// ── 8. "TELL YOUR FAMILY" MESSAGE GENERATOR ─────────────────────────────
+
+// Most ordinary Thai families have at least one elderly member who
+// doesn't read or follow AirDash. A parent who checks the dashboard
+// has the question "what do I tell my mom?" — and the answer should
+// be one tap away. The generator produces a plain-language, no-jargon
+// sentence calibrated to today's band. It uses family-respectful
+// particles (หนู/ลูก/ค่ะ) so the message reads as caring, not
+// alarming, even at elevated bands.
+export function renderTellFamily(province, band) {
+  const todayBand = band || 'normal'
+  const messages = {
+    normal: {
+      kid:    { th: 'แม่อยู่บ้าน วันนี้อากาศดี เล่นข้างนอกได้ตามสบายเลยจ้ะ', en: "Mom's home, the air is good today — play outside as long as you like" },
+      elder:  { th: 'วันนี้อากาศดี แม่ออกไปตลาดได้ตามปกติเลยค่ะ', en: "Today's air is good — you can go to the market as usual" },
+      partner:{ th: 'อากาศวันนี้ดี ออกไปข้างนอกได้ตามสบายเลย', en: "Air is good today — get outside and enjoy it" },
+    },
+    watch: {
+      kid:    { th: 'ลูกเอ๊ยะ วันนี้ฝุ่นมากกว่าปกตินิดหน่อย เล่นข้างนอกได้แต่ไม่นานนะ', en: "Air is a bit dusty today — short outdoor play is fine, but don't overdo it" },
+      elder:  { th: 'แม่คะ วันนี้ฝุ่นเริ่มมาก อย่าออกกลางแจ้งนาน ๆ ใส่หน้ากากด้วยนะคะ', en: "Air is getting dusty today — don't stay out long, wear a mask" },
+      partner:{ th: 'ฝุ่นเริ่มมาก ลดเวลากลางแจ้ง พก N95 ไว้', en: "Dust is rising — cut outdoor time, carry an N95" },
+    },
+    elevated: {
+      kid:    { th: 'ลูก วันนี้ฝุ่นเยอะ อยู่ในบ้านดีกว่านะลูก', en: "Dust is heavy today — stay indoors, okay?" },
+      elder:  { th: 'แม่คะ วันนี้ฝุ่นเยอะมาก อย่าออกไปข้างนอกเลยค่ะ เดี๋ยวลูกซื้อของให้', en: "Dust is very heavy today — please don't go out, I'll get the shopping" },
+      partner:{ th: 'ฝุ่นหนักมากวันนี้ งดออกนอกบ้าน ปิดหน้าต่าง ใส่ N95 ถ้าจำเป็น', en: "Heavy dust today — stay in, close windows, N95 if you must go out" },
+    },
+    high: {
+      kid:    { th: 'ลูก วันนี้อยู่แต่ในบ้านนะลูก อย่าออกไปเล่นนอกบ้านเด็ดขาด', en: "Stay inside today — absolutely no playing outside" },
+      elder:  { th: 'แม่คะ วันนี้ฝุ่นอันตราย อยู่บ้านอย่างเดียวนะคะ ถ้าหายใจลำบากโทรหาหนูทันที', en: "Air is dangerous today — stay home. If you have trouble breathing, call me right away" },
+      partner:{ th: 'ฝุ่นอันตราย ทุกคนอยู่ในบ้าน ปิดหน้าต่างทุกบาน เปิดเครื่องฟอก ถ้าแน่นหน้าอกโทร 1669', en: "Dangerous air — everyone stays in, seal the windows, run the purifier, chest pain → 1669" },
+    },
+  }
+  const head = el('div', { class: 'citizen-section-head' },
+    el('span', {}, tr('💌 ส่งข้อความให้ครอบครัว', '💌 tell your family')))
+  const intro = el('div', { class: 'citizen-symptom-intro' },
+    tr('แตะปุ่มเพื่อคัดลอกข้อความ แล้วส่ง LINE ให้คุณตา คุณยาย หรือลูกหลาน',
+       'Tap a button to copy a message, then send it on LINE to your parent, grandparent, or kid'))
+  // 3 audience × 3 band tables = 9 buttons
+  const grid = el('div', { class: 'citizen-tell-grid' })
+  for (const audience of ['kid', 'elder', 'partner']) {
+    const audHead = el('div', { class: 'citizen-tell-aud' },
+      tr({ kid: '👶 ลูก', elder: '👴 พ่อแม่/ผู้สูงอายุ', partner: '❤️ คนรัก' }[audience],
+         { kid: '👶 to your kid', elder: '👴 to your parent', partner: '❤️ to your partner' }[audience]))
+    const audRow = el('div', { class: 'citizen-tell-row' })
+    for (const bandKey of ['normal', 'watch', 'elevated', 'high']) {
+      const msg = messages[bandKey]?.[audience]
+      if (!msg) continue
+      const btn = el('button', {
+        class: `citizen-tell-btn ${bandKey === todayBand ? 'today' : 'muted'}`,
+        type: 'button',
+        onclick: (e) => {
+          // Copy to clipboard — navigator.clipboard works on HTTPS
+          // and on localhost. Falls back to a textarea + execCommand
+          // for older mobile browsers.
+          const text = (store.lang === 'th') ? msg.th : msg.en
+          navigator.clipboard?.writeText(text).then(() => {
+            e.currentTarget.classList.add('copied')
+            setTimeout(() => e.currentTarget.classList.remove('copied'), 1500)
+          }).catch(() => {
+            // Fallback: a temporary textarea
+            const ta = document.createElement('textarea')
+            ta.value = text
+            document.body.appendChild(ta)
+            ta.select()
+            try { document.execCommand('copy') } catch {}
+            document.body.removeChild(ta)
+            e.currentTarget.classList.add('copied')
+            setTimeout(() => e.currentTarget.classList.remove('copied'), 1500)
+          })
+        },
+      },
+        el('span', { class: 'citizen-tell-btn-lbl' },
+          tr(BAND_TH[bandKey], BAND_EN[bandKey])),
+        el('span', { class: 'citizen-tell-btn-text' },
+          tr(msg.th, msg.en)),
+      )
+      audRow.append(btn)
+    }
+    grid.append(audHead, audRow)
+  }
+  const out = el('div', { class: 'citizen-tell-wrap' })
+  out.append(head, intro, grid)
+  return out
+}
+
+// ── 9. PET CARE — FAMILIES WITH DOGS/CATS ────────────────────────────────
+
+// Dogs and cats live at the same PM2.5 exposure as humans, but they
+// can't tell us when their chest hurts. Outdoor dogs (and indoor cats
+// that go out) are at the same risk as outdoor workers. Most Thai
+// families don't know that brachycephalic breeds (pugs, shih-tzus,
+// persian cats) are at HIGHER risk because their already-narrow
+// airways are extra sensitive. This is the kind of life-saving
+// information that turns a dashboard from "me-focused" to
+// "family-focused" — including the furry family.
+export function renderPetCare(band) {
+  if (band === 'normal' || band === 'low') return null  // Only show at watch+
+  const head = el('div', { class: 'citizen-section-head' },
+    el('span', {}, tr('🐕 สัตว์เลี้ยงก็เสี่ยงเหมือนกัน', '🐕 your pet is at risk too')))
+  const tips = el('div', { class: 'citizen-pet-tips' },
+    el('div', { class: 'citizen-pet-tip' },
+      el('span', { class: 'citizen-pet-emoji' }, '🐕'),
+      el('div', {},
+        el('div', { class: 'citizen-pet-tip-title' }, tr('พาน้องหมา/แมวออกนอกบ้าน', 'When you walk your dog/cat')),
+        el('div', { class: 'citizen-pet-tip-body' },
+          tr('ลดเวลาเดินลงครึ่งหนึ่ง — สุนัขหน้าสั้น (ปั๊ก, ชิห์สุ, เปอร์เซีย) เสี่ยงมากกว่า',
+             'Cut walk time in half — short-snout breeds (pugs, shih-tzus, persians) are at higher risk')))),
+    el('div', { class: 'citizen-pet-tip' },
+      el('span', { class: 'citizen-pet-emoji' }, '🐾'),
+      el('div', {},
+        el('div', { class: 'citizen-pet-tip-title' }, tr('อาการที่ต้องสังเกต', 'Watch for these signs')),
+        el('div', { class: 'citizen-pet-tip-body' },
+          tr('ไอ หอบ ตาแดง น้ำตาไหล ซึม — ถ้าเห็น 2-3 อาการ พาไปหาหมอ',
+             'Cough, wheeze, red eyes, lethargy — 2-3 of these, see a vet')))),
+    el('div', { class: 'citizen-pet-tip' },
+      el('span', { class: 'citizen-pet-emoji' }, '💧'),
+      el('div', {},
+        el('div', { class: 'citizen-pet-tip-title' }, tr('น้ำสะอาดช่วยได้', 'Fresh water helps')),
+        el('div', { class: 'citizen-pet-tip-body' },
+          tr('น้ำช่วยล้างฝุ่นในจมูก/ตา — เติมน้ำสะอาดให้เพียงพอ',
+             'Water flushes dust from nose/eyes — keep the bowl full')))),
+  )
+  const out = el('div', { class: 'citizen-pet-wrap' })
+  out.append(head, tips)
+  return out
+}

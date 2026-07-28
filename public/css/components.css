@@ -1022,6 +1022,114 @@
 .citizen-tod-advice-best strong { color: #00933C; }
 .citizen-tod-advice-worst strong { color: #C8453A; }
 
+/* Tomorrow's outlook — early-warning callout. Only renders when
+   /api/forecast says tomorrow is in a worse band than today. The
+   callout uses a yellow border to read as "prepare, not panic". */
+.citizen-tomorrow-wrap {
+  margin: 0 12px 10px;
+  padding: 12px;
+  background: rgba(240, 180, 0, 0.08);
+  border-left: 3px solid #E86A10;
+  border-radius: 4px;
+}
+.citizen-tomorrow-band {
+  display: flex; align-items: center; gap: 8px;
+  margin: 6px 0;
+  font-weight: 700; font-size: 13px;
+}
+.citizen-tomorrow-band-arrow { color: var(--ink-mid); font-size: 16px; }
+.citizen-tomorrow-band-tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #fff; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.citizen-tomorrow-band-tag.b-normal   { background: #00933C; }
+.citizen-tomorrow-band-tag.b-watch    { background: #F0B400; color: #2A2A2A; }
+.citizen-tomorrow-band-tag.b-elevated { background: #E86A10; }
+.citizen-tomorrow-band-tag.b-high     { background: #7A1F2B; }
+.citizen-tomorrow-prep-head {
+  font-size: 11.5px; font-weight: 700; color: var(--ink);
+  margin-bottom: 6px; text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.citizen-tomorrow-prep-list {
+  margin: 0; padding-left: 18px;
+  font-size: 12.5px; line-height: 1.6; color: var(--ink);
+}
+
+/* "Tell your family" — grid of buttons, one per (audience × band).
+   The current band's row is highlighted; other bands are muted
+   but still copyable. A "copied" class briefly confirms the
+   clipboard write. */
+.citizen-tell-grid {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 0 12px 8px;
+}
+.citizen-tell-aud {
+  font-size: 11px; font-weight: 700; color: var(--ink-mid);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+.citizen-tell-row {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.citizen-tell-btn {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 10px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer; text-align: left;
+  font: inherit; color: var(--ink);
+  min-height: 44px; /* iOS tap target */
+  transition: all 0.2s;
+}
+.citizen-tell-btn:hover { background: var(--bg-soft); }
+.citizen-tell-btn.today {
+  background: var(--bg-soft);
+  border-color: var(--th-navy);
+  border-left: 3px solid var(--th-navy);
+}
+.citizen-tell-btn.muted { opacity: 0.55; }
+.citizen-tell-btn.copied {
+  background: rgba(0, 147, 60, 0.12);
+  border-color: #00933C;
+}
+.citizen-tell-btn-lbl {
+  font-size: 10px; font-weight: 700; color: var(--ink-mid);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.citizen-tell-btn-text {
+  font-size: 12.5px; line-height: 1.4; color: var(--ink);
+}
+
+/* Pet care — 3 tip cards with emoji and title+body. Renders only
+   at watch+ bands because the tips are about reducing exposure, not
+   celebrating clean air. */
+.citizen-pet-wrap {
+  margin: 0 12px 10px;
+  padding: 10px 12px;
+  background: var(--bg-soft);
+  border-radius: 4px;
+}
+.citizen-pet-tips {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.citizen-pet-tip {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.citizen-pet-tip:last-child { border-bottom: 0; }
+.citizen-pet-emoji { font-size: 18px; line-height: 1.2; }
+.citizen-pet-tip-title {
+  font-size: 12.5px; font-weight: 700; color: var(--ink);
+}
+.citizen-pet-tip-body {
+  font-size: 11.5px; color: var(--ink-mid); line-height: 1.5;
+}
+
 .citizen-share-row {
   display: flex; gap: 6px; padding: 0 12px 6px;
 }
