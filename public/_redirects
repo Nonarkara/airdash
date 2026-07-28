@@ -1,6 +1,17 @@
-# SPA fallback for clean city-dashboard links like /Sikhio. Real static
-# files and the /api/* Functions route are matched before _redirects rules
-# run, so this only fires for paths with no matching asset — exactly the
-# case for a bare place slug. The boot logic in main.js resolves the slug
-# client-side via /api/place/slug/:slug.
-/*  /index.html  200
+# SPA fallback for /<slug> deep links (e.g. /Sikhio). Rules are evaluated
+# top-down; the first match wins. Static assets and /api/* Functions
+# are matched first so the wildcard at the bottom only catches paths
+# that have no other match — exactly the case for a bare place slug.
+# The URL bar keeps /Sikhio so the link is shareable.
+/css/*   /css/:splat  200
+/js/*    /js/:splat   200
+/img/*   /img/:splat  200
+/fonts/* /fonts/:splat 200
+/geo/*   /geo/:splat  200
+/vendor/* /vendor/:splat 200
+/fonts/* /fonts/:splat 200
+/photos/* /photos/:splat 200
+# Catch-all: any other unmatched path is treated as a place slug and
+# served by the operator dashboard. bootCityFromSlug() in main.js
+# reads the path and pins the city via /api/place/slug/:splat.
+/*  /ops  200

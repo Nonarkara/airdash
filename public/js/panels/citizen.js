@@ -9,12 +9,22 @@
 // Citizen mode also pins the user's "My Province" — saved to localStorage
 // so the dashboard defaults to the user's location on every visit. The
 // "เปลี่ยนจังหวัด" button opens a searchable province picker.
+//
+// The panel now also embeds the life-saving additions from citizenLife.js
+// (persona selector + persona-specific advice, action timeline, mask
+// guide, symptom checker, time-of-day forecast, and migrant worker
+// safety phrases). All of them are bilingual (TH + EN) and degrade
+// gracefully when the science/forecast API hasn't loaded yet.
 import { on, store, emit } from '../state.js?v=2.0.0-fresh1'
 import { tr, BAND } from '../i18n.js?v=2.0.0-fresh1'
 import { el, fmtNum, ago } from '../fmt.js?v=2.0.0-fresh1'
 import { getJson } from '../cache.js?v=2.0.0-fresh1'
 import { flyToProvince } from '../map.js?v=2.0.0-fresh1'
 import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.0.0-fresh1'
+import {
+  renderPersonaSection, renderActionTimeline, renderMaskGuide,
+  renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
+} from './citizenLife.js?v=2.3.0-life1'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -246,11 +256,37 @@ function renderForProvince(province) {
   }).catch(() => {})
 
   // "What do I do" — health advice for the current band.
+  // In elevated+ bands the generic advice is replaced with a concrete
+  // 4-stage action timeline (5 min / 1 hour / today / this week). The
+  // generic advice stays for the lower bands where it reads as a
+  // reminder, not a crisis script.
+  const useTimeline = band === 'elevated' || band === 'high' || band === 'watch'
   const adviceHead = el('div', { class: 'citizen-section-head' },
     el('span', {}, tr('😷 คำแนะนำสุขภาพวันนี้', '😷 health advice today')))
   const advice = el('div', { class: 'citizen-advice' },
     ...(HEALTH_ADVICE[band] ?? HEALTH_ADVICE.normal).map((a) =>
       el('div', { class: 'citizen-advice-row' }, `· ${tr(a.th, a.en)}`)))
+
+  // Persona section — async-filled (it calls /api/science/personal).
+  // The host wrapper lets the persona module re-render in place when
+  // the user picks a different persona.
+  const personaHost = el('div', { class: 'citizen-persona-host', id: 'citizen-persona-host' })
+  // Expose province on window so the persona module can re-render
+  // when snapshot/lang changes without a hard re-render of the
+  // whole citizen panel.
+  window.__myProvince = province
+  // Fire the async render — non-blocking, the rest of the panel
+  // paints immediately.
+  renderPersonaSection(province, band).then((node) => personaHost.append(node)).catch(() => {})
+
+  // Time-of-day forecast — async, same pattern.
+  const todHost = el('div', { class: 'citizen-tod-host' })
+  renderTimeOfDay(province).then((node) => { if (node) todHost.append(node) }).catch(() => {})
+
+  // Mask guide + symptom checker + migrant phrases (sync).
+  const mask = renderMaskGuide()
+  const symptom = renderSymptomChecker()
+  const migrant = renderMigrantPhrases(band)
 
   // "What am I breathing" — three nearest AQ stations (loaded async below)
   const stationHead = el('div', { class: 'citizen-section-head' },
@@ -264,7 +300,23 @@ function renderForProvince(province) {
       el('span', { class: 'citizen-loading-text' },
         tr('กำลังค้นหาสถานีวัดฝุ่นใกล้คุณ…', 'Looking up AQ stations near you…'))))
   // Render shell first, fill in async so the page is interactive immediately
-  const out = [head, reliefWrap, adviceHead, advice, stationHead, stationList]
+  // Life-saving additions live in the order the user is most likely to
+  // scan: persona first (so they can pick themselves), then the
+  // action timeline (the most concrete "what do I do right now"
+  // answer), then mask guide + symptom checker + time-of-day forecast,
+  // then the standard AQ-stations row, then migrant-worker phrases
+  // (only at elevated+ bands, when they're needed).
+  const out = [
+    head, reliefWrap,
+    personaHost,
+    useTimeline ? renderActionTimeline(band) : null,
+    todHost,
+    adviceHead, advice,
+    mask,
+    stationHead, stationList,
+    symptom,
+    migrant,
+  ].filter(Boolean)
   if (province.lat != null && province.lng != null) {
     getJson(`/api/stations/nearest?lat=${province.lat}&lng=${province.lng}&limit=3`, 60_000)
       .then((data) => {

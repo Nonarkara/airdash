@@ -729,6 +729,299 @@
   30% { opacity: 1; transform: scale(1.1); }
 }
 
+/* ── Life-saving additions: persona, action timeline, mask guide,
+   symptom checker, migrant phrases, time-of-day forecast. ────────────── */
+
+/* Persona selector — 7 pills, one per life stage, with an emoji
+   and a small label. Active pill is filled; others are outlined. The
+   whole row is a single horizontal scroll on phone so it fits in
+   the citizen panel without wrapping. */
+.citizen-persona-pills {
+  display: flex; gap: 6px; padding: 0 12px 8px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.citizen-persona-pill {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 10px;
+  font: 600 10.5px var(--font-display);
+  color: var(--ink-mid);
+  background: var(--paper); border: 1px solid var(--rule-strong);
+  border-radius: 999px; cursor: pointer;
+  min-height: 56px; min-width: 64px;
+  transition: all 0.15s ease;
+}
+.citizen-persona-pill:hover { background: var(--bg-soft); }
+.citizen-persona-pill.active {
+  background: var(--th-navy); color: #fff; border-color: var(--th-navy);
+}
+.citizen-persona-emoji { font-size: 18px; line-height: 1; }
+.citizen-persona-lbl { font-size: 9.5px; line-height: 1.1; }
+.citizen-persona-intro {
+  font-size: 11.5px; color: var(--ink-mid); line-height: 1.4;
+  padding: 0 12px 8px;
+}
+.citizen-persona-host-inner { padding-bottom: 4px; }
+
+/* Active persona card — risk explanation, play budget, persona-
+   specific action. The play budget is the most-actionable number
+   on the card ("20 min outside" is something a parent can act on
+   without thinking). */
+.citizen-persona-card {
+  margin: 4px 12px 10px;
+  padding: 12px;
+  background: var(--bg-soft);
+  border-left: 3px solid var(--th-navy);
+  border-radius: 4px;
+}
+.citizen-persona-head {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin-bottom: 8px;
+}
+.citizen-persona-card-emoji { font-size: 24px; line-height: 1; }
+.citizen-persona-card-title {
+  font-weight: 800; font-size: 14px; color: var(--ink);
+}
+.citizen-persona-card-risk {
+  font-size: 11.5px; color: var(--ink-mid); line-height: 1.4;
+  margin-top: 2px;
+}
+.citizen-persona-budget {
+  padding: 8px 10px; margin: 6px 0;
+  background: var(--paper); border-radius: 3px;
+  border: 1px dashed var(--rule-strong);
+}
+.citizen-persona-budget-lbl {
+  font-size: 10.5px; color: var(--ink-mid); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.citizen-persona-budget-num {
+  font-size: 13px; font-weight: 700; color: var(--th-deep);
+  margin-top: 2px;
+}
+.citizen-persona-action {
+  margin-top: 6px; padding-top: 6px;
+  border-top: 1px solid var(--rule);
+}
+.citizen-persona-action-lbl {
+  font-size: 10.5px; font-weight: 600;
+  color: var(--ink-mid);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.citizen-persona-action-text {
+  font-size: 12.5px; color: var(--ink); line-height: 1.5;
+  margin-top: 2px;
+}
+.citizen-persona-clear {
+  display: block; margin: 8px auto 0;
+  padding: 4px 10px;
+  font-size: 11px; color: var(--ink-low);
+  background: transparent; border: 0; cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Action timeline — replaces the generic advice grid for elevated+
+   bands. 4 stages: now / hour / today / week. The verb-first
+   imperative form ("Close windows", "Cancel all outdoor activities")
+   is the most memorable. */
+.citizen-timeline {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  padding: 0 12px 8px;
+}
+@media (max-width: 480px) {
+  .citizen-timeline { grid-template-columns: 1fr; }
+}
+.citizen-timeline-stage {
+  padding: 8px 10px;
+  background: var(--paper);
+  border-left: 3px solid var(--th-deep);
+  border-radius: 0 3px 3px 0;
+}
+.citizen-timeline-stage.stage-now   { border-left-color: #C8453A; }
+.citizen-timeline-stage.stage-hour  { border-left-color: #E86A10; }
+.citizen-timeline-stage.stage-today { border-left-color: #F0B400; }
+.citizen-timeline-stage.stage-week  { border-left-color: #5BA8C7; }
+.citizen-timeline-when {
+  font-size: 10px; font-weight: 700; color: var(--ink-mid);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+.citizen-timeline-what {
+  font-size: 12.5px; line-height: 1.4; color: var(--ink);
+}
+
+/* Mask guide — three cards (N95 / surgical / cloth) with verdict
+   colors. The fit-check is the single most important line in the
+   whole guide, kept visually distinct. */
+.citizen-mask-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
+  padding: 0 12px 8px;
+}
+@media (max-width: 480px) {
+  .citizen-mask-grid { grid-template-columns: 1fr; }
+}
+.citizen-mask-card {
+  padding: 10px 8px;
+  background: var(--paper);
+  border-radius: 4px;
+  border: 1px solid var(--rule);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.citizen-mask-card.v-good { border-left: 3px solid #00933C; }
+.citizen-mask-card.v-mid  { border-left: 3px solid #F0B400; }
+.citizen-mask-card.v-bad  { border-left: 3px solid #C8453A; }
+.citizen-mask-verdict { font-size: 18px; line-height: 1; }
+.citizen-mask-name {
+  font-weight: 700; font-size: 12.5px; color: var(--ink);
+}
+.citizen-mask-filter {
+  font-size: 11.5px; color: var(--ink-mid); line-height: 1.35;
+}
+.citizen-mask-price {
+  font-size: 10.5px; color: var(--ink-low); font-style: italic;
+  margin-top: 2px;
+}
+.citizen-mask-fit {
+  margin: 0 12px 10px; padding: 10px 12px;
+  background: var(--bg-soft);
+  border-radius: 4px;
+}
+.citizen-mask-fit-lbl {
+  font-weight: 700; font-size: 12px; color: var(--th-deep);
+  margin-bottom: 4px;
+}
+.citizen-mask-fit-body {
+  font-size: 12px; line-height: 1.5; color: var(--ink);
+}
+
+/* Symptom checker — 5 buttons (cough / hard breathing / chest pain /
+   wheezing / eye irritation), each expanding to reveal the right
+   action. The urgent and emergency actions get a tap-to-call button
+   on the detail row. */
+.citizen-symptom-intro {
+  font-size: 11.5px; color: var(--ink-mid); line-height: 1.4;
+  padding: 0 12px 8px;
+}
+.citizen-symptom-row {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 0 12px 8px;
+}
+.citizen-symptom-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 10px 12px;
+  background: var(--paper); border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule-strong);
+  border-radius: 3px; cursor: pointer; text-align: left;
+  font: inherit; color: var(--ink);
+  min-height: 44px; /* iOS tap target */
+}
+.citizen-symptom-btn.sev-mild      { border-left-color: #5BA8C7; }
+.citizen-symptom-btn.sev-watch     { border-left-color: #F0B400; }
+.citizen-symptom-btn.sev-urgent    { border-left-color: #E86A10; }
+.citizen-symptom-btn.sev-emergency { border-left-color: #C8453A; }
+.citizen-symptom-btn:hover { background: var(--bg-soft); }
+.citizen-symptom-emoji { font-size: 18px; line-height: 1; }
+.citizen-symptom-lbl {
+  flex: 1; font-size: 13px; font-weight: 600;
+}
+.citizen-symptom-chev {
+  font-size: 14px; color: var(--ink-mid);
+  transition: transform 0.2s;
+}
+.citizen-symptom-btn[aria-expanded="true"] .citizen-symptom-chev {
+  transform: rotate(180deg);
+}
+.citizen-symptom-detail {
+  padding: 8px 12px 8px 28px;
+  background: var(--bg-soft);
+  border-left: 3px solid var(--th-deep);
+  border-radius: 0 0 3px 3px;
+  margin: -4px 12px 4px;
+}
+.citizen-symptom-action-text {
+  font-size: 12px; line-height: 1.5; color: var(--ink);
+}
+.citizen-symptom-call {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  background: #C8453A; color: #fff;
+  font-weight: 700; font-size: 13px;
+  border-radius: 4px;
+  text-decoration: none;
+  min-height: 36px;
+}
+.citizen-symptom-call-emoji { font-size: 16px; }
+.citizen-symptom-call:hover { background: #A51931; }
+
+/* Migrant worker phrases — three language rows, each with 4
+   critical safety phrases. The native script is the larger line;
+   the Thai + English source is small underneath. */
+.citizen-migrant-intro {
+  font-size: 11.5px; color: var(--ink-mid); line-height: 1.5;
+  padding: 0 12px 8px;
+}
+.citizen-migrant-row {
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  background: var(--bg-soft);
+  border-radius: 4px;
+}
+.citizen-migrant-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+}
+.citizen-migrant-flag { font-size: 18px; }
+.citizen-migrant-name { font-weight: 700; font-size: 14px; }
+.citizen-migrant-phrase {
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--rule);
+}
+.citizen-migrant-phrase:last-child { border-bottom: 0; }
+.citizen-migrant-native {
+  font-size: 14px; line-height: 1.3; color: var(--ink);
+  margin-bottom: 2px;
+}
+.citizen-migrant-th {
+  font-size: 10.5px; color: var(--ink-low); line-height: 1.3;
+}
+
+/* Time-of-day forecast — 4 colored cells (night/morning/afternoon/
+   evening) plus a "best window" / "worst window" takeaway. */
+.citizen-tod-bar {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+  padding: 0 12px 8px;
+}
+.citizen-tod-cell {
+  padding: 8px 4px; text-align: center;
+  border-radius: 3px;
+  color: #fff;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.citizen-tod-cell-lbl {
+  font-size: 10.5px; font-weight: 700; opacity: 0.9;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.citizen-tod-cell-num {
+  font-size: 16px; font-weight: 800;
+  font-family: var(--font-num);
+}
+.citizen-tod-advice {
+  padding: 0 12px 8px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.citizen-tod-advice-best, .citizen-tod-advice-worst {
+  font-size: 12.5px; line-height: 1.4; color: var(--ink);
+  padding: 6px 10px;
+  background: var(--bg-soft);
+  border-radius: 3px;
+}
+.citizen-tod-advice-lbl { color: var(--ink-mid); font-weight: 600; }
+.citizen-tod-advice-best strong { color: #00933C; }
+.citizen-tod-advice-worst strong { color: #C8453A; }
+
 .citizen-share-row {
   display: flex; gap: 6px; padding: 0 12px 6px;
 }
