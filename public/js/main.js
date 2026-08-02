@@ -1,31 +1,31 @@
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.0.0-fresh1'
-import { paintChrome } from './i18n.js?v=2.0.0-fresh1'
-import { startTap } from './sse.js?v=2.0.0-fresh1'
-import { initMap, invalidateMap } from './map.js?v=2.0.0-fresh1'
-import { initHeader } from './panels/header.js?v=2.0.0-fresh1'
-import { initRanking } from './panels/ranking.js?v=2.0.0-fresh1'
-import { initForecast } from './panels/forecast.js?v=2.0.0-fresh1'
-import { initWhatIf } from './panels/whatif.js?v=2.0.0-fresh1'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.0.0-fresh1'
-import { initTap } from './panels/tap.js?v=2.0.0-fresh1'
-import { initSources } from './panels/sources.js?v=2.0.0-fresh1'
-import { initHistory } from './panels/history.js?v=2.0.0-fresh1'
-import { initInsights } from './panels/insights.js?v=2.0.0-fresh1'
-import { initAnalytics } from './panels/analytics.js?v=2.0.0-fresh1'
-import { initFeeds } from './panels/feeds.js?v=2.0.0-fresh1'
-import { initChat } from './panels/chat.js?v=2.0.0-fresh1'
-import { initCitizen } from './panels/citizen.js?v=2.0.0-fresh1'
-import { initWaterways } from './panels/waterways.js?v=2.0.0-fresh1'
-import { initFocus } from './panels/focus.js?v=2.0.0-fresh1'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.0.0-fresh1'
-import { initSplit } from './panels/split.js?v=2.0.0-fresh1'
-import { initLibrary } from './panels/library.js?v=2.0.0-fresh1'
-import { initResearch } from './panels/research.js?v=2.0.0-fresh1'
-import { initSearch } from './panels/search.js?v=2.0.0-fresh1'
-import { initDataFreshness } from './dataFreshness.js?v=2.0.0-fresh1'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.0.0-fresh1'
+import { on, emit, store, setLang } from './state.js?v=2.4.0'
+import { paintChrome } from './i18n.js?v=2.4.0'
+import { startTap } from './sse.js?v=2.4.0'
+import { initMap, invalidateMap } from './map.js?v=2.4.0'
+import { initHeader } from './panels/header.js?v=2.4.0'
+import { initRanking } from './panels/ranking.js?v=2.4.0'
+import { initForecast } from './panels/forecast.js?v=2.4.0'
+import { initWhatIf } from './panels/whatif.js?v=2.4.0'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.4.0'
+import { initTap } from './panels/tap.js?v=2.4.0'
+import { initSources } from './panels/sources.js?v=2.4.0'
+import { initHistory } from './panels/history.js?v=2.4.0'
+import { initInsights } from './panels/insights.js?v=2.4.0'
+import { initAnalytics } from './panels/analytics.js?v=2.4.0'
+import { initFeeds } from './panels/feeds.js?v=2.4.0'
+import { initChat } from './panels/chat.js?v=2.4.0'
+import { initCitizen } from './panels/citizen.js?v=2.4.0'
+import { initWaterways } from './panels/waterways.js?v=2.4.0'
+import { initFocus } from './panels/focus.js?v=2.4.0'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.0'
+import { initSplit } from './panels/split.js?v=2.4.0'
+import { initLibrary } from './panels/library.js?v=2.4.0'
+import { initResearch } from './panels/research.js?v=2.4.0'
+import { initSearch } from './panels/search.js?v=2.4.0'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.0'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.4.0'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -242,52 +242,104 @@ function initTabs() {
   })
 }
 
-// Mobile: bottom sheet showing one rail at a time. Tapping the ACTIVE
-// tab again collapses the sheet entirely, giving the map the full
-// height between the header and the ticker — on a phone the sheet
-// otherwise eats ~56% of the screen with no way to dismiss it.
+// Mobile: single-destination navigation. Exactly ONE of {left rail, right
+// rail, map} owns the area between the header and the bottom nav.
+//
+// This replaces the docked-map layout, where the map held 44% of the space
+// below the header whether or not the user wanted it — leaving the map too
+// small to read a boundary and the panel too small to read without
+// scrolling, both at once. Giving one thing the whole area roughly doubles
+// whichever the user actually asked for. (Ported from FloodDash, where the
+// before/after was measured at 277px -> 604px on a 375x812 device.)
+//
+// The old "re-tap the active tab to collapse" gesture is deliberately gone:
+// it existed only to reclaim the screen from the docked map, and tapping
+// MAP now does that visibly.
 function initSheet() {
   const nav = document.getElementById('sheettabs')
   const left = document.getElementById('rail-left')
   const right = document.getElementById('rail-right')
-  const app = document.getElementById('app')
-  let current = null
+  const moreBtn = document.getElementById('sheet-more')
+  const MAP_SHEET = 'map'
+
+  const closeMore = () => {
+    nav.classList.remove('more-open')
+    moreBtn?.setAttribute('aria-expanded', 'false')
+  }
+
+  // Remembered across breakpoint changes so widening to desktop and
+  // narrowing back returns you to the destination you were on.
+  let currentSheet = document.body.classList.contains('mode-citizen') ? 'citizen' : 'risk'
+
   const apply = (which) => {
+    if (which) currentSheet = which
+    const target = currentSheet
     const mobile = window.matchMedia(COMPACT_VIEW).matches
     left.classList.remove('sheet-active')
     right.classList.remove('sheet-active')
-    if (!mobile) { app.classList.remove('sheet-collapsed'); current = null; invalidateMap(); return }
-    if (which === null) {
-      // Collapsed: no rail active, the map row expands (see
-      // #app.sheet-collapsed in layout.css). Tabs stay visible so one
-      // tap brings any panel back.
-      current = null
-      app.classList.add('sheet-collapsed')
-      nav.querySelectorAll('button').forEach((b) => b.classList.remove('active'))
-      invalidateMap()
-      return
-    }
-    app.classList.remove('sheet-collapsed')
-    if (which === 'risk') { left.classList.add('sheet-active'); hideDetail() }
-    else {
+    // The map only needs the body flag on mobile; on desktop it is the page
+    // and the flag would fight the three-column grid.
+    document.body.classList.toggle('map-sheet', mobile && target === MAP_SHEET)
+    // Sync the nav BEFORE the desktop bail-out — otherwise a window dragged
+    // narrow reveals a bar highlighting a destination whose rail was never
+    // mounted: a tab that looks selected next to a blank screen.
+    nav.querySelectorAll('button[data-sheet]').forEach((b) => {
+      const active = b.dataset.sheet === target
+      b.classList.toggle('active', active)
+      b.setAttribute('aria-selected', active ? 'true' : 'false')
+    })
+    if (!mobile) { closeMore(); invalidateMap(); return }
+    if (target === MAP_SHEET) {
+      // Nothing to mount — the map element is always in the DOM, CSS just
+      // stops hiding it. It does need to re-measure (see below).
+    } else if (target === 'risk') {
+      left.classList.add('sheet-active')
+      hideDetail()
+    } else {
       right.classList.add('sheet-active')
-      selectPane(which)
+      selectPane(target)
     }
-    current = which
-    nav.querySelectorAll('button').forEach((b) =>
-      b.classList.toggle('active', b.dataset.sheet === which))
+    // Leaflet measures 0x0 while display:none, so every switch INTO the map
+    // must re-measure after the style lands — one frame is not always enough
+    // on a slow phone, hence the second pass.
     invalidateMap()
+    if (target === MAP_SHEET) {
+      requestAnimationFrame(() => invalidateMap())
+      setTimeout(() => invalidateMap(), 120)
+    }
   }
+
   applyMobileSheet = apply
   nav.addEventListener('click', (e) => {
     const btn = e.target.closest('button')
     if (!btn) return
-    // Same tab again → collapse; different tab → switch.
-    apply(btn.dataset.sheet === current ? null : btn.dataset.sheet)
+    if (btn === moreBtn) {
+      const open = !nav.classList.contains('more-open')
+      nav.classList.toggle('more-open', open)
+      moreBtn.setAttribute('aria-expanded', open ? 'true' : 'false')
+      return
+    }
+    if (!btn.dataset.sheet) return
+    closeMore()          // picking anything dismisses the overflow grid
+    apply(btn.dataset.sheet)
   })
-  window.matchMedia(COMPACT_VIEW).addEventListener('change', () =>
-    apply(document.body.classList.contains('mode-citizen') ? 'citizen' : 'risk'))
-  apply(document.body.classList.contains('mode-citizen') ? 'citizen' : 'risk')
+  // Panels elsewhere ask for a destination through the store bus rather
+  // than importing this module — main.js already imports them, so a direct
+  // call would be circular.
+  on('sheet', (which) => {
+    if (which && window.matchMedia(COMPACT_VIEW).matches) { closeMore(); apply(which) }
+  })
+  // Re-apply on BOTH signals. matchMedia 'change' is the precise one but
+  // does not fire in every resize path; a phone rotating or a desktop window
+  // dragged narrow must not be left with a highlighted tab and an empty
+  // screen. apply() is idempotent, so running it twice costs nothing.
+  window.matchMedia(COMPACT_VIEW).addEventListener('change', () => apply())
+  let resizeTimer = null
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer)
+    resizeTimer = setTimeout(() => apply(), 150)
+  })
+  apply()
 }
 
 // Bottom ticker: alerts first, then the dustiest reading, hot provinces, news.
@@ -467,5 +519,5 @@ async function boot() {
 boot()
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=2.0.0-fresh1').catch(() => {}))
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=2.4.0').catch(() => {}))
 }

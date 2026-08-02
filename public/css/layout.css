@@ -656,16 +656,18 @@ html[lang="en"] .appfooter-line .en { display: inline; }
      content or the ticker. */
   .data-freshness {
     position: fixed;
-    /* NOT var(--header-h): the phone header's px-fixed rows (danger /
-       toggles / search / home strip) deliberately overflow the 64px
-       grid row and reach y≈125, and the map's layers control sits at
-       y≈125–166 right under them. 174px clears the whole stack, so
-       the pill floats over map canvas instead of covering the search
-       box and the ไทย/EN toggle (measured overlap before this fix). */
-    top: 174px;
+    /* Anchored to the BOTTOM, just above the nav. It used to sit at
+       top:174px, which cleared the header stack and floated over map
+       canvas — correct while the map was docked directly under the
+       header. Since the map became a destination, that coordinate lands
+       on panel text instead, and the pill covered the ranking's method
+       line. The bottom-right corner above the nav is empty in every
+       destination, so the "is this current?" signal stays visible
+       without ever sitting on a heading. */
+    top: auto;
     right: 6px;
     left: auto;
-    bottom: auto;
+    bottom: calc(48px + var(--ticker-h) + 8px + env(safe-area-inset-bottom));
     z-index: 600;
     margin: 0;
     font-size: 10px;
@@ -673,9 +675,23 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   }
 }
 
-/* ── Compact view: map on top, tabbed sheet below ────────────────────────
-   Three fixed columns stop being readable well before phone width. At
-   1100px and below, one map + one focused sheet preserves real text sizes. */
+/* ── Compact view: ONE full-height panel + a bottom nav ──────────────────
+   Three fixed columns stop being readable well before phone width, so at
+   ≤1100px the dashboard becomes a single-destination app.
+
+   The map is a DESTINATION here, not the backdrop. It used to be pinned
+   above the sheet at 44fr, which left the map too small to read a province
+   boundary AND the panel that answers "is it safe to go outside" too small
+   to read without scrolling — both cramped, neither usable, the two of
+   them competing for the same thumb. Now exactly one thing owns the screen
+   at a time, so whichever destination is active roughly doubles. (Ported
+   from FloodDash, where it was measured: map 277px -> 604px on a 375x812
+   device, panels likewise.) Desktop is untouched — there the map is the
+   page and deserves to be.
+
+   Nav sits at the BOTTOM: it is the control reached constantly, and the
+   bottom is the only part of a big phone a thumb reaches without
+   regripping. */
 #sheettabs { display: none; }
 
 @media (max-width: 1100px) {
@@ -684,9 +700,17 @@ html[lang="en"] .appfooter-line .en { display: inline; }
        3-row grid here (96px) and a hardcoded height clipped its last
        row. auto tracks whatever the header actually needs, so this
        cannot drift out of sync again. */
-    grid-template-rows: auto minmax(0, 44fr) auto minmax(0, 56fr) var(--ticker-h);
+    grid-template-rows: auto minmax(0, 1fr) auto var(--ticker-h);
     grid-template-columns: 1fr;
-    grid-template-areas: 'header' 'map' 'tabs' 'sheet' 'ticker';
+    grid-template-areas: 'header' 'sheet' 'tabs' 'ticker';
+  }
+  /* Out of flow by default; owns the whole sheet area when its tab is on. */
+  #map { display: none; }
+  body.map-sheet #map {
+    display: block;
+    grid-area: sheet;
+    min-height: 0;
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
   :root { --header-h: 96px; }
   header {
@@ -777,33 +801,105 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   .legend { font-size: 10px; }
 
   #rail-left, #rail-right { display: none; }
+  /* ONE scroller per destination, not several nested ones. The rails are
+     flex columns of independently-scrolling panels — right on a desktop
+     where they are always visible side by side, wrong on a phone, where
+     the fixed-height siblings starve the panel that matters and a thumb
+     drag has no way to say which of them it meant. */
   #rail-left.sheet-active, #rail-right.sheet-active {
-    display: flex;
+    display: block;
     grid-area: sheet;
     border: none;
     min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    /* +34px reserves the strip the fixed .data-freshness pill occupies at
+       the bottom-right, so the last row of a list can always be scrolled
+       clear of it instead of sitting permanently underneath. */
+    padding-bottom: calc(34px + max(0px, env(safe-area-inset-bottom)));
+  }
+  #rail-left.sheet-active > *,
+  #rail-right.sheet-active > .tabpane.active,
+  #rail-right.sheet-active > .tabpane.active > * {
+    flex: none;
+    max-height: none;
+    overflow: visible;
+    min-height: 0;
+  }
+  #rail-right.sheet-active > .tabpane.active { display: block; }
+  /* Exception: ASK. A composer that scrolls away with the transcript is
+     the one place the single-scroll rule makes things worse. */
+  #rail-right.sheet-active > .tabpane.active[data-pane="chat"] {
+    display: flex; flex-direction: column; height: 100%;
+  }
+  #rail-right.sheet-active > .tabpane.active[data-pane="chat"] > #chat-log {
+    flex: 1 1 0; min-height: 0; overflow-y: auto;
+  }
+  #rail-right.sheet-active > .tabpane.active[data-pane="chat"] > #chat-form { flex: none; }
+  #rail-right.sheet-active:has(> .tabpane.active[data-pane="chat"]) { overflow-y: hidden; }
+  /* Keep the panel title in view while the list scrolls under it. */
+  #rail-left.sheet-active > .panel-head {
+    position: sticky; top: 0; z-index: 3;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
   }
   /* The bottom sheet nav already selects the pane — hide the rail's own tab bar. */
   #rail-right.sheet-active .tabs { display: none; }
 
+  /* Bottom navigation. AirDash has twelve destinations — too many for a
+     fixed bar — but a horizontally-scrolling strip is the wrong answer on
+     a phone: anything past the fold is undiscoverable, and side-scrolling
+     a nav with the same thumb that scrolls the page is a coin flip. So:
+     five fixed destinations plus MORE, which opens the full set as a grid.
+     Nothing is dropped; everything reachable is visible. */
   #sheettabs {
     grid-area: tabs;
     display: flex;
     background: var(--well);
     border-top: 1px solid var(--rule-strong);
     border-bottom: 1px solid var(--rule-strong);
-    /* Horizontally scrollable instead of silently dropping panes — a phone
-       operator must be able to reach OVERVIEW/HISTORY/SIGNALS/NEWS too. */
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
-  #sheettabs::-webkit-scrollbar { display: none; }
   #sheettabs button {
-    flex: none; min-width: 64px; border: none; border-right: 1px solid var(--rule);
-    min-height: 48px; padding: 7px 8px; font-size: 12.5px; font-weight: 600;
-    white-space: nowrap;
+    flex: 1; min-width: 0; border: none; border-right: 1px solid var(--rule);
+    min-height: 48px; padding: 7px 4px; font-size: 12px; font-weight: 600;
+    overflow: hidden;
   }
+  /* `color` is NOT optional: the global button.active in tokens.css sets
+     color for dark-fill buttons, so overriding only the background would
+     leave the active label paper-on-paper, i.e. invisible. */
+  #sheettabs button.active {
+    background: var(--paper);
+    color: var(--th-navy);
+    box-shadow: inset 0 3px 0 var(--th-navy);
+  }
+  /* Secondary destinations live behind MORE. */
+  #sheettabs button[data-sheet="analytics"],
+  #sheettabs button[data-sheet="waterways"],
+  #sheettabs button[data-sheet="history"],
+  #sheettabs button[data-sheet="insights"],
+  #sheettabs button[data-sheet="news"],
+  #sheettabs button[data-sheet="tap"],
+  #sheettabs button[data-sheet="sources"],
+  #sheettabs button[data-sheet="library"] { display: none; }
+
+  /* MORE expanded: the same <nav> becomes a wrapped grid sitting above the
+     bar, so every destination is on one screen instead of behind a scroll. */
+  #sheettabs.more-open {
+    position: fixed; left: 0; right: 0;
+    bottom: calc(var(--ticker-h) + env(safe-area-inset-bottom));
+    z-index: 900;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    box-shadow: 0 -6px 18px rgba(0,0,0,0.18);
+  }
+  #sheettabs.more-open button { display: block !important; border-bottom: 1px solid var(--rule); }
+  /* MORE flips to CLOSE while the grid is open — see the two label spans
+     in ops.html. */
+  #sheet-more .close-lbl { display: none; }
+  #sheettabs.more-open #sheet-more .more-lbl { display: none; }
+  #sheettabs.more-open #sheet-more .close-lbl { display: block; }
+  #sheettabs.more-open #sheet-more { background: var(--paper); color: var(--th-navy); }
 }
 
 /* ── Phone header (≤480px): the hero verb owns a full-width row ─────────
@@ -812,7 +908,13 @@ html[lang="en"] .appfooter-line .en { display: inline; }
    the verb's cell and the ASK chip clipped off the right edge. Give the
    verb its own row (wrap up to 2 lines), then two clean control rows. */
 @media (max-width: 480px) {
-  #app { grid-template-rows: auto minmax(0, 44fr) auto minmax(0, 56fr) var(--ticker-h); }
+  /* Four rows, matching the ≤1100px single-destination grid. This used to
+     restate the old five-row docked-map template (header/map/tabs/sheet/
+     ticker), which silently reverted the new layout on every phone under
+     480px — the nav landed mid-screen with dead space beneath it. When the
+     ≤1100px template changes, this must change with it; it exists only to
+     re-declare the header row as `auto`. */
+  #app { grid-template-rows: auto minmax(0, 1fr) auto var(--ticker-h); }
   header {
     /* Three columns but the auto columns are sized to content; the
      * 1fr column should shrink to 0 if its content is wider than the
@@ -1513,8 +1615,13 @@ body.mode-citizen #pipes,
 body.mode-citizen #ask-btn,
 body.mode-citizen #data-quality { display: none !important; }
 
-/* Mobile: strip the bottom sheet to just the two panes a citizen needs. */
-body.mode-citizen #sheettabs button:not([data-sheet="citizen"]):not([data-sheet="risk"]):not([data-sheet="alerts"]) {
+/* Mobile: strip the bottom nav to the destinations a citizen needs.
+   MAP is explicitly one of them — before the phone overhaul the map was
+   always on screen so leaving it out of this list cost nothing, but now
+   that it is a destination, omitting it would hide the map entirely from
+   every citizen-mode phone, and citizen is the DEFAULT mode on phones.
+   MORE is dropped instead: in citizen mode there is nothing behind it. */
+body.mode-citizen #sheettabs button:not([data-sheet="citizen"]):not([data-sheet="risk"]):not([data-sheet="map"]):not([data-sheet="alerts"]) {
   display: none !important;
 }
 
@@ -1621,21 +1728,8 @@ body.mode-citizen #pane-citizen:not([hidden]) { display: flex !important; }
   #home-btn, #flooddash-btn, #about-btn { padding-left: 8px; padding-right: 8px; }
 }
 
-/* ── Collapsible phone sheet ─────────────────────────────────────────────
-   Tapping the active sheet tab again collapses the sheet (main.js adds
-   .sheet-collapsed on #app): the sheet row goes to 0 and the map takes
-   the full height between header and ticker. The chevron on the active
-   tab is the "tap again to hide" affordance. */
-@media (max-width: 1100px) {
-  #app.sheet-collapsed {
-    grid-template-rows: 64px minmax(0, 1fr) auto 0 var(--ticker-h);
-  }
-  #app.sheet-collapsed #rail-left,
-  #app.sheet-collapsed #rail-right { display: none !important; }
-  #sheettabs button.active .en-lbl::after { content: " ▾"; }
-}
-@media (max-width: 480px) {
-  #app.sheet-collapsed {
-    grid-template-rows: auto minmax(0, 1fr) auto 0 var(--ticker-h);
-  }
-}
+/* The old "re-tap the active tab to collapse the sheet" gesture is gone
+   with the layout that needed it: it existed only to reclaim the screen
+   from a permanently-docked map. Tapping MAP now does that directly, and a
+   hidden gesture whose effect is "the panel disappears" is not worth
+   keeping once its reason is gone. */

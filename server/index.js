@@ -9,6 +9,7 @@ import { createScheduler } from './scheduler.js'
 import { createRisk } from './risk.js'
 import { createWashout } from './washout.js'
 import { createDanger } from './danger.js'
+import { createHarm } from './harm.js'
 import { createScience } from './science.js'
 import { createCauses } from './causes.js'
 import { createPatterns } from './patterns.js'
@@ -46,6 +47,7 @@ const alerts = createAlerts(db, bus, { line, telegramBroadcaster })
 const washout = createWashout(db)
 const riskEngine = createRisk(db, washout)
 const danger = createDanger(db, { riskEngine, washout })
+const harm = createHarm({ riskEngine })
 const science = createScience({ db, CONFIG })
 const causes = createCauses(db, { riskEngine })
 const patterns = createPatterns(db)
@@ -64,7 +66,7 @@ const scheduler = createScheduler({
   sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise, aqHistory],
 })
 
-const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }))
+const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, harm, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }))
 
 scheduler.start()
 scheduleRetention(db)

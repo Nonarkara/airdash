@@ -15,17 +15,17 @@
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.0.0-fresh1'
-import { tr, BAND } from '../i18n.js?v=2.0.0-fresh1'
-import { el, fmtNum, ago } from '../fmt.js?v=2.0.0-fresh1'
-import { getJson } from '../cache.js?v=2.0.0-fresh1'
-import { flyToProvince } from '../map.js?v=2.0.0-fresh1'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.0.0-fresh1'
+import { on, store, emit } from '../state.js?v=2.4.0'
+import { tr, BAND } from '../i18n.js?v=2.4.0'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.0'
+import { getJson } from '../cache.js?v=2.4.0'
+import { flyToProvince } from '../map.js?v=2.4.0'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.0'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare,
-} from './citizenLife.js?v=2.3.0-life1'
+} from './citizenLife.js?v=2.4.0'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -82,7 +82,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.0.0-fresh1').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.0').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }

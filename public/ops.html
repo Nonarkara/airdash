@@ -15,10 +15,10 @@
 <meta name="twitter:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230E4A5E'/%3E%3Ccircle cx='11.5' cy='4.5' r='2.5' fill='%233A8A6E'/%3E%3Cpath d='M2 8h12M2 10.5h9M2 13h12' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round' opacity='0.9'/%3E%3Ccircle cx='13' cy='10.5' r='1' fill='%23C8453A'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/css/tokens.css?v=2.0.0-fresh1">
-<link rel="stylesheet" href="/css/layout.css?v=2.0.0-fresh1">
-<link rel="stylesheet" href="/css/components.css?v=2.0.0-fresh1">
-<link rel="stylesheet" href="/css/city-dashboard.css?v=2.0.0-fresh1">
+<link rel="stylesheet" href="/css/tokens.css?v=2.4.0">
+<link rel="stylesheet" href="/css/layout.css?v=2.4.0">
+<link rel="stylesheet" href="/css/components.css?v=2.4.0">
+<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.0">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
 <script type="application/ld+json">
@@ -363,23 +363,32 @@
     </div>
   </aside>
 
-  <!-- Mobile bottom-sheet nav. Horizontally scrollable (see layout.css) so
-       every pane stays reachable on a phone — OVERVIEW first because the
-       severity-first surface (SEVERE NOW, worst tiles) must exist on
-       mobile too. Citizen mode CSS strips this to MY AREA/RISK/ALERTS. -->
+  <!-- Phone bottom navigation. MAP is a destination here, not the permanent
+       backdrop — see the ≤1100px block in layout.css for the measurements
+       behind that. Five fixed destinations plus MORE, which opens the
+       remaining seven as a grid: a horizontally-scrolling nav hid them past
+       the fold, and side-scrolling a nav with the same thumb that scrolls
+       the page is a coin flip. Citizen mode strips this to MY AREA / RISK /
+       MAP / ALERTS. On desktop the whole bar is display:none. -->
   <nav id="sheettabs" aria-label="แผงข้อมูล · Dashboard sections">
     <button data-sheet="citizen">พื้นที่ฉัน<br><span class="en-lbl">MY AREA</span></button>
     <button data-sheet="risk" class="active">เสี่ยง<br><span class="en-lbl">RISK</span></button>
-    <button data-sheet="analytics">ภาพรวม<br><span class="en-lbl">OVERVIEW</span></button>
-    <button data-sheet="waterways">ล้างฝุ่น<br><span class="en-lbl">WASHOUT</span></button>
+    <button data-sheet="map">แผนที่<br><span class="en-lbl">MAP</span></button>
     <button data-sheet="alerts">เตือน<br><span class="en-lbl">ALERTS</span></button>
     <button data-sheet="chat">ถาม<br><span class="en-lbl">ASK</span></button>
+    <button data-sheet="analytics">ภาพรวม<br><span class="en-lbl">OVERVIEW</span></button>
+    <button data-sheet="waterways">ล้างฝุ่น<br><span class="en-lbl">WASHOUT</span></button>
     <button data-sheet="history">ประวัติ<br><span class="en-lbl">HISTORY</span></button>
     <button data-sheet="insights">สัญญาณ<br><span class="en-lbl">SIGNALS</span></button>
     <button data-sheet="news">ข่าว<br><span class="en-lbl">NEWS</span></button>
     <button data-sheet="tap">เข้า<br><span class="en-lbl">TAP</span></button>
     <button data-sheet="sources">ข้อมูล<br><span class="en-lbl">DATA</span></button>
     <button data-sheet="library">คู่มือ<br><span class="en-lbl">LIB</span></button>
+    <!-- Two labels, one shown at a time (see #sheettabs.more-open in
+         layout.css): once the grid is open, this button's job is to close
+         it, and a control still reading "MORE" while the more-panel is
+         already open tells the user the wrong thing. -->
+    <button id="sheet-more" type="button" aria-expanded="false"><span class="more-lbl">เพิ่มเติม<br><span class="en-lbl">MORE</span></span><span class="close-lbl">ปิด<br><span class="en-lbl">CLOSE</span></span></button>
   </nav>
 
   <div id="ticker">
@@ -813,7 +822,7 @@
       .map((name) => caches.delete(name)))
     location.reload()
   } else {
-    await import('/js/main.js?v=2.0.0-fresh1')
+    await import('/js/main.js?v=2.4.0')
   }
 </script>
 </body>

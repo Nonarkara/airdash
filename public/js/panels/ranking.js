@@ -1,17 +1,70 @@
 // Left rail: live province watch ranking. Click → fly map + station detail.
-import { on, store } from '../state.js?v=2.0.0-fresh1'
-import { tr, BAND } from '../i18n.js?v=2.0.0-fresh1'
-import { fmtNum, el } from '../fmt.js?v=2.0.0-fresh1'
-import { flyToProvince } from '../map.js?v=2.0.0-fresh1'
-import { showProvinceDetail } from './detail.js?v=2.0.0-fresh1'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.0.0-fresh1'
+// Sort mode: Watch (default) | Effective Harm (Watch × Social Load).
+import { on, store } from '../state.js?v=2.4.0'
+import { tr, BAND } from '../i18n.js?v=2.4.0'
+import { fmtNum, el } from '../fmt.js?v=2.4.0'
+import { flyToProvince } from '../map.js?v=2.4.0'
+import { showProvinceDetail } from './detail.js?v=2.4.0'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.0'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }
+const MODE_KEY = 'airdash.rankMode'
+/** @type {'watch' | 'harm'} */
+let rankMode = 'watch'
+
+function readMode() {
+  try {
+    const v = sessionStorage.getItem(MODE_KEY)
+    if (v === 'harm' || v === 'watch') return v
+  } catch { /* private mode */ }
+  return 'watch'
+}
+
+function setMode(mode) {
+  rankMode = mode === 'harm' ? 'harm' : 'watch'
+  try { sessionStorage.setItem(MODE_KEY, rankMode) } catch { /* ignore */ }
+  paintChromeForMode()
+  render(store.snapshot)
+}
+
+function paintChromeForMode() {
+  // Own these nodes: update data-i18n so a later i18n.paintChrome() cannot
+  // clobber Harm-mode copy back to the static Watch strings in ops.html.
+  const eyebrow = document.getElementById('left-eyebrow')
+  const method = document.getElementById('risk-method-note')
+  const title = document.querySelector('#rail-left .panel-head .sign .th')
+  if (eyebrow) {
+    const pair = rankMode === 'harm'
+      ? 'จัดอันดับภาระจริง · สด|EFFECTIVE HARM RANKING · LIVE'
+      : 'จัดอันดับเฝ้าระวัง · สด|PROVINCE WATCH RANKING · LIVE'
+    eyebrow.setAttribute('data-i18n', pair)
+    eyebrow.textContent = tr(...pair.split('|'))
+  }
+  if (method) {
+    const pair = rankMode === 'harm'
+      ? 'ภาระจริง = ดัชนีเฝ้าระวัง × ภาระทางสังคม — ใครรับฝุ่นมากกว่าเมื่อค่าเฝ้าระวังใกล้กัน|Effective Harm = Watch × Social Load — who absorbs more when watch scores are similar'
+      : 'PM2.5 40% · มลพิษอื่น 10% · แนวโน้ม 15% · พยากรณ์ 20% · การระบายอากาศ 15% — ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์|PM2.5 40% · other pollutants 10% · trend 15% · forecast 20% · ventilation 15% — indicator, not a prediction'
+    method.setAttribute('data-i18n', pair)
+    method.textContent = tr(...pair.split('|'))
+  }
+  if (title) {
+    const pair = rankMode === 'harm'
+      ? 'จัดอันดับภาระจริงรายจังหวัด|Province effective-harm ranking'
+      : 'จัดอันดับเฝ้าระวังรายจังหวัด|Province watch ranking'
+    title.setAttribute('data-i18n', pair)
+    title.textContent = tr(...pair.split('|'))
+  }
+}
 
 export function initRanking() {
+  rankMode = readMode()
+  paintChromeForMode()
   on('snapshot', render)
-  on('lang', () => render(store.snapshot))
+  on('lang', () => {
+    paintChromeForMode()
+    render(store.snapshot)
+  })
 }
 
 function trendArrow(delta) {
@@ -23,12 +76,25 @@ function trendArrow(delta) {
   }, `${up ? '▲' : '▼'}${Math.abs(delta)}`)
 }
 
+function modeToggle() {
+  const wrap = el('div', { class: 'rank-mode-toggle', role: 'group', 'aria-label': tr('โหมดจัดอันดับ', 'Ranking mode') })
+  const mk = (id, th, en) => {
+    const btn = el('button', {
+      type: 'button',
+      class: `rmt-btn${rankMode === id ? ' active' : ''}`,
+      'aria-pressed': rankMode === id ? 'true' : 'false',
+      onclick: () => { if (rankMode !== id) setMode(id) },
+    }, tr(th, en))
+    return btn
+  }
+  wrap.append(
+    mk('watch', 'เฝ้าระวัง', 'Watch'),
+    mk('harm', 'ภาระจริง', 'Effective Harm'),
+  )
+  return wrap
+}
+
 // National action card — the "so what" panel + concrete next steps.
-// One place: top of the ranking, above all provinces. Designed so a person
-// who sees ONLY this card (citizen mode, mobile) knows both the level AND
-// what to do about it. The card is intentionally compact: head, action,
-// checklist (collapsed by default to keep the ranking visible), and the
-// dust-load context when in dust season.
 function nationalActionCard(nv) {
   if (!nv) return null
   const card = el('div', { class: `rank-national-card pv-${nv.level}` })
@@ -63,7 +129,6 @@ function nationalActionCard(nv) {
   if (nv.disclaimer_th) {
     detail.append(el('div', { class: 'rnc-disclaimer' }, tr(nv.disclaimer_th, nv.disclaimer_en)))
   }
-  // Toggle behaviour
   const toggleBtn = head.querySelector('.rnc-toggle')
   toggleBtn.addEventListener('click', () => {
     const open = !detail.hidden
@@ -78,24 +143,57 @@ function nationalActionCard(nv) {
   return card
 }
 
+function socialChip(harm) {
+  if (!harm || harm.social_load == null) return null
+  const liveNote = harm.watch_live === false
+    ? tr(' · ไม่มีค่าเฝ้าระวังสด', ' · no live watch score')
+    : ''
+  return el('div', {
+    class: `social-chip${harm.social_load >= 65 ? ' sc-high' : ''}`,
+    title: tr(
+      `ภาระทางสังคม ${harm.social_load}${harm.social_label_th ? ` (${harm.social_label_th})` : ''}: กลางแจ้ง ${harm.outdoor_labor} · รายได้ ${harm.income_strain} · อายุ ${harm.sensitivity} · ที่พักพิง ${harm.adaptive_deficit}${harm.action_th ? ` — ${harm.action_th}` : ''}${liveNote}`,
+      `Social Load ${harm.social_load}${harm.social_label_en ? ` (${harm.social_label_en})` : ''}: outdoor ${harm.outdoor_labor} · income ${harm.income_strain} · age ${harm.sensitivity} · shelter ${harm.adaptive_deficit}${harm.action_en ? ` — ${harm.action_en}` : ''}${liveNote}`,
+    ),
+  },
+    el('span', { class: 'sc-lbl' }, tr('สังคม', 'Social')),
+    el('span', { class: 'sc-num' }, String(harm.social_load)),
+  )
+}
+
 function render(snap) {
   if (!snap?.risk) return
   const box = document.getElementById('ranking')
 
-  // National action card — replaced the one-liner with a full action panel
-  // (head + verb + checklist + disclaimer). In citizen mode this is the only
-  // context a non-technical reader sees; in operator mode it's still the
-  // first thing at the top of the ranking.
   const nv = snap.risk.national_verdict
   const card = nationalActionCard(nv)
 
-  const rows = snap.risk.provinces.slice(0, 60)
+  const provinces = [...(snap.risk.provinces ?? [])]
+  if (rankMode === 'harm') {
+    provinces.sort((a, b) => {
+      const ha = a.harm?.score ?? -1
+      const hb = b.harm?.score ?? -1
+      if (hb !== ha) return hb - ha
+      return (b.harm?.social_load ?? 0) - (a.harm?.social_load ?? 0)
+    })
+  }
+
+  const rows = provinces.slice(0, 60)
   const rowEls = rows.map((p, i) => {
+    const harm = p.harm
+    const useHarm = rankMode === 'harm' && harm
+    const badgeScore = useHarm ? harm.score : p.score
+    const badgeBand = useHarm ? harm.band : p.band
+
     const stats = []
     if (p.pm25 !== null && p.pm25 !== undefined) {
       stats.push(el('div', { class: 'line' },
         tr('ฝุ่น ', 'PM2.5 '),
         el('b', { class: p.pm25 >= 75 ? 'hot' : '' }, fmtNum(p.pm25, 0)), ' µg/m³'))
+    }
+    if (useHarm && typeof p.score === 'number') {
+      stats.push(el('div', { class: 'line' },
+        tr('เฝ้าระวัง ', 'Watch '),
+        el('b', {}, String(p.score))))
     }
     if (p.stations_very_unhealthy > 0 || p.stations_unhealthy > 0) {
       stats.push(el('div', { class: 'line' },
@@ -105,53 +203,46 @@ function render(snap) {
     if (p.pm25_fc_48h !== null && p.pm25_fc_48h >= 37.5) {
       stats.push(el('div', { class: 'line' }, tr('คาดฝุ่น ', 'fc '), el('b', {}, fmtNum(p.pm25_fc_48h, 0)), ` ${tr('µg/48ชม.', 'µg/48h')}`))
     }
-    // Washout chip — rain is expected to help this province's dust.
     if (p.washout_helps && p.washout_relief_pct) {
       stats.push(el('div', { class: 'line' },
         el('span', { title: tr('ฝนช่วยล้างฝุ่นได้', 'rain washout expected') },
           `🌧 −${fmtNum(p.washout_relief_pct, 0)}%`)))
     }
-    // Cause chip — the "WHY is the air bad here" hypothesis from
-    // /api/risk's cause fold (e.g. "🔥 การเผาในที่โล่ง 70%" / "🚗 traffic").
     const causeEl = causeChip(p.cause)
     if (causeEl) stats.push(el('div', { class: 'line' }, causeEl))
-    const card = p.card
-    const expand = card ? el('div', { class: 'rank-expand', hidden: true }) : null
-    if (card) {
-      // Reasons (up to 2)
-      if (card.reasons?.length) {
+    const cardExpand = p.card
+    const expand = cardExpand ? el('div', { class: 'rank-expand', hidden: true }) : null
+    if (cardExpand) {
+      if (useHarm && (harm.action_th || harm.action_en)) {
+        expand.append(el('div', { class: 'rx-action' },
+          `▶ ${tr(harm.action_th ?? '', harm.action_en ?? '')}`))
+      }
+      if (cardExpand.reasons?.length) {
         const reasons = el('div', { class: 'rx-reasons' })
-        for (const r of card.reasons) {
+        for (const r of cardExpand.reasons) {
           reasons.append(el('div', { class: 'rx-reason' }, `· ${tr(r.th, r.en)}`))
         }
         expand.append(reasons)
       }
-      // Action verb (the "what to do" line)
-      if (card.action_th || card.action_en) {
-        expand.append(el('div', { class: 'rx-action' }, `▶ ${tr(card.action_th ?? '', card.action_en ?? '')}`))
+      if (cardExpand.action_th || cardExpand.action_en) {
+        expand.append(el('div', { class: 'rx-action' }, `▶ ${tr(cardExpand.action_th ?? '', cardExpand.action_en ?? '')}`))
       }
-      // Checklist
-      if (card.checklist?.length) {
+      if (cardExpand.checklist?.length) {
         const list = el('ol', { class: 'rx-checklist' })
-        for (const item of card.checklist) {
+        for (const item of cardExpand.checklist) {
           list.append(el('li', {}, tr(item.th, item.en)))
         }
         expand.append(list)
       }
-      // Disclaimer
-      if (card.disclaimer_th) {
-        expand.append(el('div', { class: 'rx-disclaimer' }, tr(card.disclaimer_th, card.disclaimer_en)))
+      if (cardExpand.disclaimer_th) {
+        expand.append(el('div', { class: 'rx-disclaimer' }, tr(cardExpand.disclaimer_th, cardExpand.disclaimer_en)))
       }
-      // "Open detail" link — keeps the existing fly-to-province + station list behaviour
       expand.append(el('button', {
         class: 'rx-detail-btn', type: 'button',
         onclick: (e) => { e.stopPropagation(); flyToProvince(p); showProvinceDetail(p) },
       }, tr('ดูสถานี/กราฟ →', 'See stations/chart →')))
     }
-    // Danger chip — the headline composite for "is it safe to be outside
-    // RIGHT NOW". Shows the worst-case band's number + label so a glance
-    // at the ranking tells you both the watch indicator and the
-    // acute-risk number. Tooltip breaks out every modifier for audit.
+
     const danger = p.danger
     const dangerChip = danger ? el('div', {
       class: `danger-chip b-${danger.band}`,
@@ -164,19 +255,15 @@ function render(snap) {
       el('span', { class: 'dc-band' }, tr(danger.label_th, danger.label_en)),
     ) : null
 
+    const bandLabel = BAND[badgeBand]?.[store.lang] ?? badgeBand
     const row = el('div', {
-      class: `rank-row b-${p.band}`,
+      class: `rank-row b-${badgeBand}`,
       onclick: () => {
         flyToProvince(p)
-        // Toggle expand on click of the row itself (anywhere except the
-        // detail button which has its own handler). Two interactions in one
-        // tap is the citizen-mode ergonomic — no separate "+" button to find.
         if (expand) {
           const wasHidden = expand.hidden
           expand.hidden = !wasHidden
           row.classList.toggle('rank-row-open', wasHidden)
-          // Lazy-load the cause evidence on first open — the ranked
-          // hypotheses + the actual numbers behind them (/api/causes).
           if (wasHidden && !expand.dataset.causeLoaded) {
             expand.dataset.causeLoaded = '1'
             causesByProvince().then((map) => {
@@ -188,17 +275,17 @@ function render(snap) {
       },
     },
       el('span', { class: 'mono', style: 'width:18px;color:var(--ink-low);font-size:10px' }, String(i + 1)),
-      el('div', { class: `score b-${p.band} badge` }, String(p.score)),
+      el('div', { class: `score b-${badgeBand} badge` }, String(badgeScore ?? '–')),
       el('div', { class: 'who' },
         el('div', { class: 'th' }, tr(p.province_th, p.province_en) || '—'),
-        el('div', { class: 'en' }, `${store.lang === 'th' ? (p.province_en ?? '') : (p.province_th ?? '')} · ${BAND[p.band][store.lang]}`, trendArrow(p.delta))),
+        el('div', { class: 'en' }, `${store.lang === 'th' ? (p.province_en ?? '') : (p.province_th ?? '')} · ${bandLabel}`,
+          useHarm ? '' : trendArrow(p.delta))),
+      socialChip(harm),
       dangerChip,
       el('div', { class: 'stats' }, ...stats),
     )
     if (expand) row.append(expand)
     return row
   })
-  // Filter out a null card: replaceChildren coerces null to the text node
-  // "null" (Web IDL DOMString), which would print literally atop the ranking.
-  box.replaceChildren(...[card, ...rowEls].filter(Boolean))
+  box.replaceChildren(...[modeToggle(), card, ...rowEls].filter(Boolean))
 }

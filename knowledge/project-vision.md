@@ -186,6 +186,9 @@ The honest list — the next horizons an agent or collaborator could pick up:
 6. **Public alert pipeline.** The architecture is ready; a provincial
    health office could consume `/api/alerts` and turn band transitions
    into LINE broadcasts without changing the system.
+7. **Effective Harm amphoe refinement.** Province-level Social Load × Watch
+   Score shipped (ranking Watch/Harm toggle, `/api/harm`). Next: amphoe-
+   level labor/income layers when a stable open source exists.
 
 Each of these is an additive file in `server/` and a markdown edit in
 `knowledge/` — none requires a redesign.

@@ -1,7 +1,7 @@
 // Shared sensor-health fetch — one cached call feeds header, insights,
 // sources, and province detail warnings.
-import { getJson } from './cache.js?v=2.0.0-fresh1'
-import { store, emit } from './state.js?v=2.0.0-fresh1'
+import { getJson } from './cache.js?v=2.4.0'
+import { store, emit } from './state.js?v=2.4.0'
 
 const TTL_MS = 60_000
 let lastFetch = 0

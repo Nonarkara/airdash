@@ -24,6 +24,17 @@ const provinceBoundariesGeoJson = JSON.parse(
 import { buildInsights } from './insights.js'
 import { log } from './util.js'
 import { sensorHealth } from './sensors.js'
+import { harmPayload, HARM_METHOD } from './harm.js'
+
+/** Fold Effective Harm onto each risk province row (Danger-style join). */
+function foldHarm(provinces, harmEngine) {
+  if (!harmEngine || !provinces?.length) return
+  const byCode = new Map(harmEngine.get().map((h) => [h.province_code, h]))
+  for (const p of provinces) {
+    const h = p.province_code != null ? byCode.get(String(p.province_code)) : null
+    p.harm = harmPayload(h)
+  }
+}
 
 // Honest degraded-state payload for the optional LINE per-token push module
 // (linePush.js). When the module or its table is absent on a deployment the
@@ -107,7 +118,7 @@ function pivotLatest(db, source, metrics) {
   return [...byStation.values()]
 }
 
-export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }) {
+export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, harm, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }) {
   return {
     'GET /api/sensors/health': (req, res) => {
       json(res, 200, sensorHealth(db))
@@ -276,6 +287,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
             : null
         }
       }
+      foldHarm(risk.provinces, harm)
       // Primary layer: every AQ station with the full pollutant set.
       const air = pivotLatest(db, 'air4thai', ['pm25', 'pm10', 'o3', 'co', 'no2', 'so2', 'aqi'])
       // Rain gauges currently seeing washout-grade rain (≥5mm/24h).
@@ -339,6 +351,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
             : null
         }
       }
+      foldHarm(r.provinces, harm)
       return json(res, 200, r)
     },
 
@@ -411,6 +424,25 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, c
     'GET /api/danger': (req, res) => {
       if (!danger) return json(res, 200, { updated: new Date().toISOString(), provinces: [] })
       return json(res, 200, { updated: new Date().toISOString(), provinces: danger.get() })
+    },
+
+    // Effective Harm — Watch Score × Social Load. Parallel to /api/danger:
+    // full ranked list + component breakdown for the ranking Harm mode.
+    'GET /api/harm': (req, res) => {
+      if (!harm) {
+        return json(res, 200, {
+          updated: new Date().toISOString(),
+          method_th: HARM_METHOD.th,
+          method_en: HARM_METHOD.en,
+          provinces: [],
+        })
+      }
+      return json(res, 200, {
+        updated: new Date().toISOString(),
+        method_th: HARM_METHOD.th,
+        method_en: HARM_METHOD.en,
+        provinces: harm.get(),
+      })
     },
 
     // National daily aggregates — feeds the ANALYTICS (default OVERVIEW) tab.

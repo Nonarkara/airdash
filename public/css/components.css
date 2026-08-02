@@ -425,6 +425,62 @@
 .danger-chip.b-elevated .dc-band { color: var(--aqi-unhealthy); }
 .danger-chip.b-high     .dc-band { color: var(--aqi-hazardous); }
 
+/* Watch | Effective Harm sort toggle (ranking rail) */
+.rank-mode-toggle {
+  display: flex;
+  gap: 0;
+  margin: 8px 10px 4px;
+  border: 1px solid var(--rule);
+  background: var(--paper-warm);
+}
+.rank-mode-toggle .rmt-btn {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 6px 8px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink-mid);
+  cursor: pointer;
+}
+.rank-mode-toggle .rmt-btn + .rmt-btn { border-left: 1px solid var(--rule); }
+.rank-mode-toggle .rmt-btn.active {
+  background: var(--th-deep);
+  color: var(--paper);
+}
+.rank-mode-toggle .rmt-btn:hover:not(.active) { background: var(--well-dim); }
+
+/* Social Load chip — structural vulnerability next to Danger */
+.social-chip {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: none;
+  padding: 3px 6px;
+  margin-left: 4px;
+  background: var(--paper-warm);
+  border: 1px solid var(--rule);
+  min-width: 44px;
+  cursor: help;
+  line-height: 1.1;
+}
+.social-chip .sc-lbl {
+  font-family: var(--font-display);
+  font-size: 8px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+}
+.social-chip .sc-num {
+  font-family: var(--font-num);
+  font-weight: 800; font-size: 13px;
+  color: var(--th-deep);
+}
+.social-chip.sc-high {
+  border-left: 3px solid var(--aqi-unhealthy);
+  background: rgba(200, 69, 58, 0.06);
+}
+.social-chip.sc-high .sc-num { color: var(--aqi-unhealthy); }
+
 /* ── Station detail ──────────────────────────────────────────────────────── */
 .detail-back { margin: 10px 12px 0; min-height: 40px; padding: 6px 12px; }
 
