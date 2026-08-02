@@ -1,11 +1,11 @@
 // Left rail: live province watch ranking. Click → fly map + station detail.
 // Sort mode: Watch (default) | Effective Harm (Watch × Social Load).
-import { on, store } from '../state.js?v=2.4.0'
-import { tr, BAND } from '../i18n.js?v=2.4.0'
-import { fmtNum, el } from '../fmt.js?v=2.4.0'
-import { flyToProvince } from '../map.js?v=2.4.0'
-import { showProvinceDetail } from './detail.js?v=2.4.0'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.0'
+import { on, store } from '../state.js?v=2.4.1'
+import { tr, BAND } from '../i18n.js?v=2.4.1'
+import { fmtNum, el } from '../fmt.js?v=2.4.1'
+import { flyToProvince } from '../map.js?v=2.4.1'
+import { showProvinceDetail } from './detail.js?v=2.4.1'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.1'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }

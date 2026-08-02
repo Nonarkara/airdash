@@ -1189,6 +1189,12 @@
 .citizen-share-row {
   display: flex; gap: 6px; padding: 0 12px 6px;
 }
+/* OS-share button — the primary action in the share row (see share.js).
+   Filled so it reads as THE button; LINE/SMS/copy are quieter siblings. */
+.citizen-share-btn.native {
+  background: var(--brand, var(--th-navy, #1D5C4F)); color: #fff;
+  border-color: var(--brand, var(--th-navy, #1D5C4F));
+}
 .citizen-share-btn {
   flex: 1;
   padding: 8px 6px;

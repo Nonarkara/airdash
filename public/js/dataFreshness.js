@@ -19,8 +19,8 @@
 // (UTC+7), which is what the data sources stamp, so showing the local clock
 // is more honest than the browser's local clock — the source time and the
 // shown time share a timezone.
-import { on, store } from './state.js?v=2.4.0'
-import { tr } from './i18n.js?v=2.4.0'
+import { on, store } from './state.js?v=2.4.1'
+import { tr } from './i18n.js?v=2.4.1'
 
 const TICK_MS = 30_000  // re-evaluate freshness every 30s
 // Asia/Bangkok = UTC+7. We compute the local time string from the source
