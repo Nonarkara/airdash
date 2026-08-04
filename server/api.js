@@ -118,6 +118,48 @@ function pivotLatest(db, source, metrics) {
   return [...byStation.values()]
 }
 
+
+/** Summarize pipeline freshness for /api/health.
+ *  Process can be up while every ingest is silently dead — historically
+ *  /api/health said ok:true with no way to tell. This stays a 200 JSON
+ *  field (watchdog uses /api/ping for liveness); operators/UI read data_ok. */
+function summarizeDataFreshness(sources) {
+  const now = Date.now()
+  let worstStatus = 'ok'
+  let oldest = { source: null, age_s: 0 }
+  let okCount = 0
+  let total = 0
+  for (const [name, s] of Object.entries(sources || {})) {
+    total++
+    if (!s?.lastOk) {
+      if (worstStatus === 'ok') worstStatus = 'unknown'
+      continue
+    }
+    const t = new Date(s.lastOk).getTime()
+    if (!Number.isFinite(t)) {
+      if (worstStatus === 'ok') worstStatus = 'unknown'
+      continue
+    }
+    const age_s = Math.max(0, Math.round((now - t) / 1000))
+    const interval_s = Math.max(60, Math.round((s.intervalMs || 900_000) / 1000))
+    let status = 'ok'
+    if (age_s > interval_s * 3) status = 'stale'
+    else if (age_s > interval_s * 1.5) status = 'warn'
+    else okCount++
+    const rank = { ok: 0, unknown: 1, warn: 2, stale: 3 }
+    if (rank[status] > rank[worstStatus]) worstStatus = status
+    if (age_s >= oldest.age_s) oldest = { source: name, age_s }
+  }
+  return {
+    status: worstStatus,
+    data_ok: worstStatus !== 'stale',
+    oldest_source: oldest.source,
+    oldest_age_s: oldest.age_s || null,
+    sources_ok: okCount,
+    sources_total: total,
+  }
+}
+
 export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, harm, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }) {
   return {
     'GET /api/sensors/health': (req, res) => {
@@ -231,13 +273,16 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       dbStats.readings = db.get('SELECT MAX(id) AS n FROM readings').n ?? 0
       const dbSize = db.get(
         'SELECT page_count * page_size AS bytes FROM pragma_page_count(), pragma_page_size()').bytes
+      const sources = scheduler.health()
+      const data_freshness = summarizeDataFreshness(sources)
       json(res, 200, {
         ok: true,
         service: 'airdash',
         now: new Date().toISOString(),
         uptime_s: Math.round((Date.now() - startedAt) / 1000),
         db: { ...dbStats, size_mb: Math.round(dbSize / 1048576 * 10) / 10 },
-        sources: scheduler.health(),
+        sources,
+        data_freshness,
         sse: bus.stats(),
         llm: rag.status(),
       })

@@ -15,18 +15,18 @@
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.1'
-import { tr, BAND } from '../i18n.js?v=2.4.1'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.1'
-import { getJson } from '../cache.js?v=2.4.1'
-import { flyToProvince } from '../map.js?v=2.4.1'
-import { sharePlace, copyText } from '../share.js?v=2.4.1'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.1'
+import { on, store, emit } from '../state.js?v=2.4.3'
+import { tr, BAND } from '../i18n.js?v=2.4.3'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.3'
+import { getJson } from '../cache.js?v=2.4.3'
+import { flyToProvince } from '../map.js?v=2.4.3'
+import { sharePlace, copyText } from '../share.js?v=2.4.3'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.3'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare,
-} from './citizenLife.js?v=2.4.1'
+} from './citizenLife.js?v=2.4.3'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -83,7 +83,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.1').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.3').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -351,10 +351,10 @@ function renderForProvince(province) {
   const shareHead = el('div', { class: 'citizen-section-head' },
     el('span', {}, tr('📤 แจ้งสถานะให้ครอบครัว', '📤 share your status')))
   const shareRow = el('div', { class: 'citizen-share-row' },
-    nativeShareButton(province, band, score),
-    lineButton(province, band, score),
-    smsButton(province, band, score),
-    copyButton(province, band, score),
+    nativeShareButton(province, band, score, live),
+    lineButton(province, band, score, live),
+    smsButton(province, band, score, live),
+    copyButton(province, band, score, live),
   )
 
   // LINE opt-in — follow the AirDash Official Account for dust alerts
@@ -439,12 +439,30 @@ function stationCard(s) {
   )
 }
 
-function buildShareText(province, band, score) {
+/** Fact lines for share — PM + 24h forecast from live risk only. */
+function shareFactLines(live) {
+  if (!live) return { th: [], en: [] }
+  const th = [], en = []
+  if (Number.isFinite(live.pm25)) {
+    th.push(`PM2.5 ${Math.round(live.pm25)} µg/m³`)
+    en.push(`PM2.5 ${Math.round(live.pm25)} µg/m³`)
+  }
+  if (Number.isFinite(live.pm25_fc_24h) && live.pm25_fc_24h >= 15) {
+    th.push(`พยากรณ์ 24 ชม. ~${Math.round(live.pm25_fc_24h)} µg/m³`)
+    en.push(`24h forecast ~${Math.round(live.pm25_fc_24h)} µg/m³`)
+  }
+  return { th: th.slice(0, 2), en: en.slice(0, 2) }
+}
+
+function buildShareText(province, band, score, live = null) {
   const verb = (BAND[band] ?? BAND.normal)
   const link = `${location.origin}/?city=${encodeURIComponent(province.en || province.th)}`
+  const facts = shareFactLines(live)
+  const factTh = facts.th.length ? `\n${facts.th.map((f) => `· ${f}`).join('\n')}` : ''
+  const factEn = facts.en.length ? `\n${facts.en.map((f) => `· ${f}`).join('\n')}` : ''
   return tr(
-    `[AirDash] สถานการณ์ฝุ่น${province.th} (${province.en}): ${verb.th} · ${score}/100\nดูสด: ${link}`,
-    `[AirDash] ${province.en} air status: ${verb.en} · ${score}/100\nLive: ${link}`,
+    `[AirDash] ${province.th} (${province.en}): ${verb.th} · ${score}/100${factTh}\nดูสด: ${link}`,
+    `[AirDash] ${province.en}: ${verb.en} · ${score}/100${factEn}\nLive: ${link}`,
   )
 }
 
@@ -452,13 +470,13 @@ function buildShareText(province, band, score) {
 // user has, not just the two we predicted. LINE/SMS stay as one-tap
 // shortcuts; copy as the always-works fallback. (Same pattern as
 // FloodDash — see public/js/share.js.)
-function nativeShareButton(province, band, score) {
+function nativeShareButton(province, band, score, live = null) {
   const btn = el('button', { class: 'citizen-share-btn native', type: 'button',
     onclick: async (e) => {
       e.preventDefault()
       const state = await sharePlace({
         url: `${location.origin}/?city=${encodeURIComponent(province.en || province.th)}`,
-        text: buildShareText(province, band, score),
+        text: buildShareText(province, band, score, live),
         title: 'AirDash',
       })
       if (state === 'copied') {
@@ -470,8 +488,8 @@ function nativeShareButton(province, band, score) {
   return btn
 }
 
-function lineButton(province, band, score) {
-  const text = encodeURIComponent(buildShareText(province, band, score))
+function lineButton(province, band, score, live = null) {
+  const text = encodeURIComponent(buildShareText(province, band, score, live))
   return el('a', { class: 'citizen-share-btn line', href: `https://line.me/R/msg/text/?${text}`, target: '_blank', rel: 'noopener' }, 'LINE')
 }
 
@@ -643,12 +661,12 @@ function renderTelegramForm(province) {
   init()
   return wrap
 }
-function smsButton(province, band, score) {
-  const text = encodeURIComponent(buildShareText(province, band, score))
+function smsButton(province, band, score, live = null) {
+  const text = encodeURIComponent(buildShareText(province, band, score, live))
   return el('a', { class: 'citizen-share-btn sms', href: `sms:?body=${text}` }, 'SMS')
 }
-function copyButton(province, band, score) {
-  const text = buildShareText(province, band, score)
+function copyButton(province, band, score, live = null) {
+  const text = buildShareText(province, band, score, live)
   const btn = el('button', { class: 'citizen-share-btn copy', type: 'button',
     onclick: async (e) => {
       e.preventDefault()

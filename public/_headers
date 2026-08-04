@@ -1,0 +1,29 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(self)
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+# Versioned ?v= assets must NOT use year-long immutable. On 2026-08-02 a
+# custom-domain lag after Pages deploy pinned OLD bytes under a NEW ?v=
+# key; with immutable that poison lasted a year. Cap /js and /css at 7
+# days without immutable so a mistake self-heals. Vendor/fonts keep the
+# long immutable TTL (content changes only with the filename).
+/css/*
+  Cache-Control: public, max-age=604800
+
+/js/*
+  Cache-Control: public, max-age=604800
+
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/img/*
+  Cache-Control: public, max-age=86400
+
+/geo/*
+  Cache-Control: public, max-age=86400

@@ -1,31 +1,31 @@
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.4.1'
-import { paintChrome } from './i18n.js?v=2.4.1'
-import { startTap } from './sse.js?v=2.4.1'
-import { initMap, invalidateMap } from './map.js?v=2.4.1'
-import { initHeader } from './panels/header.js?v=2.4.1'
-import { initRanking } from './panels/ranking.js?v=2.4.1'
-import { initForecast } from './panels/forecast.js?v=2.4.1'
-import { initWhatIf } from './panels/whatif.js?v=2.4.1'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.4.1'
-import { initTap } from './panels/tap.js?v=2.4.1'
-import { initSources } from './panels/sources.js?v=2.4.1'
-import { initHistory } from './panels/history.js?v=2.4.1'
-import { initInsights } from './panels/insights.js?v=2.4.1'
-import { initAnalytics } from './panels/analytics.js?v=2.4.1'
-import { initFeeds } from './panels/feeds.js?v=2.4.1'
-import { initChat } from './panels/chat.js?v=2.4.1'
-import { initCitizen } from './panels/citizen.js?v=2.4.1'
-import { initWaterways } from './panels/waterways.js?v=2.4.1'
-import { initFocus } from './panels/focus.js?v=2.4.1'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.1'
-import { initSplit } from './panels/split.js?v=2.4.1'
-import { initLibrary } from './panels/library.js?v=2.4.1'
-import { initResearch } from './panels/research.js?v=2.4.1'
-import { initSearch } from './panels/search.js?v=2.4.1'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.1'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.4.1'
+import { on, emit, store, setLang } from './state.js?v=2.4.3'
+import { paintChrome } from './i18n.js?v=2.4.3'
+import { startTap } from './sse.js?v=2.4.3'
+import { initMap, invalidateMap } from './map.js?v=2.4.3'
+import { initHeader } from './panels/header.js?v=2.4.3'
+import { initRanking } from './panels/ranking.js?v=2.4.3'
+import { initForecast } from './panels/forecast.js?v=2.4.3'
+import { initWhatIf } from './panels/whatif.js?v=2.4.3'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.4.3'
+import { initTap } from './panels/tap.js?v=2.4.3'
+import { initSources } from './panels/sources.js?v=2.4.3'
+import { initHistory } from './panels/history.js?v=2.4.3'
+import { initInsights } from './panels/insights.js?v=2.4.3'
+import { initAnalytics } from './panels/analytics.js?v=2.4.3'
+import { initFeeds } from './panels/feeds.js?v=2.4.3'
+import { initChat } from './panels/chat.js?v=2.4.3'
+import { initCitizen } from './panels/citizen.js?v=2.4.3'
+import { initWaterways } from './panels/waterways.js?v=2.4.3'
+import { initFocus } from './panels/focus.js?v=2.4.3'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.3'
+import { initSplit } from './panels/split.js?v=2.4.3'
+import { initLibrary } from './panels/library.js?v=2.4.3'
+import { initResearch } from './panels/research.js?v=2.4.3'
+import { initSearch } from './panels/search.js?v=2.4.3'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.3'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.4.3'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -519,5 +519,5 @@ async function boot() {
 boot()
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=2.4.1').catch(() => {}))
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js?v=2.4.3').catch(() => {}))
 }

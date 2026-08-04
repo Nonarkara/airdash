@@ -21,9 +21,32 @@ Browser → air.nonarkara.org (Cloudflare Pages: static UI)
 ## 1. Frontend → Cloudflare Pages
 
 ```bash
-bash setup.sh                      # ensure public/vendor + public/fonts exist
+bash scripts/deploy-frontend.sh    # direct-upload + canonical-alias-first verify
+```
+
+Or the manual steps (only if you know the poison-window rules below):
+
+```bash
+bash setup.sh
 npx wrangler pages deploy public --project-name airdash
 ```
+
+> **`git push` does NOT deploy the frontend.** This is a Pages
+> *direct-upload* project. Use `scripts/deploy-frontend.sh`.
+
+> **Do not verify a new `?v=` URL on `air.nonarkara.org` until the
+> canonical alias shows the new build.** After a successful deploy the
+> custom domain can keep serving the PREVIOUS deployment for several
+> minutes. Anything that requests a new versioned asset in that window
+> caches the OLD bytes under the NEW key. Check in this order:
+>
+> ```bash
+> curl -s https://airdash.pages.dev/ | grep -o 'v=[0-9.]*' | sort -u
+> curl -s https://air.nonarkara.org/ | grep -o 'v=[0-9.]*' | sort -u
+> ```
+>
+> `_headers` caps `/js/*` and `/css/*` at 7 days without `immutable` so
+> any repeat of that poison self-heals in days, not a year.
 
 First run creates the `airdash` project (URL `airdash.pages.dev`). Add the
 custom domain once (dashboard: Pages → airdash → Custom domains →

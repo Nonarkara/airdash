@@ -1,10 +1,10 @@
 // Universal place search — search any place name (province, station, focus area)
 // and get autocomplete results. Select one → map flies there + place card opens
 // with live data: nearest AQ stations, watch score, rain-washout outlook.
-import { on, store, emit } from '../state.js?v=2.4.1'
-import { tr, pick, BAND } from '../i18n.js?v=2.4.1'
-import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.1'
-import { getJson } from '../cache.js?v=2.4.1'
+import { on, store, emit } from '../state.js?v=2.4.3'
+import { tr, pick, BAND } from '../i18n.js?v=2.4.3'
+import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.3'
+import { getJson } from '../cache.js?v=2.4.3'
 
 // Cached province centroids — fetched once, used to give postal results
 // a fly-to target. Same numbers the server's gazetteer uses (see
@@ -40,6 +40,84 @@ let placeCard = null
 let debounceTimer = null
 let currentSelection = null
 
+
+// Recent places — frictionless reopen. Empty focus / short query shows
+// the last few cities the user opened so "how is it where mom lives"
+// is one tap, not a re-type. Survives refresh; private-mode safe.
+const RECENT_KEY = 'ad_recent_places_v1'
+const RECENT_MAX = 6
+
+function loadRecentPlaces() {
+  try {
+    const list = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]')
+    return Array.isArray(list) ? list : []
+  } catch { return [] }
+}
+
+function rememberRecent(r) {
+  if (!r || (r.lat == null && r.lng == null)) return
+  if (!r.name_th && !r.name_en) return
+  const key = `${r.type || ''}|${r.name_th || ''}|${r.province_th || ''}|${r.lat}|${r.lng}`
+  const slim = {
+    type: r.type, subtype: r.subtype,
+    name_th: r.name_th, name_en: r.name_en,
+    type_th: r.type_th, type_en: r.type_en,
+    province_th: r.province_th, province_en: r.province_en,
+    province_code: r.province_code,
+    lat: r.lat, lng: r.lng, zoom: r.zoom, slug: r.slug,
+  }
+  const next = [slim, ...loadRecentPlaces().filter((x) => {
+    const k = `${x.type || ''}|${x.name_th || ''}|${x.province_th || ''}|${x.lat}|${x.lng}`
+    return k !== key
+  })].slice(0, RECENT_MAX)
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)) } catch { /* private mode */ }
+}
+
+function showRecentPlaces() {
+  if (!searchResults || !searchInput) return
+  const list = loadRecentPlaces()
+  searchResults.replaceChildren()
+  if (list.length === 0) {
+    const empty = document.createElement('div')
+    empty.className = 'search-empty'
+    empty.textContent = tr(
+      'พิมพ์ชื่อเมือง หมู่บ้าน หรือสถานที่ — หรือเปิดการ์ดล่าสุดที่นี่หลังค้นหาครั้งแรก',
+      'Type a city, village, or place — recent opens appear here after your first search',
+    )
+    searchResults.appendChild(empty)
+  } else {
+    const head = document.createElement('div')
+    head.className = 'search-recent-head'
+    head.innerHTML = `<span class="srh-eyebrow">${tr('ล่าสุด · RECENT', 'RECENT')}</span>
+      <span class="srh-hint">${tr('แตะเพื่อเปิดแดชบอร์ดเมืองอีกครั้ง', 'Tap to reopen that city dashboard')}</span>`
+    searchResults.appendChild(head)
+    list.forEach((r, i) => {
+      const icon = TYPE_ICON[r.type] ?? '📍'
+      const name = tr(r.name_th, r.name_en)
+      const ctx = r.province_th ? tr(r.province_th, r.province_en ?? r.province_th) : ''
+      const typeLabel = tr(r.type_th, r.type_en) || (r.type || '')
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'search-result search-result-recent'
+      button.id = `search-result-recent-${i}`
+      button.dataset.idx = i
+      button.setAttribute('role', 'option')
+      button.setAttribute('aria-selected', 'false')
+      button.innerHTML = `<span class="sr-icon">${icon}</span>
+        <span class="sr-body">
+          <span class="sr-name">${escapeHtml(name)}</span>
+          <span class="sr-ctx">${escapeHtml(typeLabel)}${ctx ? ' · ' + escapeHtml(ctx) : ''}</span>
+        </span>`
+      button.addEventListener('click', () => selectResult(r))
+      button.addEventListener('mouseenter', () => button.classList.add('hover'))
+      button.addEventListener('mouseleave', () => button.classList.remove('hover'))
+      searchResults.appendChild(button)
+    })
+  }
+  searchResults.style.display = 'block'
+  searchInput.setAttribute('aria-expanded', 'true')
+}
+
 export function initSearch() {
   searchInput = document.getElementById('place-search')
   searchResults = document.getElementById('search-results')
@@ -57,7 +135,7 @@ export function initSearch() {
     clearTimeout(debounceTimer)
     const q = searchInput.value.trim()
     if (q.length < 2) {
-      hideResults()
+      showRecentPlaces()
       return
     }
     debounceTimer = setTimeout(() => doSearch(q), 350)
@@ -91,6 +169,7 @@ export function initSearch() {
   }
   searchInput.addEventListener('focus', () => {
     requestAnimationFrame(reposition)
+    if (searchInput.value.trim().length < 2) showRecentPlaces()
   })
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', reposition)
@@ -139,6 +218,7 @@ export function initSearch() {
   // Falls through to /<slug> path-based links (e.g. /Sikhio) when no ?city.
   bootCityFromUrl()
   bootCityFromSlug()
+  setTimeout(() => { if (!placeCard || placeCard.style.display !== 'block') bootFromSavedCity() }, 600)
 }
 
 async function doSearch(q) {
@@ -274,6 +354,16 @@ function selectResult(r) {
 // ?city=<name or postal code> boots straight into that municipality's view —
 // the individualized dashboard link handed to every city. &tv=1 opens it
 // directly in full-screen war-room mode (for the wall TV that reboots).
+
+async function bootFromSavedCity() {
+  if (location.pathname !== '/' && location.pathname !== '') return
+  if (new URLSearchParams(location.search).get('city')) return
+  let saved = null
+  try { saved = JSON.parse(localStorage.getItem('ad_my_city_v1') ?? 'null') } catch {}
+  if (!saved || typeof saved.lat !== 'number' || typeof saved.lng !== 'number') return
+  selectResult(saved)
+}
+
 async function bootCityFromUrl() {
   const params = new URLSearchParams(location.search)
   const q = params.get('city')?.trim()

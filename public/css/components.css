@@ -2446,6 +2446,23 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
   padding: 16px; text-align: center; font-size: 13px; color: var(--ink-mid);
 }
 
+.search-recent-head {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px 8px;
+  background: linear-gradient(180deg, rgba(11, 62, 143, 0.10) 0%, rgba(11, 62, 143, 0.04) 100%);
+  border-bottom: 1px solid var(--rule);
+}
+.search-recent-head .srh-eyebrow {
+  font-family: var(--font-ui); font-weight: 800;
+  font-size: 11.5px; letter-spacing: 0.04em;
+  color: var(--th-navy);
+}
+.search-recent-head .srh-hint {
+  font-size: 11px; color: var(--ink-mid);
+}
+.search-result.search-result-recent .sr-name { color: var(--th-navy); }
+
+
 /* ── Place detail card (left rail) ──────────────────────────────────────────── */
 .place-card {
   overflow-y: auto; flex: 1; min-height: 0;
