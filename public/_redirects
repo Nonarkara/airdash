@@ -3,14 +3,25 @@
 # are matched first so the wildcard at the bottom only catches paths
 # that have no other match — exactly the case for a bare place slug.
 # The URL bar keeps /Sikhio so the link is shareable.
+#
+# IMPORTANT: Cloudflare Pages 200-rewrites can outrank bare static files at
+# the site root. Without these pass-throughs, /sw.js was served as ops.html
+# (85197 bytes of HTML) and service-worker registration silently failed —
+# returning visitors stayed on stale shells. Keep every root asset listed.
 /css/*   /css/:splat  200
 /js/*    /js/:splat   200
 /img/*   /img/:splat  200
 /fonts/* /fonts/:splat 200
 /geo/*   /geo/:splat  200
 /vendor/* /vendor/:splat 200
-/fonts/* /fonts/:splat 200
 /photos/* /photos/:splat 200
+/sw.js                  /sw.js                  200
+/manifest.webmanifest   /manifest.webmanifest   200
+/robots.txt             /robots.txt             200
+/sitemap.xml            /sitemap.xml            200
+/icon.svg               /icon.svg               200
+/index.html             /index.html             200
+/ops.html               /ops.html               200
 # Catch-all: any other unmatched path is treated as a place slug and
 # served by the operator dashboard. bootCityFromSlug() in main.js
 # reads the path and pins the city via /api/place/slug/:splat.

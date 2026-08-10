@@ -3,12 +3,12 @@
 // rain (washout) chart · one regional donut. Same shape as the GISTDA
 // สรุปสถานการณ์ panel but pulled from our richer pipeline (real-time PM2.5,
 // rain, forecast, washout) and bilingual.
-import { on, emit, store } from '../state.js?v=2.4.4'
-import { tr } from '../i18n.js?v=2.4.4'
-import { fmtNum } from '../fmt.js?v=2.4.4'
-import { getJson } from '../cache.js?v=2.4.4'
-import { drawBarChart, drawDonut } from '../chart.js?v=2.4.4'
-import { nationalPatternsBlock } from './patterns-ui.js?v=2.4.4'
+import { on, emit, store } from '../state.js?v=2.4.5'
+import { tr } from '../i18n.js?v=2.4.5'
+import { fmtNum } from '../fmt.js?v=2.4.5'
+import { getJson } from '../cache.js?v=2.4.5'
+import { drawBarChart, drawDonut } from '../chart.js?v=2.4.5'
+import { nationalPatternsBlock } from './patterns-ui.js?v=2.4.5'
 
 const BAND_LABEL_TH = {
   normal: 'ปกติ', watch: 'เฝ้าระวัง', elevated: 'เสี่ยงสูง', high: 'วิกฤต',
