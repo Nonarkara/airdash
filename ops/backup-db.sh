@@ -21,7 +21,12 @@ ROOT="/Users/axiom/AirDash"
 DB="$ROOT/data/airdash.db"
 BACKUP_DIR="$ROOT/data/backups"
 LOG="$ROOT/logs/backup.log"
-RETAIN=7
+# Was 7. Each snapshot is ~1.3GB and growing, so 7 meant ~9GB of this database
+# alone on a boot disk that hit 1.4GB free on 2026-08-04. Recent snapshots stay
+# local so backups keep working even when the external drive is unplugged
+# (it died for a full day on 2026-08-05 and took the backups with it); older
+# ones are archived to /Volumes/Data/DBBackups/airdash by hand.
+RETAIN=2
 
 NOW() { date '+%Y-%m-%dT%H:%M:%S%z'; }
 log() { printf '[%s] %s\n' "$(NOW)" "$*" >> "$LOG"; }

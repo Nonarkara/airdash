@@ -1,10 +1,10 @@
 // Universal place search — search any place name (province, station, focus area)
 // and get autocomplete results. Select one → map flies there + place card opens
 // with live data: nearest AQ stations, watch score, rain-washout outlook.
-import { on, store, emit } from '../state.js?v=2.4.3'
-import { tr, pick, BAND } from '../i18n.js?v=2.4.3'
-import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.3'
-import { getJson } from '../cache.js?v=2.4.3'
+import { on, store, emit } from '../state.js?v=2.4.4'
+import { tr, pick, BAND } from '../i18n.js?v=2.4.4'
+import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.4'
+import { getJson } from '../cache.js?v=2.4.4'
 
 // Cached province centroids — fetched once, used to give postal results
 // a fly-to target. Same numbers the server's gazetteer uses (see
@@ -609,14 +609,21 @@ function renderPlaceCard(sel) {
       // Real DOPA codes are 2 digits; cross-border spillover rows (e.g.
       // Myanmar '10499') must not count in the #rank/77 denominator.
       .filter((p) => p.province_code && p.province_code.length === 2)
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => {
+        const pa = a.pm25, pb = b.pm25
+        const aNull = pa === null || pa === undefined
+        const bNull = pb === null || pb === undefined
+        if (aNull !== bNull) return aNull ? 1 : -1
+        if (!aNull && pb !== pa) return pb - pa
+        return (b.score ?? 0) - (a.score ?? 0)
+      })
       .findIndex((p) => p.province_th === sel.province_th) + 1
     html += `
       <div class="place-section place-score-band" style="border-left-color:${bandColor}">
         <div class="place-score-val" style="color:${bandColor}">${provRisk.score}</div>
         <div class="place-score-detail">
           <b>${tr('ภาพรวมจังหวัด', 'Province picture')}: ${BAND[provRisk.band][store.lang]}</b><br>
-          ${rank > 0 ? `${tr('อันดับเฝ้าระวัง', 'watch rank')} #${rank}/77 · ` : ''}
+          ${rank > 0 ? `${tr('อันดับอากาศแย่สุด', 'worst-air rank')} #${rank}/77 · ` : ''}
           ${provRisk.stations_unhealthy + provRisk.stations_very_unhealthy > 0 ? `${tr('สถานีเกินเกณฑ์/อันตราย', 'unhealthy/v.unhealthy stn')}: ${provRisk.stations_unhealthy}/${provRisk.stations_very_unhealthy} · ` : ''}
           ${provRisk.pm25 !== null ? `${tr('ฝุ่นสูงสุด', 'worst PM2.5')} ${fmtNum(provRisk.pm25, 0)} µg/m³` : ''}
         </div>

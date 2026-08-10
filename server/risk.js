@@ -56,7 +56,9 @@ function trendScore(rise6h) {
 }
 
 function stagnationScore({ wind, prob24, rainObs24 }) {
-  if (rainObs24 !== null && rainObs24 > 10) return 0 // atmosphere actively washing
+  // Already-falling rain means the column is being scrubbed — do not let a
+  // light breeze inflate the watch score above real PM2.5 elsewhere.
+  if (rainObs24 !== null && rainObs24 > 5) return 0
   let s = 0
   if (wind !== null) {
     if (wind < 8) s = 70
@@ -64,7 +66,8 @@ function stagnationScore({ wind, prob24, rainObs24 }) {
     else if (wind < 16) s = 20
   }
   if (prob24 !== null) {
-    if (prob24 < 20) s += 30
+    if (prob24 >= 60) s = Math.min(s, 10)      // rain likely — cut stagnation hard
+    else if (prob24 < 20) s += 30
     else if (prob24 < 40) s += 15
   }
   return Math.max(0, Math.min(100, s))
@@ -306,7 +309,16 @@ export function createRisk(db, washout) {
         reasons: v.reasons.slice(0, 2),
       }
       return { ...p, score, band: band(score), delta, card }
-    }).sort((a, b) => b.score - a.score || (b.pm25 ?? 0) - (a.pm25 ?? 0))
+    // Worst air first: live PM2.5 leads (nulls last), watch score breaks ties.
+    // People triage by "where is the dust?", not by composite quirks on clean days.
+    }).sort((a, b) => {
+      const pa = a.pm25, pb = b.pm25
+      const aNull = pa === null || pa === undefined
+      const bNull = pb === null || pb === undefined
+      if (aNull !== bNull) return aNull ? 1 : -1
+      if (!aNull && pb !== pa) return pb - pa
+      return b.score - a.score || (b.stations_very_unhealthy ?? 0) - (a.stations_very_unhealthy ?? 0)
+    })
 
     persistTrendSnapshot(prevSnapshot, list)
 

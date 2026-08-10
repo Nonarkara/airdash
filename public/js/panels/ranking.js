@@ -1,28 +1,41 @@
-// Left rail: live province watch ranking. Click → fly map + station detail.
-// Sort mode: Watch (default) | Effective Harm (Watch × Social Load).
-import { on, store } from '../state.js?v=2.4.3'
-import { tr, BAND } from '../i18n.js?v=2.4.3'
-import { fmtNum, el } from '../fmt.js?v=2.4.3'
-import { flyToProvince } from '../map.js?v=2.4.3'
-import { showProvinceDetail } from './detail.js?v=2.4.3'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.3'
+// Left rail: live province ranking — worst air first.
+// Sort mode: Worst air (default, by PM2.5) | Effective Harm (Watch × Social Load).
+import { on, store } from '../state.js?v=2.4.4'
+import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.4'
+import { fmtNum, el } from '../fmt.js?v=2.4.4'
+import { flyToProvince } from '../map.js?v=2.4.4'
+import { showProvinceDetail } from './detail.js?v=2.4.4'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.4'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }
 const MODE_KEY = 'airdash.rankMode'
-/** @type {'watch' | 'harm'} */
-let rankMode = 'watch'
+/** Clean-air dim threshold — Thai "good" line (µg/m³). */
+const CLEAN_UG = 25
+/** @type {'worst' | 'harm'} */
+let rankMode = 'worst'
+
+/** Map live PM2.5 → the same band classes the watch score uses, so row chrome stays consistent. */
+function pmBand(ug) {
+  if (ug === null || ug === undefined || !Number.isFinite(ug)) return 'normal'
+  if (ug >= 75) return 'high'
+  if (ug >= 37.5) return 'elevated'
+  if (ug >= 25) return 'watch'
+  return 'normal'
+}
 
 function readMode() {
   try {
     const v = sessionStorage.getItem(MODE_KEY)
-    if (v === 'harm' || v === 'watch') return v
+    // Legacy 'watch' key → worst-air (the new default triage order).
+    if (v === 'harm') return 'harm'
+    if (v === 'worst' || v === 'watch') return 'worst'
   } catch { /* private mode */ }
-  return 'watch'
+  return 'worst'
 }
 
 function setMode(mode) {
-  rankMode = mode === 'harm' ? 'harm' : 'watch'
+  rankMode = mode === 'harm' ? 'harm' : 'worst'
   try { sessionStorage.setItem(MODE_KEY, rankMode) } catch { /* ignore */ }
   paintChromeForMode()
   render(store.snapshot)
@@ -30,28 +43,28 @@ function setMode(mode) {
 
 function paintChromeForMode() {
   // Own these nodes: update data-i18n so a later i18n.paintChrome() cannot
-  // clobber Harm-mode copy back to the static Watch strings in ops.html.
+  // clobber Harm-mode copy back to the static strings in ops.html.
   const eyebrow = document.getElementById('left-eyebrow')
   const method = document.getElementById('risk-method-note')
   const title = document.querySelector('#rail-left .panel-head .sign .th')
   if (eyebrow) {
     const pair = rankMode === 'harm'
       ? 'จัดอันดับภาระจริง · สด|EFFECTIVE HARM RANKING · LIVE'
-      : 'จัดอันดับเฝ้าระวัง · สด|PROVINCE WATCH RANKING · LIVE'
+      : 'จัดอันดับอากาศแย่สุด · สด|WORST AIR RANKING · LIVE'
     eyebrow.setAttribute('data-i18n', pair)
     eyebrow.textContent = tr(...pair.split('|'))
   }
   if (method) {
     const pair = rankMode === 'harm'
       ? 'ภาระจริง = ดัชนีเฝ้าระวัง × ภาระทางสังคม — ใครรับฝุ่นมากกว่าเมื่อค่าเฝ้าระวังใกล้กัน|Effective Harm = Watch × Social Load — who absorbs more when watch scores are similar'
-      : 'PM2.5 40% · มลพิษอื่น 10% · แนวโน้ม 15% · พยากรณ์ 20% · การระบายอากาศ 15% — ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์|PM2.5 40% · other pollutants 10% · trend 15% · forecast 20% · ventilation 15% — indicator, not a prediction'
+      : 'เรียงจาก PM2.5 สูงสุดก่อน — จังหวัดอากาศดีถูกจางไว้ด้านล่าง · คะแนนเฝ้าระวังยังแสดงในแถว|Sorted by highest PM2.5 first — clean provinces dimmed below · watch score still shown per row'
     method.setAttribute('data-i18n', pair)
     method.textContent = tr(...pair.split('|'))
   }
   if (title) {
     const pair = rankMode === 'harm'
       ? 'จัดอันดับภาระจริงรายจังหวัด|Province effective-harm ranking'
-      : 'จัดอันดับเฝ้าระวังรายจังหวัด|Province watch ranking'
+      : 'จัดอันดับจังหวัดอากาศแย่สุด|Worst air quality by province'
     title.setAttribute('data-i18n', pair)
     title.textContent = tr(...pair.split('|'))
   }
@@ -88,7 +101,7 @@ function modeToggle() {
     return btn
   }
   wrap.append(
-    mk('watch', 'เฝ้าระวัง', 'Watch'),
+    mk('worst', 'อากาศแย่สุด', 'Worst air'),
     mk('harm', 'ภาระจริง', 'Effective Harm'),
   )
   return wrap
@@ -160,6 +173,19 @@ function socialChip(harm) {
   )
 }
 
+/** Worst-PM2.5 first; provinces with no reading sink to the bottom. */
+function sortWorstAir(list) {
+  return [...list].sort((a, b) => {
+    const pa = a.pm25, pb = b.pm25
+    const aNull = pa === null || pa === undefined
+    const bNull = pb === null || pb === undefined
+    if (aNull !== bNull) return aNull ? 1 : -1
+    if (!aNull && pb !== pa) return pb - pa
+    return (b.score ?? 0) - (a.score ?? 0)
+      || (b.stations_very_unhealthy ?? 0) - (a.stations_very_unhealthy ?? 0)
+  })
+}
+
 function render(snap) {
   if (!snap?.risk) return
   const box = document.getElementById('ranking')
@@ -167,7 +193,7 @@ function render(snap) {
   const nv = snap.risk.national_verdict
   const card = nationalActionCard(nv)
 
-  const provinces = [...(snap.risk.provinces ?? [])]
+  let provinces = [...(snap.risk.provinces ?? [])]
   if (rankMode === 'harm') {
     provinces.sort((a, b) => {
       const ha = a.harm?.score ?? -1
@@ -175,17 +201,28 @@ function render(snap) {
       if (hb !== ha) return hb - ha
       return (b.harm?.social_load ?? 0) - (a.harm?.social_load ?? 0)
     })
+  } else {
+    provinces = sortWorstAir(provinces)
   }
 
   const rows = provinces.slice(0, 60)
   const rowEls = rows.map((p, i) => {
     const harm = p.harm
     const useHarm = rankMode === 'harm' && harm
-    const badgeScore = useHarm ? harm.score : p.score
-    const badgeBand = useHarm ? harm.band : p.band
+    const useWorst = !useHarm
+
+    const badgeBand = useHarm ? harm.band : (useWorst ? pmBand(p.pm25) : p.band)
+    const badgeText = useHarm
+      ? String(harm.score ?? '–')
+      : (p.pm25 !== null && p.pm25 !== undefined ? fmtNum(p.pm25, 0) : '–')
 
     const stats = []
-    if (p.pm25 !== null && p.pm25 !== undefined) {
+    if (useWorst && typeof p.score === 'number') {
+      stats.push(el('div', { class: 'line' },
+        tr('เฝ้าระวัง ', 'Watch '),
+        el('b', {}, String(p.score))))
+    }
+    if (useHarm && p.pm25 !== null && p.pm25 !== undefined) {
       stats.push(el('div', { class: 'line' },
         tr('ฝุ่น ', 'PM2.5 '),
         el('b', { class: p.pm25 >= 75 ? 'hot' : '' }, fmtNum(p.pm25, 0)), ' µg/m³'))
@@ -255,9 +292,16 @@ function render(snap) {
       el('span', { class: 'dc-band' }, tr(danger.label_th, danger.label_en)),
     ) : null
 
-    const bandLabel = BAND[badgeBand]?.[store.lang] ?? badgeBand
+    const lvl = pm25Level(p.pm25)
+    const bandLabel = useWorst && lvl
+      ? (LEVEL_NAME[lvl]?.[store.lang] ?? badgeBand)
+      : (BAND[badgeBand]?.[store.lang] ?? badgeBand)
+
+    const isClean = useWorst && (p.pm25 == null || p.pm25 < CLEAN_UG)
+    const isNodata = useWorst && (p.pm25 === null || p.pm25 === undefined)
+
     const row = el('div', {
-      class: `rank-row b-${badgeBand}`,
+      class: `rank-row b-${badgeBand}${isClean ? ' rank-row-clean' : ''}${isNodata ? ' rank-row-nodata' : ''}`,
       onclick: () => {
         flyToProvince(p)
         if (expand) {
@@ -275,7 +319,10 @@ function render(snap) {
       },
     },
       el('span', { class: 'mono', style: 'width:18px;color:var(--ink-low);font-size:10px' }, String(i + 1)),
-      el('div', { class: `score b-${badgeBand} badge` }, String(badgeScore ?? '–')),
+      el('div', {
+        class: `score b-${badgeBand} badge`,
+        title: useWorst ? tr('PM2.5 (µg/m³)', 'PM2.5 (µg/m³)') : tr('คะแนนภาระจริง', 'Effective harm score'),
+      }, badgeText),
       el('div', { class: 'who' },
         el('div', { class: 'th' }, tr(p.province_th, p.province_en) || '—'),
         el('div', { class: 'en' }, `${store.lang === 'th' ? (p.province_en ?? '') : (p.province_th ?? '')} · ${bandLabel}`,

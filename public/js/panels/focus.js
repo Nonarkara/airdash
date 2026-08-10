@@ -10,9 +10,9 @@
 // like /?city=chiangmai loads that city on first paint; selections
 // update the URL via history.replaceState (no full reload, no
 // back-button clutter).
-import { getJson } from '../cache.js?v=2.4.3'
-import { store, on, emit } from '../state.js?v=2.4.3'
-import { showProvinceDetail, hideDetail } from './detail.js?v=2.4.3'
+import { getJson } from '../cache.js?v=2.4.4'
+import { store, on, emit } from '../state.js?v=2.4.4'
+import { showProvinceDetail, hideDetail } from './detail.js?v=2.4.4'
 
 let areas = []
 let initialised = false

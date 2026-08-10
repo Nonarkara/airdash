@@ -18,12 +18,19 @@
 .rank-row.b-watch    { border-left-color: var(--band-watch); }
 .rank-row.b-normal   { border-left-color: var(--band-normal); }
 
+/* Clean / no-data rows sink visually so the eye stays on the dusty top. */
+.rank-row-clean { opacity: 0.55; }
+.rank-row-clean:hover { opacity: 0.85; }
+.rank-row-nodata { opacity: 0.4; }
+.rank-row-nodata .score { background: var(--ink-low) !important; }
+
 .rank-row .score {
   width: 34px; height: 34px; flex: none;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-num); font-weight: 700; font-size: 14px; color: #fff;
 }
 .rank-row .score.b-watch { color: var(--ink); }
+.rank-row .score.b-normal { color: var(--ink); background: var(--band-normal); }
 
 /* ── 3-day forecast strip — "Where will the crisis be in 3 days?" ────── */
 /* The left rail is a fixed-height flex column. These two auxiliary panels
