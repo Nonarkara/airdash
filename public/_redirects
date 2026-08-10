@@ -16,6 +16,7 @@
 /vendor/* /vendor/:splat 200
 /photos/* /photos/:splat 200
 /sw.js                  /sw.js                  200
+# Never register /sw.js?v=… — query strings miss this rule and SPA-fallback to ops.html.
 /manifest.webmanifest   /manifest.webmanifest   200
 /robots.txt             /robots.txt             200
 /sitemap.xml            /sitemap.xml            200
