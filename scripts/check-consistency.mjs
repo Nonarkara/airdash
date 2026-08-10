@@ -99,5 +99,25 @@ const check = (name, cond, detail = '') => {
     hits.length === 0, hits.join(', '))
 }
 
+// ── 5. Service worker must register bare /sw.js (no ?v=) ─────────────────
+// The SPA catch-all `/* → /ops 200` does not see query strings as part of
+// the `/sw.js` pass-through. `register('/sw.js?v=…')` therefore fetched
+// ops.html as the worker script. story.js already used the bare path;
+// keep main.js in lockstep, and keep /sw.js listed in _redirects.
+{
+  const main = read('public/js/main.js')
+  const story = read('public/js/story.js')
+  const redirects = read('public/_redirects')
+  const badMain = /serviceWorker\.register\(\s*['"`]\/sw\.js\?/.test(main)
+  const okMain = /serviceWorker\.register\(\s*['"`]\/sw\.js['"`]\s*\)/.test(main)
+  const okStory = /serviceWorker\.register\(\s*['"`]\/sw\.js['"`]\s*\)/.test(story)
+  const passThrough = /^\/sw\.js\s+\/sw\.js\s+200\s*$/m.test(redirects)
+  check('main.js registers bare /sw.js (no ?v=)', okMain && !badMain,
+    'use navigator.serviceWorker.register(\'/sw.js\') — query strings SPA-fallback to ops.html')
+  check('story.js registers bare /sw.js', okStory)
+  check('_redirects pass-through for /sw.js', passThrough,
+    'add `/sw.js  /sw.js  200` before the /* catch-all')
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail === 0 ? 0 : 1)
