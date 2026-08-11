@@ -49,15 +49,17 @@ body.story {
 .story-chrome .spacer { flex: 1; }
 .story-chrome .langtoggle { display: flex; gap: 0; }
 .story-chrome .langtoggle button {
+  min-height: 44px; min-width: 48px;
   border: 1px solid var(--rule); background: var(--well); color: var(--ink-mid);
-  font-size: 12px; font-weight: 600; padding: 4px 10px;
+  font-size: 13px; font-weight: 600; padding: 8px 12px;
 }
 .story-chrome .langtoggle button:hover,
 .story-chrome .langtoggle button.active { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 .story-chrome .ops-link {
-  font-size: 12px; font-weight: 700; text-decoration: none;
+  display: inline-flex; align-items: center; min-height: 44px;
+  font-size: 13px; font-weight: 700; text-decoration: none;
   border: 1px solid var(--rule); background: var(--well); color: var(--ink);
-  padding: 4px 10px;
+  padding: 8px 14px;
 }
 .story-chrome .ops-link:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
 
@@ -123,7 +125,7 @@ body.story {
   letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-low); margin-top: 10px;
 }
 .hero .loc-line { color: var(--ink-mid); font-size: 15px; margin: 10px 0 30px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.hero .loc-line select { font-family: inherit; font-size: 14px; padding: 4px 8px; border: 1px solid var(--rule-strong); background: var(--well); color: var(--ink); }
+.hero .loc-line select { font-family: inherit; font-size: 14px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--rule-strong); background: var(--well); color: var(--ink); }
 
 .breath-stage { display: flex; align-items: center; gap: clamp(20px, 6vw, 56px); flex-wrap: wrap; margin: 6px 0 18px; }
 .breath {

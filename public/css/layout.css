@@ -63,7 +63,7 @@ header {
 
 .brand {
   display: flex; flex-direction: column; justify-content: center;
-  padding: 8px 14px 0 14px;
+  padding: 8px 14px 0 14px; min-height: 44px;
   flex: none; min-width: 0;
   border-right: 1px solid var(--rule);
 }
@@ -1670,10 +1670,10 @@ body.mode-citizen #pane-citizen:not([hidden]) { display: flex !important; }
   padding: 8px 0 0 0;
 }
 .focusbox #focus-select {
-  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
   background: var(--well); color: var(--ink);
   border: 1px solid var(--rule);
-  padding: 4px 6px;
+  padding: 8px 10px; min-height: 44px;
   max-width: 180px;
   cursor: pointer;
 }
@@ -1681,8 +1681,8 @@ body.mode-citizen #pane-citizen:not([hidden]) { display: flex !important; }
 .focusbox #back-to-thailand {
   border: 1px solid var(--th-red); background: transparent;
   color: var(--th-red);
-  font-family: var(--font-ui); font-size: 11px; font-weight: 700;
-  letter-spacing: 0.02em; padding: 4px 7px; cursor: pointer;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.02em; padding: 8px 10px; min-height: 44px; cursor: pointer;
   white-space: nowrap;
 }
 .focusbox #back-to-thailand:hover { background: var(--th-red); color: #fff; }
