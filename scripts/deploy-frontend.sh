@@ -76,4 +76,36 @@ if [[ "${ok}" -ne 1 ]]; then
   exit 3
 fi
 
-echo "── Deploy verified: ${EXPECTED} on both ${CANONICAL} and ${CUSTOM}"
+# ── Asset-content probe (ported from FloodDash, 2026-08-11) ───────────────
+# The HTML version check is necessary but NOT sufficient: after the 2.4.7
+# deploy the custom domain served new HTML while an edge node still held
+# OLD bytes for components.css — and the first request for the new ?v= key
+# cached those stale bytes under it (verified by md5: throwaway probe keys
+# served correct content while the real key stayed poisoned). Assets are
+# separate cache entries from HTML; each converges on its own schedule.
+# Verify asset CONTENT via throwaway `&probe=N` keys — a stale probe can
+# only poison a key nobody will ever request again.
+md5_of() { md5 -q "$@" 2>/dev/null || md5sum "$@" | cut -d' ' -f1; }
+probe_asset() { # $1=host $2=path
+  local want got i streak=0
+  want=$(md5_of "public/$2")
+  for i in $(seq 1 24); do
+    got=$(curl -fsS --max-time 20 "$1/$2?${EXPECTED}&probe=$i" | md5_of /dev/stdin || true)
+    if [[ -n "${got}" && "${got}" == "${want}" ]]; then
+      streak=$((streak+1))
+      if [[ ${streak} -ge 3 ]]; then echo "   $2 converged on $1 (probe ${i})"; return 0; fi
+    else
+      streak=0
+      echo "   … $2 probe ${i}: stale edge — sleep 5s"
+      sleep 5
+    fi
+  done
+  echo "FAIL: $2 never converged on $1 — do NOT request its real ?${EXPECTED} key" >&2
+  return 1
+}
+echo "── Probing asset content (throwaway cache keys)"
+probe_asset "${CANONICAL}" "js/main.js"          || exit 4
+probe_asset "${CUSTOM}"    "js/main.js"          || exit 4
+probe_asset "${CUSTOM}"    "css/components.css"  || exit 4
+
+echo "── Deploy verified: ${EXPECTED} on both ${CANONICAL} and ${CUSTOM} (HTML + asset content)"
