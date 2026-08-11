@@ -16,7 +16,7 @@
 //
 // `points` shape: [{ obs_time: '2026-07-05T10:00', value: 12.4 }, …]
 // missing values (null/undefined) break the line — we draw a NaN gap.
-import { fmtNum } from './fmt.js?v=2.4.6'
+import { fmtNum } from './fmt.js?v=2.4.7'
 
 const NAVY = '#0E4A5E'   // AirDash deep-teal ink (was FloodDash #241E4E)
 const INK = NAVY

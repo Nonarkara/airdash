@@ -381,11 +381,25 @@
   border-top: 1px dashed var(--rule);
   margin-top: 6px;
 }
-.rank-row .who { flex: 1; min-width: 0; }
+/* Row squeeze order on a phone (375px, found 2026-08-11): the name is the
+   one thing a reader must never lose, so it gets a hard floor and an
+   ellipsis; the STATS column (watch count + cause-attribution line) is
+   secondary and is the part that shrinks/truncates. Before this, .stats
+   was flex:none — a wide cause line ("🚗 จราจร/การเผาไหม้ในเมือง")
+   starved .who to 0px and the province name vanished from the row; and
+   without the ellipsis, unbreakable Thai names ("กรุงเทพมหานคร")
+   painted straight through the chips beside them. */
+.rank-row .who { flex: 1 1 auto; min-width: 64px; }
+.rank-row .who .th, .rank-row .who .en {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .rank-row .who .th { font-weight: 600; font-size: 14.5px; }
 .rank-row .who .en { font-family: var(--font-num); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-mid); }
-.rank-row .stats { text-align: right; flex: none; }
-.rank-row .stats .line { font-family: var(--font-num); font-size: 11px; color: var(--ink-mid); }
+.rank-row .stats { text-align: right; flex: 0 1 auto; min-width: 0; }
+.rank-row .stats .line {
+  font-family: var(--font-num); font-size: 11px; color: var(--ink-mid);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .rank-row .stats .line b { color: var(--ink); font-weight: 700; }
 .rank-row .stats .line .hot { color: var(--th-red); font-weight: 700; }
 

@@ -672,6 +672,11 @@ html[lang="en"] .appfooter-line .en { display: inline; }
     margin: 0;
     font-size: 10px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+    /* Purely informational as an overlay — it floats over the last sliver
+       of scrollable list content, and with default pointer-events it ATE
+       the tap on whatever row sat beneath it. cursor:help tooltips don't
+       exist on touch, so nothing is lost by letting taps pass through. */
+    pointer-events: none;
   }
 }
 
