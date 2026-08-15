@@ -1738,3 +1738,109 @@ body.mode-citizen #pane-citizen:not([hidden]) { display: flex !important; }
    from a permanently-docked map. Tapping MAP now does that directly, and a
    hidden gesture whose effect is "the panel disappears" is not worth
    keeping once its reason is gone. */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HEADER DESIGN SYSTEM — the one-sweep pass (2026-08-15)
+   Mirrors the block of the same name in FloodDash's layout.css, adapted
+   to AirDash's own surface language (--r-ctl / --r-card, "two radii
+   only" — AirDash has no segmented-bar square exception, so EVERY
+   control here rounds).
+
+   Measured before this pass: 9 header controls with FIVE distinct
+   heights (24/26/28/32/34) sitting on SIX centre lines, and
+   #search-clear rendered square while the segmented language toggle
+   rendered rounded — the inverse of the stated rule.
+
+   Anything added to this header later should need NO new geometry:
+   inherit --ctl-h, centre, done.
+   ═══════════════════════════════════════════════════════════════════════ */
+header #place-search,
+header #search-clear,
+header #langtoggle button,
+header #modetoggle button,
+header #ask-btn,
+header #home-btn,
+header #split-btn,
+header #flooddash-btn,
+header #about-btn,
+header .large-text-btn,
+header .simple-mode-btn {
+  height: var(--ctl-h);
+  min-height: var(--ctl-h);
+  align-self: center;
+  border-radius: var(--r-ctl);
+}
+/* #search-clear is absolutely positioned inside .searchbox, so align-self
+   does nothing for it — it sat 4px below the input's centre line. Centre
+   it against the input explicitly. */
+header #search-clear {
+  top: 50%;
+  transform: translateY(-50%);
+  align-self: auto;
+}
+/* #danger-hero is deliberately NOT in the set above: it is a full-height
+   hero panel, not a chrome control, and normalising it to 32px would
+   flatten the header's one intentional size contrast. */
+/* Centre the segmented wrappers so their buttons land on the shared line. */
+header #langtoggle,
+header #modetoggle { align-self: center; }
+
+@media (max-width: 1100px) {
+  header #place-search,
+  header #search-clear,
+  header #langtoggle button,
+  header #modetoggle button,
+  header #ask-btn,
+  header #home-btn,
+  header .large-text-btn,
+  header .simple-mode-btn {
+    height: var(--ctl-h-touch);
+    min-height: var(--ctl-h-touch);
+    min-width: var(--ctl-h-touch);
+  }
+  /* Same class of bug FloodDash had at 375px: a fixed-width input inside
+     an auto-width cell overflows onto its neighbour. Let the box shrink
+     and keep the input inside it. */
+  header .searchbox { min-width: 0; }
+  header .searchbox #place-search { width: 100%; min-width: 0; max-width: none; }
+}
+
+/* The last 4-8px of misalignment came from the WRAPPERS, not the controls:
+   #place-search-container / #langtoggle / #modetoggle each carried
+   asymmetric vertical padding, so their children sat 4px below the line
+   that direct header children (split/home/flooddash/about, all at the
+   header's own centre) sit on. Centring a control inside a wrapper that
+   is itself off-centre just moves the problem down a level — so centre
+   the wrappers and let their padding be symmetric. */
+header #place-search-container,
+header #langtoggle,
+header #modetoggle,
+header #ask-btn {
+  align-self: center;
+  align-items: center;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+/* Absolutely-positioned inside .searchbox, so it ignores flex alignment
+   entirely — needs an explicit centre against its container. The earlier
+   rule lost to a more specific existing selector; this one carries the
+   id twice to win without !important. */
+header #place-search-container #search-clear {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+/* MOBILE BRAND — NOT DONE, deliberately left undone (2026-08-15).
+   AirDash's mobile header is a 5-row CSS Grid, so the FloodDash fix
+   (un-hide .brand, order it first) does NOT port: `order` has no effect
+   on grid placement, and the un-hidden brand auto-placed into row 4,
+   floating below the search box instead of reading as a masthead.
+   Placing it correctly means restructuring this grid's row assignments,
+   which is a real change that deserves its own pass rather than being
+   bolted on at the end of an alignment sweep — bolting it on is exactly
+   how this header got its inconsistencies in the first place.
+   So AirDash still shows no product name below 1100px. Known gap. */
+}

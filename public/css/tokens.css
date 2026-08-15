@@ -68,6 +68,17 @@
      Radius + elevation + motion tokens for the softened instrument look.
      Two radii only (controls vs cards) so the whole app rounds
      consistently; two elevation levels (resting vs floating). */
+  /* ── Header control grammar (2026-08-15) ────────────────────────────
+     ONE height and ONE radius for every interactive thing in the header.
+     Measured before this pass: header controls carried FIVE different
+     heights (24/26/28/32/34) across SIX centre lines, and #search-clear
+     was square while the segmented language toggle was rounded — the
+     exact inverse of the "two radii only" rule stated below. Everything
+     in the header now takes --ctl-h and centres itself; the touch
+     variant meets WCAG 2.5.5 on phones. */
+  --ctl-h: 32px;        /* every header control, desktop */
+  --ctl-h-touch: 44px;  /* ≤1100px — WCAG 2.5.5 minimum */
+
   --r-ctl: 7px;
   --r-card: 10px;
   --elev-1: 0 1px 2px rgba(10, 30, 40, 0.05), 0 2px 10px rgba(10, 30, 40, 0.08);
