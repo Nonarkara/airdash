@@ -59,7 +59,21 @@
   --font-num:   'JetBrains Mono', ui-monospace, 'IBM Plex Mono', monospace;
   --font-display: 'Manrope', 'Sarabun', system-ui, sans-serif;
 
-  --header-h: 80px;   /* v2 single-row instrument panel — was 96px (two rows) */
+  /* ── ONE-LINE HEADER (2026-08-16) ─────────────────────────────────────
+     FloodDash was reported directly: "so much space in the middle of the
+     banner... put everything in one line... more real estate for what's
+     below." AirDash's header was already structurally one row (unlike
+     FloodDash's 3-row stack), so the same fix here isn't "merge rows" —
+     it's removing the dead space padding a single row still had. The
+     tallest thing in the row is the DANGER hero's 4-line stack (label +
+     big number + band + scope), measured at 57px of actual content
+     inside an 80px box — 23px of that was pure top/bottom whitespace
+     from centering, not content. 68px keeps every line of that stack
+     intact with a few px of breathing room and removes the rest. See
+     the ONE-LINE HEADER block at the end of layout.css for the
+     .header-partners removal (redundant with the boot screen and About
+     overlay, mirroring FloodDash's decision). */
+  --header-h: 68px;   /* v2 single-row instrument panel — was 96px (two rows), then 80px */
   --ticker-h: 30px;
   --rail-l: 324px;
   --rail-r: 392px;

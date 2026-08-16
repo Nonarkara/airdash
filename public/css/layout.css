@@ -1843,4 +1843,26 @@ header #place-search-container #search-clear {
    bolted on at the end of an alignment sweep — bolting it on is exactly
    how this header got its inconsistencies in the first place.
    So AirDash still shows no product name below 1100px. Known gap. */
-}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ONE-LINE HEADER (2026-08-16)
+   ═══════════════════════════════════════════════════════════════════════
+   Mirrors FloodDash's pass of the same name. AirDash's header was
+   already a single flex row (v2 redesign, 2026-08-15) — no wrap, no
+   second row — so there was no line to merge. What was left, matching
+   the same underlying complaint ("so much space in the middle of the
+   banner"), was dead space: the --header-h token in tokens.css dropped
+   80px to 68px, sized to the DANGER hero's actual 4-line content height
+   (measured 57px) instead of to leftover centering whitespace.
+
+   The one structural change here: .header-partners removed entirely,
+   for the same reason as FloodDash — the boot screen's .boot-sponsors
+   and the About overlay's .about-partners card already carry the full
+   credit list, so a permanent header row for the same five logos was
+   redundant. It previously only showed above 1440px anyway (the shed
+   ladder above already dropped it below that), which meant the header's
+   width composition silently changed shape between wide and narrow
+   desktops — always-off is simpler and matches FloodDash's header now
+   having no partner row at any width. */
+.header-partners { display: none !important; }
+
