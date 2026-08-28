@@ -222,12 +222,51 @@ fi
 # lives on the separate Data volume. Checking `/` reported "43% used —
 # ok" while Data was at 100%, silently masking the exact outage this
 # check exists to catch.
+#
+# Top consumers are now DISCOVERED DYNAMICALLY from a targeted list of
+# known hot paths — NOT a full $HOME walk. The 2026-08-29 incident
+# showed that the old fixed list (.npm, ms-playwright, electron-updater)
+# was a fossil — those paths had been empty for months while the real
+# hogs (a .cache/modelscope at 2.8 GB, a single airdash-*.db snapshot
+# at 2.9 GB) were silently growing. The new rule: probe a fixed list of
+# plausible offenders (Library/Caches, .cache, this project's data/,
+# the off-device backup directory, .npm for completeness) and report
+# the top 5. Capped at 5 lines so the log doesn't drown.
 disk_pct=$(df -P /System/Volumes/Data 2>/dev/null | awk 'NR==2 {sub("%","",$5); print $5}')
 if [ -z "$disk_pct" ]; then
   log "warn: could not read disk usage"
 elif [ "$disk_pct" -ge 92 ]; then
   log "PROBLEM: disk ${disk_pct}% used (>= 92%) — top consumers:"
-  du -sh /Users/axiom/.npm /Users/axiom/Library/Caches/ms-playwright /Users/axiom/Library/Caches/ms-playwright-mcp /Users/axiom/Library/Caches/@mmx-agentelectron-updater 2>/dev/null | sort -h | tail -5 >> "$LOG"
+  # Targeted discovery. We probe the subdirectories that have actually
+  # contained the 2–3 GB offenders on this host (Library/Caches and
+  # .cache are the long-term cache locations for OS apps and AI models
+  # respectively; the AirDash data/ subdir is ours). Capped at -L 1
+  # so we DO NOT recursively walk into node_modules, .git, or a 100k
+  # Library/Application Support; the top-level sizes alone answer the
+  # "what is taking space" question in 2 seconds instead of 2 minutes.
+  #
+  # Use `du -k` (integer kilobytes) instead of `du -h` (human-readable,
+  # but with decimals like "1.0G" that break integer arithmetic). The
+  # awk converts KB→MB→GB once, then sorts numerically.
+  {
+    du -skx -L 1 /Users/axiom/Library/Caches 2>/dev/null
+    du -skx -L 1 /Users/axiom/.cache 2>/dev/null
+    du -skx -L 1 /Users/axiom/AirDash/data 2>/dev/null
+    du -skx -L 1 /Users/axiom/AirDash/.git 2>/dev/null
+    du -skx -L 1 /Users/axiom/.npm 2>/dev/null
+  } 2>/dev/null | awk 'NF == 2 && $1 + 0 >= 1048576 {
+    # 1 GB = 1,048,576 KB. Show in MB if under 1 GB, else in GB.
+    kb = $1 + 0
+    if (kb >= 1048576) printf "  %5dG  %s\n", kb / 1048576, $2
+    else                printf "  %5dM  %s\n", kb / 1024,    $2
+  }' >> "$LOG"
+  # If the 8 TB volume itself is full, the off-device backup destination
+  # stops accepting snapshots — surface that separately because the fix
+  # is "buy a bigger drive", not "delete files".
+  vol_pct=$(df -P /Volumes/Data 2>/dev/null | awk 'NR==2 {sub("%","",$5); print $5}')
+  if [ -n "$vol_pct" ] && [ "$vol_pct" -ge 90 ]; then
+    log "ALSO: /Volumes/Data (off-device backup target) is at ${vol_pct}% — backups will fail when this hits 100%"
+  fi
   problems=$((problems + 1))
 elif [ "$disk_pct" -ge 85 ]; then
   log "warn: disk ${disk_pct}% used (>= 85%)"

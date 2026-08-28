@@ -1,37 +1,62 @@
 #!/bin/bash
-# Nightly SQLite backup for AirDash. Installed as a launchd LaunchAgent
-# (com.airdash.backup, StartCalendarInterval daily at 03:17).
+# Nightly verified, OFF-DEVICE backup for AirDash.
 #
-# What it does, in order:
-#   1. Online backup of data/airdash.db via sqlite3's ".backup" command —
-#      safe against the live WAL-mode database; no server stop needed.
-#   2. Verifies the snapshot opens and passes PRAGMA integrity_check.
-#      On failure the file is KEPT for forensics but the script exits
-#      non-zero and logs loudly.
-#   3. Retains the last 7 timestamped snapshots; deletes older ones.
-#   4. Writes a compressed copy data/backups/airdash-latest.db.gz
-#      (gzip -9 of the newest snapshot, replaced atomically via a temp
-#      file) so an offsite sync can grab a single stable filename later.
+# Why this exists: until 2026-08-29 there was no off-device backup of
+# data/airdash.db (2.8 GB, ~9M readings, the national PM2.5 record).
+# The local backup folder at /Users/axiom/AirDash/data/backups/ held
+# 5.8 GB of daily snapshots — eating the boot disk to 95% used and
+# leaving the user one bad ingest away from an ENOSPC crash loop.
+# Time Machine has never run on this host. RPO was effectively
+# infinite: a boot-disk failure would have destroyed every reading
+# since 2026-05, every alert subscriber, and every credential — none
+# of it recoverable by re-ingest, because the upstream government
+# APIs serve current values only, not history.
 #
-# Idempotent: safe to run any number of times; each run produces one new
-# snapshot and re-applies retention. bash 3.2 compatible (macOS default).
+# Modelled on the proven /Users/axiom/Projects/FloodDash/ops/backup-db.sh
+# with the AirDash-specific configuration (db path, retention, paths).
+#
+# Why this design
+#   1. Writes to /Volumes/Data/DBBackups/airdash — a DIFFERENT physical
+#      device (disk5) from the boot volume (disk3). A backup on the
+#      same disk is not a backup; a backup on the same physical SSD
+#      is barely better.
+#   2. Probe-based mode selection, NOT permission-bit checking. macOS
+#      TCC blocks launchd jobs at open(2) time, not at access(2) —
+#      `[ -w ]` will pass while sqlite3 then fails with "cannot open"
+#      three nights in a row (FloodDash saw this on 2026-08-11..13).
+#      Only an actual `open(2)` tells the truth about TCC.
+#   3. Free-space check BEFORE the copy. A .backup that runs out of
+#      space mid-write leaves a truncated, non-restorable file with
+#      the same name as a good one. Refusing up front is the only
+#      safe answer.
+#   4. Compressed streamed .dump fallback when off-device fails. Better
+#      than nothing — covers corruption, bad migrations, accidental
+#      deletion — and explicitly labelled as same-disk so a future
+#      audit knows RPO is degraded.
+#   5. Idempotent. Safe to run any number of times.
+#   6. PRAGMA integrity_check on the snapshot. corruption detection
+#      that the live system otherwise has nowhere.
+#
+# bash 3.2 compatible (macOS default).
 set -euo pipefail
 
 ROOT="/Users/axiom/AirDash"
 DB="$ROOT/data/airdash.db"
-BACKUP_DIR="$ROOT/data/backups"
+OFFDEVICE_DIR="/Volumes/Data/DBBackups/airdash"
+LOCAL_DIR="$ROOT/data/backups"
 LOG="$ROOT/logs/backup.log"
-# Was 7. Each snapshot is ~1.3GB and growing, so 7 meant ~9GB of this database
-# alone on a boot disk that hit 1.4GB free on 2026-08-04. Recent snapshots stay
-# local so backups keep working even when the external drive is unplugged
-# (it died for a full day on 2026-08-05 and took the backups with it); older
-# ones are archived to /Volumes/Data/DBBackups/airdash by hand.
-RETAIN=2
+
+# Retention: 7 off-device (cheap, on a 6 TB volume), 2 local (boot disk
+# is chronically near-full — the 2 was chosen because the 2.8 GB
+# snapshots × 2 = 5.6 GB exactly matches the 5.8 GB that put the
+# boot disk at 95% on 2026-08-29).
+OFFDEVICE_RETAIN=7
+LOCAL_RETAIN=2
 
 NOW() { date '+%Y-%m-%dT%H:%M:%S%z'; }
 log() { printf '[%s] %s\n' "$(NOW)" "$*" >> "$LOG"; }
 
-mkdir -p "$BACKUP_DIR"
+mkdir -p "$LOCAL_DIR"
 log "backup run starting (db=$DB)"
 
 if [ ! -f "$DB" ]; then
@@ -39,8 +64,42 @@ if [ ! -f "$DB" ]; then
   exit 1
 fi
 
+# ── Mode selection: prefer off-device, fall back to internal ───────────
+#
+# The probe is a REAL file create+delete, not `[ -w ]`. `-w` asks
+# access(2), which answers from permission bits — but macOS TCC blocks
+# launchd jobs at open(2) time, so on 2026-08-11..13 the FloodDash
+# -w check passed and sqlite3 then failed with "cannot open" three
+# nights in a row. Only an actual open tells the truth about TCC.
+if [ -d "/Volumes/Data" ] && mkdir -p "$OFFDEVICE_DIR" 2>/dev/null \
+   && ( : > "$OFFDEVICE_DIR/.write-probe-$$" ) 2>/dev/null; then
+  rm -f "$OFFDEVICE_DIR/.write-probe-$$"
+  MODE="offdevice"
+else
+  log "WARN: /Volumes/Data unavailable or open() blocked (macOS TCC?) — using INTERNAL fallback"
+  log "WARN: internal backups do NOT survive a boot-disk failure. Grant Full Disk Access to restore off-device backups."
+  MODE="internal"
+fi
+log "  mode: $MODE"
+
+# Refuse to run the DB copy if the destination can't hold it (+20% headroom
+# so the .backup API's temporary pages don't run us out mid-write). On
+# the local disk we additionally require 3 GB of headroom for the gzip
+# step (a .db.gz is ~13% of the source so 2.8 GB → ~370 MB, but the temp
+# file is uncompressed, so we need 2.8 GB of room for it).
+DB_MB=$(( $(stat -f %z "$DB") / 1048576 ))
+case "$MODE" in
+  offdevice) DEST_DIR="$OFFDEVICE_DIR" ; RETAIN="$OFFDEVICE_RETAIN" ; NEEDED_MB=$(( DB_MB * 12 / 10 )) ;;
+  internal)  DEST_DIR="$LOCAL_DIR"      ; RETAIN="$LOCAL_RETAIN"  ; NEEDED_MB=$(( DB_MB * 22 / 10 )) ;;
+esac
+FREE_MB=$(df -m "$DEST_DIR" 2>/dev/null | awk 'NR==2 {print $4}')
+if [ "${FREE_MB:-0}" -lt "$NEEDED_MB" ]; then
+  log "FATAL: only ${FREE_MB}MB free at $DEST_DIR for a ${DB_MB}MB database (need ${NEEDED_MB}MB)"
+  exit 1
+fi
+
 STAMP="$(date '+%Y%m%d-%H%M')"
-DEST="$BACKUP_DIR/airdash-$STAMP.db"
+DEST="$DEST_DIR/airdash-$STAMP.db"
 
 # Online backup (WAL-safe). sqlite3 .backup copies via the backup API,
 # so a live writer does not corrupt the snapshot.
@@ -65,9 +124,10 @@ fi
 # next to it; they are empty and useless once the snapshot is closed.
 rm -f "$DEST"-wal "$DEST"-shm
 
-# Retention: keep the newest $RETAIN timestamped snapshots, delete the rest.
-# ls -1t sorts newest first; tail -n +N skips the ones we keep.
-ls -1t "$BACKUP_DIR"/airdash-[0-9]*-[0-9]*.db 2>/dev/null | tail -n +"$((RETAIN + 1))" | while IFS= read -r old; do
+# Retention in the destination directory only. Never touches the
+# other side (don't prune off-device when the local fallback wrote,
+# and vice versa).
+ls -1t "$DEST_DIR"/airdash-[0-9]*-[0-9]*.db 2>/dev/null | tail -n +"$((RETAIN + 1))" | while IFS= read -r old; do
   log "retention: deleting old snapshot $old"
   rm -f "$old" "$old"-wal "$old"-shm
 done
@@ -75,15 +135,17 @@ done
 # Compressed "latest" copy for a future offsite sync — written to a temp
 # file first, then moved into place atomically (rename is atomic on the
 # same filesystem), so a sync never grabs a half-written gzip.
-TMP_GZ="$BACKUP_DIR/.airdash-latest.db.gz.tmp"
+# The off-device directory holds the .db files; the .db.gz lives
+# locally as the stable filename for any offsite sync tool.
+TMP_GZ="$LOCAL_DIR/.airdash-latest.db.gz.tmp"
 if gzip -9 -c "$DEST" > "$TMP_GZ" 2>>"$LOG"; then
-  mv -f "$TMP_GZ" "$BACKUP_DIR/airdash-latest.db.gz"
-  GZ_SIZE=$(stat -f%z "$BACKUP_DIR/airdash-latest.db.gz" 2>/dev/null || echo 0)
-  log "compressed copy updated: $BACKUP_DIR/airdash-latest.db.gz ($GZ_SIZE bytes)"
+  mv -f "$TMP_GZ" "$LOCAL_DIR/airdash-latest.db.gz"
+  GZ_SIZE=$(stat -f%z "$LOCAL_DIR/airdash-latest.db.gz" 2>/dev/null || echo 0)
+  log "compressed copy updated: $LOCAL_DIR/airdash-latest.db.gz ($GZ_SIZE bytes)"
 else
   rm -f "$TMP_GZ"
   log "FATAL: gzip of latest snapshot failed"
   exit 1
 fi
 
-log "backup run complete"
+log "backup run complete (mode=$MODE, free_after=${FREE_MB}MB)"

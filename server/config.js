@@ -24,8 +24,17 @@ export const CONFIG = {
   // Poll cadences follow each upstream's native update rhythm.
   intervals: {
     air4thai: 1 * HOUR,      // PCD publishes hourly
-    openmeteo: 3 * HOUR,     // weather forecast (rain probability, wind, temp, RH)
-    openmeteo_aq: 3 * HOUR,  // CAMS air-quality forecast (12-hourly cycles upstream)
+    // Open-Meteo free tier has a daily request limit (10,000/day globally,
+    // but smaller per-IP burst limits bite first). 6h = 4 calls/day per
+    // source × 3 sources = 12 calls/day, well under any sensible limit,
+    // and the forecast only changes meaningfully every few hours anyway.
+    // The previous 3h setting hit 429s on Aug 28 because the scheduler's
+    // exponential backoff wasn't long enough to ride out a "daily quota
+    // exhausted" error (max 6× = 18h, but the limit doesn't reset for
+    // 24h). The 429-aware park in scheduler.js handles the recovery
+    // edge; the lower cadence prevents the trigger in the first place.
+    openmeteo: 6 * HOUR,     // weather forecast (rain probability, wind, temp, RH)
+    openmeteo_aq: 6 * HOUR,  // CAMS air-quality forecast (12-hourly cycles upstream)
     thaiwater_rain: 10 * MINUTE,
     enso: 12 * HOUR,         // ONI revises monthly; cheap to recheck
     news: 30 * MINUTE,
