@@ -566,9 +566,9 @@
   border-top: 1px solid var(--rule);
   padding-top: 6px;
 }
-.detail-block { background: var(--well); border-bottom: 1px solid var(--rule); padding: 10px 12px; }
-.detail-block h3 { font-size: 15px; font-weight: 600; }
-.detail-kv { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; }
+.detail-block { background: var(--well); border-bottom: 1px solid var(--rule); padding: 8px 10px; }
+.detail-block h3 { font-size: 14px; font-weight: 700; letter-spacing: -0.005em; }
+.detail-kv { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12.5px; }
 .detail-kv .v { font-family: var(--font-num); font-weight: 500; }
 .spark { width: 100%; height: 64px; margin-top: 6px; }
 .spark polyline { fill: none; stroke: var(--rain); stroke-width: 1.5; }
@@ -722,61 +722,74 @@
    targets, no jargon. JMA-verb band color sets the entire panel mood
    (red = act, yellow = prepare, green = all clear). Shelters and
    hotlines are one tap away. */
-.citizen-empty { padding: 18px 14px; }
-.citizen-empty h3 { margin: 0 0 4px; font-size: 15px; color: var(--ink); }
-.citizen-empty-sub { font-size: 12px; color: var(--ink-mid); margin: 0 0 12px; line-height: 1.5; }
+.citizen-empty { padding: 14px 10px; }
+.citizen-empty h3 { margin: 0 0 3px; font-size: 14px; color: var(--ink); }
+.citizen-empty-sub { font-size: 11.5px; color: var(--ink-mid); margin: 0 0 8px; line-height: 1.4; }
 
 .citizen-head {
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: var(--paper);
   border-bottom: 1px solid var(--rule);
 }
 .citizen-pin {
   display: flex; align-items: center; gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
-.citizen-pin-icon { font-size: 16px; }
+.citizen-pin-icon { font-size: 15px; }
 .citizen-pin-text { flex: 1; min-width: 0; }
-.citizen-province-th { font-weight: 700; font-size: 14.5px; line-height: 1.1; }
-.citizen-province-en { font-size: 10.5px; color: var(--ink-mid); letter-spacing: 0.04em; text-transform: uppercase; }
+.citizen-province-th { font-weight: 700; font-size: 14px; line-height: 1.1; }
+.citizen-province-en { font-size: 9.5px; color: var(--ink-mid); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
 .citizen-change {
   border: 1px solid var(--rule-strong);
   background: #fff;
-  padding: 4px 8px;
-  font-size: 12px; cursor: pointer;
+  padding: 3px 8px;
+  font-size: 11px; cursor: pointer;
   color: var(--ink);
+  border-radius: 3px;
 }
 .citizen-band {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 10px;
-  border-left: 4px solid;
+  padding: 6px 10px;
+  border-left: 3px solid;
 }
 .citizen-band.b-normal   { background: rgba(0,147,60,0.10);  border-color: #00933C; }
 .citizen-band.b-low      { background: rgba(91,168,199,0.12); border-color: #5BA8C7; }
 .citizen-band.b-watch    { background: rgba(240,180,0,0.16);  border-color: #F0B400; }
 .citizen-band.b-elevated { background: rgba(232,106,16,0.16); border-color: #E86A10; }
 .citizen-band.b-high     { background: rgba(122,31,43,0.18);  border-color: #7A1F2B; }
-.citizen-band-verb { font-weight: 800; font-size: 15px; }
+.citizen-band-verb { font-weight: 800; font-size: 14px; }
 .citizen-band-score {
-  font-family: var(--font-num); font-weight: 700; font-size: 13px;
+  font-family: var(--font-num); font-weight: 700; font-size: 12px;
   background: rgba(255,255,255,0.7); padding: 2px 6px;
+  border-radius: 2px;
 }
 
 .citizen-section-head {
-  padding: 10px 12px 4px;
-  font-size: 12px; font-weight: 700; color: var(--ink);
+  padding: 9px 10px 4px;
+  font-family: var(--font-num);
+  font-size: 10px; font-weight: 600; color: var(--ink-mid);
+  text-transform: uppercase; letter-spacing: 0.1em;
   border-top: 1px solid var(--rule);
+  background: var(--well);
+  display: flex; align-items: center; gap: 6px;
 }
-.citizen-shelter-list { padding: 0 12px 6px; }
+/* Sub-label inside a section head — small all-caps that follows the
+   headline verb (e.g. "RISK · 4/100" next to the persona title). */
+.citizen-section-head .sub {
+  font-size: 9.5px; color: var(--ink-low);
+  font-weight: 500; letter-spacing: 0.08em;
+}
+.citizen-shelter-list { padding: 0 10px 6px; }
 .citizen-shelter {
   display: block;
-  padding: 8px 10px;
-  margin: 5px 0;
+  padding: 7px 10px;
+  margin: 4px 0;
   background: var(--paper);
-  border: 1px solid var(--rule-strong);
-  border-left: 4px solid #5BA8C7;
+  border: 1px solid var(--rule);
+  border-left: 3px solid #5BA8C7;
   text-decoration: none;
   color: var(--ink);
+  border-radius: 3px;
 }
 .citizen-shelter:hover { background: #fff; }
 .citizen-shelter-name { font-weight: 700; font-size: 12.5px; line-height: 1.2; }
@@ -792,7 +805,7 @@
    so the section never looks broken. */
 .citizen-loading {
   display: flex; align-items: center; gap: 4px;
-  padding: 10px 12px; color: var(--ink-mid); font-size: 11.5px;
+  padding: 8px 10px; color: var(--ink-mid); font-size: 11px;
 }
 .citizen-loading-dot {
   width: 5px; height: 5px; border-radius: 50%; background: var(--th-navy);
@@ -814,30 +827,30 @@
    whole row is a single horizontal scroll on phone so it fits in
    the citizen panel without wrapping. */
 .citizen-persona-pills {
-  display: flex; gap: 6px; padding: 0 12px 8px;
+  display: flex; gap: 5px; padding: 0 10px 6px;
   overflow-x: auto; -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
 .citizen-persona-pill {
   flex: 0 0 auto;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 8px 10px;
-  font: 600 10.5px var(--font-display);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 6px 8px;
+  font: 600 10px var(--font-display);
   color: var(--ink-mid);
-  background: var(--paper); border: 1px solid var(--rule-strong);
+  background: var(--paper); border: 1px solid var(--rule);
   border-radius: 999px; cursor: pointer;
-  min-height: 56px; min-width: 64px;
+  min-height: 48px; min-width: 56px;
   transition: all 0.15s ease;
 }
 .citizen-persona-pill:hover { background: var(--bg-soft); }
 .citizen-persona-pill.active {
   background: var(--th-navy); color: #fff; border-color: var(--th-navy);
 }
-.citizen-persona-emoji { font-size: 18px; line-height: 1; }
-.citizen-persona-lbl { font-size: 9.5px; line-height: 1.1; }
+.citizen-persona-emoji { font-size: 16px; line-height: 1; }
+.citizen-persona-lbl { font-size: 9px; line-height: 1.15; letter-spacing: 0.02em; }
 .citizen-persona-intro {
-  font-size: 11.5px; color: var(--ink-mid); line-height: 1.4;
-  padding: 0 12px 8px;
+  font-size: 11px; color: var(--ink-mid); line-height: 1.4;
+  padding: 0 10px 6px;
 }
 .citizen-persona-host-inner { padding-bottom: 4px; }
 
@@ -846,54 +859,55 @@
    on the card ("20 min outside" is something a parent can act on
    without thinking). */
 .citizen-persona-card {
-  margin: 4px 12px 10px;
-  padding: 12px;
+  margin: 4px 10px 8px;
+  padding: 10px 12px;
   background: var(--bg-soft);
   border-left: 3px solid var(--th-navy);
   border-radius: 4px;
 }
 .citizen-persona-head {
-  display: flex; gap: 10px; align-items: flex-start;
-  margin-bottom: 8px;
+  display: flex; gap: 8px; align-items: flex-start;
+  margin-bottom: 6px;
 }
-.citizen-persona-card-emoji { font-size: 24px; line-height: 1; }
+.citizen-persona-card-emoji { font-size: 22px; line-height: 1; }
 .citizen-persona-card-title {
-  font-weight: 800; font-size: 14px; color: var(--ink);
+  font-weight: 800; font-size: 13.5px; color: var(--ink);
+  line-height: 1.2;
 }
 .citizen-persona-card-risk {
-  font-size: 11.5px; color: var(--ink-mid); line-height: 1.4;
+  font-size: 11px; color: var(--ink-mid); line-height: 1.4;
   margin-top: 2px;
 }
 .citizen-persona-budget {
-  padding: 8px 10px; margin: 6px 0;
+  padding: 6px 10px; margin: 4px 0;
   background: var(--paper); border-radius: 3px;
   border: 1px dashed var(--rule-strong);
 }
 .citizen-persona-budget-lbl {
-  font-size: 10.5px; color: var(--ink-mid); font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 9.5px; color: var(--ink-mid); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
 }
 .citizen-persona-budget-num {
-  font-size: 13px; font-weight: 700; color: var(--th-deep);
-  margin-top: 2px;
+  font-size: 12.5px; font-weight: 700; color: var(--th-deep);
+  margin-top: 1px;
 }
 .citizen-persona-action {
-  margin-top: 6px; padding-top: 6px;
+  margin-top: 5px; padding-top: 5px;
   border-top: 1px solid var(--rule);
 }
 .citizen-persona-action-lbl {
-  font-size: 10.5px; font-weight: 600;
+  font-size: 9.5px; font-weight: 600;
   color: var(--ink-mid);
-  text-transform: uppercase; letter-spacing: 0.04em;
+  text-transform: uppercase; letter-spacing: 0.08em;
 }
 .citizen-persona-action-text {
-  font-size: 12.5px; color: var(--ink); line-height: 1.5;
+  font-size: 12px; color: var(--ink); line-height: 1.45;
   margin-top: 2px;
 }
 .citizen-persona-clear {
-  display: block; margin: 8px auto 0;
-  padding: 4px 10px;
-  font-size: 11px; color: var(--ink-low);
+  display: block; margin: 6px auto 0;
+  padding: 2px 10px;
+  font-size: 10.5px; color: var(--ink-low);
   background: transparent; border: 0; cursor: pointer;
   text-decoration: underline;
 }
@@ -903,14 +917,14 @@
    imperative form ("Close windows", "Cancel all outdoor activities")
    is the most memorable. */
 .citizen-timeline {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
-  padding: 0 12px 8px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+  padding: 0 10px 6px;
 }
 @media (max-width: 480px) {
   .citizen-timeline { grid-template-columns: 1fr; }
 }
 .citizen-timeline-stage {
-  padding: 8px 10px;
+  padding: 6px 10px;
   background: var(--paper);
   border-left: 3px solid var(--th-deep);
   border-radius: 0 3px 3px 0;
@@ -920,56 +934,59 @@
 .citizen-timeline-stage.stage-today { border-left-color: #F0B400; }
 .citizen-timeline-stage.stage-week  { border-left-color: #5BA8C7; }
 .citizen-timeline-when {
-  font-size: 10px; font-weight: 700; color: var(--ink-mid);
-  text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 9.5px; font-weight: 700; color: var(--ink-mid);
+  text-transform: uppercase; letter-spacing: 0.08em;
   margin-bottom: 2px;
 }
 .citizen-timeline-what {
-  font-size: 12.5px; line-height: 1.4; color: var(--ink);
+  font-size: 12px; line-height: 1.4; color: var(--ink);
 }
 
 /* Mask guide — three cards (N95 / surgical / cloth) with verdict
    colors. The fit-check is the single most important line in the
    whole guide, kept visually distinct. */
 .citizen-mask-grid {
-  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
-  padding: 0 12px 8px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;
+  padding: 0 10px 6px;
 }
 @media (max-width: 480px) {
   .citizen-mask-grid { grid-template-columns: 1fr; }
 }
 .citizen-mask-card {
-  padding: 10px 8px;
+  padding: 8px 6px;
   background: var(--paper);
-  border-radius: 4px;
+  border-radius: 3px;
   border: 1px solid var(--rule);
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 1px;
 }
 .citizen-mask-card.v-good { border-left: 3px solid #00933C; }
 .citizen-mask-card.v-mid  { border-left: 3px solid #F0B400; }
 .citizen-mask-card.v-bad  { border-left: 3px solid #C8453A; }
-.citizen-mask-verdict { font-size: 18px; line-height: 1; }
+.citizen-mask-verdict { font-size: 16px; line-height: 1; }
 .citizen-mask-name {
-  font-weight: 700; font-size: 12.5px; color: var(--ink);
+  font-weight: 700; font-size: 12px; color: var(--ink);
+  margin-top: 1px;
 }
 .citizen-mask-filter {
-  font-size: 11.5px; color: var(--ink-mid); line-height: 1.35;
+  font-size: 11px; color: var(--ink-mid); line-height: 1.3;
 }
 .citizen-mask-price {
-  font-size: 10.5px; color: var(--ink-low); font-style: italic;
-  margin-top: 2px;
+  font-size: 10px; color: var(--ink-low); font-style: italic;
+  margin-top: 1px;
 }
 .citizen-mask-fit {
-  margin: 0 12px 10px; padding: 10px 12px;
+  margin: 0 10px 8px; padding: 8px 10px;
   background: var(--bg-soft);
-  border-radius: 4px;
+  border-radius: 3px;
+  border-left: 3px solid var(--th-deep);
 }
 .citizen-mask-fit-lbl {
-  font-weight: 700; font-size: 12px; color: var(--th-deep);
-  margin-bottom: 4px;
+  font-weight: 700; font-size: 11px; color: var(--th-deep);
+  margin-bottom: 3px;
+  text-transform: uppercase; letter-spacing: 0.08em;
 }
 .citizen-mask-fit-body {
-  font-size: 12px; line-height: 1.5; color: var(--ink);
+  font-size: 11.5px; line-height: 1.45; color: var(--ink);
 }
 
 /* Symptom checker — 5 buttons (cough / hard breathing / chest pain /
@@ -977,16 +994,16 @@
    action. The urgent and emergency actions get a tap-to-call button
    on the detail row. */
 .citizen-symptom-intro {
-  font-size: 11.5px; color: var(--ink-mid); line-height: 1.4;
-  padding: 0 12px 8px;
+  font-size: 11px; color: var(--ink-mid); line-height: 1.4;
+  padding: 0 10px 6px;
 }
 .citizen-symptom-row {
   display: flex; flex-direction: column; gap: 4px;
-  padding: 0 12px 8px;
+  padding: 0 10px 6px;
 }
 .citizen-symptom-btn {
   display: flex; align-items: center; gap: 8px;
-  width: 100%; padding: 10px 12px;
+  width: 100%; padding: 8px 10px;
   background: var(--paper); border: 1px solid var(--rule);
   border-left: 3px solid var(--rule-strong);
   border-radius: 3px; cursor: pointer; text-align: left;
@@ -998,35 +1015,36 @@
 .citizen-symptom-btn.sev-urgent    { border-left-color: #E86A10; }
 .citizen-symptom-btn.sev-emergency { border-left-color: #C8453A; }
 .citizen-symptom-btn:hover { background: var(--bg-soft); }
-.citizen-symptom-emoji { font-size: 18px; line-height: 1; }
+.citizen-symptom-emoji { font-size: 17px; line-height: 1; }
 .citizen-symptom-lbl {
-  flex: 1; font-size: 13px; font-weight: 600;
+  flex: 1; font-size: 12.5px; font-weight: 600;
 }
 .citizen-symptom-chev {
-  font-size: 14px; color: var(--ink-mid);
+  font-size: 13px; color: var(--ink-mid);
   transition: transform 0.2s;
 }
 .citizen-symptom-btn[aria-expanded="true"] .citizen-symptom-chev {
   transform: rotate(180deg);
 }
 .citizen-symptom-detail {
-  padding: 8px 12px 8px 28px;
+  padding: 6px 10px 6px 26px;
   background: var(--bg-soft);
   border-left: 3px solid var(--th-deep);
   border-radius: 0 0 3px 3px;
-  margin: -4px 12px 4px;
+  margin: -4px 10px 4px;
 }
 .citizen-symptom-action-text {
-  font-size: 12px; line-height: 1.5; color: var(--ink);
+  font-size: 11.5px; line-height: 1.5; color: var(--ink);
 }
 .citizen-symptom-call {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 14px;
+  padding: 6px 12px;
   background: #C8453A; color: #fff;
-  font-weight: 700; font-size: 13px;
-  border-radius: 4px;
+  font-weight: 700; font-size: 12px;
+  border-radius: 3px;
   text-decoration: none;
   min-height: 36px;
+  margin-top: 6px;
 }
 .citizen-symptom-call-emoji { font-size: 16px; }
 .citizen-symptom-call:hover { background: #A51931; }
@@ -1035,63 +1053,65 @@
    critical safety phrases. The native script is the larger line;
    the Thai + English source is small underneath. */
 .citizen-migrant-intro {
-  font-size: 11.5px; color: var(--ink-mid); line-height: 1.5;
-  padding: 0 12px 8px;
+  font-size: 11px; color: var(--ink-mid); line-height: 1.5;
+  padding: 0 10px 6px;
 }
 .citizen-migrant-row {
-  margin: 0 12px 8px;
-  padding: 10px 12px;
+  margin: 0 10px 6px;
+  padding: 8px 10px;
   background: var(--bg-soft);
-  border-radius: 4px;
+  border-radius: 3px;
+  border-left: 3px solid var(--th-deep);
 }
 .citizen-migrant-head {
-  display: flex; align-items: center; gap: 8px;
-  margin-bottom: 6px;
-  padding-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--rule);
 }
-.citizen-migrant-flag { font-size: 18px; }
-.citizen-migrant-name { font-weight: 700; font-size: 14px; }
+.citizen-migrant-flag { font-size: 16px; }
+.citizen-migrant-name { font-weight: 700; font-size: 13px; }
 .citizen-migrant-phrase {
-  padding: 6px 0;
+  padding: 4px 0;
   border-bottom: 1px dashed var(--rule);
 }
 .citizen-migrant-phrase:last-child { border-bottom: 0; }
 .citizen-migrant-native {
-  font-size: 14px; line-height: 1.3; color: var(--ink);
-  margin-bottom: 2px;
+  font-size: 13px; line-height: 1.3; color: var(--ink);
+  margin-bottom: 1px;
 }
 .citizen-migrant-th {
-  font-size: 10.5px; color: var(--ink-low); line-height: 1.3;
+  font-size: 10px; color: var(--ink-low); line-height: 1.3;
 }
 
 /* Time-of-day forecast — 4 colored cells (night/morning/afternoon/
    evening) plus a "best window" / "worst window" takeaway. */
 .citizen-tod-bar {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
-  padding: 0 12px 8px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;
+  padding: 0 10px 6px;
 }
 .citizen-tod-cell {
-  padding: 8px 4px; text-align: center;
-  border-radius: 3px;
+  padding: 6px 3px; text-align: center;
+  border-radius: 2px;
   color: #fff;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
 }
 .citizen-tod-cell-lbl {
-  font-size: 10.5px; font-weight: 700; opacity: 0.9;
-  text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 9.5px; font-weight: 700; opacity: 0.9;
+  text-transform: uppercase; letter-spacing: 0.06em;
 }
 .citizen-tod-cell-num {
-  font-size: 16px; font-weight: 800;
+  font-size: 15px; font-weight: 800;
   font-family: var(--font-num);
+  line-height: 1.1;
 }
 .citizen-tod-advice {
-  padding: 0 12px 8px;
-  display: flex; flex-direction: column; gap: 4px;
+  padding: 0 10px 6px;
+  display: flex; flex-direction: column; gap: 3px;
 }
 .citizen-tod-advice-best, .citizen-tod-advice-worst {
-  font-size: 12.5px; line-height: 1.4; color: var(--ink);
-  padding: 6px 10px;
+  font-size: 11.5px; line-height: 1.4; color: var(--ink);
+  padding: 5px 9px;
   background: var(--bg-soft);
   border-radius: 3px;
 }
@@ -1103,23 +1123,23 @@
    /api/forecast says tomorrow is in a worse band than today. The
    callout uses a yellow border to read as "prepare, not panic". */
 .citizen-tomorrow-wrap {
-  margin: 0 12px 10px;
-  padding: 12px;
+  margin: 0 10px 8px;
+  padding: 10px 12px;
   background: rgba(240, 180, 0, 0.08);
   border-left: 3px solid #E86A10;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 .citizen-tomorrow-band {
-  display: flex; align-items: center; gap: 8px;
-  margin: 6px 0;
-  font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; gap: 6px;
+  margin: 4px 0;
+  font-weight: 700; font-size: 12.5px;
 }
-.citizen-tomorrow-band-arrow { color: var(--ink-mid); font-size: 16px; }
+.citizen-tomorrow-band-arrow { color: var(--ink-mid); font-size: 14px; }
 .citizen-tomorrow-band-tag {
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 999px;
-  color: #fff; font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.04em;
+  color: #fff; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
 }
 .citizen-tomorrow-band-tag.b-normal   { background: #00933C; }
 .citizen-tomorrow-band-tag.b-watch    { background: #F0B400; color: #2A2A2A; }
@@ -1140,26 +1160,26 @@
    but still copyable. A "copied" class briefly confirms the
    clipboard write. */
 .citizen-tell-grid {
-  display: flex; flex-direction: column; gap: 8px;
-  padding: 0 12px 8px;
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 0 10px 6px;
 }
 .citizen-tell-aud {
-  font-size: 11px; font-weight: 700; color: var(--ink-mid);
-  text-transform: uppercase; letter-spacing: 0.04em;
-  margin-top: 4px;
+  font-size: 10px; font-weight: 700; color: var(--ink-mid);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-top: 3px;
 }
 .citizen-tell-row {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: 3px;
 }
 .citizen-tell-btn {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 6px 10px;
   background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: 3px;
   cursor: pointer; text-align: left;
   font: inherit; color: var(--ink);
-  min-height: 44px; /* iOS tap target */
+  min-height: 40px; /* iOS tap target (was 44 — tightened to gain density) */
   transition: all 0.2s;
 }
 .citizen-tell-btn:hover { background: var(--bg-soft); }
@@ -1174,41 +1194,42 @@
   border-color: #00933C;
 }
 .citizen-tell-btn-lbl {
-  font-size: 10px; font-weight: 700; color: var(--ink-mid);
-  text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 9.5px; font-weight: 700; color: var(--ink-mid);
+  text-transform: uppercase; letter-spacing: 0.08em;
 }
 .citizen-tell-btn-text {
-  font-size: 12.5px; line-height: 1.4; color: var(--ink);
+  font-size: 12px; line-height: 1.4; color: var(--ink);
 }
 
 /* Pet care — 3 tip cards with emoji and title+body. Renders only
    at watch+ bands because the tips are about reducing exposure, not
    celebrating clean air. */
 .citizen-pet-wrap {
-  margin: 0 12px 10px;
-  padding: 10px 12px;
+  margin: 0 10px 8px;
+  padding: 8px 10px;
   background: var(--bg-soft);
-  border-radius: 4px;
+  border-radius: 3px;
+  border-left: 3px solid var(--th-deep);
 }
 .citizen-pet-tips {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: 4px;
 }
 .citizen-pet-tip {
   display: flex; gap: 8px; align-items: flex-start;
-  padding: 6px 0;
+  padding: 4px 0;
   border-bottom: 1px solid var(--rule);
 }
 .citizen-pet-tip:last-child { border-bottom: 0; }
-.citizen-pet-emoji { font-size: 18px; line-height: 1.2; }
+.citizen-pet-emoji { font-size: 16px; line-height: 1.2; }
 .citizen-pet-tip-title {
-  font-size: 12.5px; font-weight: 700; color: var(--ink);
+  font-size: 12px; font-weight: 700; color: var(--ink);
 }
 .citizen-pet-tip-body {
-  font-size: 11.5px; color: var(--ink-mid); line-height: 1.5;
+  font-size: 11px; color: var(--ink-mid); line-height: 1.4;
 }
 
 .citizen-share-row {
-  display: flex; gap: 6px; padding: 0 12px 6px;
+  display: flex; gap: 5px; padding: 0 10px 6px;
 }
 /* OS-share button — the primary action in the share row (see share.js).
    Filled so it reads as THE button; LINE/SMS/copy are quieter siblings. */
@@ -1218,27 +1239,29 @@
 }
 .citizen-share-btn {
   flex: 1;
-  padding: 8px 6px;
-  font-size: 11.5px; font-weight: 700;
+  padding: 6px 5px;
+  font-size: 11px; font-weight: 700;
   border: 1px solid var(--rule-strong);
   background: #fff;
   color: var(--ink);
   text-align: center; text-decoration: none;
   cursor: pointer;
+  border-radius: 3px;
 }
 .citizen-share-btn.line { color: #00C300; border-color: #00C300; }
 .citizen-share-btn.sms  { color: var(--th-navy); }
 
 .citizen-help-row {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
-  padding: 0 12px 12px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+  padding: 0 10px 10px;
 }
 .citizen-help-btn {
   display: flex; flex-direction: column; align-items: center;
-  padding: 10px 4px;
+  padding: 7px 4px;
   background: var(--th-red);
   color: #fff;
   text-decoration: none;
+  border-radius: 3px;
 }
 .citizen-help-btn:nth-child(2) { background: #A51931; }
 .citizen-help-btn:nth-child(3) { background: #241E4E; }
@@ -1250,20 +1273,23 @@
 @media (max-width: 480px) {
   .phone-about-link { display: flex !important; }
 }
-.citizen-help-num { font-family: var(--font-num); font-weight: 800; font-size: 18px; }
-.citizen-help-lbl { font-size: 9.5px; opacity: 0.9; margin-top: 1px; }
+.citizen-help-num { font-family: var(--font-num); font-weight: 800; font-size: 16px; line-height: 1.1; }
+.citizen-help-lbl { font-size: 9px; opacity: 0.9; margin-top: 1px; line-height: 1.2; }
 
 .citizen-line-follow {
-  margin: 0 12px 8px; min-height: 44px; padding: 9px 12px;
-  display: flex; align-items: center; gap: 9px;
-  border: 1px solid #00A000; border-left: 4px solid #00C300;
+  margin: 0 10px 6px; min-height: 40px; padding: 7px 10px;
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid #00A000; border-left: 3px solid #00C300;
   background: rgba(0,194,0,0.06); color: var(--ink);
   text-decoration: none; font-weight: 700;
+  border-radius: 3px;
+  font-size: 12px;
 }
 .citizen-line-follow:hover { background: rgba(0,194,0,0.12); }
 .citizen-line-mark {
-  padding: 3px 6px; background: #00C300; color: #fff;
-  font-family: var(--font-num); font-size: 10px;
+  padding: 2px 6px; background: #00C300; color: #fff;
+  font-family: var(--font-num); font-size: 9.5px;
+  border-radius: 2px;
 }
 .citizen-line-follow span:nth-child(2) { flex: 1; }
 
@@ -1271,19 +1297,20 @@
    follow above. Targets ONLY the user's selected province; throttled
    server-side to ≤1 push per 3 h; one-tap cancel link inside the push. */
 .citizen-line-subscribe {
-  margin: 0 12px 12px; padding: 0;
+  margin: 0 10px 8px; padding: 0;
   border: 1px solid var(--rule-strong);
-  border-left: 4px solid #00C300;
+  border-left: 3px solid #00C300;
   background: rgba(0,194,0,0.04);
+  border-radius: 3px;
 }
-.citizen-line-form { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; }
-.citizen-line-head { display: flex; gap: 10px; align-items: flex-start; }
-.citizen-line-head-icon { font-size: 18px; line-height: 1; padding-top: 1px; }
+.citizen-line-form { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; }
+.citizen-line-head { display: flex; gap: 8px; align-items: flex-start; }
+.citizen-line-head-icon { font-size: 16px; line-height: 1; padding-top: 1px; }
 .citizen-line-head-text { flex: 1; min-width: 0; }
-.citizen-line-head-th { font-weight: 700; font-size: 12.5px; line-height: 1.35; }
-.citizen-line-head-en { font-size: 10.5px; opacity: 0.7; margin-top: 2px; line-height: 1.35; }
+.citizen-line-head-th { font-weight: 700; font-size: 12px; line-height: 1.3; }
+.citizen-line-head-en { font-size: 10px; opacity: 0.7; margin-top: 1px; line-height: 1.3; }
 .citizen-line-token {
-  width: 100%; padding: 8px 10px;
+  width: 100%; padding: 6px 8px;
   border: 1px solid var(--rule-strong); font: inherit; font-size: 12px;
   font-family: var(--font-num);
   background: var(--card); color: var(--ink);
@@ -1321,72 +1348,76 @@
    subscribe card but with Telegram's brand colour (sky blue) instead
    of green. */
 .citizen-tg-subscribe {
-  margin: 0 12px 12px; padding: 0;
+  margin: 0 10px 8px; padding: 0;
   border: 1px solid var(--rule-strong);
-  border-left: 4px solid #2AABEE;
+  border-left: 3px solid #2AABEE;
   background: rgba(42,171,238,0.04);
+  border-radius: 3px;
 }
-.citizen-tg-head { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px 4px; }
-.citizen-tg-head-icon { font-size: 18px; line-height: 1; padding-top: 1px; }
+.citizen-tg-head { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px 4px; }
+.citizen-tg-head-icon { font-size: 16px; line-height: 1; padding-top: 1px; }
 .citizen-tg-head-text { flex: 1; min-width: 0; }
-.citizen-tg-head-th { font-weight: 700; font-size: 12.5px; line-height: 1.35; }
-.citizen-tg-head-en { font-size: 10.5px; opacity: 0.7; margin-top: 2px; line-height: 1.35; }
-.citizen-tg-actions { display: flex; align-items: center; gap: 12px; padding: 4px 12px 10px; }
+.citizen-tg-head-th { font-weight: 700; font-size: 12px; line-height: 1.3; }
+.citizen-tg-head-en { font-size: 10px; opacity: 0.7; margin-top: 1px; line-height: 1.3; }
+.citizen-tg-actions { display: flex; align-items: center; gap: 10px; padding: 4px 10px 8px; }
 .citizen-tg-open {
-  display: inline-block; padding: 8px 14px; background: #2AABEE; color: #fff;
-  font-size: 12.5px; font-weight: 700; text-decoration: none;
-  min-height: 32px;
+  display: inline-block; padding: 6px 12px; background: #2AABEE; color: #fff;
+  font-size: 12px; font-weight: 700; text-decoration: none;
+  min-height: 32px; border-radius: 3px;
 }
 .citizen-tg-open:hover { background: #1E96D1; }
 .citizen-tg-waiting {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 10px; background: var(--bg-soft); border: 1px solid var(--rule);
-  font-size: 11.5px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 9px; background: var(--bg-soft); border: 1px solid var(--rule);
+  font-size: 11px; border-radius: 3px;
 }
 .citizen-tg-pulse {
-  width: 8px; height: 8px; border-radius: 50%; background: #2AABEE;
+  width: 7px; height: 7px; border-radius: 50%; background: #2AABEE;
   animation: citizen-tg-blink 1.2s ease-in-out infinite;
 }
 @keyframes citizen-tg-blink { 0%, 100% { opacity: 0.3 } 50% { opacity: 1 } }
-.citizen-tg-state { font-size: 11.5px; color: var(--ink); opacity: 0.75; }
+.citizen-tg-state { font-size: 11px; color: var(--ink); opacity: 0.75; }
 .citizen-tg-province {
   display: flex; align-items: center; gap: 8px;
-  margin: 0 12px 8px; padding: 6px 10px;
+  margin: 0 10px 6px; padding: 5px 9px;
   background: var(--bg-soft); border: 1px solid var(--rule);
+  border-radius: 3px;
 }
-.citizen-tg-province-label { font-size: 9.5px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.05em; }
-.citizen-tg-province-name { font-weight: 700; font-size: 12.5px; }
+.citizen-tg-province-label { font-size: 9px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.08em; }
+.citizen-tg-province-name { font-weight: 700; font-size: 12px; }
 .citizen-tg-bind {
-  display: inline-block; margin: 0 12px 10px;
-  padding: 8px 14px; background: #2AABEE; color: #fff; border: 0;
+  display: inline-block; margin: 0 10px 8px;
+  padding: 6px 12px; background: #2AABEE; color: #fff; border: 0;
   font: inherit; font-weight: 700; font-size: 12px; cursor: pointer;
-  min-height: 32px;
+  min-height: 32px; border-radius: 3px;
 }
 .citizen-tg-bind:hover:not(:disabled) { background: #1E96D1; }
 .citizen-tg-bind:disabled { background: #88C7E5; cursor: progress; }
-.citizen-tg-status { padding: 0 12px 10px; min-height: 14px; font-size: 11px; line-height: 1.4; }
+.citizen-tg-status { padding: 0 10px 8px; min-height: 14px; font-size: 10.5px; line-height: 1.4; }
 .citizen-tg-ok { color: #006A00; font-weight: 700; }
 .citizen-tg-err { color: #A51931; font-weight: 600; }
 
-.citizen-picker-wrap { padding: 8px 12px 12px; border-top: 1px solid var(--rule); }
+.citizen-picker-wrap { padding: 6px 10px 10px; border-top: 1px solid var(--rule); }
 .citizen-picker-search {
-  width: 100%; padding: 6px 8px; margin-bottom: 6px;
+  width: 100%; padding: 5px 8px; margin-bottom: 5px;
   border: 1px solid var(--rule-strong); font: inherit; font-size: 12px;
+  border-radius: 3px;
 }
-.citizen-picker-list { max-height: 220px; overflow-y: auto; }
+.citizen-picker-list { max-height: 200px; overflow-y: auto; }
 .citizen-pick-row {
   display: flex; align-items: center; justify-content: space-between;
   width: 100%;
-  padding: 6px 8px; margin: 2px 0;
+  padding: 5px 8px; margin: 2px 0;
   border: 1px solid transparent; border-left: 3px solid var(--ink-low);
   background: #fff; text-align: left; cursor: pointer;
+  border-radius: 2px;
 }
 .citizen-pick-row:hover { background: var(--well-dim); }
 .citizen-pick-row.b-watch    { border-left-color: #F0B400; }
 .citizen-pick-row.b-elevated { border-left-color: #E86A10; }
 .citizen-pick-row.b-high     { border-left-color: #A51931; }
-.citizen-pick-name { font-weight: 600; font-size: 12.5px; }
-.citizen-pick-meta { font-family: var(--font-num); font-size: 11px; color: var(--ink-mid); }
+.citizen-pick-name { font-weight: 600; font-size: 12px; }
+.citizen-pick-meta { font-family: var(--font-num); font-size: 10.5px; color: var(--ink-mid); }
 
 /* ── Right rail tabs ─────────────────────────────────────────────────────── */
 /* role=tablist: ARIA tab pattern. Buttons carry role=tab (set in HTML),
@@ -1463,10 +1494,10 @@ body.mode-citizen .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ── Alerts / news lists ─────────────────────────────────────────────────── */
-.alert-row { padding: 8px 12px; border-bottom: 1px solid var(--rule); background: var(--well); font-size: 13.5px; display: flex; gap: 8px; }
+.alert-row { padding: 7px 10px; border-bottom: 1px solid var(--rule); background: var(--well); font-size: 13px; display: flex; gap: 8px; }
 .alert-row .badge { margin-top: 2px; }
-.alert-row .when { font-family: var(--font-num); font-size: 10.5px; color: var(--ink-low); }
-.news-row { padding: 8px 12px; border-bottom: 1px solid var(--rule); background: var(--well); font-size: 13.5px; }
+.alert-row .when { font-family: var(--font-num); font-size: 10px; color: var(--ink-low); }
+.news-row { padding: 7px 10px; border-bottom: 1px solid var(--rule); background: var(--well); font-size: 13px; }
 .news-row a { text-decoration: none; }
 .news-row a:hover { text-decoration: underline; }
 .news-row .when { font-family: var(--font-num); font-size: 10px; color: var(--ink-low); display: flex; align-items: center; gap: 6px; }
@@ -1477,29 +1508,30 @@ body.mode-citizen .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ── Chat ────────────────────────────────────────────────────────────────── */
-#chat-log { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
-.chat-msg { max-width: 92%; padding: 8px 10px; font-size: 13.5px; white-space: pre-wrap; }
+#chat-log { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.chat-msg { max-width: 92%; padding: 7px 10px; font-size: 13px; white-space: pre-wrap; border-radius: 6px; }
 .chat-msg.user { align-self: flex-end; background: var(--th-navy); color: var(--ink-inv); }
-.chat-msg.bot  { align-self: flex-start; background: var(--well); border: 1px solid var(--rule-strong); }
-.chat-msg.offline { border-left: 4px solid var(--band-watch); font-family: var(--font-num); font-size: 11.5px; }
-.chat-msg .kn { margin-top: 6px; font-size: 10px; color: var(--ink-low); font-family: var(--font-num); }
+.chat-msg.bot  { align-self: flex-start; background: var(--well); border: 1px solid var(--rule); }
+.chat-msg.offline { border-left: 3px solid var(--band-watch); font-family: var(--font-num); font-size: 11.5px; }
+.chat-msg .kn { margin-top: 5px; font-size: 9.5px; color: var(--ink-low); font-family: var(--font-num); }
 
 /* "Try asking" example chips — solves the empty-input paralysis that
    first-time visitors hit when they don't know what to ask the AI.
    One click populates and submits the question. */
-.chat-examples { padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 6px; border-top: 1px dashed var(--rule); margin-top: 6px; }
-.chat-examples-head { font-family: var(--font-num); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-mid); }
+.chat-examples { padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 5px; border-top: 1px dashed var(--rule); margin-top: 5px; }
+.chat-examples-head { font-family: var(--font-num); font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-mid); }
 .chat-example-chip {
   text-align: left; background: var(--well); border: 1px solid var(--rule);
-  padding: 6px 10px; font-size: 12.5px; cursor: pointer; font-family: var(--font-ui);
+  padding: 5px 9px; font-size: 12px; cursor: pointer; font-family: var(--font-ui);
   color: var(--ink); transition: background 0.12s, border-color 0.12s;
+  border-radius: 3px;
 }
 .chat-example-chip:hover { background: #fff; border-color: var(--th-navy); }
 .chat-example-chip:focus-visible { outline: 2px solid var(--th-navy); outline-offset: 1px; }
 #chat-form { display: flex; border-top: 1px solid var(--rule-strong); flex: none; }
-#chat-input { flex: 1; border: none; padding: 10px; }
-#chat-send { border: none; border-left: 1px solid var(--rule-strong); padding: 0 16px; font-weight: 700; }
-.chat-status { padding: 4px 10px; font-family: var(--font-num); font-size: 10px; color: var(--ink-low); border-top: 1px solid var(--rule); flex: none; }
+#chat-input { flex: 1; border: none; padding: 8px 10px; font-size: 13px; }
+#chat-send { border: none; border-left: 1px solid var(--rule-strong); padding: 0 14px; font-weight: 700; }
+.chat-status { padding: 3px 10px; font-family: var(--font-num); font-size: 9.5px; color: var(--ink-low); border-top: 1px solid var(--rule); flex: none; }
 .chat-status .on { color: var(--band-normal); }
 .chat-status .off { color: var(--th-red); }
 
@@ -3112,9 +3144,9 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
   color: var(--rain, #1D66A8);
 }
 .relief-eta-none { color: var(--ink-low); font-weight: 400; }
-.citizen-relief { padding: 0 12px; }
-.citizen-relief .relief-eta { font-size: 12.5px; margin-top: 8px; }
-.citizen-relief .worse-chip { margin: 6px 0 0; }
+.citizen-relief { padding: 0 10px; }
+.citizen-relief .relief-eta { font-size: 11.5px; margin-top: 4px; }
+.citizen-relief .worse-chip { margin: 4px 0 0; }
 
 /* "Worse before better" honesty chip. */
 .worse-chip {

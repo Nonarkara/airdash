@@ -8,10 +8,10 @@
 // /api/whatif payload already contains every province's re-projected
 // score; the search just filters the existing list client-side, so no
 // extra round trip and no server change.
-import { on, store } from '../state.js?v=2.4.15'
-import { tr, BAND } from '../i18n.js?v=2.4.15'
-import { fmtNum, el } from '../fmt.js?v=2.4.15'
-import { getJson } from '../cache.js?v=2.4.15'
+import { on, store } from '../state.js?v=2.4.16'
+import { tr, BAND } from '../i18n.js?v=2.4.16'
+import { fmtNum, el } from '../fmt.js?v=2.4.16'
+import { getJson } from '../cache.js?v=2.4.16'
 
 let currentRain = 20
 let currentData = null
