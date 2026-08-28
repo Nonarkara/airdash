@@ -9,9 +9,15 @@ export const BASEMAP_META = [
 ]
 
 export function createBasemaps() {
-  const street = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    subdomains: 'abcd', maxZoom: 19,
-    attribution: '© OpenStreetMap © CARTO',
+  // Esri World Light Gray Canvas — keyless, and it does NOT watermark the
+  // way CARTO's free raster endpoint started to ("API KEY REQUIRED" baked
+  // into every tile). maxNativeZoom:16 is load-bearing: this Esri service
+  // has no tiles past z16, so without the cap Leaflet requests z17+ tiles
+  // that 404 and the map goes blank on a Bangkok-street zoom-in (the exact
+  // regression FloodDash hit and fixed — ported here verbatim).
+  const street = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxNativeZoom: 16, maxZoom: 19,
+    attribution: 'Esri, HERE, Garmin · © OpenStreetMap',
   })
 
   const satellite = L.layerGroup([

@@ -14,6 +14,7 @@
     "test": "node scripts/check-consistency.mjs && node scripts/test-alerts-fixes.mjs && node scripts/test-telegram-bind.mjs",
     "test:consistency": "node scripts/check-consistency.mjs",
     "test:alerts": "node scripts/test-alerts-fixes.mjs",
-    "test:bind": "node scripts/test-telegram-bind.mjs"
+    "test:bind": "node scripts/test-telegram-bind.mjs",
+    "bump": "node scripts/bump-version.mjs"
   }
 }

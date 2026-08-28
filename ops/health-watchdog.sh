@@ -35,6 +35,29 @@ notify() {
 }
 up() { curl -sf --max-time 8 "$1" -o /dev/null; }
 
+# STARVED vs DEAD (ported from FloodDash cb38e84).
+# An unreachable server is not necessarily a broken one — the HOST may be
+# starved: swap nearly full, or the run queue jammed by an unrelated
+# process (a build, a Time Machine pass, another agent). On THIS machine
+# that is a live risk — it has ENOSPC-crashed before, and a disk-full or
+# memory-pressure event drags load and swap up host-wide. Kickstarting a
+# server that is merely a victim of host starvation does not help: the
+# fresh process hits the same wall, and the restart itself adds load. So
+# when a probe fails AND the host is starved, we log and hold instead of
+# killing — the Cloudflare edge cache covers users through the squeeze.
+host_starved() {
+  local swap_pct load ncpu
+  swap_pct=$(sysctl -n vm.swapusage 2>/dev/null | awk '{u=$6+0; t=$3+0; if (t>0) printf "%.0f", u*100/t; else print 0}')
+  load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%.0f", $2}')
+  ncpu=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
+  [ "${swap_pct:-0}" -ge 90 ] && return 0
+  [ "${load:-0}" -ge $(( ncpu * 4 )) ] && return 0
+  return 1
+}
+starve_detail() {
+  print -r -- "swap $(sysctl -n vm.swapusage 2>/dev/null | awk '{print $6"/"$3}'), load $(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}')"
+}
+
 # Persistent state files (in logs/, dot-prefixed so log rotation never
 # touches them):
 #   .watchdog-health-fails — consecutive /api/health failure count
@@ -117,6 +140,11 @@ if up_retry "http://localhost:8341/api/ping" 5 15; then
         # 5 minutes is still warming up; kickstarting it now would just
         # restart boot congestion.
         log "warn: /api/health failing ($hf_fails consecutive checks) but pid=$pid is only ${age}s old (boot grace) — NOT kickstarting"
+      elif host_starved; then
+        # /api/ping answers (event loop alive) but /api/health is slow AND
+        # the host is starved — the DB is being starved of I/O, not broken.
+        # Restarting cannot help. Hold and let the squeeze pass.
+        log "warn: /api/health failing ($hf_fails checks) BUT host is starved ($(starve_detail)) — NOT kickstarting, waiting it out"
       else
         log "PROBLEM: /api/ping ok but /api/health failed $hf_fails consecutive checks (pid=${pid:-none}, age=${age}s) — kickstarting server"
         launchctl kickstart -k "gui/$UID_NUM/com.airdash.server" 2>>"$LOG"
@@ -139,6 +167,11 @@ else
     # congestion that made it slow. Leave it alone; next hourly check will
     # see it warm.
     log "info: local server slow but process pid=$pid is only ${age}s old (booting) — NOT killing"
+  elif [ -n "${pid:-}" ] && host_starved; then
+    # STARVED, not DEAD — the process is alive but the host is choking it.
+    # A restart cannot help and adds load. Hold; the edge cache covers users.
+    log "PROBLEM: local server unreachable BUT host is starved ($(starve_detail)) — pid=$pid is a victim, NOT killing"
+    problems=$((problems + 1))
   else
     log "PROBLEM: local server unreachable (pid=${pid:-none}, age=${age}s) — recovering"
     if [ -n "${pid:-}" ]; then
