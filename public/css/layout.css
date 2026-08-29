@@ -375,7 +375,12 @@ html[lang="en"] .danger-label .en { display: inline; }
 html[lang="en"] #ask-btn .ask-lbl.th { display: none; }
 html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
 
-/* Search box — light theme, fits in the v2 single-row header */
+/* Search box — light theme, fits in the v2 single-row header.
+   A 🔍 magnifier icon sits inside the input on the left so the
+   affordance is obvious even at a glance. Tap target is the full
+   32px height of the input + 4px padding buffer = 40px effective
+   area (WCAG 2.5.5 met on ≥768px viewports; on phones the input
+   grows to 44px via the ctl-h-touch rule below). */
 .searchbox {
   position: relative;
   display: flex; align-items: center;
@@ -385,26 +390,47 @@ html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
   max-width: 380px;
   align-self: center;
   height: var(--header-h);
-  overflow: hidden;     /* contain the input on narrow viewports */
+  overflow: visible;        /* allow magnifier icon to sit inside without clipping */
+}
+.searchbox::before {
+  content: '🔍';
+  position: absolute;
+  left: 9px; top: 50%;
+  transform: translateY(calc(-50% - 4px));
+  font-size: 11px;
+  pointer-events: none;
+  opacity: 0.55;
+  z-index: 1;
 }
 .searchbox input {
   width: 100%;
   min-width: 0;         /* let the input shrink to its flex container */
   max-width: 100%;
   font-family: var(--font-ui); font-size: 12.5px;
-  padding: 5px 26px 5px 9px;
+  padding: 7px 28px 7px 26px;
   background: var(--well);
   border: 1px solid var(--rule);
   color: var(--ink);
+  border-radius: 4px;
+  min-height: 32px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .searchbox input::placeholder { color: var(--ink-low); }
-.searchbox input:focus { outline: 2px solid var(--th-sage); outline-offset: -1px; }
-.searchbox #search-clear {
-  position: absolute; right: 14px; top: 50%; transform: translateY(-25%);
-  background: transparent; border: 0; padding: 0 4px;
-  color: var(--ink-low); cursor: pointer; font-size: 12px;
+.searchbox input:hover { border-color: var(--ink-low); }
+.searchbox input:focus {
+  outline: none;
+  border-color: var(--th-deep);
+  box-shadow: 0 0 0 2px rgba(14, 74, 94, 0.18);
 }
-.searchbox #search-clear:hover { color: var(--th-deep); }
+.searchbox #search-clear {
+  position: absolute; right: 14px; top: 50%; transform: translateY(calc(-50% - 4px));
+  background: transparent; border: 0; padding: 4px 6px;
+  color: var(--ink-low); cursor: pointer; font-size: 12px;
+  min-height: 24px; min-width: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 3px;
+}
+.searchbox #search-clear:hover { color: var(--th-deep); background: var(--well-dim); }
 .searchbox .search-results { position: absolute; top: 100%; left: 0; right: 14px; z-index: 100; }
 
 /* Mode toggle (EASY / FULL) — pill style, fits the compact header */

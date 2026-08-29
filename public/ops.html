@@ -15,10 +15,10 @@
 <meta name="twitter:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230E4A5E'/%3E%3Ccircle cx='11.5' cy='4.5' r='2.5' fill='%233A8A6E'/%3E%3Cpath d='M2 8h12M2 10.5h9M2 13h12' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round' opacity='0.9'/%3E%3Ccircle cx='13' cy='10.5' r='1' fill='%23C8453A'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/css/tokens.css?v=2.4.16">
-<link rel="stylesheet" href="/css/layout.css?v=2.4.16">
-<link rel="stylesheet" href="/css/components.css?v=2.4.16">
-<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.16">
+<link rel="stylesheet" href="/css/tokens.css?v=2.4.18">
+<link rel="stylesheet" href="/css/layout.css?v=2.4.18">
+<link rel="stylesheet" href="/css/components.css?v=2.4.18">
+<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.18">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
 <script type="application/ld+json">
@@ -805,7 +805,7 @@
   // layers during the service-worker handover. The shell name must match
   // the new CACHE name in sw.js so the migration only runs when the SW
   // itself is upgrading.
-  const shell = 'airdash-v32'
+  const shell = 'airdash-v34'
   const migrated = `ad-shell-ready:${shell}`
   const registrations = 'serviceWorker' in navigator
     ? await navigator.serviceWorker.getRegistrations()
@@ -822,7 +822,7 @@
       .map((name) => caches.delete(name)))
     location.reload()
   } else {
-    await import('/js/main.js?v=2.4.16')
+    await import('/js/main.js?v=2.4.18')
   }
 </script>
 </body>

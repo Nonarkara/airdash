@@ -1,9 +1,9 @@
 // Research Paper panel — renders the full bilingual academic paper inside
 // the About overlay's "Research Paper" tab, with custom SVG infographics,
 // the complete source catalog, citations, and CSV dataset download.
-import { on, store } from '../state.js?v=2.4.16'
-import { getJson } from '../cache.js?v=2.4.16'
-import { escapeHtml } from '../fmt.js?v=2.4.16'
+import { on, store } from '../state.js?v=2.4.18'
+import { getJson } from '../cache.js?v=2.4.18'
+import { escapeHtml } from '../fmt.js?v=2.4.18'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -377,10 +377,10 @@ function sectionDanger() {
         ${tr('2. ดัชนีอันตราย — The Danger Score: เหตุผลทางวิทยาศาสตร์', '2. The Danger Score — Why PM2.5 Alone Misleads')}
       </h2>
 
-      <p data-th="ดัชนีเฝ้าระวังในข้อ 3 ตอบคำถามว่า 'อากาศมีแนวโน้มเป็นอย่างไร' แต่คำถามที่ผู้ปกครอง ผู้สูงอายุ และโค้ชถามจริงๆ คือ 'ตอนนี้ออกไปข้างนอกปลอดภัยไหม' คำตอบขึ้นกับปัจจัยสี่ตัว — ไม่ใช่แค่ฝุ่น — และเมื่อรวมเข้าด้วยกัน ผลที่ได้ต่างจากการอ่านค่า PM2.5 ตรงๆ อย่างมาก" data-en="The watch score in §3 answers the question 'where is the air headed?'. The question a parent, an elderly neighbour, or a coach actually has is 'is it safe to be outside right now?'. The answer depends on four factors — not just dust — and the combined number is materially different from reading the PM2.5 reading alone.">
+      <p data-th="ดัชนีเฝ้าระวังในข้อ 5 ตอบคำถามว่า 'อากาศมีแนวโน้มเป็นอย่างไร' แต่คำถามที่ผู้ปกครอง ผู้สูงอายุ และโค้ชถามจริงๆ คือ 'ตอนนี้ออกไปข้างนอกปลอดภัยไหม' คำตอบขึ้นกับปัจจัยสี่ตัว — ไม่ใช่แค่ฝุ่น — และเมื่อรวมเข้าด้วยกัน ผลที่ได้ต่างจากการอ่านค่า PM2.5 ตรงๆ อย่างมาก" data-en="The watch score in §5 answers the question 'where is the air headed?'. The question a parent, an elderly neighbour, or a coach actually has is 'is it safe to be outside right now?'. The answer depends on four factors — not just dust — and the combined number is materially different from reading the PM2.5 reading alone.">
         ${tr(
-          'ดัชนีเฝ้าระวังในข้อ 3 ตอบคำถามว่า "อากาศมีแนวโน้มเป็นอย่างไร" แต่คำถามที่ผู้ปกครอง ผู้สูงอายุ และโค้ชถามจริงๆ คือ "ตอนนี้ออกไปข้างนอกปลอดภัยไหม"',
-          'The watch score in §3 answers the question "where is the air headed?". The question a parent, an elderly neighbour, or a coach actually has is "is it safe to be outside right now?".'
+          'ดัชนีเฝ้าระวังในข้อ 5 ตอบคำถามว่า "อากาศมีแนวโน้มเป็นอย่างไร" แต่คำถามที่ผู้ปกครอง ผู้สูงอายุ และโค้ชถามจริงๆ คือ "ตอนนี้ออกไปข้างนอกปลอดภัยไหม"',
+          'The watch score in §5 answers the question "where is the air headed?". The question a parent, an elderly neighbour, or a coach actually has is "is it safe to be outside right now?".'
         )}
       </p>
 
@@ -653,7 +653,7 @@ function svgRainRelief() {
 function sectionArchitecture() {
   return `
     <section class="rp-section">
-      <h2 data-th="2. สถาปัตยกรรมระบบ" data-en="2. System Architecture">${tr('2. สถาปัตยกรรมระบบ', '2. System Architecture')}</h2>
+      <h2 data-th="3. สถาปัตยกรรมระบบ" data-en="3. System Architecture">${tr('3. สถาปัตยกรรมระบบ', '3. System Architecture')}</h2>
       <div class="rp-figure">${svgArchitecture()}</div>
       <p data-th="ดีไซน์รวมทุกอย่างในโปรเซสเดียว — รันบน Raspberry Pi หรือแล็ปท็อปเก่าได้ ฐานข้อมูลเป็นไฟล์เดียวส่งต่อด้วย USB ได้ เหตุการณ์ทุกอย่างผ่านบัสเดียวและถูกเขียนลงตาราง events ทำให้ท่อข้อมูลสดเป็นล็อกที่ query ได้ RAG ที่ใช้ LLM local เป็นทางเลือก ถ้าไม่มีโมเดล แชทบอทจะถอยไปแสดงสรุปข้อมูลจริงแบบมีโครงสร้าง" data-en="The single-process design means the system runs on a Raspberry Pi or a retired office laptop, the database is a single file, and the entire surface is auditable. All events go through one bus and are written to an events table so the running tap is also a queryable log. The local-LLM RAG is optional: with no model, the chatbot gracefully degrades to a structured live-data summary.">
         ${tr(
@@ -689,7 +689,7 @@ function sectionSources(catalog) {
   }).join('')
   return `
     <section class="rp-section">
-      <h2 data-th="3. แหล่งข้อมูล — ท่อสาธารณะ" data-en="3. Data Sources — Public Pipelines">${tr('3. แหล่งข้อมูล — ท่อสาธารณะ', '3. Data Sources — Public Pipelines')}</h2>
+      <h2 data-th="4. แหล่งข้อมูล — ท่อสาธารณะ" data-en="4. Data Sources — Public Pipelines">${tr('4. แหล่งข้อมูล — ท่อสาธารณะ', '4. Data Sources — Public Pipelines')}</h2>
       <p class="rp-lead" data-th="ทุกแหล่งข้อมูลเป็นสาธารณะ เข้าถึงได้โดยไม่ต้องใช้คีย์ และอ่านได้อย่างเดียว แต่ละท่อทำงานเป็นโมดูลใน server/sources/*.js" data-en="All sources are public, keyless, and read-only. Each runs as a module with a run({ db, bus }) contract that returns a { seen, added } summary.">
         ${tr('ทุกแหล่งข้อมูลเป็นสาธารณะ เข้าถึงได้โดยไม่ต้องใช้คีย์ และอ่านได้อย่างเดียว', 'All sources are public, keyless, and read-only. Each runs as a module with a run({ db, bus }) contract.')}
       </p>
@@ -703,7 +703,7 @@ function sectionSources(catalog) {
 function sectionScore() {
   return `
     <section class="rp-section">
-      <h2 data-th="4. คะแนนเฝ้าระวังรายจังหวัด" data-en="4. The Province Watch Score">${tr('4. คะแนนเฝ้าระวังรายจังหวัด', '4. The Province Watch Score')}</h2>
+      <h2 data-th="5. คะแนนเฝ้าระวังรายจังหวัด" data-en="5. The Province Watch Score">${tr('5. คะแนนเฝ้าระวังรายจังหวัด', '5. The Province Watch Score')}</h2>
       <div class="rp-figure">${svgScoreFormula()}</div>
       <div class="rp-figure">${svgRiskBands()}</div>
       <p data-th="น้ำหนักเป็นการเลือกเชิงปฏิบัติการ ไม่ใช่แบบจำลองคุณภาพอากาศที่ปรับเทียบแล้ว PM2.5 จากสถานีภาคพื้นเป็นสัญญาณหลัก (40%) เพราะเป็นค่าที่กระทบสุขภาพโดยตรง พยากรณ์ CAMS ได้ 20% เพราะบอกว่าพรุ่งนี้จะแย่ลงหรือดีขึ้น แนวโน้ม 6 ชม. (15%) จับการสะสมฝุ่นที่กำลังเกิด การระบายอากาศ (15%) เป็นตัวแทนสภาพอากาศปิด — ลมอ่อน + ไม่มีฝน = ฝุ่นสะสม และมลพิษอื่น (PM10 · O₃ · NO₂ · SO₂ · CO, 10%) กันกรณีที่ฝุ่นละเอียดต่ำแต่มลพิษตัวอื่นสูง คะแนนนี้เป็นดัชนีเฝ้าระวังจากข้อมูลจริง ไม่ใช่การพยากรณ์คุณภาพอากาศ" data-en="The weights are a deliberate operational choice, not a calibrated air-quality model. Ground PM2.5 dominates (40%) because it is the direct health signal. The CAMS forecast gets 20% because it says whether tomorrow improves or worsens. The 6-hour trend (15%) catches accumulation as it happens. Ventilation (15%) proxies stagnant conditions — weak wind plus no rain means dust loads up. Other pollutants (PM10 · O₃ · NO₂ · SO₂ · CO, 10%) catch episodes where fine dust is low but another pollutant spikes. The score is a live watch indicator, not an air-quality forecast.">
@@ -722,7 +722,7 @@ function sectionScore() {
 function sectionWashout() {
   return `
     <section class="rp-section">
-      <h2 data-th="5. ฝนช่วยล้างฝุ่น (Rain Washout)" data-en="5. Rain Washout — the Signature Analysis">${tr('5. ฝนช่วยล้างฝุ่น (Rain Washout)', '5. Rain Washout — the Signature Analysis')}</h2>
+      <h2 data-th="6. ฝนช่วยล้างฝุ่น (Rain Washout)" data-en="6. Rain Washout — the Signature Analysis">${tr('6. ฝนช่วยล้างฝุ่น (Rain Washout)', '6. Rain Washout — the Signature Analysis')}</h2>
       <div class="rp-figure">${svgWashout()}</div>
       <p data-th="ฝนชะล้างอนุภาคในอากาศ (wet deposition / scavenging): เม็ดฝนจับฝุ่นละเอียดแล้วพาลงพื้น ระบบแปลงฝนพยากรณ์ 24 ชม. เป็น % ฝุ่นที่คาดว่าจะถูกชะล้าง แล้วถ่วงด้วยโอกาสเกิดฝน ได้ทั้ง 'ถ้าฝนตกจริงช่วยได้เท่าไร' และ 'คาดหวังได้เท่าไรเมื่อคิดความน่าจะเป็น' ต่อจังหวัด — นี่คือคำตอบของคำถามประจำฤดูฝุ่น: ฝนที่กำลังมาจะช่วยพื้นที่ไหนบ้าง" data-en="Rain scavenges airborne particles (wet deposition): droplets capture fine dust and carry it to the ground. The system converts the 24-h rain forecast into an expected PM2.5 relief percentage, then weights it by the probability of rain — giving both 'how much it helps if it lands' and the probability-weighted expectation per province. This answers the dust-season question: which areas will the incoming rain actually help?">
         ${tr(
@@ -736,7 +736,7 @@ function sectionWashout() {
 function sectionEnso() {
   return `
     <section class="rp-section">
-      <h2 data-th="6. ENSO เป็นตัวปรับความเสี่ยง (ไม่ใช่ตัวพยากรณ์)" data-en="6. ENSO as a Risk Modulator">${tr('6. ENSO เป็นตัวปรับความเสี่ยง', '6. ENSO as a Risk Modulator')}</h2>
+      <h2 data-th="7. ENSO เป็นตัวปรับความเสี่ยง (ไม่ใช่ตัวพยากรณ์)" data-en="7. ENSO as a Risk Modulator">${tr('7. ENSO เป็นตัวปรับความเสี่ยง', '7. ENSO as a Risk Modulator')}</h2>
       <div class="rp-figure">${svgEnso()}</div>
       <p data-th="Oceanic Niño Index ดึงทุก 12 ชม. เอลนีโญทำให้แล้งและร้อนกว่าปกติ — ฤดูเผา/ฝุ่นมักรุนแรงขึ้นเพราะฝนที่ช่วยล้างฝุ่นมาน้อย ส่วนลานีญาเพิ่มโอกาสฝนล้างฝุ่น แต่นี่คือปัจจัยก่อนเหตุ ไม่ใช่ตัวพยากรณ์" data-en="The Oceanic Niño Index is fetched every 12 hours. El Niño brings drier, hotter conditions — burning/dust seasons tend to be worse because washout rain is scarce; La Niña raises washout-rain odds. This is a prior, not a predictor.">
         ${tr(
@@ -750,12 +750,28 @@ function sectionEnso() {
 function sectionRetention() {
   return `
     <section class="rp-section">
-      <h2 data-th="7. การเก็บข้อมูลระยะยาว" data-en="7. Data Retention & Storage">${tr('7. การเก็บข้อมูลระยะยาว', '7. Data Retention & Storage')}</h2>
+      <h2 data-th="8. การเก็บข้อมูลระยะยาว" data-en="8. Data Retention & Storage">${tr('8. การเก็บข้อมูลระยะยาว', '8. Data Retention & Storage')}</h2>
       <div class="rp-figure">${svgRetention()}</div>
-      <p data-th="ข้อมูลดิบเก็บ 90 วัน แล้วสรุปเป็น hourly aggregate ถาวร ตาราง readings ใช้ INSERT OR IGNORE ป้องกันข้อมูลซ้ำ ตาราง events เก็บทุกเหตุการณ์ของท่อพร้อมการแจ้งเตือนเกินเกณฑ์ที่มี cooldown 6 ชม." data-en="Raw rows are kept 90 days, then collapsed into permanent hourly aggregates (min, max, average). The readings table uses INSERT OR IGNORE to prevent duplicates. The events table stores every pipeline event with 6-hour-cooldown threshold-crossing alerts.">
+      <p data-th="ฐานข้อมูลที่ให้บริการหน้าจอเก็บข้อมูลดิบ 90 วัน แล้วสรุปเป็นค่ารายชั่วโมง (ต่ำสุด/สูงสุด/เฉลี่ย) ถาวร ตาราง readings ใช้ INSERT OR IGNORE ป้องกันข้อมูลซ้ำ นี่คือนโยบายที่ถูกต้องสำหรับระบบเรียลไทม์ — ฐานข้อมูลที่เล็กคือฐานข้อมูลที่เร็ว และความเร็วบนเส้นทางแจ้งเตือนคือคุณสมบัติด้านความปลอดภัยของชีวิต" data-en="The live database keeps raw readings for 90 days, then collapses them into permanent hourly aggregates (min/max/average). The readings table uses INSERT OR IGNORE to prevent duplicates. This is the correct policy for a real-time system — a small database is a fast database, and speed on the alert path is a life-safety property.">
         ${tr(
-          'ข้อมูลดิบเก็บ 90 วัน แล้วสรุปเป็น hourly aggregate ถาวร ตาราง readings ใช้ INSERT OR IGNORE ป้องกันข้อมูลซ้ำ',
-          'Raw rows are kept 90 days, then collapsed into permanent hourly aggregates. The readings table uses INSERT OR IGNORE to prevent duplicates.'
+          'ฐานข้อมูลที่ให้บริการหน้าจอเก็บข้อมูลดิบ 90 วัน แล้วสรุปเป็นค่ารายชั่วโมงถาวร',
+          'The live database keeps raw readings 90 days, then collapses them into permanent hourly aggregates.'
+        )}
+      </p>
+
+      <h3 data-th="7.1 คลังข้อมูลระยะยาว — บันทึกงานวิจัยถาวร" data-en="7.1 The long-term archive — a permanent research record">
+        ${tr('7.1 คลังข้อมูลระยะยาว — บันทึกงานวิจัยถาวร', '7.1 The long-term archive — a permanent research record')}
+      </h3>
+      <p data-th="การลบข้อมูลดิบหลัง 90 วันทำให้รายละเอียดระดับต่ำกว่าชั่วโมงและประวัติการทำงานทั้งหมดหายไปเป็นหน้าต่างเลื่อน คำถามที่มีค่าจริงหลังผ่านไปหนึ่งหรือสองปีต้องใช้รายละเอียดนั้น จึงมีกระบวนการแยกต่างหาก (archive-longterm.mjs) คัดลอกสตรีมข้อมูลแบบเพิ่มต่อท้ายทั้งหมด — readings, alerts, events, ingest_runs, ข่าว, คุณภาพน้ำ, การยกระดับ — ออกไปยังฐานข้อมูลแยกบนไดรฟ์ 8 TB ก่อนที่นโยบายลบจะทำลาย ไม่มีการลบใด ๆ ในคลังนี้ ทั้ง AirDash และ FloodDash เขียนลงฐานเดียวกัน ทำให้เชื่อมโยงข้อมูลข้ามระบบได้ (เช่น ฝนกับ PM2.5)" data-en="Deleting raw rows after 90 days means sub-hourly detail and the entire operational history evaporate on a rolling window. The questions that are actually worth asking after a year or two need exactly that detail. A separate process (archive-longterm.mjs) therefore copies every append-only stream — readings, alerts, events, ingest_runs, news, water quality, escalations — out to a standalone database on an 8 TB drive before retention destroys it. Nothing is ever deleted from the archive. Both AirDash and FloodDash write to the same database, which is what makes cross-system joins (rain vs PM2.5) possible at all.">
+        ${tr(
+          'กระบวนการแยกคัดลอกสตรีมข้อมูลทั้งหมดไปยังฐานข้อมูลถาวรบนไดรฟ์ 8 TB ก่อนที่นโยบายลบ 90 วันจะทำลาย — ทั้งสองระบบใช้ฐานเดียวกันเพื่อให้วิเคราะห์ข้ามระบบได้',
+          'A separate process copies every stream to a permanent database on an 8 TB drive before the 90-day retention destroys it — both systems share one database so cross-system analysis is possible.'
+        )}
+      </p>
+      <p class="rp-note" data-th="ความปลอดภัย: ฐานข้อมูลที่ให้บริการเปิดแบบอ่านอย่างเดียว (read-only) คลังจึงไม่สามารถทำให้ข้อมูลการผลิตเสียหายหรือล็อกได้ กระบวนการทำงานแยกจาก event loop ของเซิร์ฟเวอร์ และล้มเหลวแบบนุ่มนวล (ถ้าไดรฟ์ไม่ได้เชื่อมต่อก็เพียงบันทึกและออก)" data-en="Safety: the live databases are opened read-only, so the archiver cannot corrupt or lock production data; it runs off the server event loop and fails soft (if the drive is unmounted it simply logs and exits).">
+        ${tr(
+          'ความปลอดภัย: เปิดฐานข้อมูลผลิตแบบอ่านอย่างเดียว แยกจาก event loop และล้มเหลวแบบนุ่มนวล',
+          'Safety: live DBs opened read-only, off the event loop, fails soft.'
         )}
       </p>
     </section>`
@@ -774,11 +790,68 @@ function sectionLimitations() {
   const list = items.map((it) => `<li>${tr(it.th, it.en)}</li>`).join('')
   return `
     <section class="rp-section">
-      <h2 data-th="8. ข้อจำกัดที่ต้องพูดตรง ๆ" data-en="8. Honest Limitations">${tr('8. ข้อจำกัดที่ต้องพูดตรง ๆ', '8. Honest Limitations')}</h2>
+      <h2 data-th="9. ข้อจำกัดที่ต้องพูดตรง ๆ" data-en="9. Honest Limitations">${tr('9. ข้อจำกัดที่ต้องพูดตรง ๆ', '9. Honest Limitations')}</h2>
       <ul class="rp-limitations">${list}</ul>
       <div class="rp-warning" data-th="ฟังประกาศทางการของ คพ. / กรมอุตุฯ / กรมควบคุมโรค เสมอ ระบบนี้จัดทำเพื่อจัดลำดับความสนใจ ไม่ใช่เพื่อออกประกาศเตือนภัย" data-en="Always follow official PCD / TMD / DDC guidance. This system is for prioritisation, not for issuing alerts.">
         ⚠ ${tr('ฟังประกาศทางการของ คพ. / กรมอุตุฯ / กรมควบคุมโรค เสมอ — ระบบนี้จัดทำเพื่อจัดลำดับความสนใจ ไม่ใช่เพื่อออกประกาศเตือนภัย', 'Always follow official PCD / TMD / DDC guidance — this system is for prioritisation, not for issuing alerts.')}
       </div>
+    </section>`
+}
+
+function sectionResearchDirections() {
+  // Concrete, answerable research questions the long-term archive + the
+  // satellite AOD layer make possible. Each pairs a question with the
+  // exact data now on hand to answer it — this is the "so what can we
+  // actually DO with a year of data" section, aimed at researchers,
+  // journalists and provincial health officers, not just the curious.
+  const q = (th_q, en_q, th_how, en_how) => `
+    <li class="rp-rq">
+      <div class="rp-rq-q" data-th="${th_q}" data-en="${en_q}">${tr(th_q, en_q)}</div>
+      <div class="rp-rq-how" data-th="${th_how}" data-en="${en_how}">${tr(th_how, en_how)}</div>
+    </li>`
+  return `
+    <section class="rp-section rp-section-rq">
+      <h2 data-th="10. ทิศทางการวิจัย — สิ่งที่ข้อมูลชุดนี้ตอบได้" data-en="10. Research Directions — What This Data Can Answer">
+        ${tr('9. ทิศทางการวิจัย — สิ่งที่ข้อมูลชุดนี้ตอบได้', '9. Research Directions — What This Data Can Answer')}
+      </h2>
+      <p data-th="เมื่อคลังข้อมูลระยะยาวสะสมไปหลายฤดูกาล คำถามเชิงนโยบายที่ตอบไม่ได้ด้วยข้อมูลชั่วขณะจะเริ่มตอบได้ ต่อไปนี้คือคำถามที่มีข้อมูลพร้อมตอบอยู่แล้ว — แต่ละข้อระบุว่าใช้ตารางหรือชั้นข้อมูลใด" data-en="As the long-term archive accumulates across seasons, policy questions that a snapshot cannot answer become answerable. These are questions the data on hand can already address — each names the table or layer that answers it. This is an open invitation: the full dataset is downloadable (§12).">
+        ${tr(
+          'เมื่อคลังข้อมูลสะสมหลายฤดูกาล คำถามเชิงนโยบายจะเริ่มตอบได้ — ดาวน์โหลดชุดข้อมูลเต็มได้ในข้อ 12',
+          'As the archive accumulates across seasons, policy questions become answerable — the full dataset is downloadable (§12).'
+        )}
+      </p>
+      <ul class="rp-rq-list">
+        ${q(
+          'ฝนล้างฝุ่นได้จริงเท่าที่โมเดลบอกไหม?',
+          'Does rain actually clear the air by as much as the model predicts?',
+          'เชื่อมค่า PM2.5 รายชั่วโมงกับปริมาณฝนรายชั่วโมงในคลังข้อมูลเดียวกัน (ทั้งสองระบบอยู่ฐานเดียว) แล้วเทียบการลดลงที่วัดได้จริงกับสัมประสิทธิ์ wet-deposition ในข้อ 4',
+          'Join hourly PM2.5 to hourly rainfall in the shared archive (both systems, one database) and compare the measured drop against the wet-deposition coefficients in §4.',
+        )}
+        ${q(
+          'ฤดูเผาปีนี้แย่กว่าหรือดีกว่าปีที่แล้ว?',
+          'Is this burning season worse or better than last year?',
+          'เทียบค่าเฉลี่ยรายชั่วโมงรายจังหวัดในคลังข้อมูลข้ามปี พร้อมบริบท ENSO (ข้อ 6) เพื่อแยกผลของสภาพอากาศออกจากผลของการเผา',
+          'Compare per-province hourly means across years in the archive, with ENSO context (§6) to separate the weather signal from the burning signal.',
+        )}
+        ${q(
+          'หมอกควันข้ามแดนมาถึงก่อนสถานีภาคพื้นดินจับได้กี่ชั่วโมง?',
+          'How many hours ahead of the ground stations does transboundary smoke arrive?',
+          'ชั้นละอองลอยดาวเทียม (AOD) แสดงแนวควันที่ลอยเข้ามาเหนือลม เทียบเวลาที่ AOD สูงขึ้นกับเวลาที่ PM2.5 ปลายลมพุ่ง — วัด lead time จริงของแต่ละจังหวัดชายแดน',
+          'The satellite AOD layer shows a plume advecting in from upwind; compare when AOD rises against when downwind PM2.5 spikes to measure each border province\'s real lead time.',
+        )}
+        ${q(
+          'เซ็นเซอร์ตัวไหนเสียก่อนเมื่อเหตุการณ์ฝุ่นเริ่มก่อตัว?',
+          'Which sensors fail first as an episode builds?',
+          'ตาราง ingest_runs และ events ในคลังข้อมูลบันทึกความน่าเชื่อถือของทุกท่อและทุกสถานีย้อนหลัง — หาสถานีที่ค่าหายหรือค้างซ้ำ ๆ ก่อนช่วงฝุ่นหนัก เพื่อจัดลำดับการซ่อมบำรุงเชิงรุก',
+          'The archive\'s ingest_runs and events tables hold every pipeline\'s and station\'s reliability history — find monitors that repeatedly go silent or flatline just before heavy episodes, to prioritise preventive maintenance.',
+        )}
+        ${q(
+          'การยกระดับความเสี่ยงกระจุกตัวช่วงกลางคืน (ที่ไม่มีใครเฝ้า) หรือไม่?',
+          'Do risk escalations cluster at night, when nobody is watching?',
+          'ตาราง escalations (FloodDash) และ alerts ติดธงเหตุการณ์ช่วง 22:00–06:00 — วิเคราะห์ว่าช่วงเวลาใดต้องการการแจ้งเตือนอัตโนมัติมากที่สุด',
+          'The escalations (FloodDash) and alerts tables flag events in the 22:00–06:00 window — analyse which hours most need automated push, precisely because a human operator is least likely to catch them.',
+        )}
+      </ul>
     </section>`
 }
 
@@ -818,7 +891,7 @@ function sectionCitations() {
   const list = cites.map((c) => `<li>${c}</li>`).join('')
   return `
     <section class="rp-section">
-      <h2 data-th="9. อ้างอิงและเอกสารที่เกี่ยวข้อง" data-en="9. Citations & References">${tr('9. อ้างอิงและเอกสารที่เกี่ยวข้อง', '9. Citations & References')}</h2>
+      <h2 data-th="11. อ้างอิงและเอกสารที่เกี่ยวข้อง" data-en="11. Citations & References">${tr('11. อ้างอิงและเอกสารที่เกี่ยวข้อง', '11. Citations & References')}</h2>
       <ul class="rp-citations">${list}</ul>
     </section>`
 }
@@ -826,7 +899,7 @@ function sectionCitations() {
 function sectionDownload() {
   return `
     <section class="rp-section rp-download-section">
-      <h2 data-th="ดาวน์โหลดชุดข้อมูล" data-en="Download the Dataset">${tr('ดาวน์โหลดชุดข้อมูล', 'Download the Dataset')}</h2>
+      <h2 data-th="12. ดาวน์โหลดชุดข้อมูล" data-en="12. Download the Dataset">${tr('12. ดาวน์โหลดชุดข้อมูล', '12. Download the Dataset')}</h2>
       <p class="rp-lead" data-th="ข้อมูลทุกค่าที่ AirDash เก็บถาวร (hourly aggregates) พร้อมข้อมูล metadata ของสถานี สามารถดาวน์โหลดเป็น CSV เพื่อวิเคราะห์ต่อได้ทันที" data-en="Every permanent hourly aggregate AirDash has stored, with full station metadata, downloadable as CSV for offline analysis.">
         ${tr(
           'ข้อมูลทุกค่าที่ AirDash เก็บถาวร พร้อม metadata ของสถานี ดาวน์โหลดเป็น CSV ได้ทันที',
@@ -923,6 +996,7 @@ function paint() {
     sectionEnso(),
     sectionRetention(),
     sectionLimitations(),
+    sectionResearchDirections(),
     sectionCitations(),
     sectionDownload(),
     sectionFooter(),

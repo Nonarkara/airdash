@@ -1,14 +1,14 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.16'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.16'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.16'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.16'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles } from './layers/satellite.js?v=2.4.16'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.16'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.16'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.16'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.16'
+import { on, store } from './state.js?v=2.4.18'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.18'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.18'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.18'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles } from './layers/satellite.js?v=2.4.18'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.18'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.18'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.18'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.18'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
@@ -39,6 +39,7 @@ export function initMap() {
   layers.gsmap = satLayers.gsmap
   layers.himawari = satLayers.himawari
   layers.modis = satLayers.modis
+  layers.aod = satLayers.aod
 
   layers.risk = L.layerGroup([], { pane: 'data' })
   layers.air = L.layerGroup([], { pane: 'data' })
@@ -242,6 +243,7 @@ function addLegend() {
       <div class="lrow" style="margin-top:4px"><span class="lsw round" style="background:#0039A6;opacity:.5"></span>${tr('ฝนสะสม 24 ชม. (ช่วยล้างฝุ่น)', 'rain 24h (washout)')}</div>
       <div class="lrow"><span class="lsw round" style="background:#1565C0;opacity:.5"></span>${tr('GPM IMERG ฝนดาวเทียม', 'GPM IMERG satellite rain')}</div>
       <div class="lrow"><span class="lsw" style="background:#5C6BC0;opacity:.6"></span>${tr('Himawari-9 IR เมฆ', 'Himawari-9 IR clouds')}</div>
+      <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#f7f4b8,#f0a030,#c0341a,#6b1f10)"></span>${tr('หมอกควัน/ละอองลอย AOD (เหลือง→น้ำตาล = หนาแน่นขึ้น)', 'smoke/aerosol AOD (yellow→brown = thicker)')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
       <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ฮีทแมป PM2.5', 'PM2.5 HEAT MAP')}</div>

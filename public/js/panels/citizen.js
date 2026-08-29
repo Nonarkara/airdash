@@ -15,18 +15,18 @@
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.16'
-import { tr, BAND } from '../i18n.js?v=2.4.16'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.16'
-import { getJson } from '../cache.js?v=2.4.16'
-import { flyToProvince } from '../map.js?v=2.4.16'
-import { sharePlace, copyText } from '../share.js?v=2.4.16'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.16'
+import { on, store, emit } from '../state.js?v=2.4.18'
+import { tr, BAND } from '../i18n.js?v=2.4.18'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.18'
+import { getJson } from '../cache.js?v=2.4.18'
+import { flyToProvince } from '../map.js?v=2.4.18'
+import { sharePlace, copyText } from '../share.js?v=2.4.18'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.18'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare,
-} from './citizenLife.js?v=2.4.16'
+} from './citizenLife.js?v=2.4.18'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -83,7 +83,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.16').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.18').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -199,6 +199,7 @@ function renderEmpty() {
     el('p', { class: 'citizen-empty-sub' },
       tr('เพื่อดูสถานีวัดฝุ่นใกล้บ้าน + ระดับเสี่ยงเฉพาะพื้นที่',
          'See AQ stations near you + local risk level')),
+    renderQuickSelect(),
     renderPicker(),
     // On phones the header's #about-btn is hidden to save space. Surface
     // the link inside the citizen panel so the project info is still
@@ -212,6 +213,127 @@ function renderEmpty() {
     }, 'ⓘ ' + tr('เกี่ยวกับโครงการนี้', 'About this project')),
   )
   return [intro]
+}
+
+// Quick-select row for the empty state. Two affordances that close the
+// "how do I start" gap for first-time users:
+//   1. "Use my location" — geolocation picks the nearest province and
+//      flies the map there. Permission is requested on click, not on
+//      page load (the latter is intrusive).
+//   2. "Popular cities" — five tap-targets the user almost certainly
+//      recognises (กรุงเทพ, เชียงใหม่, etc.). One tap sets the
+//      province and flies the map.
+// Both hide themselves once a province is set (the empty state is gone).
+function renderQuickSelect() {
+  const POPULAR = [
+    { th: 'กรุงเทพมหานคร', en: 'Bangkok' },
+    { th: 'เชียงใหม่', en: 'Chiang Mai' },
+    { th: 'เชียงราย', en: 'Chiang Rai' },
+    { th: 'ขอนแก่น', en: 'Khon Kaen' },
+    { th: 'สงขลา', en: 'Songkhla' },
+  ]
+  const wrap = el('div', { class: 'citizen-quick' })
+
+  // 1. Geolocation button — primary action, full width, teal
+  const geoBtn = el('button', {
+    class: 'citizen-geo-btn', type: 'button',
+    onclick: useGeolocation,
+  },
+    el('span', { class: 'citizen-geo-ico' }, '📍'),
+    el('span', { class: 'citizen-geo-lbl' },
+      tr('ใช้ตำแหน่งของฉัน', 'Use my location')),
+    el('span', { class: 'citizen-geo-sub' },
+      tr('หาจังหวัดที่ใกล้ที่สุดอัตโนมัติ', 'auto-find nearest province')),
+  )
+  wrap.append(geoBtn)
+
+  // 2. Popular cities — secondary, row of compact chips
+  const popHead = el('div', { class: 'citizen-quick-head' },
+    tr('เมืองยอดนิยม', 'Popular'))
+  const popRow = el('div', { class: 'citizen-quick-row' })
+  for (const want of POPULAR) {
+    const p = PROVINCE_INDEX.find((x) =>
+      (x.th === want.th) || (x.en && x.en.toLowerCase() === want.en.toLowerCase()))
+    if (!p) continue
+    const band = p.band ?? 'normal'
+    const score = p.score ?? 0
+    popRow.append(el('button', {
+      class: `citizen-quick-pill b-${band}`, type: 'button',
+      title: `${score}/100`,
+      onclick: () => {
+        setMyProvince({ th: p.th, en: p.en, code: p.code, lat: p.lat, lng: p.lng, band, score })
+        if (p.lat != null && p.lng != null) flyToProvince(p)
+      },
+    },
+      el('span', { class: 'citizen-quick-pill-th' }, p.th),
+      el('span', { class: 'citizen-quick-pill-num' }, `${score}`),
+    ))
+  }
+  wrap.append(popHead, popRow)
+  return wrap
+}
+
+// Geolocation handler. Three states the button cycles through:
+//   idle  → "Use my location" (default)
+//   busy  → "กำลังค้นหา…" (during getCurrentPosition + reverse lookup)
+//   fail  → "ไม่สามารถระบุตำแหน่ง — เลือกจากรายการ" (denied / unavailable)
+function useGeolocation(ev) {
+  const btn = ev.currentTarget
+  if (!('geolocation' in navigator)) {
+    setGeoFail(btn, tr('เบราว์เซอร์ไม่รองรับ', 'browser unsupported'))
+    return
+  }
+  setGeoBusy(btn)
+  navigator.geolocation.getCurrentPosition(
+    (pos) => onGeoOk(pos, btn),
+    (err) => setGeoFail(btn, geoErrMsg(err)),
+    { timeout: 10_000, maximumAge: 60_000 },
+  )
+}
+
+function onGeoOk(pos, btn) {
+  const { latitude: lat, longitude: lng } = pos.coords
+  // Find nearest province from the static index. Haversine — accuracy
+  // within ~5 km is plenty for picking a province.
+  let best = null, bestD = Infinity
+  for (const p of PROVINCE_INDEX) {
+    if (p.lat == null || p.lng == null) continue
+    const d = haversineKm(lat, lng, p.lat, p.lng)
+    if (d < bestD) { bestD = d; best = p }
+  }
+  if (!best) { setGeoFail(btn, tr('ไม่พบจังหวัดใกล้เคียง', 'no province found')); return }
+  const band = best.band ?? 'normal'
+  const score = best.score ?? 0
+  setMyProvince({ th: best.th, en: best.en, code: best.code, lat, lng, band, score })
+  flyToProvince({ ...best, lat, lng })
+}
+
+function setGeoBusy(btn) {
+  btn.classList.add('busy'); btn.disabled = true
+  btn.querySelector('.citizen-geo-lbl').textContent = tr('กำลังค้นหา…', 'finding…')
+  btn.querySelector('.citizen-geo-sub').textContent = tr('กรุณาอนุญาตการเข้าถึงตำแหน่ง', 'please allow location access')
+}
+function setGeoFail(btn, msg) {
+  btn.classList.remove('busy'); btn.classList.add('fail'); btn.disabled = false
+  btn.querySelector('.citizen-geo-lbl').textContent = msg
+  btn.querySelector('.citizen-geo-sub').textContent = tr('แตะเพื่อลองอีกครั้ง', 'tap to retry')
+}
+
+function geoErrMsg(err) {
+  if (err?.code === 1) return tr('ปฏิเสธการเข้าถึงตำแหน่ง', 'location denied')
+  if (err?.code === 2) return tr('ไม่สามารถระบุตำแหน่ง', 'position unavailable')
+  if (err?.code === 3) return tr('หมดเวลา', 'timed out')
+  return tr('เกิดข้อผิดพลาด', 'failed')
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(a))
 }
 
 function renderForProvince(province) {

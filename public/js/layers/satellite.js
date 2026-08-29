@@ -63,6 +63,24 @@ export function createSatelliteLayers(map, pane) {
         crossOrigin: true,
       },
     ),
+    // Aerosol Optical Depth (MODIS combined value-added, Terra+Aqua,
+    // deep-blue + dark-target) — the smoke/haze plume view. This is the
+    // burning-season layer: AOD is column aerosol loading, so a swath of
+    // high AOD blowing in from upwind fires shows up here BEFORE the
+    // ground stations downwind register the PM2.5 spike. Native tiles are
+    // one calendar day behind (the retrieval is processed overnight), so
+    // it defaults to yesterday; today's tile is transparent until ~mid-day.
+    aod: L.tileLayer(
+      `${GIBS}/MODIS_Combined_Value_Added_AOD/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.7,
+        pane,
+        attribution: '© NASA GIBS · MODIS AOD (Terra+Aqua)',
+        crossOrigin: true,
+      },
+    ),
   }
 }
 
@@ -88,6 +106,7 @@ export const LAYER_GROUPS = [
     th: 'ดาวเทียม · เรดาร์',
     en: 'SATELLITE · RADAR',
     layers: [
+      { id: 'aod', th: 'หมอกควัน/ละอองลอย (AOD ดาวเทียม)', en: 'Smoke / aerosol (satellite AOD)', on: false, kind: 'sat' },
       { id: 'gsmap', th: 'GSMaP/GPM ฝนดาวเทียม', en: 'GSMaP/GPM rain', on: false, kind: 'sat' },
       { id: 'himawari', th: 'Himawari-9 เมฆ IR', en: 'Himawari-9 IR', on: false, kind: 'sat' },
       { id: 'modis', th: 'MODIS ภาพจริง', en: 'MODIS true colour', on: false, kind: 'sat' },
