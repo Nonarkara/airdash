@@ -1,10 +1,10 @@
 // Daily data archive — every day AirDash has collected, from
 // /api/export/days. Click a day to see its air-quality rollup (worst PM2.5
 // stations, series/alert counts) inline, or download the day as CSV/JSON.
-import { on, store } from '../state.js?v=2.4.18'
-import { tr } from '../i18n.js?v=2.4.18'
-import { fmtNum, el } from '../fmt.js?v=2.4.18'
-import { getJson } from '../cache.js?v=2.4.18'
+import { on, store } from '../state.js?v=2.4.17'
+import { tr } from '../i18n.js?v=2.4.17'
+import { fmtNum, el } from '../fmt.js?v=2.4.17'
+import { getJson } from '../cache.js?v=2.4.17'
 
 let days = null
 let openDay = null      // date string currently expanded
