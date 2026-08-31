@@ -521,7 +521,7 @@ is right, share it.
 
 ## 📜 License & Attribution
 
-© 2026 Dr Non Arkaraprasertkul. All rights reserved.
+Released under the [MIT License](LICENSE). Copyright © 2026 Dr Non Arkaraprasertkul.
 
 Data sourced from each respective Thai government agency and open provider
 (PCD, TMD, HII, NOAA, Copernicus/CAMS, Open-Meteo, RainViewer, NASA
