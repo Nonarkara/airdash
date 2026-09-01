@@ -3366,3 +3366,68 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
   outline-offset: 1px;
   border-radius: 3px;
 }
+
+/* ── User manual (About → คู่มือใช้งาน / MANUAL) ──────────────────────────
+   Ported from FloodDash 2026-09-01 together with panels/manual.js. The
+   hero/disclaimer rules come along because AirDash has .rp-section but
+   never had the research-progress hero these reuse. */
+.rp-progress-hero {
+  margin-bottom: 10px; padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(36,30,78,0.04), rgba(0,57,166,0.03));
+  border-radius: var(--r-lg); border: 1px solid var(--rule);
+}
+.rp-progress-eyebrow {
+  font-family: var(--font-num); font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--th-navy);
+  margin-bottom: 4px;
+}
+.rp-progress-title {
+  font-size: 19px; font-weight: 800; color: var(--ink); margin-bottom: 4px;
+  line-height: 1.15;
+}
+.rp-progress-intro {
+  font-size: 12px; line-height: 1.42; color: var(--ink-mid); max-width: 760px;
+}
+.rp-progress-disclaimer {
+  margin-top: 10px; padding: 8px 14px;
+  background: #FFF8E6; border: 1px solid #E8B33C;
+  border-radius: var(--r-md); color: #5D4A00;
+  font-size: 11px; line-height: 1.4;
+}
+.man-quick { background: var(--well); border-left: 4px solid var(--th-red, #A51931); }
+.man-quick-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.man-quick-list li {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin-bottom: 10px; font-size: 13.5px; line-height: 1.6;
+}
+.man-quick-n {
+  flex: 0 0 22px; height: 22px; border-radius: 50%;
+  background: var(--th-red, #A51931); color: #fff;
+  display: grid; place-items: center;
+  font-family: var(--font-num); font-size: 11px; font-weight: 700;
+}
+.man-zone h2 { display: flex; align-items: center; gap: 8px; }
+.man-zone-icon { font-size: 15px; }
+.man-where {
+  font-size: 11.5px; color: var(--ink-low); font-style: italic;
+  margin: -2px 0 12px;
+}
+.man-row {
+  display: grid; grid-template-columns: 116px 1fr; gap: 12px;
+  padding: 9px 0; border-top: 1px solid var(--rule);
+  align-items: start;
+}
+.man-row:first-of-type { border-top: none; }
+.man-key {
+  font-family: var(--font-num); font-size: 12px; font-weight: 700;
+  color: var(--th-navy); background: var(--well);
+  border: 1px solid var(--rule); border-radius: var(--r-sm);
+  padding: 4px 7px; text-align: center;
+  overflow-wrap: anywhere; line-height: 1.35;
+}
+.man-name { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+.man-what { font-size: 12.5px; line-height: 1.6; color: var(--ink-mid); }
+@media (max-width: 700px) {
+  .man-row { grid-template-columns: 1fr; gap: 4px; }
+  .man-key { justify-self: start; }
+}

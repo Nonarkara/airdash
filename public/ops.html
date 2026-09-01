@@ -15,10 +15,10 @@
 <meta name="twitter:description" content="Live PM2.5 conditions, local risk and rain-washout outlook across Thailand.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230E4A5E'/%3E%3Ccircle cx='11.5' cy='4.5' r='2.5' fill='%233A8A6E'/%3E%3Cpath d='M2 8h12M2 10.5h9M2 13h12' stroke='%23FFFFFF' stroke-width='1.4' stroke-linecap='round' opacity='0.9'/%3E%3Ccircle cx='13' cy='10.5' r='1' fill='%23C8453A'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/css/tokens.css?v=2.4.17">
-<link rel="stylesheet" href="/css/layout.css?v=2.4.17">
-<link rel="stylesheet" href="/css/components.css?v=2.4.17">
-<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.17">
+<link rel="stylesheet" href="/css/tokens.css?v=2.4.18">
+<link rel="stylesheet" href="/css/layout.css?v=2.4.18">
+<link rel="stylesheet" href="/css/components.css?v=2.4.18">
+<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.18">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
 <script type="application/ld+json">
@@ -128,17 +128,13 @@
          Thailand Office, Axiom+ReTL), standards (SLIC, RCAD). Hidden
          progressively on narrow viewports (see layout.css) — the boot
          screen and About panel keep the full credits everywhere. -->
-    <div class="header-partners" aria-label="Project partners">
-      <a href="https://depa.or.th" target="_blank" rel="noopener" title="สำนักงานส่งเสริมเศรษฐกิจดิจิทัล · Digital Economy Promotion Agency">
-        <img src="/img/depa-mark.png" alt="depa" class="header-partner-logo header-partner-depa" width="56" height="18">
-      </a>
-      <a href="https://smartcitythailand.or.th" target="_blank" rel="noopener" title="สำนักงานเมืองอัจฉริยะประเทศไทย · Smart City Thailand Office">
-        <img src="/img/smart-city-th-icon.png" alt="Smart City Thailand Office" class="header-partner-logo header-partner-sct" width="24" height="24">
-      </a>
-      <img src="/img/axiom-retl.png" alt="Axiom + ReTL — The Reason To Live Company" class="header-partner-logo header-partner-axiom-retl" width="68" height="36" title="Axiom + ReTL — The Reason To Live Company">
-      <img src="/img/slic.webp" alt="SLIC" class="header-partner-logo header-partner-slic" width="22" height="22" title="SLIC">
-      <img src="/img/rcad-mark.svg" alt="RCAD" class="header-partner-logo header-partner-rcad" width="90" height="24" title="RCAD — Research and Innovation Acceleration Agency for Competitiveness and Area Development">
-    </div>
+    <!-- .header-partners markup removed 2026-09-01, finishing the job its
+         own CSS comment already claimed ("removed entirely"). The rule
+         `.header-partners { display: none !important }` had been in place
+         for a while, but the markup stayed — so every single page load
+         still downloaded all five logos for a block no one could ever
+         see. Same fix FloodDash made on 2026-08-19. The full credits live
+         on the boot screen (.boot-sponsors) and in the About overlay. -->
     <!-- Data freshness pill — the honest "is this number current?" signal.
          Color-coded: green = <15 min, amber = 15–30 min, red = >30 min.
          Sits as a sibling of the brand block (NOT inside it) so it can
@@ -427,6 +423,10 @@
     </div>
     <div class="about-tabs">
       <button class="about-tab active" data-about-pane="about">เกี่ยวกับ<br><span class="en-lbl">ABOUT</span></button>
+      <!-- Manual: every control, what it does. Ported from FloodDash
+           2026-09-01 — same reasoning: a health decision should never
+           depend on guessing what a button means. -->
+      <button class="about-tab" data-about-pane="manual">คู่มือใช้งาน<br><span class="en-lbl">MANUAL</span></button>
       <button class="about-tab" data-about-pane="research">เอกสารวิจัย<br><span class="en-lbl">RESEARCH PAPER</span></button>
     </div>
     <button id="about-close">✕ <span class="lbl">ปิด</span></button>
@@ -772,6 +772,10 @@
     </div>
   </div>
 
+  <div class="about-body about-pane" data-about-pane="manual">
+    <div class="research-scroll" id="manual-content"></div>
+  </div>
+
   <div class="about-body about-pane" data-about-pane="research">
     <div class="research-scroll" id="research-content"></div>
   </div>
@@ -822,7 +826,7 @@
       .map((name) => caches.delete(name)))
     location.reload()
   } else {
-    await import('/js/main.js?v=2.4.17')
+    await import('/js/main.js?v=2.4.18')
   }
 </script>
 </body>

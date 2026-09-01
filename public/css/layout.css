@@ -8,7 +8,18 @@ html, body { overflow-x: hidden; }   /* phones: a few children can still overflo
 #app {
   display: grid;
   height: 100dvh;
-  grid-template-rows: var(--header-h) 1fr var(--ticker-h);
+  /* Header row is `auto`, NOT a locked var(--header-h) (2026-09-01, ported
+     from the FloodDash fix of the same day). --header-h only ever described
+     the header's ONE-LINE height. Locked to it, with header{overflow:hidden;
+     flex-wrap:nowrap}, anything that made the row need more space did not
+     wrap or spill — it was SILENTLY CLIPPED. Measured at 150% browser zoom:
+     the language toggle, compare, home, FloodDash link and About button all
+     ran off the right edge and became unreachable; at 200% the search box
+     went too. Elderly and low-vision users — exactly who a PM2.5 dashboard
+     is for — routinely browse at 150%+. With `auto` here plus flex-wrap on
+     the header, those controls wrap onto a second row and stay reachable.
+     header{min-height:var(--header-h)} keeps the normal case identical. */
+  grid-template-rows: auto 1fr var(--ticker-h);
   grid-template-columns: var(--rail-l) 1fr var(--rail-r);
   grid-template-areas:
     'header header header'
@@ -39,10 +50,24 @@ header {
   color: var(--ink);
   display: flex;
   align-items: stretch;
+  /* wrap + align-content:flex-start: when the row runs out of width the
+     overflowing controls move to a second line instead of being clipped
+     away by the overflow rule below. Pairs with #app's `auto` header row,
+     which lets that second line push the map down rather than cover it. */
+  flex-wrap: wrap;
+  align-content: flex-start;
   gap: 0;
   position: relative;
-  overflow: hidden;
+  /* visible, not hidden (2026-09-01). overflow:hidden was silently eating
+     every control that did not fit — and it also clips absolutely
+     positioned dropdowns anchored inside the header (search results, menus)
+     regardless of their z-index, which is the exact bug FloodDash hit and
+     fixed on 2026-08-18. z-index keeps the header above Leaflet's own
+     control panes (which default to 1000 in Leaflet's stylesheet). */
+  overflow: visible;
+  z-index: 1500;
   min-width: 0;
+  min-height: var(--header-h);
   border-bottom: 1px solid var(--rule);
 }
 

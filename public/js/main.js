@@ -1,31 +1,32 @@
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.4.17'
-import { paintChrome } from './i18n.js?v=2.4.17'
-import { startTap } from './sse.js?v=2.4.17'
-import { initMap, invalidateMap } from './map.js?v=2.4.17'
-import { initHeader } from './panels/header.js?v=2.4.17'
-import { initRanking } from './panels/ranking.js?v=2.4.17'
-import { initForecast } from './panels/forecast.js?v=2.4.17'
-import { initWhatIf } from './panels/whatif.js?v=2.4.17'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.4.17'
-import { initTap } from './panels/tap.js?v=2.4.17'
-import { initSources } from './panels/sources.js?v=2.4.17'
-import { initHistory } from './panels/history.js?v=2.4.17'
-import { initInsights } from './panels/insights.js?v=2.4.17'
-import { initAnalytics } from './panels/analytics.js?v=2.4.17'
-import { initFeeds } from './panels/feeds.js?v=2.4.17'
-import { initChat } from './panels/chat.js?v=2.4.17'
-import { initCitizen } from './panels/citizen.js?v=2.4.17'
-import { initWaterways } from './panels/waterways.js?v=2.4.17'
-import { initFocus } from './panels/focus.js?v=2.4.17'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.17'
-import { initSplit } from './panels/split.js?v=2.4.17'
-import { initLibrary } from './panels/library.js?v=2.4.17'
-import { initResearch } from './panels/research.js?v=2.4.17'
-import { initSearch } from './panels/search.js?v=2.4.17'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.17'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.4.17'
+import { on, emit, store, setLang } from './state.js?v=2.4.18'
+import { paintChrome } from './i18n.js?v=2.4.18'
+import { startTap } from './sse.js?v=2.4.18'
+import { initMap, invalidateMap } from './map.js?v=2.4.18'
+import { initHeader } from './panels/header.js?v=2.4.18'
+import { initRanking } from './panels/ranking.js?v=2.4.18'
+import { initForecast } from './panels/forecast.js?v=2.4.18'
+import { initWhatIf } from './panels/whatif.js?v=2.4.18'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.4.18'
+import { initTap } from './panels/tap.js?v=2.4.18'
+import { initSources } from './panels/sources.js?v=2.4.18'
+import { initHistory } from './panels/history.js?v=2.4.18'
+import { initInsights } from './panels/insights.js?v=2.4.18'
+import { initAnalytics } from './panels/analytics.js?v=2.4.18'
+import { initFeeds } from './panels/feeds.js?v=2.4.18'
+import { initChat } from './panels/chat.js?v=2.4.18'
+import { initCitizen } from './panels/citizen.js?v=2.4.18'
+import { initWaterways } from './panels/waterways.js?v=2.4.18'
+import { initFocus } from './panels/focus.js?v=2.4.18'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.18'
+import { initSplit } from './panels/split.js?v=2.4.18'
+import { initLibrary } from './panels/library.js?v=2.4.18'
+import { initResearch } from './panels/research.js?v=2.4.18'
+import { initManual } from './panels/manual.js?v=2.4.18'
+import { initSearch } from './panels/search.js?v=2.4.18'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.18'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.4.18'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -466,6 +467,7 @@ async function boot() {
   safeInit('split', () => initSplit(map))
   safeInit('library', initLibrary)
   safeInit('research', initResearch)
+  safeInit('manual', initManual)
   safeInit('search', initSearch)
   safeInit('tabs', initTabs)
   safeInit('dataFreshness', initDataFreshness)
