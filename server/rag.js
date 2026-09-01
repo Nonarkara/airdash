@@ -84,24 +84,81 @@ export function createRag({ db, riskEngine, washout, faq }) {
     return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1)
   }
 
+  // ── Lexical fallback retrieval ─────────────────────────────────────────
+  // Vector search needs (a) an embedding API key and (b) a completed
+  // embedding pass. When either is missing every stored note is invisible:
+  // the old code filtered on `embedding IS NOT NULL` and returned [] , so a
+  // corpus of real statistics sat in SQLite unreachable while the chat
+  // answered "I don't have that information". That is the wrong failure for
+  // a public-health tool — the numbers exist, they just weren't searchable.
+  //
+  // This scores documents on term overlap instead. It is plainly weaker than
+  // cosine similarity (no synonyms, no semantics), but it is honest, needs no
+  // API key, and keeps the corpus reachable when NIM is down or unfunded.
+  //
+  // Thai has no spaces between words, so a whitespace tokenizer alone would
+  // never match a Thai query. We therefore ALSO substring-match Thai runs of
+  // 2+ characters directly against the document text.
+  const STOP = new Set(['the', 'and', 'for', 'are', 'was', 'with', 'that', 'this',
+    'from', 'what', 'how', 'why', 'when', 'where', 'is', 'in', 'of', 'to', 'a', 'an',
+    'do', 'does', 'did', 'can', 'about', 'many', 'much', 'me', 'my', 'you'])
+
+  function lexicalScore(question, docs, topK) {
+    const q = question.toLowerCase()
+    // Latin word tokens (>=3 chars, not stopwords) + numbers.
+    const latin = (q.match(/[a-z0-9.]{3,}/g) ?? []).filter((t) => !STOP.has(t))
+    // Contiguous Thai runs — used as substrings, not word tokens.
+    const thai = (question.match(/[฀-๿]{2,}/g) ?? [])
+    if (!latin.length && !thai.length) return []
+
+    const scored = docs.map((d) => {
+      const hay = `${d.title ?? ''}\n${d.content ?? ''}`
+      const low = hay.toLowerCase()
+      let score = 0
+      for (const t of latin) {
+        // Count occurrences, with diminishing returns so one repeated word
+        // cannot dominate a document that matches many distinct terms.
+        const n = low.split(t).length - 1
+        if (n > 0) score += 1 + Math.log(n)
+      }
+      for (const t of thai) {
+        // Longer Thai substrings are far more specific ("จุดความร้อน" beats
+        // "ไฟ"), so weight by length.
+        const n = hay.split(t).length - 1
+        if (n > 0) score += (1 + Math.log(n)) * Math.min(3, t.length / 3)
+      }
+      // Title hits are strong signal — the H2 heading names the topic.
+      const titleLow = (d.title ?? '').toLowerCase()
+      for (const t of latin) if (titleLow.includes(t)) score += 2
+      for (const t of thai) if ((d.title ?? '').includes(t)) score += 2
+      return { ...d, score }
+    })
+    return scored.filter((d) => d.score > 0).sort((a, b) => b.score - a.score).slice(0, topK)
+  }
+
   // topK=5 now that the corpus includes the full Air Bible (~800 chunks).
   async function retrieveKnowledge(question, topK = 5) {
-    const docs = db.all('SELECT doc_key, title, content, embedding FROM rag_docs WHERE embedding IS NOT NULL')
-    if (docs.length === 0) return []
-    try {
-      const [qv] = await embed([`search_query: ${question}`])
-      return docs
-        .map((d) => {
-          const buf = d.embedding
-          const vec = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4)
-          return { ...d, score: cosine(qv, vec) }
-        })
-        .sort((a, b) => b.score - a.score)
-        .slice(0, topK)
-    } catch (err) {
-      log('error', 'knowledge retrieval failed', { error: String(err) })
-      return []
+    const embedded = db.all('SELECT doc_key, title, content, embedding FROM rag_docs WHERE embedding IS NOT NULL')
+    if (embedded.length > 0) {
+      try {
+        const [qv] = await embed([`search_query: ${question}`])
+        return embedded
+          .map((d) => {
+            const buf = d.embedding
+            const vec = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4)
+            return { ...d, score: cosine(qv, vec) }
+          })
+          .sort((a, b) => b.score - a.score)
+          .slice(0, topK)
+      } catch (err) {
+        // Embedding service died mid-flight — fall through to lexical
+        // rather than returning nothing.
+        log('warn', 'vector retrieval failed — falling back to lexical', { error: String(err?.message ?? err) })
+      }
     }
+    const all = db.all('SELECT doc_key, title, content FROM rag_docs')
+    if (all.length === 0) return []
+    return lexicalScore(question, all, topK)
   }
 
   // ── Deterministic FACTS from SQLite ────────────────────────────────────────
