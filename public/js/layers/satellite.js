@@ -35,6 +35,10 @@ function gibsLayer(layer, { date, maxNativeZoom, opacity = 0.82, pane }) {
 export function createSatelliteLayers(map, pane) {
   const today = bangkokDate(0)
   const yesterday = bangkokDate(1)
+  // Night-lights (VIIRS DNB) is a night-overpass product processed a day
+  // behind the AOD retrieval — yesterday's tile is still empty when the
+  // dashboard loads in the morning, so it reads two days back.
+  const twoDaysAgo = bangkokDate(2)
 
   return {
     // Himawari-9 band 13 clean IR — storm/cloud-top monitoring (JAXA/JMA via GIBS).
@@ -81,6 +85,30 @@ export function createSatelliteLayers(map, pane) {
         crossOrigin: true,
       },
     ),
+    // Night lights — VIIRS Day/Night Band at-sensor radiance. Two things
+    // make this meaningful for a dust dashboard, not just pretty:
+    //   1. ACTIVE NIGHT BURNING. Agricultural fires are frequently lit in
+    //      the evening precisely because it is cooler and less visible.
+    //      The DNB sees that heat/light directly, so a field being burned
+    //      overnight appears here while the daytime AOD retrieval has not
+    //      run yet and the ground stations only smell it hours later.
+    //   2. HAZE SCATTERING. On a thick-haze night the aerosol layer
+    //      scatters city light back to the sensor, so an urban area looks
+    //      diffuse and bloomed rather than sharply pin-pointed — a visual
+    //      cross-check on the AOD panel above it.
+    // Caveat worth remembering when reading it: moonlight also brightens
+    // the scene, so compare like-for-like across the lunar cycle.
+    nightlights: L.tileLayer(
+      `${GIBS}/VIIRS_SNPP_DayNightBand_At_Sensor_Radiance/default/${twoDaysAgo}/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 8,
+        maxZoom: 19,
+        opacity: 0.75,
+        pane,
+        attribution: '© NASA GIBS · VIIRS Day/Night Band',
+        crossOrigin: true,
+      },
+    ),
   }
 }
 
@@ -107,6 +135,7 @@ export const LAYER_GROUPS = [
     en: 'SATELLITE · RADAR',
     layers: [
       { id: 'aod', th: 'หมอกควัน/ละอองลอย (AOD ดาวเทียม)', en: 'Smoke / aerosol (satellite AOD)', on: false, kind: 'sat' },
+      { id: 'nightlights', th: 'แสงไฟกลางคืน (เผากลางคืน/ฟุ้งกระจาย)', en: 'Night lights (night burning / haze glow)', on: false, kind: 'sat' },
       { id: 'gsmap', th: 'GSMaP/GPM ฝนดาวเทียม', en: 'GSMaP/GPM rain', on: false, kind: 'sat' },
       { id: 'himawari', th: 'Himawari-9 เมฆ IR', en: 'Himawari-9 IR', on: false, kind: 'sat' },
       { id: 'modis', th: 'MODIS ภาพจริง', en: 'MODIS true colour', on: false, kind: 'sat' },
