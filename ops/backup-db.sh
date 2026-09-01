@@ -82,15 +82,21 @@ else
 fi
 log "  mode: $MODE"
 
-# Refuse to run the DB copy if the destination can't hold it (+20% headroom
-# so the .backup API's temporary pages don't run us out mid-write). On
-# the local disk we additionally require 3 GB of headroom for the gzip
-# step (a .db.gz is ~13% of the source so 2.8 GB → ~370 MB, but the temp
-# file is uncompressed, so we need 2.8 GB of room for it).
+# Refuse to run the DB copy if the destination can't hold it.
+#
+# These multipliers were sized for `.backup`, which writes a byte-for-byte
+# copy. VACUUM INTO compacts instead — measured 3147 MB -> 2611 MB (0.83x)
+# — and needs no separate temp file. The old internal figure of 2.2x
+# assumed a full-size copy PLUS a full-size uncompressed gzip temp, and
+# that over-estimate is not theoretical: on 2026-09-01 it refused to run
+# ("only 3048MB free ... need 6817MB") on a disk that had ample room for
+# the ~2.6 GB VACUUM output, so the night's backup silently did not happen.
+# Demanding phantom space is its own outage. 1.0x source for the snapshot
+# plus 0.3x headroom covers the gzip (~0.15x) with margin.
 DB_MB=$(( $(stat -f %z "$DB") / 1048576 ))
 case "$MODE" in
-  offdevice) DEST_DIR="$OFFDEVICE_DIR" ; RETAIN="$OFFDEVICE_RETAIN" ; NEEDED_MB=$(( DB_MB * 12 / 10 )) ;;
-  internal)  DEST_DIR="$LOCAL_DIR"      ; RETAIN="$LOCAL_RETAIN"  ; NEEDED_MB=$(( DB_MB * 22 / 10 )) ;;
+  offdevice) DEST_DIR="$OFFDEVICE_DIR" ; RETAIN="$OFFDEVICE_RETAIN" ; NEEDED_MB=$(( DB_MB * 11 / 10 )) ;;
+  internal)  DEST_DIR="$LOCAL_DIR"      ; RETAIN="$LOCAL_RETAIN"  ; NEEDED_MB=$(( DB_MB * 13 / 10 )) ;;
 esac
 FREE_MB=$(df -m "$DEST_DIR" 2>/dev/null | awk 'NR==2 {print $4}')
 if [ "${FREE_MB:-0}" -lt "$NEEDED_MB" ]; then
@@ -101,10 +107,52 @@ fi
 STAMP="$(date '+%Y%m%d-%H%M')"
 DEST="$DEST_DIR/airdash-$STAMP.db"
 
-# Online backup (WAL-safe). sqlite3 .backup copies via the backup API,
-# so a live writer does not corrupt the snapshot.
-if ! sqlite3 "$DB" ".backup '$DEST'" 2>>"$LOG"; then
-  log "FATAL: sqlite3 .backup failed — snapshot may be partial: $DEST"
+# Online snapshot via VACUUM INTO — NOT .backup.
+#
+# `.backup` uses the SQLite backup API, which RESTARTS THE ENTIRE COPY
+# whenever the source database is written during the run. AirDash's
+# ingest loop writes every ~60s, and this database is now 3.1 GB, so a
+# single pass takes far longer than the gap between writes: the copy
+# restarts forever and never completes. Observed 2026-09-01: a .backup
+# ran 2h05m, sat at 2425 MB of 3147 MB, and moved zero bytes in 20s
+# while holding a read lock that stalled /api/health into timeouts.
+# Silent, unbounded, and it starves the thing it is meant to protect.
+#
+# VACUUM INTO takes ONE read transaction and does ONE pass — no restart
+# semantics. In WAL mode writers keep appending, so ingest is not
+# blocked. Measured on this same live database: 495s, and the output is
+# compacted (3147 MB -> 2611 MB, ~17% smaller) because VACUUM rebuilds
+# without free-page fragmentation. Requires SQLite >= 3.27 (2019).
+#
+# VACUUM INTO refuses to write to a path that already exists, which is
+# the behaviour we want (never silently overwrite a good snapshot) — so
+# clear only our own just-stamped target, and only if a previous crashed
+# run left one behind.
+rm -f "$DEST" "$DEST"-wal "$DEST"-shm "$DEST"-journal
+
+# Hard ceiling. Even with the restart bug gone, a failing disk or a
+# yanked USB cable must not leave a backup process pinning a read lock
+# on the live database indefinitely. 3x the measured 495s.
+BACKUP_TIMEOUT=1800
+if command -v timeout >/dev/null 2>&1; then TIMEOUT_BIN=timeout
+elif command -v gtimeout >/dev/null 2>&1; then TIMEOUT_BIN=gtimeout
+else TIMEOUT_BIN=""; fi
+
+if [ -n "$TIMEOUT_BIN" ]; then
+  "$TIMEOUT_BIN" "$BACKUP_TIMEOUT" sqlite3 "$DB" "VACUUM INTO '$DEST';" 2>>"$LOG"
+  RC=$?
+else
+  sqlite3 "$DB" "VACUUM INTO '$DEST';" 2>>"$LOG"
+  RC=$?
+fi
+
+if [ "$RC" -eq 124 ]; then
+  log "FATAL: snapshot exceeded ${BACKUP_TIMEOUT}s and was killed — check disk health at $DEST_DIR"
+  rm -f "$DEST"
+  exit 1
+elif [ "$RC" -ne 0 ]; then
+  log "FATAL: VACUUM INTO failed (rc=$RC) — removing partial snapshot: $DEST"
+  rm -f "$DEST"
   exit 1
 fi
 
@@ -129,7 +177,25 @@ rm -f "$DEST"-wal "$DEST"-shm
 # and vice versa).
 ls -1t "$DEST_DIR"/airdash-[0-9]*-[0-9]*.db 2>/dev/null | tail -n +"$((RETAIN + 1))" | while IFS= read -r old; do
   log "retention: deleting old snapshot $old"
-  rm -f "$old" "$old"-wal "$old"-shm
+  rm -f "$old" "$old"-wal "$old"-shm "$old"-journal
+done
+
+# Sweep orphaned sidecars: a crashed or timed-out run leaves a -journal
+# / -wal / -shm behind with no .db next to it, and the retention loop
+# above only ever sees real snapshots — so they accumulated untouched
+# (the off-device directory still held -journal files from 2026-08-21
+# and 2026-08-25). Harmless individually, but they are the visible
+# fingerprint of a failed run, and leaving them makes a real corruption
+# event impossible to spot by eye.
+for side in "$DEST_DIR"/airdash-[0-9]*-[0-9]*.db-journal \
+            "$DEST_DIR"/airdash-[0-9]*-[0-9]*.db-wal \
+            "$DEST_DIR"/airdash-[0-9]*-[0-9]*.db-shm; do
+  [ -e "$side" ] || continue
+  base="${side%-journal}"; base="${base%-wal}"; base="${base%-shm}"
+  if [ ! -f "$base" ]; then
+    log "retention: removing orphaned sidecar $side"
+    rm -f "$side"
+  fi
 done
 
 # Compressed "latest" copy for a future offsite sync — written to a temp
