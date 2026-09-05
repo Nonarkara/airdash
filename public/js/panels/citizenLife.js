@@ -314,7 +314,8 @@ const STAGE_LABEL = {
 export function renderActionTimeline(band) {
   const plan = TIMELINE[band] ?? TIMELINE.normal
   const head = el('div', { class: 'citizen-section-head' },
-    el('span', {}, tr('⏱ ทำอะไรตอนนี้', '⏱ what to do right now')))
+    el('span', { 'aria-hidden': 'true' }, '⏱ '),
+    tr('ทำอะไรตอนนี้', 'what to do right now'))
   const grid = el('div', { class: 'citizen-timeline' })
   for (const stage of ['now', 'hour', 'today', 'week']) {
     grid.append(el('div', { class: `citizen-timeline-stage stage-${stage}` },
@@ -340,7 +341,8 @@ export function renderActionTimeline(band) {
 // with a 1cm gap around the nose is a 50% mask, not a 95% one.
 export function renderMaskGuide() {
   const head = el('div', { class: 'citizen-section-head' },
-    el('span', {}, tr('😷 หน้ากากแบบไหนป้องกันฝุ่นได้?', '😷 Which mask actually protects you?')))
+    el('span', { 'aria-hidden': 'true' }, '😷 '),
+    tr('หน้ากากแบบไหนป้องกันฝุ่นได้?', 'Which mask actually protects you?'))
   const grid = el('div', { class: 'citizen-mask-grid' },
     // N95 — the only one that works
     maskCard({
@@ -710,7 +712,8 @@ export async function renderTomorrowOutlook(province) {
   const prepItems = prepForBand(band24)
   const out = el('div', { class: 'citizen-tomorrow-wrap' },
     el('div', { class: 'citizen-section-head' },
-      el('span', {}, tr('⚠️ พรุ่งนี้อากาศจะแย่ลง', '⚠️ tomorrow the air will be worse'))),
+      el('span', { 'aria-hidden': 'true' }, '⚠️ '),
+      tr('พรุ่งนี้อากาศจะแย่ลง', 'tomorrow the air will be worse')),
     el('div', { class: 'citizen-tomorrow-band' },
       el('span', { class: 'citizen-tomorrow-band-arrow' }, '→'),
       el('span', { class: `citizen-tomorrow-band-tag b-${bandToday}` }, tr(BAND_TH[bandToday], BAND_EN[bandToday])),

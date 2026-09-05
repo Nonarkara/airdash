@@ -210,7 +210,7 @@ function renderEmpty() {
         e.preventDefault()
         document.getElementById('about-btn')?.click()
       },
-    }, 'ⓘ ' + tr('เกี่ยวกับโครงการนี้', 'About this project')),
+    }, el('span', { 'aria-hidden': 'true' }, 'ⓘ '), tr('เกี่ยวกับโครงการนี้', 'About this project')),
   )
   return [intro]
 }
@@ -239,7 +239,7 @@ function renderQuickSelect() {
     class: 'citizen-geo-btn', type: 'button',
     onclick: useGeolocation,
   },
-    el('span', { class: 'citizen-geo-ico' }, '📍'),
+    el('span', { class: 'citizen-geo-ico', 'aria-hidden': 'true' }, '📍'),
     el('span', { class: 'citizen-geo-lbl' },
       tr('ใช้ตำแหน่งของฉัน', 'Use my location')),
     el('span', { class: 'citizen-geo-sub' },
@@ -348,7 +348,7 @@ function renderForProvince(province) {
 
   const head = el('div', { class: 'citizen-head' },
     el('div', { class: 'citizen-pin' },
-      el('span', { class: 'citizen-pin-icon' }, '📍'),
+      el('span', { class: 'citizen-pin-icon', 'aria-hidden': 'true' }, '📍'),
       el('div', { class: 'citizen-pin-text' },
         el('div', { class: 'citizen-province-th' }, tr(province.th, province.en)),
         el('div', { class: 'citizen-province-en' }, tr(province.en, province.th)),
@@ -386,7 +386,8 @@ function renderForProvince(province) {
   // reminder, not a crisis script.
   const useTimeline = band === 'elevated' || band === 'high' || band === 'watch'
   const adviceHead = el('div', { class: 'citizen-section-head' },
-    el('span', {}, tr('😷 คำแนะนำสุขภาพวันนี้', '😷 health advice today')))
+    el('span', { 'aria-hidden': 'true' }, '😷 '),
+    tr('คำแนะนำสุขภาพวันนี้', 'health advice today'))
   const advice = el('div', { class: 'citizen-advice' },
     ...(HEALTH_ADVICE[band] ?? HEALTH_ADVICE.normal).map((a) =>
       el('div', { class: 'citizen-advice-row' }, `· ${tr(a.th, a.en)}`)))
@@ -422,7 +423,8 @@ function renderForProvince(province) {
 
   // "What am I breathing" — three nearest AQ stations (loaded async below)
   const stationHead = el('div', { class: 'citizen-section-head' },
-    el('span', {}, tr('🌫 สถานีวัดฝุ่นใกล้คุณ', '🌫 AQ stations near you')))
+    el('span', { 'aria-hidden': 'true' }, '🌫 '),
+    tr('สถานีวัดฝุ่นใกล้คุณ', 'AQ stations near you'))
   // Show a "looking up..." placeholder so the section never looks broken.
   const stationList = el('div', { class: 'citizen-shelter-list' },
     el('div', { class: 'citizen-loading' },
@@ -527,7 +529,7 @@ function renderForProvince(province) {
         document.getElementById('about-btn')?.click()
       },
     },
-      el('div', { class: 'citizen-help-num' }, 'ⓘ'),
+      el('div', { class: 'citizen-help-num', 'aria-hidden': 'true' }, 'ⓘ'),
       el('div', { class: 'citizen-help-lbl' }, tr('เกี่ยวกับ', 'About'))),
   )
 

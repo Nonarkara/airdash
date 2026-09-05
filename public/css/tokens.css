@@ -107,6 +107,26 @@
    layer at the end of components.css). */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* UPM-skill foundation. These are the cross-cutting resets the design
+   guidance flags as P0: text-wrap balance prevents orphan last words in
+   headings (a recurring anti-pattern in narrow rails), text-size-adjust
+   blocks iOS Safari from auto-zooming inputs on focus, and font-synthesis
+   forbids fake bold/italic from web fonts the loader hasn't pulled yet.
+   `interpolate-size: allow-keywords` lets us animate to intrinsic sizes
+   (auto, min-content) in micro-interactions. */
+:root {
+  text-wrap: pretty;       /* paragraphs: avoid orphans, balance last lines */
+  text-size-adjust: 100%;  /* iOS Safari: no auto-zoom on input focus */
+  font-synthesis: none;    /* no fake bold/italic for missing glyphs */
+  -webkit-tap-highlight-color: transparent; /* remove iOS tap flash */
+  interpolate-size: allow-keywords;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  text-wrap: balance;      /* headings: distribute lines evenly */
+  letter-spacing: -0.01em; /* tighten — the UPM rule for confident copy */
+}
+
 html, body {
   height: 100%;
   overflow: hidden;               /* fixed viewport — the map owns the page */
@@ -115,6 +135,10 @@ html, body {
   font-family: var(--font-ui);
   font-size: 14px;
   line-height: 1.35;
+  /* Antialiasing: Apple's LCD sub-pixel hinting looks washed on dark
+     backgrounds; use grayscale on dark, subpixel on light. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .num, .mono {
@@ -190,6 +214,14 @@ button {
   font-size: 12px;
   padding: 3px 8px;
 }
+/* UPM rule: every clickable element must signal interactivity.
+   Some citizen cards render as <div role="button"> (NOT <button>),
+   and tap-row/citizen-shelter render as <a> with onclick — both need
+   the explicit pointer. The `cursor` here is the cheapest accessibility
+   upgrade we can make: it tells the user, before they tap, that
+   the element is interactive. */
+[role="button"], [role="tab"], [role="switch"], [onclick] { cursor: pointer; }
+[tabindex]:not([tabindex="-1"]) { cursor: pointer; }
 /* CONTRAST CONTRACT: these global state rules set background AND color as an
    inseparable pair. Any component override of its own buttons MUST override
    both — overriding only `background` leaves the cream text from here on a
@@ -223,6 +255,53 @@ a { color: var(--ink); }
     scroll-behavior: auto !important;
   }
   #ticker .track .crawl { padding-left: 12px; transform: none !important; }
+}
+
+/* ── HIGH-CONTRAST MODE (UPM accessibility) ───────────────────────────
+   For users with `prefers-contrast: more` (Windows High Contrast, iOS
+   Smart Invert, Android high-contrast text). AirDash is a safety app:
+   the same color band that means "watch" in standard mode MUST also
+   mean "watch" to a colorblind user or someone with low vision. The
+   fix: thicker borders (the visual band is the color, the border is
+   the signal), forced AA contrast pairs, and disabled tonal
+   backgrounds that hide the band. The mode also locks the AQI band
+   background-color on the .badge square (default: only the square is
+   colored, which becomes invisible in invert). */
+@media (prefers-contrast: more) {
+  :root {
+    --rule: #4A6273;        /* hairlines → mid-gray, not 0.5px from bg */
+    --ink-mid: #2A3D4A;     /* secondary text → higher contrast */
+    --ink-low: #4A6273;     /* tertiary text → readable, not decorative */
+  }
+  body { background: #FFFFFF; color: #0A2A38; }
+  /* The AQI band backgrounds (rgba 0.10-0.18) wash out in invert. Pin
+     them to the saturated band color + a 2px border so the signal
+     survives. */
+  .citizen-band,
+  .citizen-timeline-stage,
+  .citizen-tod-cell,
+  .citizen-tomorrow-wrap,
+  .citizen-mask-fit,
+  .citizen-persona-card,
+  .citizen-pet-wrap,
+  .citizen-migrant-row,
+  .citizen-quick-pill,
+  .citizen-pick-row,
+  .rank-national-card {
+    border: 2px solid currentColor !important;
+    border-left-width: 4px !important;
+  }
+  /* Force AA contrast on the soft eyebrow labels — they sit on light
+     surfaces in standard mode, but invert flips them. */
+  .eyebrow, .citizen-section-head { color: #2A3D4A !important; }
+  /* The geolocation button — primary CTA — needs its label visible even
+     when the system inverts. */
+  .citizen-geo-btn { background: #0A2A38 !important; }
+  .citizen-geo-btn .citizen-geo-sub { opacity: 1 !important; }
+  /* Buttons in dark-mode-inverted high contrast still need to be tappable. */
+  button:focus-visible, a:focus-visible, input:focus-visible {
+    outline-width: 4px !important;
+  }
 }
 
 /* ────────────────────────────────────────────────────────────────────────────

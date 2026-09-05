@@ -737,9 +737,20 @@
   border: 0; border-radius: 4px;
   font: inherit; cursor: pointer; text-align: left;
   margin-bottom: 8px;
-  transition: background 0.15s;
+  transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+  /* Subtle inner ring on hover — the "I'm being pressed" affordance
+     the UPM rule calls a "context-appropriate transition". */
 }
-.citizen-geo-btn:hover { background: #0a3a4a; }
+.citizen-geo-btn:hover {
+  background: #0a3a4a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(14, 74, 94, 0.25);
+}
+.citizen-geo-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(14, 74, 94, 0.2);
+}
 .citizen-geo-btn .citizen-geo-ico { font-size: 18px; line-height: 1; flex: none; }
 .citizen-geo-btn .citizen-geo-lbl { font-size: 12.5px; font-weight: 700; }
 .citizen-geo-btn .citizen-geo-sub {
@@ -770,9 +781,14 @@
   border-left: 3px solid var(--ink-low);
   border-radius: 3px; cursor: pointer;
   min-height: 32px;
-  transition: background 0.12s;
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
-.citizen-quick-pill:hover { background: #fff; }
+.citizen-quick-pill:hover {
+  background: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(14, 74, 94, 0.12);
+}
+.citizen-quick-pill:active { transform: translateY(0); box-shadow: none; }
 .citizen-quick-pill.b-normal   { border-left-color: #00933C; }
 .citizen-quick-pill.b-low      { border-left-color: #5BA8C7; }
 .citizen-quick-pill.b-watch    { border-left-color: #F0B400; }
@@ -830,7 +846,10 @@
   border-top: 1px solid var(--rule);
   background: var(--well);
   display: flex; align-items: center; gap: 6px;
+  /* First section head in a panel shouldn't carry a top border — it
+     already has the well context. */
 }
+.citizen-section-head:first-child { border-top: 0; }
 /* Sub-label inside a section head — small all-caps that follows the
    headline verb (e.g. "RISK · 4/100" next to the persona title). */
 .citizen-section-head .sub {
