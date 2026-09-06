@@ -16,6 +16,23 @@
 export const FEED_STALE_MIN = 90
 export const FEED_ALARM_MIN = 180
 
+// Natural cadence of each snapshot feed, in minutes (server/config.js
+// intervals). A feed is "blind" only relative to its OWN rhythm: the
+// 6-hourly Open-Meteo weather/forecast rows are on time at 5 h, while
+// hourly PM2.5 silent for 3 h is not. Without this, a flat bar re-trips
+// "stale" every ~1.5 h after each weather poll — a banner that cries wolf
+// on schedule teaches people to ignore it (FloodDash 2026-09-06, dams).
+export const FEED_CADENCE_MIN = {
+  aqi: 60, air: 60,        // air4thai, hourly
+  rain: 10,                // thaiwater_rain
+  weather: 360,            // openmeteo, 6-hourly
+  aqForecast: 360,         // openmeteo_aq (CAMS), 6-hourly
+}
+export function feedThresholds(feed) {
+  const c = FEED_CADENCE_MIN[feed] ?? 60
+  return { stale: Math.max(FEED_STALE_MIN, 2 * c + 30), alarm: Math.max(FEED_ALARM_MIN, 3 * c + 30) }
+}
+
 // Sources stamp obs_time as naive Bangkok-local "YYYY-MM-DDTHH:MM". A naive
 // ISO string parses as the BROWSER's local zone, which is only right for a
 // reader in Thailand. Pin it to +07:00 so the age is correct everywhere.
@@ -39,17 +56,30 @@ export function newestObservationAgeMin(items, now = Date.now()) {
   return Math.max(0, Math.round((now - newest) / 60_000))
 }
 
-/** Minutes since the newest reading across ALL feeds — the WORST feed wins.
- *  If any feed is blind, the system is degraded. null when nothing parses. */
-export function newestObservationAgeMinAll(snap, now = Date.now()) {
+/** The feed that most exceeds its OWN allowance, or null when all are within
+ *  cadence. `{ feed, ageMin, stale, alarm }`. */
+export function staleFeed(snap, now = Date.now()) {
   if (!snap || typeof snap !== 'object') return null
   let worst = null
-  for (const k of ['aqi', 'air', 'rain', 'weather']) {
-    const age = newestObservationAgeMin(snap[k], now)
-    if (age == null) continue
-    if (worst == null || age > worst) worst = age
+  for (const feed of Object.keys(FEED_CADENCE_MIN)) {
+    const ageMin = newestObservationAgeMin(snap[feed], now)
+    if (ageMin == null) continue
+    const { stale, alarm } = feedThresholds(feed)
+    const ratio = ageMin / stale
+    if (ratio < 1) continue
+    if (!worst || ratio > worst.ratio) worst = { feed, ageMin, stale, alarm, ratio }
   }
   return worst
+}
+
+/** Scalar for the pill: the age of the feed that is actually stale (worst by
+ *  ratio), else the primary PM2.5 age. Compared against feedBand(). */
+export function newestObservationAgeMinAll(snap, now = Date.now()) {
+  if (!snap || typeof snap !== 'object') return null
+  const s = staleFeed(snap, now)
+  if (s) return s.ageMin
+  return newestObservationAgeMin(snap.aqi, now) ?? newestObservationAgeMin(snap.air, now)
+    ?? newestObservationAgeMin(snap.rain, now) ?? null
 }
 
 /** 'ok' | 'warn' | 'stale' | 'unknown' — the single band definition. */
