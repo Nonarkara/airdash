@@ -2,7 +2,11 @@
 // current?" signal. Two questions, one element:
 //
 //   1. When was the live data last refreshed?
-//      Answer = max(source.lastOk) across all pipelines. Different sources
+//      Answer = the newest OBSERVATION across all feeds, worst feed wins —
+//      NOT max(source.lastOk). lastOk is when an ingest last succeeded,
+//      i.e. transport; it stays green while an upstream keeps answering
+//      with readings that have stopped advancing (2026-09-06, ported from
+//      FloodDash's 2026-09-05 blind-system postmortem). Different sources
 //      have different cadences (air4thai = 1h, openmeteo = 3h, thaiwater_rain
 //      = 10min), so the "freshest possible" answer is the most-recent
 //      successful ingest, not a single common timestamp.
@@ -21,17 +25,17 @@
 // shown time share a timezone.
 import { on, store } from './state.js?v=2.4.19'
 import { tr } from './i18n.js?v=2.4.19'
+import { newestObservationAgeMinAll, feedBand, FEED_STALE_MIN, FEED_ALARM_MIN } from './feedAge.js?v=2.4.19'
 
 const TICK_MS = 30_000  // re-evaluate freshness every 30s
 // Asia/Bangkok = UTC+7. We compute the local time string from the source
 // lastOk timestamp so the source clock and the shown clock share a
 // timezone, instead of mixing browser-local with server-UTC.
 const BKK_OFFSET_MIN = 7 * 60
-const AGE_OK_MAX_S = 15 * 60
-const AGE_WARN_MAX_S = 30 * 60
 
 let pillEl = null
-let lastSourceOk = null  // Date | null — most recent source.lastOk we've seen
+let lastSourceOk = null  // Date | null — newest OBSERVATION across feeds (name kept for the paint path)
+let lastAgeMin = null    // minutes, from feedAge.js — the one definition
 
 function pillNode() {
   return document.getElementById('data-freshness')
@@ -76,10 +80,21 @@ function ageText(ageSec, lang) {
 }
 
 function ageBand(ageSec) {
-  if (ageSec == null || !Number.isFinite(ageSec)) return 'unknown'
-  if (ageSec < AGE_OK_MAX_S) return 'ok'
-  if (ageSec < AGE_WARN_MAX_S) return 'warn'
-  return 'stale'
+  return feedBand(ageSec == null ? null : ageSec / 60)
+}
+
+// The ticker's LIVE label must tell the same truth as the pill. i18n.js
+// repaints it on language switch, so this runs after that handler (next
+// tick) and re-asserts the band.
+function paintTickerLive(band) {
+  const live = document.querySelector('#ticker .live')
+  if (!live) return
+  const label = band === 'stale' ? tr('ข้อมูลช้า', 'DELAYED')
+    : band === 'warn' ? tr('สด · เริ่มเก่า', 'LIVE · AGING')
+    : band === 'unknown' ? tr('รอข้อมูล', 'WAITING')
+    : tr('สด', 'LIVE')
+  live.innerHTML = `<span class="pip"></span> ${label}`
+  live.dataset.band = band
 }
 
 function paint() {
@@ -91,6 +106,7 @@ function paint() {
   // instead of a stale red dot, so the boot state doesn't look alarming.
   if (!lastSourceOk) {
     pillEl.className = 'data-freshness data-freshness--loading'
+    paintTickerLive('unknown')
     pillEl.setAttribute('aria-live', 'polite')
     pillEl.textContent = tr(
       '⏳ กำลังเชื่อมต่อข้อมูลสด…',
@@ -109,6 +125,7 @@ function paint() {
   const nowMs = Date.now()
   const ageSec = (nowMs - lastSourceOk.getTime()) / 1000
   const band = ageBand(ageSec)
+  paintTickerLive(band)
   const clock = bkkLocalTime(lastSourceOk)
   const date = bkkLocalDate(lastSourceOk)
   const age = ageText(ageSec, lang)
@@ -127,49 +144,44 @@ function paint() {
   // for officers auditing why a number is "stale" without having to
   // open the sources panel.
   const bandLabel = band === 'ok'
-    ? tr('สด (อายุ < 15 นาที)', 'live (< 15 min)')
+    ? tr(`สด (ค่าล่าสุดอายุ < ${FEED_STALE_MIN} นาที)`, `live (newest reading < ${FEED_STALE_MIN} min)`)
     : band === 'warn'
-      ? tr('เริ่มเก่า (15–30 นาที)', 'aging (15–30 min)')
-      : tr('เก่า (> 30 นาที)', 'stale (> 30 min)')
+      ? tr(`เริ่มเก่า (${FEED_STALE_MIN}–${FEED_ALARM_MIN} นาที)`, `aging (${FEED_STALE_MIN}–${FEED_ALARM_MIN} min)`)
+      : tr(`เก่า (> ${FEED_ALARM_MIN} นาที) — ค่าที่เห็นอาจไม่ใช่ปัจจุบัน`, `stale (> ${FEED_ALARM_MIN} min) — readings may not be current`)
   pillEl.title = lang === 'th'
     ? `อัปเดตล่าสุด: ${clock} น. (${date} เวลาไทย) — ${bandLabel}`
     : `last refresh: ${clock} BKK (${date}) — ${bandLabel}`
 }
 
-function captureFromSnapshot(snap) {
-  // Sources can be either an object (newer) or an array (older). The
-  // snapshot endpoint returns it as an object keyed by source name; each
-  // value has lastOk / lastRun / lastError. We pick the freshest lastOk
-  // across sources — that's the most-recent real data the system has.
+function captureFromSnapshot(snap, now = Date.now()) {
+  // Worst-feed newest observation (feedAge.js). Falls back to the old
+  // max(source.lastOk) ONLY when no feed carries a parseable obs_time, so
+  // the pill can never claim a staleness it cannot measure — nor a
+  // freshness it cannot either: that fallback is transport, and it is
+  // labelled as such in the title.
+  const ageMin = newestObservationAgeMinAll(snap, now)
+  if (ageMin != null) {
+    lastAgeMin = ageMin
+    lastSourceOk = new Date(now - ageMin * 60_000)
+    return
+  }
   const sources = snap?.sources
   if (!sources) return
   let best = null
-  if (Array.isArray(sources)) {
-    for (const s of sources) {
-      const t = s?.lastOk
-      if (!t) continue
-      const d = new Date(t)
-      if (!Number.isFinite(d.getTime())) continue
-      if (!best || d > best) best = d
-    }
-  } else if (typeof sources === 'object') {
-    for (const k of Object.keys(sources)) {
-      const s = sources[k]
-      const t = s?.lastOk
-      if (!t) continue
-      const d = new Date(t)
-      if (!Number.isFinite(d.getTime())) continue
-      if (!best || d > best) best = d
-    }
+  const list = Array.isArray(sources) ? sources : Object.values(sources)
+  for (const src of list) {
+    const d = new Date(src?.lastOk ?? '')
+    if (Number.isFinite(d.getTime()) && (!best || d > best)) best = d
   }
   lastSourceOk = best
+  lastAgeMin = best ? Math.round((now - best.getTime()) / 60_000) : null
 }
 
 export function initDataFreshness() {
   pillEl = pillNode()
   if (!pillEl) return
   on('snapshot', (snap) => { captureFromSnapshot(snap); paint() })
-  on('lang', paint)
+  on('lang', () => setTimeout(paint, 0))
   setInterval(paint, TICK_MS)
   paint()
 }

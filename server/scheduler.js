@@ -29,7 +29,9 @@ function isRateLimit(err) {
   // throws an Error whose message contains the URL; we look for
   // "429" anywhere in that string, plus the standard "Too Many
   // Requests" body phrase.
-  return /\b429\b/.test(s) || /Too Many Requests/i.test(s) || /rate.?limit/i.test(s)
+  // 'daily quota exhausted' is what util.js throws when the HOST is blocked
+  // (Open-Meteo reports a spent day as HTTP 200 + error body, never a 429).
+  return /\b429\b/.test(s) || /Too Many Requests/i.test(s) || /rate.?limit/i.test(s) || /daily quota exhausted/i.test(s)
 }
 
 export function createScheduler({ db, bus, alerts, sources }) {

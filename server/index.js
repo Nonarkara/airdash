@@ -1,7 +1,7 @@
 // AirDash — 24/7 air-quality monitoring for Thailand.
 // Single process: ingest scheduler + SQLite collection + HTTP/SSE dashboard + cloud-LLM chat.
 import { CONFIG } from './config.js'
-import { log } from './util.js'
+import { log, setQuotaStore } from './util.js'
 import { openDb } from './db.js'
 import { createBus } from './bus.js'
 import { createAlerts } from './alerts.js'
@@ -67,6 +67,14 @@ const scheduler = createScheduler({
 })
 
 const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, harm, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }))
+
+// Restore daily-quota blocks BEFORE sources start (ported from FloodDash):
+// held only in memory, the breaker resets on restart and a process killed
+// by a quota storm comes back and immediately re-creates it.
+setQuotaStore({
+  load: () => { try { return JSON.parse(db.kvGet('api_quota_blocks_v1') ?? 'null') } catch { return null } },
+  save: (m) => { try { db.kvSet('api_quota_blocks_v1', JSON.stringify(m)) } catch { /* best effort */ } },
+})
 
 scheduler.start()
 scheduleRetention(db)

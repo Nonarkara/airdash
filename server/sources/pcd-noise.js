@@ -108,6 +108,17 @@ export default {
     // Fetch all 27 stations in parallel — noisemonitor.net is a static
     // HTML page with no rate limit, so a single sweep takes ~3–5 s.
     const results = await Promise.all(STATIONS.map(async (s) => ({ s, series: await fetchOne(s.id) })))
+    // fetchOne() returns null on any failure, so a dead upstream used to
+    // reach the end of run() with added=0 and RETURN NORMALLY — the
+    // scheduler recorded success, /api/health showed failures:0 with a
+    // fresh lastOk, and nothing anywhere said the feed was gone. Same
+    // false-success class FloodDash found in gistda_extras (2026-09-01).
+    // Partial results are fine; total failure must throw so the watchdog
+    // can see it.
+    const failed = results.filter((r) => r.series === null).length
+    if (failed === STATIONS.length) {
+      throw new Error(`pcd_noise: all ${STATIONS.length} stations failed to fetch`)
+    }
     const fetched_at = new Date().toISOString()
     const now = fetched_at
     let added = 0
