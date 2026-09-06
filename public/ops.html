@@ -809,7 +809,7 @@
   // layers during the service-worker handover. The shell name must match
   // the new CACHE name in sw.js so the migration only runs when the SW
   // itself is upgrading.
-  const shell = 'airdash-v37'
+  const shell = 'airdash-v39'
   const migrated = `ad-shell-ready:${shell}`
   const registrations = 'serviceWorker' in navigator
     ? await navigator.serviceWorker.getRegistrations()
