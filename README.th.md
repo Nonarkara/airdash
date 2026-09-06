@@ -1,12 +1,15 @@
 <p align="center">
-  <img src="public/img/hero-1200.png" alt="DR NON'S AIRDASH — แดชบอร์ดคุณภาพอากาศประเทศไทย" width="100%">
+  <img src="docs/hero-banner.png" alt="ภาพประกอบ AirDash: ฝั่งหนึ่งเป็นเมืองไทยใต้หมอกควัน อีกฝั่งอากาศใสกับเกจ AQI/PM2.5 — เป็นภาพประกอบ ไม่ใช่ผลิตภัณฑ์ข้อมูล" width="100%">
 </p>
 
 # AIRDASH 3.0
 
 ## เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · Thailand Air Quality & Dust Watch
 
-> **ข้อมูลสดเรียลไทม์ ผลกระทบจริง อากาศดีขึ้น พรุ่งนี้ดีกว่า**
+**ระบบสาธารณะบนแมคเครื่องเดียว:** สองภาษาไทย/อังกฤษ ซื่อสัตย์เรื่องแหล่งข้อมูล
+ใช้ได้จริงในห้าวินาทีบนโทรศัพท์ แบนเนอร์มังงะด้านบนเป็นภาพประกอบ
+ไม่ใช่คำอ้างว่าซอฟต์แวร์เอาชนะหมอกควันได้
+
 > ระบบปฏิบัติการสำหรับการตัดสินใจเรื่องคุณภาพอากาศ — มีสองประตูหน้า
 > **Air Story** (`/`) คือหน้าแรกแบบเล่าเรื่องสองภาษาไล่ตามการเลื่อนจอ
 > สำหรับเด็กฉลาดและผู้ใหญ่ที่อยากรู้: วงกลม hero ที่หายใจตามสีของแถบ
@@ -14,8 +17,8 @@
 > และทุกสูตรมีใบเสร็จวิทยาศาสตร์กำกับ **Mission Control** (`/ops.html`)
 > คือแดชบอร์ดผู้ปฏิบัติการตัวเต็มที่ถูกเก็บไว้ครบถ้วน สำหรับนายกเทศมนตรี
 > เจ้าหน้าที่อำเภอ นักวิจัย นักข่าว และนักสืบเรื่องอากาศ
-> ทุกตัวเลขมาจากแหล่งข้อมูลภาครัฐไทยแบบเรียลไทม์ ทุกตัวเลขมี confidence interval
-> และสิ่งแรกที่ผู้ใช้เห็นคือการกระทำที่ควรทำ
+> ทุกตัวเลขมาจากแหล่งข้อมูลภาครัฐไทยและแหล่งวิทยาศาสตร์เปิดแบบเรียลไทม์
+> ทุกตัวเลขมี confidence interval และสิ่งแรกที่ผู้ใช้เห็นคือการกระทำที่ควรทำ
 
 <p align="center">
   <strong>🇹🇭 ใช้งานจริง:</strong> <a href="https://air.nonarkara.org">air.nonarkara.org</a> ·
@@ -31,8 +34,268 @@
   <img alt="77 จังหวัด" src="https://img.shields.io/badge/จังหวัด-77-3A8A6E?style=flat-square">
   <img alt="130,830 ค่าที่บันทึก" src="https://img.shields.io/badge/ค่าที่บันทึก-130,830-3A8A6E?style=flat-square">
   <img alt="$0/เดือน ค่า Cloud" src="https://img.shields.io/badge/ค่า_Cloud-$0%2Fเดือน-0E4A5E?style=flat-square">
-  <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-0E4A5E?style=flat-square">
+  <img alt="ลิขสิทธิ์ 2026" src="https://img.shields.io/badge/ลิขสิทธิ์-2026-0E4A5E?style=flat-square">
 </p>
+
+---
+
+## สารบัญ
+
+1. [นี่คืออะไร](#นี่คืออะไร)
+2. [ปรัชญา](#ปรัชญา)
+3. [การใช้ตามจริยธรรม](#การใช้ตามจริยธรรม)
+4. [ระบบทำงานอย่างไร](#ระบบทำงานอย่างไร)
+5. [เว็บสด](#เว็บสด)
+6. [วิธีรัน](#วิธีรัน)
+7. [ส่วนที่เหลือของระบบ](#ภารกิจ) (ภารกิจ พื้นผิว แหล่งข้อมูล คะแนน API)
+8. [สัญญาอนุญาต](#license)
+
+---
+
+## นี่คืออะไร
+
+AirDash คือ **ระบบเฝ้าระวัง PM2.5 / คุณภาพอากาศเพื่อสาธารณประโยชน์ของประเทศไทย**
+ไม่แทนที่กรมควบคุมมลพิษ (คพ.) Air4Thai กรมอุตุนิยมวิทยา หรือกรมอนามัย
+แต่นั่งบนตัวเลขที่หน่วยงานเหล่านั้นและแหล่งวิทยาศาสตร์เปิดเผยอยู่แล้ว
+แล้วพยายามตอบคำถามเชิงปฏิบัติข้อเดียว:
+
+> วันนี้ลูกออกไปเล่นข้างนอกได้ไหม — ถ้าไม่ได้ ต้องทำอะไรในห้านาทีข้างหน้า?
+
+เป็นพี่น้องของ [FloodDash](https://flood.nonarkara.org): แมคเครื่องเดียว
+SQLite สองภาษา ค่าคลาวด์ $0 น้ำท่วมมาเป็น “เหตุการณ์” อากาศแย่มาเป็น
+**ฤดูกาล** (ประมาณ 1 ธันวาคม – 30 เมษายน) ส่วนที่เพิ่มเป็นลายเซ็นของอากาศคือ
+**Rain-Washout** — ฝนคือการบรรเทาตามธรรมชาติที่เร็วที่สุดของฝุ่น
+จึงถือว่าพยากรณ์ฝนเป็นการพยากรณ์ *การบรรเทา* ด้วย และติดป้ายว่าเป็น heuristic
+ไม่ใช่คำสัญญา
+
+สองพื้นผิว เครื่องยนต์เดียว:
+
+| พื้นผิว | URL | สำหรับใคร |
+|---------|-----|-----------|
+| **Air Story** | [`/`](https://air.nonarkara.org/) | ครอบครัว นักเรียน คนที่ต้องการคำกริยาก่อนกราฟ |
+| **Mission Control** | [`/ops.html`](https://air.nonarkara.org/ops.html) | นายกเทศมนตรี เจ้าหน้าที่อำเภอ นักวิจัย นักข่าว |
+
+ไม่มีล็อกอิน ไม่มีโฆษณา ไม่ขายข้อมูล หน้า boot บอกว่าใครอยู่เบื้องหลัง
+และสถานี/API ไหนเป็นที่มาของตัวเลข
+
+---
+
+## ปรัชญา
+
+สี่หลัก ที่ตั้งใจไว้:
+
+**ระบบสาธารณะบนแมคเครื่องเดียว.** แบ็กเอนด์สดอยู่บนแมคที่มีอยู่แล้ว:
+Node.js ไฟล์ SQLite ไฟล์เดียว บริการ launchd สามตัว (เซิร์ฟเวอร์, Cloudflare
+Tunnel, watchdog) Cloudflare Pages เป็นแค่เปลือกสแตติกกับพร็อกซี `/api/*`
+ให้เป็น same-origin ไม่มีฐานข้อมูลจัดการ ไม่มี Docker ไม่มีบิลคลาวด์ของเครื่องยนต์
+สำนักงานจังหวัดควร fork จากรีโปนี้แล้วรันบนแล็ปท็อปได้
+
+**สองภาษาไทย/อังกฤษ.** ไทยเป็นภาษาหลัก อังกฤษสะท้อน 1:1 ทุกสตริงที่ผู้ใช้เห็น
+ทุกข้อผิดพลาด ทุกบันทึกระเบียบวิธี ควรมีทั้งสองภาษา ดู
+[README.md](README.md) และ [SYSTEM.th.md](SYSTEM.th.md)
+
+**แหล่งข้อมูลที่ซื่อสัตย์.** ทุกตัวเลขบนจอตามไปถึงหน่วยงานหรือฟีดเปิดที่มีชื่อ
+ค่าที่หมดอายุถูกทิ้ง ไม่ถูกนำมาใช้ซ้ำ คะแนนมี confidence interval
+heuristic (คะแนนเฝ้าระวัง, washout, บุหรี่เทียบเท่า) ติดป้ายว่า heuristic
+ข้อมูลจำลองคือบั๊ก
+
+**ใช้ได้จริง ไม่ใช่ละคร.** แบนเนอร์เป็นภาพประกอบสาธารณะ สีแดงอิฐโผล่เฉพาะเมื่อ
+อากาศอันตรายจริง ๆ หน้าเว็บนำด้วย **คำกริยา** แบบ JMA (อากาศดี / GOOD AIR …
+ป้องกันทันที / PROTECT NOW) ไม่ใช่ความสวยของแดชบอร์ด ถ้าแผงไหนไม่ได้ช่วยให้
+ตัดสินใจ ก็ไม่สมควรอยู่
+
+วิทยานิพนธ์การทำงาน:
+
+> ข้อมูลไม่ใช่การตัดสินใจ ตัวเลขบนหน้าจอไม่ใช่การกระทำ AirDash
+> มีอยู่เพื่อปิดช่องว่างระหว่าง “เรารู้ว่าอากาศแย่” กับ “เรารู้ว่าควรทำอย่างไร”
+
+เจตนายาว: [`knowledge/project-vision.md`](knowledge/project-vision.md)
+
+---
+
+## การใช้ตามจริยธรรม
+
+นี่คือ **เครื่องมือช่วยตัดสินใจด้านสาธารณสุข** ไม่ใช่หน่วยงานออกประกาศเตือน
+และไม่ใช่คำทดแทนคำแนะนำทางการแพทย์หรือประกาศราชการ
+
+**อย่าสร้าง AQI ขึ้นมาเอง.** ดัชนีคุณภาพอากาศของไทยและจุดแบ่ง PM2.5 ปี 2023
+(15 / 25 / 37.5 / 75 µg/m³) เป็นของ คพ. AirDash **แสดง** AQI ของสถานีตามที่
+Air4Thai เผยแพร่ **คะแนนเฝ้าระวังอากาศ** (0–100) เป็น heuristic แยกต่างหาก —
+ถ่วงน้ำหนัก PM2.5 มลพิษอื่น แนวโน้ม 6 ชม. พยากรณ์ CAMS และตัวแทนการระบายอากาศ
+ทั้ง UI และแชทบอกเช่นนี้ อย่านำคะแนนเฝ้าระวังไปเรียกว่า “AQI”
+อย่าปัดสถานีที่หายไปให้เป็นดัชนีปลอม และอย่าประมาณจังหวัดที่ไม่มีค่าสดให้ดูมั่นใจ
+
+**ให้เครดิตสถานีและ API.** ความจริงภาคพื้นคือคนกับเครื่องมือ: สถานี Air4Thai
+สถานีฝน สสน. เครื่องวัดเสียง คพ. ฟิวชัน GISTDA CAMS / Open-Meteo NOAA CPC
+NASA IMERG / GIBS RainViewer JAXA ระบุชื่อ ใส่ลิงก์ แท็บข้อมูลในแอปและ
+`GET /api/sources` คือแค็ตตาล็อก ถ้าฟีดล่ม ให้บอกว่าล่ม
+
+**มาตรการสุขภาพเป็นตามเงื่อนไข.** AirDash **ไม่** ออกคำสั่งด้านสุขภาพจากคะแนน
+heuristic เช็กลิสต์ (N95 ปิดหน้าต่าง ห้องปลอดฝุ่น กลุ่มเสี่ยง) ผูกกับประกาศ
+คพ. / กรมอนามัย ให้ตามนั้นก่อน
+
+**สายด่วน ไม่ใช่คำโฆษณา.**
+
+* มลพิษ คพ. — **1650** · [pcd.go.th](https://www.pcd.go.th)
+* สุขภาพ กรมควบคุมโรค — **1422**
+* ฉุกเฉินการแพทย์ — **1669**
+* AQI ทางการ — [air4thai.pcd.go.th](https://air4thai.pcd.go.th)
+
+ถ้าแดชบอร์ดขัดกับช่องทางราชการ ให้ตามช่องทางราชการ
+
+**ไม่มีความลับใน git.** โทเคน LINE / Telegram / NVIDIA NIM / NASA Earthdata
+(ถ้ามี) อยู่ในตาราง `kv` ของ SQLite ผ่าน `scripts/set-*-token.mjs`
+ไม่เคยคอมมิต ท่อข้อมูลหลักไม่ต้องใช้คีย์ จึง fork แล้วรันได้โดยไม่มีโทเคน
+
+---
+
+## ระบบทำงานอย่างไร
+
+ฟีดสาธารณะลงบน **แมคเครื่องเดียว** แมคเก็บค่าใน SQLite คำนวณเฝ้าระวัง /
+อันตราย / washout / วิทยาศาสตร์ แล้วเสิร์ฟ JSON + SSE Cloudflare Pages
+เสิร์ฟ HTML/JS; Pages Function พร็อกซี `/api/*` ไปยัง named tunnel
+(`api-air.nonarkara.org`) ให้เบราว์เซอร์อยู่ same-origin
+
+```mermaid
+flowchart LR
+  subgraph sources["สถานีและ API สาธารณะ"]
+    PCD["คพ. Air4Thai · AQI / PM"]
+    HII["สสน. · สถานีฝน"]
+    OM["Open-Meteo + CAMS"]
+    OTHER["GISTDA · NOAA · NASA · ข่าว"]
+  end
+
+  subgraph mac["แมคเครื่องเดียว · Node + SQLite"]
+    IN["อะแดปเตอร์ตามจังหวะเวลา"]
+    DB[("data/airdash.db")]
+    ENG["เฝ้าระวัง · อันตราย · Washout · วิทยาศาสตร์"]
+    API["HTTP :8341 · /api/*"]
+  end
+
+  subgraph edge["Cloudflare · $0"]
+    TUN["Tunnel api-air.nonarkara.org"]
+    PG["Pages air.nonarkara.org"]
+  end
+
+  subgraph people["โทรศัพท์ / แล็ปท็อป"]
+    STORY["Air Story /"]
+    OPS["Mission Control /ops.html"]
+  end
+
+  sources --> IN --> DB --> ENG --> API
+  API --> TUN
+  PG --> people
+  TUN --> STORY
+  TUN --> OPS
+```
+
+โทโพโลยีเต็ม สูตรคะแนน และแผนภาพ:
+[ARCHITECTURE.md](ARCHITECTURE.md) · [SYSTEM.th.md](SYSTEM.th.md) ·
+[`docs/diagrams/`](docs/diagrams/)
+
+---
+
+## เว็บสด
+
+URL ผลิตในรีโปนี้คือ **[https://air.nonarkara.org](https://air.nonarkara.org)**
+(canonical ใน `public/index.html` โดเมนกำหนดเองของ Cloudflare Pages ใน
+[DEPLOY.md](DEPLOY.md) โฮสต์ทันเนล `api-air.nonarkara.org` ใน
+`functions/api/[[path]].js`)
+
+ระบบพี่น้อง: [flood.nonarkara.org](https://flood.nonarkara.org)
+
+---
+
+## วิธีรัน
+
+คำสั่งด้านล่างถอดจาก `package.json`, `setup.sh`,
+[CONTRIBUTING.md](CONTRIBUTING.md), [ARCHITECTURE.md](ARCHITECTURE.md) §16,
+[DEPLOY.md](DEPLOY.md) และ `ops/*` ท่อหลักไม่ต้องใช้ API key
+
+### สิ่งที่ต้องมี
+
+* **Node.js ≥ 22.5** (`engines` ใน `package.json` — เซิร์ฟเวอร์ใช้
+  `node:sqlite`, `fetch`, `node:http` ในตัว **ไม่มี dependency ของ npm
+  ตอนรัน**)
+* Git, curl, bash
+* macOS คือโฮสต์ 24/7 ที่ตั้งใจไว้ (plist ใต้ `ops/`) Linux/WSL รันโปรเซส
+  Node ได้ แต่สคริปต์ติดตั้ง launchd จะใช้ไม่ได้
+
+### 1. โคลนแล้วดึงแอสเซ็ตฟรอนต์เอนด์
+
+`public/vendor/` และ `public/fonts/` ถูก gitignore และสร้างใหม่ด้วย
+`setup.sh` (Leaflet 1.9.4 + Sarabun / IBM Plex Mono) ถ้าข้ามขั้นนี้
+เปลือกแผนที่จะว่าง
+
+```bash
+git clone https://github.com/Nonarkara/airdash.git
+cd airdash
+bash setup.sh
+# npm install ไม่ติดตั้ง runtime dep — คงไว้ได้ถ้าเคยชิน
+```
+
+### 2. รันแบ็กเอนด์โปรเซสเดียว (API + UI สแตติก)
+
+```bash
+node server/index.js
+# ฟังที่ 0.0.0.0:8341  (เปลี่ยนด้วย PORT)
+# ไฟล์ SQLite: data/airdash.db  (เปลี่ยนด้วย AIRDASH_DB_PATH)
+```
+
+เปิด **http://localhost:8341** — โปรเซส Node เสิร์ฟ `public/` และ `/api/*`
+บนออริจินเดียวกัน การดึง Air4Thai / Open-Meteo / สสน. รอบแรกจะเติมฐานข้อมูล
+หน้า boot รอ `GET /api/snapshot`
+
+ตรวจสุขภาพ: `curl -s http://localhost:8341/api/health`
+
+### 3. ไม่บังคับ: ฟรอนต์เอนด์ Cloudflare Pages บนเครื่อง
+
+```bash
+npx wrangler pages dev public --port 8788
+# → http://localhost:8788
+```
+
+**ข้อควรรู้:** `functions/api/[[path]].js` พร็อกซี `/api/*` ไปยังทันเนล
+**สด** `https://api-air.nonarkara.org` ไม่ใช่แล็ปท็อปของคุณ
+ใช้โหมดนี้เพื่อดู UI สแตติกกับข้อมูลผลิต สำหรับสแตกท้องถิ่นเต็ม ๆ
+ใช้พอร์ต **8341** จากขั้นที่ 2
+
+### 4. เทสต์ (ไม่ต้องมีซีเคร็ตเครือข่าย)
+
+```bash
+npm test
+# scripts/check-consistency.mjs
+# scripts/test-alerts-fixes.mjs
+# scripts/test-telegram-bind.mjs
+```
+
+### 5. 24/7 บนแมคผู้ดูแล (แบบผลิต)
+
+แก้ `WorkingDirectory` และพาธล็อกใน `ops/com.airdash.server.plist`
+(และ plist ทันเนล / watchdog) ให้ชี้ไปที่ checkout **ของคุณ** แล้ว:
+
+```bash
+bash ops/install-service.sh          # launchd com.airdash.server → :8341
+cloudflared tunnel login             # ครั้งเดียว เปิดเบราว์เซอร์ โซน nonarkara.org
+bash ops/setup-tunnel.sh             # api-air.nonarkara.org → localhost:8341
+bash scripts/deploy-frontend.sh      # อัปโหลดตรงไป Cloudflare Pages
+```
+
+`git push` **ไม่ได้** เดพลอยฟรอนต์เอนด์ โปรเจ็กต์นี้เป็น Pages แบบ
+direct-upload รายละเอียดและหน้าต่างพิษของแคช: [DEPLOY.md](DEPLOY.md)
+
+ให้แมคไม่หลับตอนเสียบไฟ โทเคนทางเลือก (อย่าคอมมิต):
+
+| ฟีเจอร์ | สคริปต์ | ถ้าไม่มี |
+|---------|---------|----------|
+| Ask-AI (NVIDIA NIM) | `node scripts/set-llm-key.mjs nvapi-…` | แชทถอยไปสรุปข้อมูลสด |
+| ฝน NASA IMERG | `node scripts/set-earthdata-token.mjs …` | แหล่งนี้ข้ามเงียบ ๆ |
+| กระจาย LINE OA | `node scripts/set-line-token.mjs …` | พุชไม่ทำงาน |
+| บอท Telegram | `node scripts/set-telegram-token.mjs …` | พุชไม่ทำงาน |
+
+สำรองฐานข้อมูลรายคืน: `ops/backup-db.sh` ผ่าน `ops/com.airdash.backup.plist`
+
+ดูคำแนะนำสั้นใน [ARCHITECTURE.md §16](./ARCHITECTURE.md#16-how-to-run-it-the-5-minute-setup)
 
 ---
 
@@ -97,6 +360,8 @@
 * **NASA GIBS / GPM** — ภาพดาวเทียม + IMERG
 * **RainViewer** — เรดาร์ฝน
 * **JAXA** — ผลิตภัณฑ์ฝนดาวเทียม
+
+รายละเอียดจังหวะและหน่วย: [`knowledge/data-sources.md`](knowledge/data-sources.md)
 
 ---
 
@@ -195,29 +460,16 @@ freakonomics 3 ใบ); บท "ท้องฟ้า" (ระยะมองเ
 
 ## 📐 เอกสารฉบับเต็ม
 
-เอกสารนี้คือ README ฉบับย่อ ฉบับเต็มอยู่ที่นี่:
+เอกสารนี้คือ README สองภาษาที่ขยายจากฉบับย่อ ฉบับเทคนิคอยู่ที่นี่:
 
 * 📐 **[ARCHITECTURE.md](./ARCHITECTURE.md)** — System architecture, data flow, ER diagram, network topology, score formulas, deployment story (English)
 * 🇹🇭 **[SYSTEM.th.md](./SYSTEM.th.md)** — เอกสารทางเทคนิคฉบับภาษาไทยฉบับเต็ม ครอบคลุมสถาปัตยกรรม การไหลของข้อมูล schema เครือข่าย สูตรคะแนน
 * 📄 **[CONTRIBUTING.md](./CONTRIBUTING.md)** — How to contribute code, data, docs, or translations
 * 📋 **[CHANGELOG.md](./CHANGELOG.md)** — Release history (updated every deploy)
+* 🎨 **[DESIGN-AIRDASH.md](./DESIGN-AIRDASH.md)** — สัญญาออกแบบ FloodDash → AirDash
+* 📚 **[`knowledge/`](knowledge/)** — ระเบียบวิธีสองภาษา (งานวิจัย แถบ AQI washout แหล่งข้อมูล)
 
 แผนภาพสถาปัตยกรรมทั้งหมดอยู่ใน `docs/diagrams/` และเรนเดอร์แบบเนทีฟบน GitHub
-
----
-
-## 🧪 เรียกใช้ใน 5 นาที
-
-```bash
-git clone https://github.com/Nonarkara/airdash.git
-cd airdash
-npm install
-node server/index.js                   # backend, :8341
-npx wrangler pages dev public --port 8788  # frontend, :8788
-# → เปิด http://localhost:8788
-```
-
-ดูคำแนะนำเต็มใน [ARCHITECTURE.md §16](./ARCHITECTURE.md#16-how-to-run-it-the-5-minute-setup)
 
 ---
 
@@ -236,7 +488,20 @@ npx wrangler pages dev public --port 8788  # frontend, :8788
 
 ## 📜 License
 
-[MIT](./LICENSE) — ใช้ฟรี แก้ไขฟรี deploy ฟรี ขายต่อก็ได้ (แต่โปรดอย่าเก็บข้อมูลไว้ขาย)
+© 2026 ดร.นน อัครประเสริฐกุล สงวนลิขสิทธิ์
+
+หน้า About ในแอปใช้ข้อความลิขสิทธิ์เดียวกัน เอกสารสถาปัตยกรรมกล่าวถึง
+MIT License แต่รีโปนี้**ยังไม่มี**ไฟล์ `LICENSE` ให้ถือข้อความสงวนลิขสิทธิ์ด้านบน
+เป็นคำแถลงสาธารณะจนกว่าจะมีไฟล์สัญญาอนุญาต
+
+**ข้อมูลไม่ใช่ของเราที่จะอนุญาตใหม่** ค่าที่วัด AQI พยากรณ์ สถานีฝน และไทล์ดาวเทียม
+ยังเป็นของ คพ. อุตุฯ สสน. GISTDA Copernicus/CAMS Open-Meteo NOAA NASA JAXA
+RainViewer และสำนักข่าว ให้เครดิตสถานีและ API อย่าดึงแดชบอร์ดนี้แทนข้อกำหนดต้นทาง
+
+ผลิตภายใต้สำนักงานส่งเสริมเศรษฐกิจดิจิทัล (depa) และสำนักงานเมืองอัจฉริยะประเทศไทย
+
+แบนเนอร์ README (`docs/hero-banner.png`) เป็นภาพประกอบสาธารณะของโครงการนี้
+ไม่ใช่ศิลปะราชการ และไม่ใช่ภาพวิทยาศาสตร์
 
 ---
 

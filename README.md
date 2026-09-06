@@ -1,22 +1,23 @@
 <p align="center">
-  <img src="public/img/hero-1200.png" alt="DR NON'S AIRDASH — Thailand's Air Quality Dashboard" width="100%">
+  <img src="docs/hero-banner.png" alt="AirDash civic illustration: Thai city haze on one side, clearer air and a public-health AQI/PM2.5 gauge on the other. Decorative — not a data product." width="100%">
 </p>
 
 # AIRDASH 3.0
 
 ## เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย · Thailand Air Quality & Dust Watch
 
-> **Real-time data. Real impact. Better air. Better tomorrow.**
-> An operating system for air-quality decision making — with two front
+A **one-Mac civic system**: bilingual Thai/English, honest about where every number comes from, useful in five seconds on a phone. The manga banner above is illustration, not a claim that software defeats haze.
+
+> An operating system for air-quality **decision making** — with two front
 > doors. **Air Story** (`/`) is a scroll-based bilingual narrative for
 > smart kids and curious adults: a breathing hero tinted by the live Thai
 > AQI band, your day in cigarette-equivalents, the national haze bill,
 > and every formula with its receipt. **Mission Control** (`/ops.html`)
 > is the preserved operator dashboard for mayors, district officials,
 > researchers, journalists, and air detectives. Every figure is real-time
-> from Thai government sources, every number carries a confidence
-> interval, and the first thing on screen is always the action the user
-> should take.
+> from Thai government and open scientific sources, every number carries a
+> confidence interval, and the first thing on screen is always the action
+> the user should take.
 
 <p align="center">
   <strong>🇹🇭 Live:</strong> <a href="https://air.nonarkara.org">air.nonarkara.org</a> ·
@@ -31,8 +32,282 @@
   <img alt="77 provinces" src="https://img.shields.io/badge/provinces-77-3A8A6E?style=flat-square">
   <img alt="130,830 readings" src="https://img.shields.io/badge/readings-130,830-3A8A6E?style=flat-square">
   <img alt="$0/mo cloud" src="https://img.shields.io/badge/cloud-$0%2Fmo-0E4A5E?style=flat-square">
-  <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-0E4A5E?style=flat-square">
+  <img alt="copyright 2026" src="https://img.shields.io/badge/copyright-2026-0E4A5E?style=flat-square">
 </p>
+
+---
+
+## Contents
+
+1. [What this is](#what-this-is)
+2. [Philosophy](#philosophy)
+3. [Ethical use](#ethical-use)
+4. [How it works](#how-it-works)
+5. [Live site](#live-site)
+6. [How to run it](#how-to-run-it)
+7. [The rest of the system](#the-mission) (mission, surfaces, sources, scores, API)
+8. [License](#license--attribution)
+
+---
+
+## What this is
+
+AirDash is a **public-interest PM2.5 / air-quality watch for Thailand**. It
+does not replace the Pollution Control Department (PCD / คพ.), Air4Thai, the
+Thai Meteorological Department (TMD / อุตุฯ), or the Department of Health.
+It sits on top of the numbers those agencies and open scientific feeds
+already publish, and tries to answer one operational question:
+
+> Should my child play outside today — and if not, what do I do in the
+> next five minutes?
+
+It is the air sibling of [FloodDash](https://flood.nonarkara.org): same
+one-Mac, SQLite, bilingual, $0-cloud pattern. Where floods arrive as
+events, bad air arrives as a **season** (roughly 1 December – 30 April).
+The signature extra for air is **Rain-Washout** — rain is the only fast
+natural relief from dust, so a forecast rain event is treated as a
+forecast *relief* event, labelled as a heuristic, never as a promise.
+
+Two surfaces, one engine:
+
+| Surface | URL | Who it is for |
+|---------|-----|----------------|
+| **Air Story** | [`/`](https://air.nonarkara.org/) | Families, students, anyone who needs a verb before a chart |
+| **Mission Control** | [`/ops.html`](https://air.nonarkara.org/ops.html) | Mayors, district officers, researchers, journalists |
+
+No login. No ads. No data sold. The boot screen lists who is behind it
+and which sensors/APIs the numbers came from.
+
+---
+
+## Philosophy
+
+Four tenets, on purpose:
+
+**One Mac civic systems.** The live backend is a Mac that was already in
+the house: Node.js, one SQLite file, three `launchd` services (server,
+Cloudflare Tunnel, watchdog). Cloudflare Pages is only the static shell
+and a same-origin `/api/*` proxy. No managed database, no Docker, no
+cloud bill for the engine. A provincial office should be able to run a
+fork from this repo on a laptop.
+
+**Bilingual TH/EN.** Thai is the primary language. English mirrors it.
+Every user-facing string, error, and methodology note is supposed to
+exist in both. See [README.th.md](README.th.md) and
+[SYSTEM.th.md](SYSTEM.th.md).
+
+**Honest data sources.** Every figure on screen traces to a named agency
+or open feed. Stale readings are dropped, not reused. Scores carry
+confidence intervals. Heuristics (watch score, washout, cigarette
+equivalents) are labelled as heuristics. Mock data is a bug.
+
+**Useful, not theatrical.** The banner is civic illustration. Brick red
+appears only when the air is actually hazardous. The page leads with a
+JMA-style **verb** (อากาศดี / GOOD AIR … ป้องกันทันที / PROTECT NOW), not
+a dashboard aesthetic. If a panel does not help someone decide, it
+does not earn its place.
+
+The working thesis:
+
+> Data is not a decision. A number on a screen is not an action. AirDash
+> exists to close the gap between “we know the air is bad” and “we know
+> what to do about it.”
+
+Longer intent: [`knowledge/project-vision.md`](knowledge/project-vision.md).
+
+---
+
+## Ethical use
+
+This is a **public-health decision aid**, not an alert authority and not
+a substitute for clinical or official advice.
+
+**Do not invent AQI.** Official Thai AQI and the 2023 PM2.5 breakpoints
+(15 / 25 / 37.5 / 75 µg/m³) belong to PCD. AirDash **displays** station
+AQI as published by Air4Thai. The **Air Watch Score** (0–100) is a
+separate heuristic — weighted PM2.5, other pollutants, 6-hour trend,
+CAMS forecast, and a ventilation proxy. The UI and the chat both say so.
+Never present the watch score as “the AQI,” never round a missing station
+into a fake index, and never interpolate a province that has no fresh
+reading into a confident number.
+
+**Credit sensors and APIs.** Ground truth is people and instruments:
+Air4Thai stations, HII rain gauges, PCD noise monitors, GISTDA fusion,
+CAMS / Open-Meteo, NOAA CPC, NASA IMERG / GIBS, RainViewer, JAXA. Name
+them. Link them. The in-app Data tab and `GET /api/sources` are the
+catalog. If a feed is down, say it is down.
+
+**Health measures are conditional.** AirDash does **not** issue health
+orders from its heuristic. Checklists (N95, windows, clean rooms,
+sensitive groups) are tied to official PCD / Department of Health
+advisories. Follow those first.
+
+**Hotlines, not hype.**
+
+* PCD pollution — **1650** · [pcd.go.th](https://www.pcd.go.th)
+* DDC health — **1422**
+* EMS — **1669**
+* Official AQI — [air4thai.pcd.go.th](https://air4thai.pcd.go.th)
+
+If the dashboard disagrees with the official channel, the official
+channel wins.
+
+**No secrets in git.** Optional LINE / Telegram / NVIDIA NIM / NASA
+Earthdata tokens live in the SQLite `kv` table via `scripts/set-*-token.mjs`.
+They are never committed. Core pipelines are keyless so a fork still
+runs without them.
+
+---
+
+## How it works
+
+Public feeds land on **one Mac**. The Mac stores readings in SQLite,
+computes watch / danger / washout / science, and serves JSON + SSE.
+Cloudflare Pages serves the HTML/JS; a Pages Function proxies `/api/*`
+to a named tunnel (`api-air.nonarkara.org`) so the browser stays
+same-origin.
+
+```mermaid
+flowchart LR
+  subgraph sources["Public sensors and APIs"]
+    PCD["PCD Air4Thai · AQI / PM"]
+    HII["HII · rain gauges"]
+    OM["Open-Meteo + CAMS"]
+    OTHER["GISTDA · NOAA · NASA · news"]
+  end
+
+  subgraph mac["One Mac · Node + SQLite"]
+    IN["Adapters on a timer"]
+    DB[("data/airdash.db")]
+    ENG["Watch · Danger · Washout · Science"]
+    API["HTTP :8341 · /api/*"]
+  end
+
+  subgraph edge["Cloudflare · $0"]
+    TUN["Tunnel api-air.nonarkara.org"]
+    PG["Pages air.nonarkara.org"]
+  end
+
+  subgraph people["Phone / laptop"]
+    STORY["Air Story /"]
+    OPS["Mission Control /ops.html"]
+  end
+
+  sources --> IN --> DB --> ENG --> API
+  API --> TUN
+  PG --> people
+  TUN --> STORY
+  TUN --> OPS
+```
+
+Full topology, ER diagram, and score formulas:
+[ARCHITECTURE.md](ARCHITECTURE.md) · diagrams in [`docs/diagrams/`](docs/diagrams/).
+
+---
+
+## Live site
+
+The production URL in this tree is **[https://air.nonarkara.org](https://air.nonarkara.org)**
+(`public/index.html` canonical, Cloudflare Pages custom domain in
+[DEPLOY.md](DEPLOY.md), tunnel host `api-air.nonarkara.org` in
+`functions/api/[[path]].js`).
+
+Sister system: [flood.nonarkara.org](https://flood.nonarkara.org).
+
+---
+
+## How to run it
+
+Instructions below are taken from `package.json`, `setup.sh`,
+[CONTRIBUTING.md](CONTRIBUTING.md), [ARCHITECTURE.md](ARCHITECTURE.md) §16,
+[DEPLOY.md](DEPLOY.md), and `ops/*`. No API keys are required for the
+core watch.
+
+### Prerequisites
+
+* **Node.js ≥ 22.5** (`package.json` `engines` — the server uses the
+  built-in `node:sqlite`, `fetch`, and `node:http`. There are **zero
+  npm runtime dependencies**.)
+* Git, curl, bash
+* macOS is the intended 24/7 host (`launchd` plists under `ops/`).
+  Linux/WSL can run the Node process; the plist installers will not.
+
+### 1. Clone and vendor frontend assets
+
+`public/vendor/` and `public/fonts/` are gitignored and regenerated by
+`setup.sh` (Leaflet 1.9.4 + Sarabun / IBM Plex Mono). Without this
+step the map shell is empty.
+
+```bash
+git clone https://github.com/Nonarkara/airdash.git
+cd airdash
+bash setup.sh
+# npm install is a no-op for runtime deps; keep it if your habit expects it
+```
+
+### 2. Run the one-process backend (API + static UI)
+
+```bash
+node server/index.js
+# listens on 0.0.0.0:8341  (override with PORT)
+# SQLite file: data/airdash.db  (override with AIRDASH_DB_PATH)
+```
+
+Open **http://localhost:8341** — the Node process serves `public/` and
+`/api/*` on the same origin. First ingest of Air4Thai / Open-Meteo /
+HII / etc. fills the database; the boot screen waits on
+`GET /api/snapshot`.
+
+Health check: `curl -s http://localhost:8341/api/health`
+
+### 3. Optional: Cloudflare Pages frontend locally
+
+```bash
+npx wrangler pages dev public --port 8788
+# → http://localhost:8788
+```
+
+**Honest caveat:** `functions/api/[[path]].js` proxies `/api/*` to the
+**live** tunnel `https://api-air.nonarkara.org`, not to your laptop.
+Use this to preview static UI against production data. For a fully
+local stack, use port **8341** from step 2.
+
+### 4. Tests (no network secrets)
+
+```bash
+npm test
+# scripts/check-consistency.mjs
+# scripts/test-alerts-fixes.mjs
+# scripts/test-telegram-bind.mjs
+```
+
+### 5. 24/7 on the steward Mac (production pattern)
+
+Edit the hardcoded `WorkingDirectory` / log paths in
+`ops/com.airdash.server.plist` (and the tunnel / watchdog plists) to
+**your** checkout, then:
+
+```bash
+bash ops/install-service.sh          # launchd com.airdash.server → :8341
+cloudflared tunnel login             # one-time, browser, nonarkara.org zone
+bash ops/setup-tunnel.sh             # api-air.nonarkara.org → localhost:8341
+bash scripts/deploy-frontend.sh      # Cloudflare Pages direct-upload
+```
+
+`git push` does **not** deploy the frontend. This is a Pages
+direct-upload project. Details and poison-window verification:
+[DEPLOY.md](DEPLOY.md).
+
+Keep the Mac awake on power. Optional tokens (never commit them):
+
+| Feature | Script | If absent |
+|---------|--------|-----------|
+| Ask-AI (NVIDIA NIM) | `node scripts/set-llm-key.mjs nvapi-…` | Chat falls back to a live-data summary |
+| NASA IMERG rain | `node scripts/set-earthdata-token.mjs …` | Source skips quietly |
+| LINE OA broadcasts | `node scripts/set-line-token.mjs …` | Push is a no-op |
+| Telegram bot | `node scripts/set-telegram-token.mjs …` | Push is a no-op |
+
+Nightly DB snapshot: `ops/backup-db.sh` via `ops/com.airdash.backup.plist`.
 
 ---
 
@@ -143,6 +418,8 @@ immediately knows "is this real?" and "who's behind it?".
 * **NASA GIBS / GPM** — satellite imagery + IMERG precipitation
 * **RainViewer** — radar tile mosaic
 * **JAXA** — satellite precipitation products
+
+Field-level cadence and units: [`knowledge/data-sources.md`](knowledge/data-sources.md).
 
 ---
 
@@ -255,6 +532,10 @@ dashboard with a real-time "tap" of every pipeline event:
 animation, NASA GIBS satellite imagery, JAXA precipitation, and the
 province-boundaries choropleth.
 
+Additional adapters in `server/sources/` (GISTDA PM2.5 fusion, PCD noise,
+history) feed the same SQLite file. The architecture doc counts **nine**
+live sources including those. The badge at the top matches that inventory.
+
 ---
 
 ## 🧮 The Air Watch Score
@@ -273,9 +554,9 @@ The PM2.5 sub-score is anchored to the **Thai AQI 2023 breakpoints
 in CAMS; stagnation reads forecast wind + rain probability as a
 ventilation proxy.
 
-> **This is a heuristic indicator, not an air-quality forecast.** The UI
-> and the AI assistant both say so, repeatedly. Always follow official
-> PCD / TMD / DOH advisories.
+> **This is a heuristic indicator, not an air-quality forecast, and not
+> official AQI.** The UI and the AI assistant both say so, repeatedly.
+> Always follow official PCD / TMD / DOH advisories.
 
 ### Confidence intervals
 
@@ -504,6 +785,18 @@ never decorative.
 
 ---
 
+## 📐 Further documentation
+
+* [ARCHITECTURE.md](ARCHITECTURE.md) — system architecture, data flow, ER diagram, scores, 5-minute setup
+* [SYSTEM.th.md](SYSTEM.th.md) — Thai technical edition
+* [DEPLOY.md](DEPLOY.md) — Pages + tunnel + backup
+* [CONTRIBUTING.md](CONTRIBUTING.md) — code, data, translation, and docs bar
+* [CHANGELOG.md](CHANGELOG.md) — what shipped
+* [DESIGN-AIRDASH.md](DESIGN-AIRDASH.md) — FloodDash → AirDash contract
+* [`knowledge/`](knowledge/) — bilingual methodology (paper, AQI bands, washout, sources)
+
+---
+
 ## 🆘 Always Follow Official Warnings
 
 AirDash is a **decision-prioritisation system**, not an alert issuer.
@@ -523,13 +816,26 @@ is right, share it.
 
 © 2026 Dr Non Arkaraprasertkul. All rights reserved.
 
-Data sourced from each respective Thai government agency and open provider
-(PCD, TMD, HII, NOAA, Copernicus/CAMS, Open-Meteo, RainViewer, NASA
-GIBS/GPM, JAXA). Produced under the Digital Economy Promotion Agency (depa)
-and the Smart City Thailand Office.
+The in-app About overlay uses the same copyright line. Architecture notes
+describe an MIT license; this repository does **not** currently contain a
+`LICENSE` file. Treat the copyright notice above as the public statement
+until a license file is added.
+
+**Data is not ours to relicense.** Readings, AQI, forecasts, gauges, and
+satellite tiles remain with PCD, TMD, HII, GISTDA, Copernicus/CAMS,
+Open-Meteo, NOAA, NASA, JAXA, RainViewer, and the news publishers.
+Credit the sensor and the API. Do not scrape this dashboard as a
+substitute for those upstream terms.
+
+Produced under the Digital Economy Promotion Agency (depa) and the
+Smart City Thailand Office.
 
 **Always follow official PCD / TMD / DOH advisories.** This system is for
 prioritisation, not for issuing alerts.
+
+The README banner (`docs/hero-banner.png`) is a civic illustration for
+this project. It is not official government art and not a scientific
+figure.
 
 ---
 
