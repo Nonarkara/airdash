@@ -5,10 +5,10 @@
 // so the operator gets a quick visual scan of where the situation is
 // elevated. The plain boundary outline is also useful on its own for
 // orientation ("which province am I looking at?").
-import { getJson } from '../cache.js?v=2.4.21'
-import { store, on } from '../state.js?v=2.4.21'
-import { tr } from '../i18n.js?v=2.4.21'
-import { escapeHtml } from '../fmt.js?v=2.4.21'
+import { getJson } from '../cache.js?v=2.4.22'
+import { store, on } from '../state.js?v=2.4.22'
+import { tr } from '../i18n.js?v=2.4.22'
+import { escapeHtml } from '../fmt.js?v=2.4.22'
 
 const BAND_COLOR = { normal: '#00933C', watch: '#F0B400', elevated: '#E86A10', high: '#A51931' }
 const BAND_FILL = {

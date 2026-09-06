@@ -8,10 +8,10 @@
 //   - Data bar sorted by score — hottest first, with Δ vs #1
 //   - Band colors use the real keys (normal/low/watch/elevated/high)
 
-import { on, store } from '../state.js?v=2.4.21'
-import { tr, BAND } from '../i18n.js?v=2.4.21'
-import { fmtNum, escapeHtml } from '../fmt.js?v=2.4.21'
-import { getJson } from '../cache.js?v=2.4.21'
+import { on, store } from '../state.js?v=2.4.22'
+import { tr, BAND } from '../i18n.js?v=2.4.22'
+import { fmtNum, escapeHtml } from '../fmt.js?v=2.4.22'
+import { getJson } from '../cache.js?v=2.4.22'
 
 const TYPE_ICON = {
   province: '🏛', district: '🏘', subdistrict: '🏡',

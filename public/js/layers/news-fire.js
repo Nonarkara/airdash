@@ -17,9 +17,9 @@
 // province-name substring match against the headline), so this only ever
 // shows a SUBSET of the news feed: headlines that name a single place. The
 // full, ungeotagged feed stays in the NEWS panel.
-import { tr } from '../i18n.js?v=2.4.21'
-import { ago, escapeHtml } from '../fmt.js?v=2.4.21'
-import { popupHtml, pm25Color } from '../paint.js?v=2.4.21'
+import { tr } from '../i18n.js?v=2.4.22'
+import { ago, escapeHtml } from '../fmt.js?v=2.4.22'
+import { popupHtml, pm25Color } from '../paint.js?v=2.4.22'
 
 export function createNewsFireLayer() {
   const group = L.layerGroup([], { pane: 'data' })

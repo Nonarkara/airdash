@@ -4,11 +4,11 @@
 // value if it lands. This is the "science of it" surfaced from live data.
 // (Kept the initWaterways export + #waterways container so main.js/index.html
 // keep working unchanged.)
-import { getJson } from '../cache.js?v=2.4.21'
-import { on } from '../state.js?v=2.4.21'
-import { tr } from '../i18n.js?v=2.4.21'
-import { fmtNum, el } from '../fmt.js?v=2.4.21'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.21'
+import { getJson } from '../cache.js?v=2.4.22'
+import { on } from '../state.js?v=2.4.22'
+import { tr } from '../i18n.js?v=2.4.22'
+import { fmtNum, el } from '../fmt.js?v=2.4.22'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.22'
 
 const WASHOUT_COLOR = { strong: '#1D66A8', moderate: '#3E7CB1', light: '#5BA8C7', none: '#B7AFA3', unknown: '#B7AFA3' }
 

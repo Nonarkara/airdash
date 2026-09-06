@@ -3,7 +3,8 @@
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(self)
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api-air.nonarkara.org https://api2-air.nonarkara.org https://gibs.earthdata.nasa.gov https://api.rainviewer.com https://generativelanguage.googleapis.com https://integrate.api.nvidia.com https://static.cloudflareinsights.com wss:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 
 # Versioned ?v= assets must NOT use year-long immutable. On 2026-08-02 a
 # custom-domain lag after Pages deploy pinned OLD bytes under a NEW ?v=
