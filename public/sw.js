@@ -23,19 +23,21 @@ const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/ops.html',
-  '/css/tokens.css?v=2.4.19',
-  '/css/layout.css?v=2.4.19',
-  '/css/components.css?v=2.4.19',
-  '/css/city-dashboard.css?v=2.4.19',
-  '/css/story.css?v=2.4.19',
-  '/js/main.js?v=2.4.19',
-  '/js/story.js?v=2.4.19',
+  '/css/tokens.css?v=2.4.20',
+  '/css/layout.css?v=2.4.20',
+  '/css/components.css?v=2.4.20',
+  '/css/city-dashboard.css?v=2.4.20',
+  '/css/story.css?v=2.4.20',
+  '/js/main.js?v=2.4.20',
+
+  '/js/feedAge.js?v=2.4.20',
+  '/js/story.js?v=2.4.20',
   // The life-saving citizen panel additions (persona selector, action
   // timeline, mask guide, symptom checker, migrant phrases, time-of-day
   // forecast). Precache so the citizen panel works offline — the user
   // reading "ถ้าเจ็บหน้าอก โทร 1669" needs that line to work even
   // when the cellular drops.
-  '/js/panels/citizenLife.js?v=2.4.19',
+  '/js/panels/citizenLife.js?v=2.4.20',
   // New modules added in Phase 1. The SW does NOT precache every panel
   // (the install event is fragile if any 404s), but the runtime cache
   // picks them up on first load via stale-while-revalidate.
