@@ -814,7 +814,7 @@ is right, share it.
 
 ## 📜 License & Attribution
 
-© 2026 Dr Non Arkaraprasertkul. All rights reserved.
+Released under the [MIT License](LICENSE). Copyright © 2026 Dr Non Arkaraprasertkul.
 
 The in-app About overlay uses the same copyright line. Architecture notes
 describe an MIT license; this repository does **not** currently contain a
