@@ -38,6 +38,24 @@ const GISTDA_SEP = {
   ],
 }
 
+
+// ตามรอยเผา (HII/KU) monthly province CSVs, summed across all 77 provinces
+// for the 2025/26 dust-smoke season. Fetched and totalled directly from
+// https://tamroypao.hii.or.th/openburn/tamroypao/data/csv/province/<Y>/
+// on 2026-09-10 — these are sums of published values, not estimates.
+// Units: rai. Sentinel-2, 20 m, crop-classified.
+const SEASON_2526 = {
+  total: 12283528,
+  months: [
+    { m: '202511', th: 'พ.ย.', en: 'Nov', paddy: 21752, cane: 18949, corn: 8488, total: 49320 },
+    { m: '202512', th: 'ธ.ค.', en: 'Dec', paddy: 469688, cane: 224126, corn: 64881, total: 759612 },
+    { m: '202601', th: 'ม.ค.', en: 'Jan', paddy: 2259820, cane: 1202829, corn: 320103, total: 3794197 },
+    { m: '202602', th: 'ก.พ.', en: 'Feb', paddy: 1272929, cane: 1212011, corn: 375073, total: 2871487 },
+    { m: '202603', th: 'มี.ค.', en: 'Mar', paddy: 823958, cane: 1263557, corn: 361941, total: 2462442 },
+    { m: '202604', th: 'เม.ย.', en: 'Apr', paddy: 1436263, cane: 713441, corn: 190360, total: 2346470 },
+  ],
+}
+
 function barRow(label, n, max, accent) {
   const pct = Math.max(1, Math.round((n / max) * 100))
   return `
@@ -137,10 +155,85 @@ function sectionSeptember() {
     </section>`
 }
 
+
+// Stacked monthly columns. The shape IS the argument: rice front-loads
+// the season, cane peaks two months later, and the two together make
+// January-March the wall.
+function svgCalendar() {
+  const M = SEASON_2526.months
+  const max = Math.max(...M.map((x) => x.total))
+  const W = 62, H = 118, GAP = 8
+  const cols = M.map((x, i) => {
+    const px = i * (W + GAP)
+    const h = (v) => Math.round((v / max) * H)
+    const hp = h(x.paddy), hc = h(x.cane), hk = h(x.corn)
+    let y = H
+    const seg = (hh, fill) => { y -= hh; return `<rect x="${px}" y="${y}" width="${W}" height="${hh}" fill="${fill}"/>` }
+    const bars = seg(hp, 'var(--aqi-watch)') + seg(hc, 'var(--th-red)') + seg(hk, 'var(--th-sage)')
+    return `${bars}
+      <text x="${px + W / 2}" y="${H + 13}" class="bn-svg-lbl" text-anchor="middle">${tr(x.th, x.en)}</text>
+      <text x="${px + W / 2}" y="${y - 4}" class="bn-svg-sub" text-anchor="middle">${(x.total / 1e6).toFixed(1)}M</text>`
+  }).join('')
+  return `
+    <svg viewBox="0 0 ${M.length * (W + GAP)} ${H + 42}" class="bn-svg bn-svg--wide" role="img"
+         aria-label="${tr('พื้นที่เผาไหม้รายเดือน แยกตามพืช', 'Monthly burned area by crop')}">
+      ${cols}
+      <g transform="translate(0,${H + 34})">
+        <rect x="0" y="-9" width="11" height="11" fill="var(--aqi-watch)"/><text x="16" y="0" class="bn-svg-sub">${tr('ข้าว', 'rice')}</text>
+        <rect x="62" y="-9" width="11" height="11" fill="var(--th-red)"/><text x="78" y="0" class="bn-svg-sub">${tr('อ้อย', 'sugarcane')}</text>
+        <rect x="140" y="-9" width="11" height="11" fill="var(--th-sage)"/><text x="156" y="0" class="bn-svg-sub">${tr('ข้าวโพด', 'maize')}</text>
+      </g>
+    </svg>`
+}
+
+function sectionCalendar() {
+  const t = SEASON_2526.total
+  return `
+    <section class="rp-section">
+      <h2>${tr('3. ปฏิทินการเผา — พืชแต่ละชนิดเผาคนละเดือน', '3. The burning calendar — each crop burns in a different month')}</h2>
+      <p class="rp-lead">${tr(
+        `ฤดูหมอกควัน 2568/69 (พ.ย.–เม.ย.) รวม ${t.toLocaleString()} ไร่ · ดาวเทียม Sentinel-2 ความละเอียด 20 ม. · ระบบตามรอยเผา (สสน. + ม.เกษตรศาสตร์)`,
+        `2025/26 dust-smoke season (Nov–Apr): ${t.toLocaleString()} rai burned · Sentinel-2 at 20 m · ตามรอยเผา (HII + Kasetsart University)`
+      )}</p>
+      <div class="rp-figure">${svgCalendar()}</div>
+      <p>${tr(
+        'ข้าวเผาก่อน — สูงสุดในเดือนมกราคม (2.26 ล้านไร่) ส่วนอ้อยขึ้นถึงจุดสูงสุดช้ากว่าสองเดือน คือเดือนมีนาคม (1.26 ล้านไร่) เพราะอ้อยเผาตามรอบการเข้าหีบของโรงงานน้ำตาล ไม่ใช่ตามรอบเก็บเกี่ยวข้าว ทั้งสองอย่างซ้อนกันในเดือนมกราคมถึงมีนาคม ซึ่งเป็นช่วงที่ค่าฝุ่นแย่ที่สุดของปี',
+        'Rice burns first, peaking in January (2.26 M rai). Sugarcane peaks two months later, in March (1.26 M rai), because cane burning follows the sugar mills\' crushing window rather than the rice harvest. The two overlap through January–March — which is exactly when PM2.5 is worst.'
+      )}</p>
+      <p class="bn-callout">${tr(
+        'สิ่งที่ปฏิทินนี้บอกและตัวเลขรวมทั้งปีบอกไม่ได้ คือมาตรการที่ได้ผลกับข้าวในเดือนธันวาคมแทบไม่มีผลกับอ้อยในเดือนมีนาคม เพราะเป็นพืชคนละชนิด คนละเหตุผล และคนละรอบเวลา',
+        'What the calendar shows and an annual total cannot: a measure that works on rice in December does almost nothing for cane in March. Different crop, different reason, different clock.'
+      )}</p>
+    </section>`
+}
+
+function sectionEconomics() {
+  return `
+    <section class="rp-section">
+      <h2>${tr('4. ทำไมถึงเผา — เหตุผลทางเศรษฐกิจ ไม่ใช่ความมักง่าย', '4. Why they burn — the economics, not carelessness')}</h2>
+      <p>${tr(
+        'งานสำรวจเกษตรกร 500 รายของ TDRI (ร้อยเอ็ด เชียงราย นครสวรรค์ ปราจีนบุรี) ชี้ว่าเหตุผลอันดับหนึ่งของการเผาตอซังข้าวไม่ใช่เรื่องนิสัย แต่เป็นเรื่องเครื่องมือ — ฟางติดเครื่องไถพรวนแบบโรตารี ส่วนอ้อยคือ “การเผามีต้นทุนต่ำที่สุด”',
+        'TDRI surveyed 500 farmers (Roi Et, Chiang Rai, Nakhon Sawan, Prachinburi). The top reason for burning rice stubble is not habit but equipment — straw clogs the rotary tiller. For cane, burning is simply the cheapest option available.'
+      )}</p>
+      <p>${tr(
+        'ตัวเลขที่อธิบายได้ดีที่สุดคือเรื่องกระแสเงินสด การไถกลบให้ผลตอบแทนสุทธิราว 253 บาท/ไร่ แต่มาในรูปค่าปุ๋ยที่ประหยัดได้ ซึ่งต้องรอ 110–120 วัน ขณะที่ชาวไร่อ้อยที่เผาได้ผลตอบแทนสุทธิเพียงราว 180 บาท/ไร่ แต่ได้เป็นเงินสดทันทีที่หน้าโรงงาน บวกเงินอุดหนุนจากรัฐอีก 120 บาท/ไร่',
+        'The clearest number is a cash-flow one. Ploughing residue back in nets about 253 THB/rai — but as a deferred fertiliser saving that takes 110–120 days to arrive. A cane grower who burns nets only about 180 THB/rai, yet receives it as cash at the mill gate, plus a 120 THB/rai state payment.'
+      )}</p>
+      <p class="bn-callout">${tr(
+        'เกษตรกรที่เลือกเผาจึงไม่ได้เลือกทางที่ให้ผลตอบแทนน้อยกว่าอย่างไร้เหตุผล แต่เลือกเงินวันนี้แทนเงินอีกสี่เดือนข้างหน้า มาตรการที่ไม่แก้เรื่องจังหวะเวลาของเงิน จึงเป็นการขอให้คนที่ไม่มีเงินสำรองไปกู้มาเพื่ออากาศสะอาด',
+        'A farmer who burns is not irrationally choosing the smaller return — they are choosing money today over money in four months. Any measure that does not fix the timing of the money is asking people without a cash buffer to borrow in order to supply clean air.'
+      )}</p>
+      <p>${tr(
+        'อีกจุดที่มักถูกมองข้าม คือข้าวนาปรังถูกเผาในสัดส่วนราว 57% ของพื้นที่ เทียบกับนาปีที่ราว 29% (TEI 2565) นาปรังจึงเป็นเป้าหมายที่ตรงกว่าการรณรงค์กับชาวนาทั้งประเทศ',
+        'One target often missed: off-season rice (นาปรัง) is burned on about 57% of its area against roughly 29% for main-season rice (นาปี) (TEI 2022). That makes off-season rice a far sharper target than a nationwide campaign.'
+      )}</p>
+    </section>`
+}
+
 function sectionSensor() {
   return `
     <section class="rp-section">
-      <h2>${tr('3. ตัวเลขจุดความร้อนไม่มีความหมายถ้าไม่บอกดาวเทียม', '3. A hotspot count means nothing without naming the sensor')}</h2>
+      <h2>${tr('5. ตัวเลขจุดความร้อนไม่มีความหมายถ้าไม่บอกดาวเทียม', '5. A hotspot count means nothing without naming the sensor')}</h2>
       <p>${tr(
         'GISTDA ให้เลือกเซนเซอร์ได้ระหว่าง VIIRS (Suomi NPP, NOAA-20, NOAA-21) และ MODIS (Terra, Aqua) การเลือกนี้ไม่ใช่รายละเอียดทางเทคนิค แต่เปลี่ยนตัวเลขได้หลายเท่า',
         'GISTDA lets you switch between VIIRS (Suomi NPP, NOAA-20, NOAA-21) and MODIS (Terra, Aqua). That choice is not a technical footnote — it changes the answer several times over.'
@@ -159,7 +252,7 @@ function sectionSensor() {
 function sectionEnforcement() {
   return `
     <section class="rp-section">
-      <h2>${tr('4. ข้อมูลการบังคับใช้กฎหมายอ่านเป็นระดับการเผาไม่ได้', '4. Enforcement records cannot be read as a burning signal')}</h2>
+      <h2>${tr('6. ข้อมูลการบังคับใช้กฎหมายอ่านเป็นระดับการเผาไม่ได้', '6. Enforcement records cannot be read as a burning signal')}</h2>
       <p>${tr(
         'ในชุดข้อมูลที่เผยแพร่ เชียงใหม่มีการดำเนินคดี 21 ราย เทียบกับจุดความร้อน 13,343 จุด และสกลนครรายงานเรื่องร้องเรียนเป็นศูนย์ติดต่อกันสี่ปี',
         'In the published datasets, Chiang Mai logged 21 prosecutions against 13,343 hotspot detections, and Sakon Nakhon recorded zero complaints four years running.'
@@ -174,7 +267,7 @@ function sectionEnforcement() {
 function sectionSatellite() {
   return `
     <section class="rp-section">
-      <h2>${tr('5. ดาวเทียมบอกอะไรได้ และบอกไม่ได้', '5. What satellites can and cannot tell you')}</h2>
+      <h2>${tr('7. ดาวเทียมบอกอะไรได้ และบอกไม่ได้', '7. What satellites can and cannot tell you')}</h2>
       <p>${tr(
         'ดาวเทียมตรวจจับ “จุดที่ร้อนผิดปกติ” ไม่ใช่ “ใครเป็นคนจุดไฟและเผาอะไร” การแยกว่าเป็นการเผาเกษตรหรือไฟป่าเกิดจากการซ้อนตำแหน่งจุดความร้อนกับแผนที่การใช้ประโยชน์ที่ดิน ไม่ใช่จากตัวเซนเซอร์เอง',
         'A satellite detects a thermal anomaly — a hot pixel. It does not detect who lit it or what is burning. Separating agricultural burning from forest fire comes from overlaying those points on a land-use map, not from the sensor itself.'
@@ -195,7 +288,7 @@ function sectionSatellite() {
 function sectionGaps() {
   return `
     <section class="rp-section">
-      <h2>${tr('6. สิ่งที่ข้อมูลชุดนี้ยังตอบไม่ได้', '6. What this data still cannot answer')}</h2>
+      <h2>${tr('8. สิ่งที่ข้อมูลชุดนี้ยังตอบไม่ได้', '8. What this data still cannot answer')}</h2>
       <ul class="bn-list">
         <li>${tr(
           'ตัวเลขเดือนกันยายนข้างต้นมาจากหน้าต่างเวลาเพียง 7 วัน เป็นภาพหนึ่งสัปดาห์ ไม่ใช่แนวโน้ม',
@@ -223,6 +316,9 @@ function sectionSources() {
     ['GISTDA — Open API (ต้องใช้ key / API key required)', 'https://disaster.gistda.or.th/services/open-api?type=fire'],
     ['HRDI — จุดความร้อน / hotspot records', 'https://data.go.th/'],
     ['กรมอุทยานฯ (DNP) — การเข้าดับไฟป่า / fire response', 'https://data.go.th/'],
+    ['ตามรอยเผา (สสน./ม.เกษตรศาสตร์) — รอยเผาภาคเกษตร Sentinel-2 / agri burn scars', 'https://tamroypao.hii.or.th/openburn/map.jsp'],
+    ['TDRI — เศรษฐศาสตร์การจัดการชีวมวล / biomass management economics', 'https://tdri.or.th/2025/05/sustainable-biomass-management-rice-sugarcane-part1/'],
+    ['กรมส่งเสริมการเกษตร — แผนที่เสี่ยงเผา / DOAE burn-risk map', 'https://riskmap.doae.go.th/hnb_page'],
     ['NASA GIBS — AOD, UV aerosol index, CO, night lights', 'https://gibs.earthdata.nasa.gov/'],
   ].map(([n, u]) => `<li><span>${n}</span><a href="${u}" target="_blank" rel="noopener">${u}</a></li>`).join('')
   return `
@@ -239,6 +335,8 @@ function paint() {
     sectionLede(),
     sectionInversion(),
     sectionSeptember(),
+    sectionCalendar(),
+    sectionEconomics(),
     sectionSensor(),
     sectionEnforcement(),
     sectionSatellite(),

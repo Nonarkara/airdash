@@ -3499,3 +3499,6 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
   .bn-row { grid-template-columns: minmax(80px, 42%) 1fr auto; gap: 8px; }
   .bn-row-label { font-size: 11.5px; }
 }
+/* Wide figure (the 6-month burning calendar) needs to breathe; .rp-figure
+   already scrolls horizontally on narrow screens. */
+.bn-svg--wide { max-width: 100%; min-width: 380px; }

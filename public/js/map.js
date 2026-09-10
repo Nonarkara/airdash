@@ -4,7 +4,7 @@ import { on, store } from './state.js?v=2.4.23'
 import { tr, LEVEL_NAME } from './i18n.js?v=2.4.23'
 import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.23'
 import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.23'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles } from './layers/satellite.js?v=2.4.23'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.23'
 import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.23'
 import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.23'
 import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.23'
@@ -43,6 +43,9 @@ export function initMap() {
   layers.nightlights = satLayers.nightlights
   layers.aerosolIndex = satLayers.aerosolIndex
   layers.co = satLayers.co
+  // Burn scars sit in the satellite pane: a ground-truth basemap overlay,
+  // under the station markers and risk shading that must stay readable.
+  layers.burnscar = createBurnScarLayer('satellite')
 
   layers.risk = L.layerGroup([], { pane: 'data' })
   layers.air = L.layerGroup([], { pane: 'data' })
@@ -250,6 +253,7 @@ function addLegend() {
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#05060f,#3b3f6b,#f2e6b8)"></span>${tr('แสงไฟกลางคืน — จุดสว่างนอกเมือง = อาจเป็นการเผากลางคืน', 'night lights — bright spots outside towns can be night burning')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#e8edf2,#c9a227,#8a4b1f)"></span>${tr('ดัชนีควัน UV — ค่าสูง = ควันดูดกลืนแสงลอยอยู่เหนือพื้นที่', 'UV smoke index — higher = absorbing smoke aloft')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#0f2f4a,#2f8fa8,#d8e04a)"></span>${tr('CO 500 hPa — ควันที่ลอยมาจากที่อื่น ไม่ใช่ไฟที่กำลังไหม้ตรงนี้', 'CO 500 hPa — smoke transported from elsewhere, not fire below')}</div>
+      <div class="lrow"><span class="lsw" style="background:var(--th-red)"></span>${tr('รอยเผาภาคเกษตร — สะสมทั้งฤดู ธ.ค.68–เม.ย.69 (ไม่ใช่ไฟวันนี้) เฉพาะภาคเหนือ+กลาง', 'agri burn scars — whole season Dec 25–Apr 26 (not today\'s fires), north+central only')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
       <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ฮีทแมป PM2.5', 'PM2.5 HEAT MAP')}</div>

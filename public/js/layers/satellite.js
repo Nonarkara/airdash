@@ -155,6 +155,53 @@ export function createSatelliteLayers(map, pane) {
   }
 }
 
+// ── ตามรอยเผา (Tam Roy Pao) — agricultural burn scars ──────────────────
+//
+// The layer this dashboard was missing. Everything else here sees SMOKE
+// or HEAT; this sees the burned ground itself, and — uniquely — knows
+// which CROP it was. Sentinel-2 at 20 m, classified into rice / sugarcane
+// / maize, with urban, orchard and legally-defined forest masked out
+// first using Land Development Department land-use layers. So unlike a
+// raw hotspot count, agricultural burning is already separated from
+// forest fire at the source rather than inferred by us.
+//
+// Built by HII + Kasetsart University under an NRCT-funded project, with
+// cane ground-truth from Khon Kaen Sugar. Their published accuracy:
+// 87.66% on cane plots (88,403 of 100,853 rai), 80.84% overall multi-crop
+// in Khon Kaen. No API key, no auth.
+//
+// THREE THINGS TO KNOW BEFORE READING IT:
+//   1. It is SEASONAL ACCUMULATION, not live. B3A sums the whole
+//      dust-smoke season (พฤศจิกายน–เมษายน). The constant below is the
+//      most recent COMPLETE season, Dec 2025 – Apr 2026. It answers
+//      "where did it burn last season", which is the honest way to
+//      anticipate the season that starts this November — it is not and
+//      cannot be today's fires.
+//   2. Coverage is PARTIAL. Verified 2026-09-10 by fetching tiles: the
+//      NORTH mosaic returns imagery over Chiang Mai, the central plains
+//      (Nakhon Sawan is the densest tile tested, 145 KB) and Bangkok,
+//      but 404s over the Northeast (Ubon) and the South (Songkhla).
+//      Absence of colour outside that footprint means NO DATA, not no
+//      burning — the toggle label says so.
+//   3. Tiles are TMS, so the y axis is inverted relative to XYZ. Leaflet
+//      needs the {-y} placeholder; plain {y} 404s on every tile.
+const TAMROYPAO_SEASON = { year: 2025, span: '202512_202604', region: 'NORTH' }
+
+export function createBurnScarLayer(pane) {
+  const { year, span, region } = TAMROYPAO_SEASON
+  return L.tileLayer(
+    `https://tamroypao.hii.or.th/tms/${year}/BURNSCAR_${region}_20M_${span}_B3A_COLOR/{z}/{x}/{-y}.png`,
+    {
+      maxNativeZoom: 12,
+      maxZoom: 19,
+      opacity: 0.78,
+      pane,
+      attribution: '© ตามรอยเผา HII/KU · Sentinel-2 burn scars',
+      crossOrigin: true,
+    },
+  )
+}
+
 export function ensureMapPanes(map) {
   const spec = [
     ['satellite', 250],
@@ -204,6 +251,7 @@ export const LAYER_GROUPS = [
     en: 'ANALYSIS · REFERENCE',
     layers: [
       { id: 'risk', th: 'ชั้นความเสี่ยงจังหวัด', en: 'province risk', on: true },
+      { id: 'burnscar', th: 'รอยเผาภาคเกษตร ฤดูล่าสุด (เหนือ+กลาง)', en: 'Agri burn scars, last season (north+central)', on: false },
       { id: 'boundaries', th: 'ขอบเขตจังหวัด (data.go.th)', en: 'province boundaries (DOPA)', on: false },
       { id: 'osmbuild', th: 'อาคารพื้นที่เสี่ยง OSM', en: 'OSM buildings in risk areas', on: false },
     ],
