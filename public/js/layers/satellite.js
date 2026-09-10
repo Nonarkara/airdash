@@ -85,6 +85,49 @@ export function createSatelliteLayers(map, pane) {
         crossOrigin: true,
       },
     ),
+    // Carbon monoxide, 500 hPa (AIRS/Aqua). CO is THE tracer for biomass
+    // burning: incomplete combustion of vegetation produces it in bulk, it
+    // survives in the atmosphere for weeks, and — unlike CO2 — it is not
+    // well-mixed, so a plume still points back at its source. That is the
+    // whole reason this layer is here and a CO2 layer is not: CO2 from a
+    // rice field is indistinguishable from CO2 from anywhere else on Earth,
+    // which makes it useless for finding a fire.
+    //
+    // Read it as TRANSPORT, not ignition: 500 hPa is roughly 5.5 km up, so
+    // this shows smoke that has already lofted and is travelling — often
+    // the haze arriving from Myanmar/Laos before any Thai station reacts.
+    // It will NOT show a field burning this morning.
+    // Verified 2026-09-10: L2 returns real tiles at 1-day lag over Thailand
+    // where the L3 daily grid was still 404 — hence L2 and yesterday.
+    co: L.tileLayer(
+      `${GIBS}/AIRS_L2_Carbon_Monoxide_500hPa_Volume_Mixing_Ratio_Day/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.68,
+        pane,
+        attribution: '© NASA GIBS · AIRS CO 500 hPa',
+        crossOrigin: true,
+      },
+    ),
+    // UV Aerosol Index (OMPS/Suomi-NPP). Complements AOD rather than
+    // repeating it: AOD measures how MUCH aerosol is in the column, while
+    // the UV index responds to ABSORBING aerosol — smoke and dust — and
+    // stays usable over bright surfaces and thin cloud where the AOD
+    // retrieval drops out and leaves a hole exactly where the haze is.
+    // Positive values mean absorbing particles aloft; near-zero or
+    // negative is clear air or non-absorbing cloud.
+    aerosolIndex: L.tileLayer(
+      `${GIBS}/OMPS_Aerosol_Index/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.7,
+        pane,
+        attribution: '© NASA GIBS · OMPS UV Aerosol Index',
+        crossOrigin: true,
+      },
+    ),
     // Night lights — VIIRS Day/Night Band at-sensor radiance. Two things
     // make this meaningful for a dust dashboard, not just pretty:
     //   1. ACTIVE NIGHT BURNING. Agricultural fires are frequently lit in
@@ -135,6 +178,8 @@ export const LAYER_GROUPS = [
     en: 'SATELLITE · RADAR',
     layers: [
       { id: 'aod', th: 'หมอกควัน/ละอองลอย (AOD ดาวเทียม)', en: 'Smoke / aerosol (satellite AOD)', on: false, kind: 'sat' },
+      { id: 'aerosolIndex', th: 'ดัชนีควัน UV (ควันดูดกลืนแสง)', en: 'UV smoke index (absorbing aerosol)', on: false, kind: 'sat' },
+      { id: 'co', th: 'คาร์บอนมอนอกไซด์ (ควันไฟที่ลอยมา)', en: 'Carbon monoxide (transported smoke)', on: false, kind: 'sat' },
       { id: 'nightlights', th: 'แสงไฟกลางคืน (เผากลางคืน/ฟุ้งกระจาย)', en: 'Night lights (night burning / haze glow)', on: false, kind: 'sat' },
       { id: 'gsmap', th: 'GSMaP/GPM ฝนดาวเทียม', en: 'GSMaP/GPM rain', on: false, kind: 'sat' },
       { id: 'himawari', th: 'Himawari-9 เมฆ IR', en: 'Himawari-9 IR', on: false, kind: 'sat' },

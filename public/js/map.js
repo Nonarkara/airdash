@@ -41,6 +41,8 @@ export function initMap() {
   layers.modis = satLayers.modis
   layers.aod = satLayers.aod
   layers.nightlights = satLayers.nightlights
+  layers.aerosolIndex = satLayers.aerosolIndex
+  layers.co = satLayers.co
 
   layers.risk = L.layerGroup([], { pane: 'data' })
   layers.air = L.layerGroup([], { pane: 'data' })
@@ -246,6 +248,8 @@ function addLegend() {
       <div class="lrow"><span class="lsw" style="background:#5C6BC0;opacity:.6"></span>${tr('Himawari-9 IR เมฆ', 'Himawari-9 IR clouds')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#f7f4b8,#f0a030,#c0341a,#6b1f10)"></span>${tr('หมอกควัน/ละอองลอย AOD (เหลือง→น้ำตาล = หนาแน่นขึ้น)', 'smoke/aerosol AOD (yellow→brown = thicker)')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#05060f,#3b3f6b,#f2e6b8)"></span>${tr('แสงไฟกลางคืน — จุดสว่างนอกเมือง = อาจเป็นการเผากลางคืน', 'night lights — bright spots outside towns can be night burning')}</div>
+      <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#e8edf2,#c9a227,#8a4b1f)"></span>${tr('ดัชนีควัน UV — ค่าสูง = ควันดูดกลืนแสงลอยอยู่เหนือพื้นที่', 'UV smoke index — higher = absorbing smoke aloft')}</div>
+      <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#0f2f4a,#2f8fa8,#d8e04a)"></span>${tr('CO 500 hPa — ควันที่ลอยมาจากที่อื่น ไม่ใช่ไฟที่กำลังไหม้ตรงนี้', 'CO 500 hPa — smoke transported from elsewhere, not fire below')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
       <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ฮีทแมป PM2.5', 'PM2.5 HEAT MAP')}</div>
