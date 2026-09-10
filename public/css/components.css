@@ -3450,3 +3450,52 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
   .man-row { grid-template-columns: 1fr; gap: 4px; }
   .man-key { justify-self: start; }
 }
+
+/* ── Agricultural burning research tab ──────────────────────────────────
+   Reuses .rp-section for typography so the burning tab reads as the same
+   document as the research paper. Only the data-display primitives are
+   new, and every colour routes through tokens.css — no raw hex, so the
+   panel follows the palette wherever it goes. */
+.bn-lede h2 { border-bottom-color: var(--rule-strong); }
+
+.bn-bars { margin: 14px 0; display: flex; flex-direction: column; gap: 7px; }
+.bn-row {
+  display: grid; grid-template-columns: minmax(96px, 34%) 1fr auto;
+  align-items: center; gap: 10px;
+}
+.bn-row-label { font-size: 12.5px; color: var(--ink-mid); line-height: 1.3; }
+.bn-row-track { background: var(--well-dim); height: 16px; position: relative; }
+.bn-row-fill { height: 100%; transition: width .35s ease; }
+.bn-row-val {
+  font-size: 12.5px; font-variant-numeric: tabular-nums;
+  color: var(--ink); min-width: 3.5em; text-align: right;
+}
+
+.bn-svg { width: 100%; height: auto; max-width: 440px; }
+.bn-svg-lbl { font-size: 11px; fill: var(--ink-mid); }
+.bn-svg-num { font-size: 10.5px; fill: var(--ink-inv); font-weight: 600; }
+.bn-svg-sub { font-size: 10px; fill: var(--ink-low); }
+
+/* The pull-quote for a claim a reader could easily get backwards. The
+   left rule (not a fill or a box) keeps it in the paper idiom. */
+.bn-callout {
+  border-left: 3px solid var(--th-amber);
+  padding: 2px 0 2px 12px; margin: 14px 0;
+  color: var(--ink-mid); font-size: 13.5px;
+}
+
+.bn-list { margin: 10px 0; padding-left: 18px; }
+.bn-list li { font-size: 13.5px; line-height: 1.6; color: var(--ink); margin: 7px 0; }
+
+.bn-src { list-style: none; margin: 10px 0; padding: 0; }
+.bn-src li {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 12.5px;
+}
+.bn-src li span { color: var(--ink); }
+.bn-src li a { color: var(--ink-low); word-break: break-all; font-size: 11.5px; }
+
+@media (max-width: 560px) {
+  .bn-row { grid-template-columns: minmax(80px, 42%) 1fr auto; gap: 8px; }
+  .bn-row-label { font-size: 11.5px; }
+}

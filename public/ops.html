@@ -428,6 +428,10 @@
            depend on guessing what a button means. -->
       <button class="about-tab" data-about-pane="manual">คู่มือใช้งาน<br><span class="en-lbl">MANUAL</span></button>
       <button class="about-tab" data-about-pane="research">เอกสารวิจัย<br><span class="en-lbl">RESEARCH PAPER</span></button>
+      <!-- Agricultural burning: its own research tab because the seasonal
+           inversion (forest-dominated in March, farm-dominated in September)
+           is the single most misread fact in Thailand's haze debate. -->
+      <button class="about-tab" data-about-pane="burning">การเผา<br><span class="en-lbl">BURNING</span></button>
     </div>
     <button id="about-close">✕ <span class="lbl">ปิด</span></button>
   </div>
@@ -778,6 +782,10 @@
 
   <div class="about-body about-pane" data-about-pane="research">
     <div class="research-scroll" id="research-content"></div>
+  </div>
+
+  <div class="about-body about-pane" data-about-pane="burning">
+    <div class="research-scroll" id="burning-content"></div>
   </div>
 </div>
 

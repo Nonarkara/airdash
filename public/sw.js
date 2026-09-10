@@ -29,6 +29,7 @@ const PRECACHE_URLS = [
   '/css/city-dashboard.css?v=2.4.23',
   '/css/story.css?v=2.4.23',
   '/js/boot.js?v=2.4.23',
+  '/js/panels/burning.js?v=2.4.23',
   '/js/main.js?v=2.4.23',
 
   '/js/feedAge.js?v=2.4.23',

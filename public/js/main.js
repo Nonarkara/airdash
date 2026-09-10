@@ -24,6 +24,7 @@ import { initSplit } from './panels/split.js?v=2.4.23'
 import { initLibrary } from './panels/library.js?v=2.4.23'
 import { initResearch } from './panels/research.js?v=2.4.23'
 import { initManual } from './panels/manual.js?v=2.4.23'
+import { initBurning } from './panels/burning.js?v=2.4.23'
 import { initSearch } from './panels/search.js?v=2.4.23'
 import { initDataFreshness } from './dataFreshness.js?v=2.4.23'
 import { refreshSensorHealth } from './sensorHealth.js?v=2.4.23'
@@ -468,6 +469,7 @@ async function boot() {
   safeInit('library', initLibrary)
   safeInit('research', initResearch)
   safeInit('manual', initManual)
+  safeInit('burning', initBurning)
   safeInit('search', initSearch)
   safeInit('tabs', initTabs)
   safeInit('dataFreshness', initDataFreshness)

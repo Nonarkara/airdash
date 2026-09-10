@@ -1,0 +1,264 @@
+// ── Agricultural burning — the research tab ─────────────────────────────
+//
+// Thailand's burning debate runs on a single question ("is it the
+// farmers?") that has no single answer, because the mix of what is
+// burning INVERTS across the year. This panel exists to show that
+// inversion with real counts rather than settle the argument with a
+// slogan.
+//
+// Every figure here was read off a named source and is labelled with it.
+// Where two credible sources disagree (they do, by an order of
+// magnitude), both numbers are shown rather than the flattering one.
+import { store, on } from '../state.js?v=2.4.23'
+
+function tr(th, en) { return store.lang === 'th' ? th : en }
+
+// GISTDA disaster dashboard, "ไฟป่า" tab, sensor = Suomi NPP, the
+// rolling 7-day window 4–10 Sep 2569 (2026). Read from the dashboard UI
+// at https://disaster.gistda.or.th/dashboard — the machine-readable
+// equivalent is /features/viirs/7days on the GISTDA open API, which
+// returns 407 without an API key.
+const GISTDA_SEP = {
+  total: 415,
+  window: '4–10 ก.ย. 2569 · 4–10 Sep 2026',
+  classes: [
+    { th: 'พื้นที่เกษตร', en: 'Agricultural land', n: 300 },
+    { th: 'ชุมชนและอื่น ๆ', en: 'Community & other', n: 45 },
+    { th: 'เขต ส.ป.ก.', en: 'Land-reform (ALRO) area', n: 25 },
+    { th: 'ป่าอนุรักษ์', en: 'Conservation forest', n: 24 },
+    { th: 'ป่าสงวนแห่งชาติ', en: 'National reserved forest', n: 11 },
+    { th: 'พื้นที่ริมทางหลวง', en: 'Roadside', n: 10 },
+  ],
+  provinces: [
+    { th: 'นครสวรรค์', en: 'Nakhon Sawan', n: 72 },
+    { th: 'พระนครศรีอยุธยา', en: 'Phra Nakhon Si Ayutthaya', n: 61 },
+    { th: 'สุพรรณบุรี', en: 'Suphan Buri', n: 61 },
+    { th: 'ชัยนาท', en: 'Chai Nat', n: 29 },
+    { th: 'นครศรีธรรมราช', en: 'Nakhon Si Thammarat', n: 27 },
+  ],
+}
+
+function barRow(label, n, max, accent) {
+  const pct = Math.max(1, Math.round((n / max) * 100))
+  return `
+    <div class="bn-row">
+      <div class="bn-row-label">${label}</div>
+      <div class="bn-row-track"><div class="bn-row-fill" style="width:${pct}%;background:${accent}"></div></div>
+      <div class="bn-row-val">${n.toLocaleString()}</div>
+    </div>`
+}
+
+// The whole argument in one figure: the same country, two different
+// months, two opposite answers.
+function svgSeasonInversion() {
+  const bars = [
+    { m: tr('มี.ค. (ฤดูฝุ่น)', 'March (dust season)'), forest: 84, agri: 7, note: tr('ยอดรวมหลายปี', 'multi-year totals') },
+    { m: tr('ก.ย. (ฤดูข้าว)', 'September (rice season)'), forest: 8, agri: 72, note: tr('7 วัน · GISTDA', '7-day · GISTDA') },
+  ]
+  const rows = bars.map((b, i) => {
+    const y = 34 + i * 62
+    return `
+      <text x="0" y="${y - 8}" class="bn-svg-lbl">${b.m}</text>
+      <rect x="0" y="${y}" width="${b.forest * 4.4}" height="18" fill="var(--th-sage)"/>
+      <rect x="${b.forest * 4.4}" y="${y}" width="${b.agri * 4.4}" height="18" fill="var(--th-amber)"/>
+      <text x="${Math.max(b.forest * 4.4, 30) / 2}" y="${y + 13}" class="bn-svg-num" text-anchor="middle">${b.forest}%</text>
+      <text x="${b.forest * 4.4 + b.agri * 4.4 / 2}" y="${y + 13}" class="bn-svg-num" text-anchor="middle">${b.agri}%</text>
+      <text x="${b.forest * 4.4 + b.agri * 4.4 + 8}" y="${y + 13}" class="bn-svg-sub">${b.note}</text>`
+  }).join('')
+  return `
+    <svg viewBox="0 0 440 150" class="bn-svg" role="img"
+         aria-label="${tr('สัดส่วนจุดความร้อนสลับกันระหว่างฤดู', 'Hotspot share inverts between seasons')}">
+      ${rows}
+      <g transform="translate(0,140)">
+        <rect x="0" y="-9" width="11" height="11" fill="var(--th-sage)"/>
+        <text x="16" y="0" class="bn-svg-sub">${tr('ป่า', 'forest')}</text>
+        <rect x="62" y="-9" width="11" height="11" fill="var(--th-amber)"/>
+        <text x="78" y="0" class="bn-svg-sub">${tr('เกษตร', 'agriculture')}</text>
+      </g>
+    </svg>`
+}
+
+function sectionLede() {
+  return `
+    <section class="rp-section bn-lede">
+      <h2>${tr('การเผาในภาคเกษตร — อ่านตัวเลขให้ตรง', 'Agricultural burning — reading the numbers honestly')}</h2>
+      <p class="rp-lead">${tr(
+        'คำถามที่ได้ยินบ่อยที่สุดคือ “ฝุ่นนี้เกษตรกรเผาใช่ไหม” คำตอบเปลี่ยนไปตามเดือนที่ถาม และนั่นคือประเด็นสำคัญที่สุดของหน้านี้',
+        'The most common question is "is this the farmers burning?" The answer changes depending on which month you ask — and that is the single most important thing on this page.'
+      )}</p>
+    </section>`
+}
+
+function sectionInversion() {
+  return `
+    <section class="rp-section">
+      <h2>${tr('1. สัดส่วนการเผาสลับกันระหว่างฤดู', '1. The burning mix inverts between seasons')}</h2>
+      <div class="rp-figure">${svgSeasonInversion()}</div>
+      <p>${tr(
+        'เมื่อรวมทั้งปีหลายปีเข้าด้วยกัน จุดความร้อนราว 82–84% อยู่ในพื้นที่ป่า (ป่าอนุรักษ์และป่าสงวน) และมีเพียงราว 7% ที่อยู่ในพื้นที่เกษตร — เพราะยอดรวมทั้งปีถูกครอบงำด้วยยอดพุ่งของไฟป่าในเดือนมีนาคม แต่ถ้าดูเฉพาะสัปดาห์ในเดือนกันยายน ภาพกลับด้านโดยสิ้นเชิง',
+        'Summed across whole years, roughly 82–84% of hotspot detections fall on forest land (conservation and reserved forest) and only about 7% on agricultural land — because the annual total is dominated by the March forest-fire peak. Look at a single week in September and the picture inverts completely.'
+      )}</p>
+      <p>${tr(
+        'ทั้งสองตัวเลขเป็นความจริง และการอ้างตัวเลขใดตัวเลขหนึ่งโดยไม่บอกเดือน คือการทำให้เข้าใจผิด',
+        'Both figures are true. Quoting either one without naming the month is how this debate gets distorted.'
+      )}</p>
+    </section>`
+}
+
+function sectionSeptember() {
+  const max = Math.max(...GISTDA_SEP.classes.map((c) => c.n))
+  const rows = GISTDA_SEP.classes
+    .map((c) => barRow(tr(c.th, c.en), c.n, max, c.n === max ? 'var(--th-amber)' : 'var(--ink-low)'))
+    .join('')
+  const pmax = Math.max(...GISTDA_SEP.provinces.map((p) => p.n))
+  const prov = GISTDA_SEP.provinces
+    .map((p) => barRow(tr(p.th, p.en), p.n, pmax, 'var(--aqi-watch)'))
+    .join('')
+  const agri = GISTDA_SEP.classes[0].n
+  const pct = Math.round((agri / GISTDA_SEP.total) * 100)
+  return `
+    <section class="rp-section">
+      <h2>${tr('2. หน้าตาของฤดูเผาเกษตร', '2. What the agricultural burning season looks like')}</h2>
+      <p class="rp-lead">${tr(
+        `จุดความร้อน ${GISTDA_SEP.total} จุด · ${GISTDA_SEP.window} · เซนเซอร์ Suomi NPP (VIIRS) · ข้อมูล GISTDA`,
+        `${GISTDA_SEP.total} hotspots · ${GISTDA_SEP.window} · Suomi NPP (VIIRS) · GISTDA`
+      )}</p>
+      <div class="bn-bars">${rows}</div>
+      <p>${tr(
+        `ในสัปดาห์นี้ ${agri} จาก ${GISTDA_SEP.total} จุด (${pct}%) อยู่ในพื้นที่เกษตร ส่วนป่าอนุรักษ์และป่าสงวนรวมกันได้เพียง 35 จุด`,
+        `In this week ${agri} of ${GISTDA_SEP.total} detections (${pct}%) sat on agricultural land, while conservation and reserved forest together accounted for just 35.`
+      )}</p>
+      <h3>${tr('จังหวัดที่พบมากที่สุด', 'Where it concentrates')}</h3>
+      <div class="bn-bars">${prov}</div>
+      <p>${tr(
+        'สังเกตว่าไม่มีจังหวัดภาคเหนือที่มักเป็นข่าวเรื่องหมอกควันเลย ทั้งห้าจังหวัดแรกอยู่ในที่ราบภาคกลางและภาคใต้ ซึ่งเป็นพื้นที่ปลูกข้าวเป็นหลัก นี่คือฤดูเผาคนละฤดูกับที่คนทั่วไปนึกถึง',
+        'None of the northern provinces that dominate haze coverage appear here. All five are central-plains and southern rice country. This is a different burning season from the one the public argues about.'
+      )}</p>
+    </section>`
+}
+
+function sectionSensor() {
+  return `
+    <section class="rp-section">
+      <h2>${tr('3. ตัวเลขจุดความร้อนไม่มีความหมายถ้าไม่บอกดาวเทียม', '3. A hotspot count means nothing without naming the sensor')}</h2>
+      <p>${tr(
+        'GISTDA ให้เลือกเซนเซอร์ได้ระหว่าง VIIRS (Suomi NPP, NOAA-20, NOAA-21) และ MODIS (Terra, Aqua) การเลือกนี้ไม่ใช่รายละเอียดทางเทคนิค แต่เปลี่ยนตัวเลขได้หลายเท่า',
+        'GISTDA lets you switch between VIIRS (Suomi NPP, NOAA-20, NOAA-21) and MODIS (Terra, Aqua). That choice is not a technical footnote — it changes the answer several times over.'
+      )}</p>
+      <p>${tr(
+        'ในข้อมูลจุดความร้อนของ HRDI จังหวัดพะเยาในปีเดียวกัน VIIRS ตรวจพบ 2,536 จุด ขณะที่ MODIS พบ 217 จุด ต่างกันราว 12 เท่า เพราะ VIIRS มีความละเอียด 375 เมตร ส่วน MODIS 1 กิโลเมตร จึงเห็นไฟกองเล็กที่ MODIS มองไม่เห็น',
+        'In the HRDI hotspot record, Phayao in the same year shows 2,536 VIIRS detections against 217 from MODIS — roughly 12×. VIIRS resolves 375 m against MODIS at 1 km, so it catches small field fires MODIS never registers.'
+      )}</p>
+      <p class="bn-callout">${tr(
+        'ดังนั้นการเทียบตัวเลขจุดความร้อนข้ามปีหรือข้ามรายงาน ต้องตรวจสอบก่อนว่าใช้ดาวเทียมตัวเดียวกันหรือไม่ มิฉะนั้นการเปลี่ยนเซนเซอร์จะดูเหมือนสถานการณ์ดีขึ้นหรือแย่ลง ทั้งที่ไฟเท่าเดิม',
+        'So comparing hotspot counts across years or across reports requires checking they used the same satellite. Otherwise a change of sensor looks like a change in the fires.'
+      )}</p>
+    </section>`
+}
+
+function sectionEnforcement() {
+  return `
+    <section class="rp-section">
+      <h2>${tr('4. ข้อมูลการบังคับใช้กฎหมายอ่านเป็นระดับการเผาไม่ได้', '4. Enforcement records cannot be read as a burning signal')}</h2>
+      <p>${tr(
+        'ในชุดข้อมูลที่เผยแพร่ เชียงใหม่มีการดำเนินคดี 21 ราย เทียบกับจุดความร้อน 13,343 จุด และสกลนครรายงานเรื่องร้องเรียนเป็นศูนย์ติดต่อกันสี่ปี',
+        'In the published datasets, Chiang Mai logged 21 prosecutions against 13,343 hotspot detections, and Sakon Nakhon recorded zero complaints four years running.'
+      )}</p>
+      <p class="bn-callout">${tr(
+        'ศูนย์เรื่องร้องเรียนไม่ได้แปลว่าอากาศสะอาด แต่แปลว่าไม่มีการรายงาน การนำตัวเลขเหล่านี้ไปจัดอันดับจังหวัดจะให้ผลกลับด้านกับความเป็นจริง',
+        'Zero complaints does not mean clean air; it means nothing was recorded. Ranking provinces on these figures produces the opposite of the truth.'
+      )}</p>
+    </section>`
+}
+
+function sectionSatellite() {
+  return `
+    <section class="rp-section">
+      <h2>${tr('5. ดาวเทียมบอกอะไรได้ และบอกไม่ได้', '5. What satellites can and cannot tell you')}</h2>
+      <p>${tr(
+        'ดาวเทียมตรวจจับ “จุดที่ร้อนผิดปกติ” ไม่ใช่ “ใครเป็นคนจุดไฟและเผาอะไร” การแยกว่าเป็นการเผาเกษตรหรือไฟป่าเกิดจากการซ้อนตำแหน่งจุดความร้อนกับแผนที่การใช้ประโยชน์ที่ดิน ไม่ใช่จากตัวเซนเซอร์เอง',
+        'A satellite detects a thermal anomaly — a hot pixel. It does not detect who lit it or what is burning. Separating agricultural burning from forest fire comes from overlaying those points on a land-use map, not from the sensor itself.'
+      )}</p>
+      <ul class="bn-list">
+        <li><strong>${tr('ชั้นควัน (AOD)', 'Aerosol (AOD)')}</strong> — ${tr('ปริมาณละอองลอยทั้งคอลัมน์อากาศ เห็นกลุ่มควันก่อนสถานีภาคพื้นดินปลายลม', 'column aerosol loading; sees a plume before downwind ground stations do')}</li>
+        <li><strong>${tr('ดัชนีควัน UV', 'UV smoke index')}</strong> — ${tr('ตอบสนองต่อควันที่ดูดกลืนแสง ใช้ได้แม้เหนือพื้นสว่างที่ AOD อ่านไม่ได้', 'responds to absorbing smoke and still works over bright surfaces where AOD drops out')}</li>
+        <li><strong>${tr('คาร์บอนมอนอกไซด์ (CO)', 'Carbon monoxide (CO)')}</strong> — ${tr('ตัวชี้วัดการเผาชีวมวล ที่ระดับ 500 hPa คือควันที่ลอยมาแล้ว ไม่ใช่ไฟใต้ตำแหน่งนั้น', 'the biomass-burning tracer; at 500 hPa it is smoke already travelling, not fire below')}</li>
+        <li><strong>${tr('แสงไฟกลางคืน', 'Night lights')}</strong> — ${tr('การเผามักจุดตอนหัวค่ำ จึงเห็นได้ก่อนภาพกลางวัน แต่แสงจันทร์ก็ทำให้สว่างขึ้นเช่นกัน', 'burning is often lit in the evening, so it shows before daytime imagery — but moonlight brightens the scene too')}</li>
+      </ul>
+      <p class="bn-callout">${tr(
+        'ไม่มีชั้นข้อมูล CO₂ ในระบบนี้โดยตั้งใจ CO₂ กระจายตัวสม่ำเสมอทั่วบรรยากาศและอยู่ได้นาน CO₂ เหนือแปลงนาที่กำลังเผาจึงแยกไม่ออกจาก CO₂ ที่อื่นบนโลก ใช้ระบุตำแหน่งไฟไม่ได้ และไม่บอกคุณภาพอากาศที่เราหายใจ',
+        'There is deliberately no CO₂ layer here. CO₂ is well-mixed and long-lived, so CO₂ over a burning field is indistinguishable from CO₂ anywhere else on Earth. It cannot locate a fire and says nothing about the air you breathe.'
+      )}</p>
+    </section>`
+}
+
+function sectionGaps() {
+  return `
+    <section class="rp-section">
+      <h2>${tr('6. สิ่งที่ข้อมูลชุดนี้ยังตอบไม่ได้', '6. What this data still cannot answer')}</h2>
+      <ul class="bn-list">
+        <li>${tr(
+          'ตัวเลขเดือนกันยายนข้างต้นมาจากหน้าต่างเวลาเพียง 7 วัน เป็นภาพหนึ่งสัปดาห์ ไม่ใช่แนวโน้ม',
+          'The September figures above come from a single 7-day window. That is one week, not a trend.'
+        )}</li>
+        <li>${tr(
+          'GISTDA เปิด API สาธารณะ (จุดความร้อน VIIRS, พื้นที่เผาไหม้ซ้ำซาก, ร่องรอยเผาไหม้) แต่ต้องใช้ API key ระบบนี้จึงยังอ่านตัวเลขจากหน้าแดชบอร์ด ไม่ได้ดึงอัตโนมัติ',
+          'GISTDA publishes an open API (VIIRS hotspots, repeat-burn areas, burn scars) but it requires an API key. These figures were read from the dashboard, not pulled automatically.'
+        )}</li>
+        <li>${tr(
+          'การ์ด “พื้นที่เผาไหม้ 10 วันล่าสุด” บนแดชบอร์ด GISTDA แสดงช่วงวันที่ 11–20 พ.ค. 2569 ซึ่งเก่ากว่าที่ป้ายบอกหลายเดือน จึงไม่นำมาแสดงเป็นข้อมูลปัจจุบันที่นี่',
+          'The GISTDA dashboard card labelled "burn scar, last 10 days" showed 11–20 May 2569 — months older than its own label. It is therefore not reproduced here as current.'
+        )}</li>
+        <li>${tr(
+          'ยังไม่มีการเชื่อมโยงเชิงสาเหตุระหว่างจุดความร้อนกับค่า PM2.5 ที่สถานีใดสถานีหนึ่ง ลมและความสูงของชั้นควันเป็นตัวกำหนดว่าควันจะตกที่ไหน',
+          'Nothing here establishes a causal link between a given hotspot and a given station PM2.5 reading. Wind and plume height decide where smoke lands.'
+        )}</li>
+      </ul>
+    </section>`
+}
+
+function sectionSources() {
+  const rows = [
+    ['GISTDA — ระบบภัยพิบัติ / disaster dashboard', 'https://disaster.gistda.or.th/dashboard'],
+    ['GISTDA — Open API (ต้องใช้ key / API key required)', 'https://disaster.gistda.or.th/services/open-api?type=fire'],
+    ['HRDI — จุดความร้อน / hotspot records', 'https://data.go.th/'],
+    ['กรมอุทยานฯ (DNP) — การเข้าดับไฟป่า / fire response', 'https://data.go.th/'],
+    ['NASA GIBS — AOD, UV aerosol index, CO, night lights', 'https://gibs.earthdata.nasa.gov/'],
+  ].map(([n, u]) => `<li><span>${n}</span><a href="${u}" target="_blank" rel="noopener">${u}</a></li>`).join('')
+  return `
+    <section class="rp-section">
+      <h2>${tr('แหล่งข้อมูลของหน้านี้', 'Sources for this page')}</h2>
+      <ul class="bn-src">${rows}</ul>
+    </section>`
+}
+
+function paint() {
+  const el = document.getElementById('burning-content')
+  if (!el) return
+  el.innerHTML = [
+    sectionLede(),
+    sectionInversion(),
+    sectionSeptember(),
+    sectionSensor(),
+    sectionEnforcement(),
+    sectionSatellite(),
+    sectionGaps(),
+    sectionSources(),
+  ].join('')
+}
+
+let wired = false
+
+export function initBurning() {
+  const overlay = document.getElementById('about-overlay')
+  if (!overlay || wired) return
+  wired = true
+  for (const tab of overlay.querySelectorAll('.about-tab')) {
+    tab.addEventListener('click', () => {
+      if (tab.dataset.aboutPane === 'burning') paint()
+    })
+  }
+  on('lang', () => {
+    if (document.querySelector('.about-pane[data-about-pane="burning"]')?.classList.contains('active')) paint()
+  })
+}
