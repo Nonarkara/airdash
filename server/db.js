@@ -157,6 +157,35 @@ CREATE TABLE IF NOT EXISTS ingest_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_ingest_runs ON ingest_runs(source, started_at DESC);
 
+-- Agricultural burn scars, per province per month, SPLIT BY CROP.
+-- Source: ตามรอยเผา (HII + Kasetsart), Sentinel-2 at 20 m, crop-classified
+-- with urban/orchard/legal-forest masked out first via LDD land-use.
+--
+-- This is the column GISTDA's fire dashboard does not have. Theirs
+-- classifies a hotspot as "พื้นที่เกษตร" (agricultural area) and stops;
+-- it cannot say whether that was rice in January or sugarcane in March,
+-- which is the difference between two unrelated problems with different
+-- causes, different actors and different remedies.
+--
+-- Grain is (province_code, yyyymm). Values are RAI. Re-ingesting a month
+-- overwrites it: the upstream publisher revises past months as more
+-- Sentinel-2 passes are processed, so last-write-wins is correct here and
+-- INSERT OR IGNORE would freeze a provisional figure forever.
+CREATE TABLE IF NOT EXISTS burn_area (
+  province_code TEXT NOT NULL,
+  yyyymm        TEXT NOT NULL,
+  province_th   TEXT,
+  province_en   TEXT,
+  paddy_rai     REAL,
+  cane_rai      REAL,
+  corn_rai      REAL,
+  mixed_rai     REAL,
+  total_rai     REAL,
+  fetched_at    TEXT,
+  PRIMARY KEY (province_code, yyyymm)
+);
+CREATE INDEX IF NOT EXISTS burn_area_month ON burn_area(yyyymm);
+
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT);
 
 -- ── Chat telemetry — every question the operator asks is logged here so we

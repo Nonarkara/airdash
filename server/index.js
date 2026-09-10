@@ -26,6 +26,7 @@ import openmeteo from './sources/openmeteo.js'
 import openmeteoAq from './sources/openmeteo-aq.js'
 import thaiwaterRain from './sources/thaiwater-rain.js'
 import enso from './sources/enso.js'
+import burnArea from './sources/burn-area.js'
 import news from './sources/news.js'
 import imerg from './sources/imerg.js'
 import gistdaPm25 from './sources/gistda-pm25.js'
@@ -63,7 +64,7 @@ for (const k of Object.keys(ragWithFaq)) {
 
 const scheduler = createScheduler({
   db, bus, alerts,
-  sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise, aqHistory],
+  sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise, aqHistory, burnArea],
 })
 
 const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, harm, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }))
