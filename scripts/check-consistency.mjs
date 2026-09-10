@@ -37,15 +37,49 @@ const check = (name, cond, detail = '') => {
 
 // ── 1. Service-worker shell / cache-name invariant ───────────────────────
 {
-  const ops = read('public/ops.html')
+  // The shell constant moved out of ops.html into js/boot.js on
+  // 2026-09-10: inline scripts are blocked by the v2.4.22 CSP.
+  const boot = read('public/js/boot.js')
   const sw = read('public/sw.js')
-  const shell = ops.match(/const shell = '([^']+)'/)?.[1] ?? null
+  const shell = boot.match(/const shell = '([^']+)'/)?.[1] ?? null
   const cache = sw.match(/const CACHE = '([^']+)'/)?.[1] ?? null
-  check('ops.html declares a shell constant', shell !== null)
+  check('js/boot.js declares a shell constant', shell !== null)
   check('sw.js declares a CACHE constant', cache !== null)
   check('shell === CACHE (or the SW is nuked every session)',
     shell !== null && shell === cache,
-    `ops.html shell=${shell} vs sw.js CACHE=${cache} — bump BOTH together`)
+    `boot.js shell=${shell} vs sw.js CACHE=${cache} — bump BOTH together`)
+}
+
+// ── 1b. No CSP-blocking inline <script> in any shipped page ──────────────
+//
+// public/_headers sets `script-src 'self' https://static.cloudflareinsights.com`
+// with NO 'unsafe-inline' and no hashes. Any inline script with a body is
+// therefore silently dropped by the browser — no network error, no server
+// log, origin looks perfectly healthy.
+//
+// This is not hypothetical. On 2026-09-10 the boot module in ops.html was
+// inline and held the only import('/js/main.js') in the page. CSP blocked
+// it and EVERY visitor sat on the loading splash forever while /api/* all
+// returned 200. Put executable code in a file under /js/ instead.
+//
+// <script type="application/ld+json"> is data, not script-src — exempt.
+{
+  const pages = ['public/index.html', 'public/ops.html']
+  const offenders = []
+  for (const page of pages) {
+    const html = read(page)
+    for (const m of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) {
+      const [, attrs, body] = m
+      if (/\bsrc=/.test(attrs)) continue
+      if (/ld\+json/.test(attrs)) continue
+      if (!body.trim()) continue
+      const line = html.slice(0, m.index).split('\n').length
+      offenders.push(`${page}:${line}`)
+    }
+  }
+  check('no CSP-blocking inline <script> in shipped pages',
+    offenders.length === 0,
+    `inline script(s) at ${offenders.join(', ')} — CSP has no 'unsafe-inline'; move the code into /js/`)
 }
 
 // ── 2. Versioned assets referenced by the HTML exist on disk ─────────────

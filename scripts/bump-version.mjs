@@ -54,9 +54,10 @@ if (!curCache) { console.error('FATAL: no CACHE = \'airdash-vNN\' in public/sw.j
 const cacheNum = Number(curCache.match(/v(\d+)$/)[1])
 const nextCache = `airdash-v${cacheNum + 1}`
 
-const shellInOps = ops.match(/const shell = '(airdash-v\d+)'/)?.[1]
+const bootPath = join(PUBLIC, 'js', 'boot.js')
+const shellInOps = read(bootPath).match(/const shell = '(airdash-v\d+)'/)?.[1]
 if (shellInOps !== curCache) {
-  console.error(`FATAL: shell/CACHE already desynced (ops.html shell=${shellInOps}, sw.js CACHE=${curCache}).`)
+  console.error(`FATAL: shell/CACHE already desynced (boot.js shell=${shellInOps}, sw.js CACHE=${curCache}).`)
   console.error('Fix that by hand first, then bump.'); process.exit(1)
 }
 
@@ -92,7 +93,7 @@ walk(PUBLIC)
 // ── SW cache + ops.html shell, in lockstep ────────────────────────────────
 if (!dryRun) {
   writeFileSync(swPath, read(swPath).replace(`const CACHE = '${curCache}'`, `const CACHE = '${nextCache}'`))
-  writeFileSync(opsPath, read(opsPath).replace(`const shell = '${curCache}'`, `const shell = '${nextCache}'`))
+  writeFileSync(bootPath, read(bootPath).replace(`const shell = '${curCache}'`, `const shell = '${nextCache}'`))
 }
 console.log(`\n${filesChanged} files, ${refsChanged} asset refs${dryRun ? ' (would be)' : ''} bumped; SW cache/shell -> ${nextCache}`)
 if (!dryRun) console.log('Next: run `npm test` (consistency check will confirm), then deploy.')
