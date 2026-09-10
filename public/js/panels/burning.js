@@ -9,7 +9,7 @@
 // Every figure here was read off a named source and is labelled with it.
 // Where two credible sources disagree (they do, by an order of
 // magnitude), both numbers are shown rather than the flattering one.
-import { store, on } from '../state.js?v=2.4.23'
+import { store, on } from '../state.js?v=2.4.24'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 

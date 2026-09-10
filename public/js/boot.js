@@ -20,22 +20,65 @@
 // map layers during the service-worker handover. The shell name must
 // match the CACHE name in sw.js so the migration only runs when the SW
 // itself is upgrading — scripts/check-consistency.mjs enforces that.
-const shell = 'airdash-v41'
+//
+// Defensive timeout (2026-09-10 fix): `navigator.serviceWorker.getRegistrations()`
+// can hang indefinitely on some Chrome configurations (notably headless
+// and some Linux distros with strict SW permissions). The previous
+// version awaited it with no timeout, which meant main.js was never
+// imported and the page sat on the boot screen forever. The fix: race
+// every SW API call against a 1.5s ceiling, and proceed to the main.js
+// import either way. A user without SW never waits; a user with a
+// hung SW gets the new code within 1.5s instead of never.
+const shell = 'airdash-v42'
 const migrated = `ad-shell-ready:${shell}`
-const registrations = 'serviceWorker' in navigator
-  ? await navigator.serviceWorker.getRegistrations()
-  : []
-const cacheNames = 'caches' in window ? await caches.keys() : []
+
+// Promise.race wrapper: resolve with the SW value, or with the
+// fallback after `ms` if the SW call hangs. Returns the fallback
+// rather than throwing so the rest of the boot can proceed.
+function withTimeout(promise, ms, fallback) {
+  return Promise.race([
+    promise.catch(() => fallback),
+    new Promise((r) => setTimeout(() => r(fallback), ms)),
+  ])
+}
+
+let registrations = []
+try {
+  if ('serviceWorker' in navigator) {
+    registrations = await withTimeout(navigator.serviceWorker.getRegistrations(), 1500, [])
+  }
+} catch { registrations = [] }
+
+let cacheNames = []
+try {
+  if ('caches' in window) {
+    cacheNames = await withTimeout(caches.keys(), 1500, [])
+  }
+} catch { cacheNames = [] }
+
 const hasOldShell = cacheNames.some((name) =>
   (name.startsWith('flooddash-') || name.startsWith('airdash-')) && name !== shell)
 
 if (!sessionStorage.getItem(migrated) && (registrations.length || hasOldShell)) {
   sessionStorage.setItem(migrated, '1')
-  await Promise.all(registrations.map((registration) => registration.unregister()))
-  await Promise.all(cacheNames
-    .filter((name) => (name.startsWith('flooddash-') || name.startsWith('airdash-')) && name !== shell)
-    .map((name) => caches.delete(name)))
+  // The migration is best-effort: even if unregister/delete hangs,
+  // the new shell is what we just deployed, and it self-heals on the
+  // next page load. Don't block the user waiting for the cleanup.
+  try {
+    await withTimeout(
+      Promise.all(registrations.map((registration) => registration.unregister())),
+      2000, null,
+    )
+    await withTimeout(
+      Promise.all(cacheNames
+        .filter((name) => (name.startsWith('flooddash-') || name.startsWith('airdash-')) && name !== shell)
+        .map((name) => caches.delete(name))),
+      2000, null,
+    )
+  } catch {}
   location.reload()
 } else {
-  await import('/js/main.js?v=2.4.23')
+  // Always import main.js — the whole point of this file. Never let
+  // any of the above paths block this.
+  await import('/js/main.js?v=2.4.24')
 }
