@@ -1,33 +1,33 @@
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.4.27'
-import { paintChrome } from './i18n.js?v=2.4.27'
-import { startTap } from './sse.js?v=2.4.27'
-import { initMap, invalidateMap } from './map.js?v=2.4.27'
-import { initHeader } from './panels/header.js?v=2.4.27'
-import { initRanking } from './panels/ranking.js?v=2.4.27'
-import { initForecast } from './panels/forecast.js?v=2.4.27'
-import { initWhatIf } from './panels/whatif.js?v=2.4.27'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.4.27'
-import { initTap } from './panels/tap.js?v=2.4.27'
-import { initSources } from './panels/sources.js?v=2.4.27'
-import { initHistory } from './panels/history.js?v=2.4.27'
-import { initInsights } from './panels/insights.js?v=2.4.27'
-import { initAnalytics } from './panels/analytics.js?v=2.4.27'
-import { initFeeds } from './panels/feeds.js?v=2.4.27'
-import { initChat } from './panels/chat.js?v=2.4.27'
-import { initCitizen } from './panels/citizen.js?v=2.4.27'
-import { initWaterways } from './panels/waterways.js?v=2.4.27'
-import { initFocus } from './panels/focus.js?v=2.4.27'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.27'
-import { initSplit } from './panels/split.js?v=2.4.27'
-import { initLibrary } from './panels/library.js?v=2.4.27'
-import { initResearch } from './panels/research.js?v=2.4.27'
-import { initManual } from './panels/manual.js?v=2.4.27'
-import { initBurning } from './panels/burning.js?v=2.4.27'
-import { initSearch } from './panels/search.js?v=2.4.27'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.27'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.4.27'
+import { on, emit, store, setLang } from './state.js?v=2.4.29'
+import { paintChrome } from './i18n.js?v=2.4.29'
+import { startTap } from './sse.js?v=2.4.29'
+import { initMap, invalidateMap } from './map.js?v=2.4.29'
+import { initHeader } from './panels/header.js?v=2.4.29'
+import { initRanking } from './panels/ranking.js?v=2.4.29'
+import { initForecast } from './panels/forecast.js?v=2.4.29'
+import { initWhatIf } from './panels/whatif.js?v=2.4.29'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.4.29'
+import { initTap } from './panels/tap.js?v=2.4.29'
+import { initSources } from './panels/sources.js?v=2.4.29'
+import { initHistory } from './panels/history.js?v=2.4.29'
+import { initInsights } from './panels/insights.js?v=2.4.29'
+import { initAnalytics } from './panels/analytics.js?v=2.4.29'
+import { initFeeds } from './panels/feeds.js?v=2.4.29'
+import { initChat } from './panels/chat.js?v=2.4.29'
+import { initCitizen } from './panels/citizen.js?v=2.4.29'
+import { initWaterways } from './panels/waterways.js?v=2.4.29'
+import { initFocus } from './panels/focus.js?v=2.4.29'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.29'
+import { initSplit } from './panels/split.js?v=2.4.29'
+import { initLibrary } from './panels/library.js?v=2.4.29'
+import { initResearch } from './panels/research.js?v=2.4.29'
+import { initManual } from './panels/manual.js?v=2.4.29'
+import { initBurning } from './panels/burning.js?v=2.4.29'
+import { initSearch } from './panels/search.js?v=2.4.29'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.29'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.4.29'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -442,7 +442,26 @@ async function boot() {
   initHeader()
   initAskBtn()
   initMode()
-  const map = initMap()
+  // initMap() was the one call in this file that did NOT follow the
+  // comment above — a genuine, live outage on 2026-09-15/16 traced back
+  // to exactly this gap. Every visitor got a permanently stuck "loading
+  // live data" splash with ZERO /api/* requests ever firing, because a
+  // throw inside initMap() (source verified byte-identical to git HEAD;
+  // root cause not pinned down after extensive live debugging — a
+  // ReferenceError on `droughtApi`, reproducible on every fresh load,
+  // that does not reproduce when the same code is re-invoked manually
+  // after the fact) propagated straight out of this unguarded call and
+  // aborted boot() before it ever reached loadSnapshotWithRetry(), so
+  // the splash's data-driven removal (further down this function) never
+  // ran. The dashboard's actual DATA has nothing to do with the map —
+  // there is no reason a map bug should withhold PM2.5 readings from
+  // someone deciding whether it's safe to send a kid outside.
+  let map = null
+  try {
+    map = initMap()
+  } catch (e) {
+    console.error('initMap failed — continuing boot without the map:', e)
+  }
   safeInit('ranking', initRanking)
   safeInit('forecast', initForecast)
   safeInit('whatif', initWhatIf)

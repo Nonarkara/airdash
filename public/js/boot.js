@@ -29,7 +29,7 @@
 // every SW API call against a 1.5s ceiling, and proceed to the main.js
 // import either way. A user without SW never waits; a user with a
 // hung SW gets the new code within 1.5s instead of never.
-const shell = 'airdash-v45'
+const shell = 'airdash-v47'
 const migrated = `ad-shell-ready:${shell}`
 
 // Promise.race wrapper: resolve with the SW value, or with the
@@ -80,5 +80,5 @@ if (!sessionStorage.getItem(migrated) && (registrations.length || hasOldShell)) 
 } else {
   // Always import main.js — the whole point of this file. Never let
   // any of the above paths block this.
-  await import('/js/main.js?v=2.4.27')
+  await import('/js/main.js?v=2.4.29')
 }
