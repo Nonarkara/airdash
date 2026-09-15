@@ -816,6 +816,78 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       })
     },
 
+    // GISTDA Check Drought — province-level drought risk (weekly) +
+    // actual vs baseline crop ET (weekly). Two endpoints: `latest` for
+    // the dashboard map fill (returns the most recent week's risk
+    // polygons); `series?province=XX` for the research-tab trend
+    // (multi-week history for one province). GeoJSON polygons are
+    // returned as the raw JSON-string the source served — never
+    // re-serialized by this server, so the bytes you cache match the
+    // bytes upstream sent.
+    'GET /api/drought': (req, res) => {
+      const url = new URL(req.url, 'http://x')
+      const province = url.searchParams.get('province')
+      const view = url.searchParams.get('view') || 'latest'
+
+      if (view === 'series') {
+        if (!province) return json(res, 400, { error: 'view=series requires ?province=<DOPA code>' })
+        const rows = db.all(
+          `SELECT week, mean, des FROM drought_risk
+             WHERE province_code = ?
+             ORDER BY week DESC LIMIT 26`,
+          province,
+        )
+        const etRows = db.all(
+          `SELECT week, et_mean, et_base_mean, et_normalized, et_range
+             FROM crop_water
+             WHERE province_code = ?
+             ORDER BY week DESC LIMIT 26`,
+          province,
+        )
+        return json(res, 200, { province_code: province, drought: rows, et: etRows })
+      }
+
+      // Default: latest week for all provinces, including geometry.
+      const latest = db.get(
+        `SELECT MAX(week) AS w, MAX(fetched_at) AS fetched_at FROM drought_risk`,
+      )
+      if (!latest?.w) return json(res, 200, { updated: null, week: null, rows: [] })
+
+      let rows
+      if (province) {
+        rows = db.all(
+          `SELECT province_code, pv_tn, pv_en, mean, des, geometry_json
+             FROM drought_risk
+             WHERE week = ? AND province_code = ?
+             ORDER BY pv_tn`,
+          latest.w, province,
+        )
+      } else {
+        rows = db.all(
+          `SELECT province_code, pv_tn, pv_en, mean, des, geometry_json
+             FROM drought_risk
+             WHERE week = ?
+             ORDER BY mean DESC`,
+          latest.w,
+        )
+      }
+      // Parse the stored JSON-string polygons back into objects for the
+      // map renderer; the byte cost is small because we cap response at
+      // 77 provinces and the polygons are pre-simplified by GISTDA.
+      for (const r of rows) {
+        if (r.geometry_json) {
+          try { r.geometry = JSON.parse(r.geometry_json) } catch { r.geometry = null }
+          delete r.geometry_json
+        }
+      }
+      return json(res, 200, {
+        updated: latest.fetched_at,
+        week: latest.w,
+        end_date: db.get(`SELECT end_date FROM drought_risk WHERE week = ? LIMIT 1`, latest.w)?.end_date ?? null,
+        rows,
+      })
+    },
+
     // ── City Dashboard detail endpoint ─────────────────────────────────
     // Returns the full enriched manifest entry for one focus area PLUS all
     // data scoped to that city: its risk entry, danger score, washout

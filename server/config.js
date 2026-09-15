@@ -45,6 +45,11 @@ export const CONFIG = {
     imerg: 30 * MINUTE,      // IMERG Early publishes half-hourly (~4h latency)
     gistda_pm25: 1 * HOUR,   // GISTDA satellite+ground PM2.5 fusion
     pcd_noise: 30 * MINUTE,   // PCD noisemonitor.net — daily Leq, polled sub-hourly
+    // GISTDA cropsdrought (Check Drought) publishes weekly province-
+    // level drought risk + crop ET. Drought is the second-most-important
+    // cause of haze after agricultural burning (dry topsoil lifts with
+    // any wind), so the weekly cadence matches the upstream product.
+    cropsdrought: 6 * HOUR,
   },
 
   // Thai AQI 2023 PM2.5 breakpoints (µg/m³): ≤15 very good, ≤25 good,

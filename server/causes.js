@@ -59,6 +59,7 @@ export const CAUSE_LABELS = {
   traffic: { th: 'จราจร/การเผาไหม้ในเมือง', en: 'Traffic / urban combustion' },
   industry: { th: 'อุตสาหกรรม/โรงโม่ (ฝุ่นหยาบ)', en: 'Industry / quarry coarse dust' },
   desert_dust: { th: 'ฝุ่นทะเลทรายพัดพามา', en: 'Advected desert dust' },
+  drought: { th: 'ดินแห้ง ฝุ่นฟุ้งง่าย', en: 'Dry topsoil — dust lifts easily' },
   stagnation: { th: 'อากาศนิ่ง ฝุ่นสะสม', en: 'Stagnant air accumulating dust' },
 }
 
@@ -242,6 +243,42 @@ export function createCauses(db, { riskEngine }) {
             en: `CAMS forecasts ${dustFc} µg/m³ of desert dust within 24h`,
           }],
         })
+      }
+
+      // ── drought (dry topsoil amplifies dust lift) ────────────────────
+      // GISTDA Check Drought publishes a weekly 0-100 risk per province.
+      // High score means the topsoil is dry enough that any wind (or any
+      // follow-on burning) lifts dust for days. Cross-references the
+      // burn-season window: drought + in-season is the single biggest
+      // predictor of haze-event days in the upper north.
+      const drRow = db.get(
+        `SELECT mean, des, week FROM drought_risk
+           WHERE province_code = ?
+           ORDER BY week DESC LIMIT 1`,
+        code,
+      )
+      if (drRow?.mean != null) {
+        const m = Number(drRow.mean)
+        if (m >= 50) {
+          let conf = 0.18
+          const ev = [{
+            th: `GISTDA Check Drought: ความเสี่ยงภัยแล้ง ${m.toFixed(0)}/100 (สัปดาห์ ${drRow.week}) — ดินแห้ง ฝุ่นฟุ้งง่ายเมื่อมีลม/การเผา`,
+            en: `GISTDA Check Drought: risk ${m.toFixed(0)}/100 (week ${drRow.week}) — dry topsoil lifts dust on any wind/burn`,
+          }]
+          if (m >= 65) conf += 0.12
+          if (m >= 80) conf += 0.1
+          if (inSeason) {
+            conf += 0.1
+            ev.push({
+              th: 'ฤดูเผา — ภัยแล้ง + การเผาซ้อนกันทวีความรุนแรง',
+              en: 'Burning season — drought + burning compound each other',
+            })
+          }
+          causes.push({
+            id: 'drought', confidence: clamp01(Math.min(conf, 0.6)),
+            evidence: ev,
+          })
+        }
       }
 
       // ── stagnation (secondary — amplifies the primary) ────────────────

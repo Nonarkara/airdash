@@ -1,14 +1,15 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.24'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.24'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.24'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.24'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.24'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.24'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.24'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.24'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.24'
+import { on, store } from './state.js?v=2.4.25'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.25'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.25'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.25'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.25'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.25'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.25'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.25'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.25'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.25'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
@@ -53,6 +54,8 @@ export function initMap() {
   layers.heatmap = createPm25HeatmapLayer()
   newsFireApi = createNewsFireLayer()
   layers.newsfire = newsFireApi.group
+  droughtApi = createDroughtLayer()
+  layers.drought = droughtApi.group
   osmBuildingsApi = createOsmBuildingsLayer({ getMap: () => map, getRisk: () => store.snapshot?.risk })
   layers.osmbuild = osmBuildingsApi.group
   const boundariesApi = createProvinceBoundariesLayer()
@@ -73,6 +76,12 @@ export function initMap() {
 
   on('snapshot', renderAll)
   on('lang', () => { addLegend(); addLayerControl(); renderAll(store.snapshot) })
+  // Drought risk is a separate (weekly) feed, not part of the snapshot
+  // pipeline — fetch it once at boot and on every snapshot tick so a
+  // long-running tab picks up next week's polygons without a manual
+  // reload.
+  droughtApi.refresh()
+  on('snapshot', () => droughtApi.refresh())
   return map
 }
 

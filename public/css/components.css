@@ -3211,6 +3211,7 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .cause-chip.cause-transboundary { border-left-color: #8B3A6E; }
 .cause-chip.cause-industry      { border-left-color: #6B5B4A; }
 .cause-chip.cause-desert_dust   { border-left-color: #C8B560; }
+.cause-chip.cause-drought       { border-left-color: #B86E2B; background: rgba(184,110,43,0.08); }
 .cause-chip.cause-stagnation    { border-left-color: #7A8A94; }
 
 .detail-cause-line { margin-top: 4px; }

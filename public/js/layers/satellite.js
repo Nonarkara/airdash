@@ -251,6 +251,7 @@ export const LAYER_GROUPS = [
     en: 'ANALYSIS · REFERENCE',
     layers: [
       { id: 'risk', th: 'ชั้นความเสี่ยงจังหวัด', en: 'province risk', on: true },
+      { id: 'drought', th: 'ความเสี่ยงภัยแล้งรายสัปดาห์ (GISTDA)', en: 'weekly drought risk (GISTDA)', on: false },
       { id: 'burnscar', th: 'รอยเผาภาคเกษตร ฤดูล่าสุด (เหนือ+กลาง)', en: 'Agri burn scars, last season (north+central)', on: false },
       { id: 'boundaries', th: 'ขอบเขตจังหวัด (data.go.th)', en: 'province boundaries (DOPA)', on: false },
       { id: 'osmbuild', th: 'อาคารพื้นที่เสี่ยง OSM', en: 'OSM buildings in risk areas', on: false },

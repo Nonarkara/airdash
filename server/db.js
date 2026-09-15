@@ -186,6 +186,53 @@ CREATE TABLE IF NOT EXISTS burn_area (
 );
 CREATE INDEX IF NOT EXISTS burn_area_month ON burn_area(yyyymm);
 
+-- ── Drought risk (GISTDA cropsdrought) ────────────────────────────────────
+-- Weekly province-level drought-risk polygons from GISTDA's Check
+-- Drought system (cropsdrought.gistda.or.th). The polygon is the
+-- province boundary; the risk score (0-100) and the categorical
+-- description (โอกาสได้รับความเสี่ยง...) drive the map fill and the
+-- citizen-panel cause chip. Geometry is stored as the raw MultiPolygon
+-- JSON so we don't have to re-fetch GeoJSON every dashboard paint — a
+-- province polygon is large but bounded (~10-50 KB each).
+CREATE TABLE IF NOT EXISTS drought_risk (
+  province_code TEXT NOT NULL,
+  week          TEXT NOT NULL,           -- YYYY-MM-DD (start of the week)
+  end_date      TEXT,
+  pv_tn         TEXT,
+  pv_en         TEXT,
+  mean          REAL,                    -- 0-100 risk score
+  des           TEXT,                    -- Thai risk description
+  geometry_json TEXT,                    -- MultiPolygon as JSON string
+  fetched_at    TEXT NOT NULL,
+  PRIMARY KEY (province_code, week)
+);
+CREATE INDEX IF NOT EXISTS drought_risk_week ON drought_risk(week DESC);
+
+-- ── Crop water use (GISTDA cropsdrought) ───────────────────────────────────
+-- Weekly actual vs baseline crop evapotranspiration by province.
+-- et_normalized = (et_mean − et_base_mean) / et_base_mean — negative
+-- means the crop is using LESS water than baseline (rainy / mild week);
+-- positive means STRESSED (drier than the model baseline → burn-risk
+-- proxy for the next month). Stored alongside the GeoJSON string.
+CREATE TABLE IF NOT EXISTS crop_water (
+  province_code  TEXT NOT NULL,
+  week           TEXT NOT NULL,
+  pv_tn          TEXT,
+  pv_en          TEXT,
+  re_royin       TEXT,
+  et_di          REAL,
+  et_mean        REAL,
+  et_base_mean   REAL,
+  et_base_min    REAL,
+  et_base_max    REAL,
+  et_normalized  REAL,
+  et_range       REAL,
+  geometry_json  TEXT,
+  fetched_at     TEXT NOT NULL,
+  PRIMARY KEY (province_code, week)
+);
+CREATE INDEX IF NOT EXISTS crop_water_week ON crop_water(week DESC);
+
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT);
 
 -- ── Chat telemetry — every question the operator asks is logged here so we
