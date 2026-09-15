@@ -1,15 +1,15 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.26'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.26'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.26'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.26'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.26'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.26'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.26'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.26'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.26'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.26'
+import { on, store } from './state.js?v=2.4.27'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.27'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.27'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.27'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.27'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.27'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.27'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.27'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.27'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.27'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
@@ -17,6 +17,7 @@ const layers = {}
 let satLayers = null
 let osmBuildingsApi = null
 let newsFireApi = null
+let droughtApi = null
 let basemaps = null
 const BASEMAP_KEY = 'ad_basemap'
 let currentBasemap = (() => {
