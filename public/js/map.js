@@ -1,15 +1,15 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.25'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.25'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.25'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.25'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.25'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.25'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.25'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.25'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.25'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.25'
+import { on, store } from './state.js?v=2.4.26'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.26'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.26'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.26'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.26'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.26'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.26'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.26'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.26'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.26'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
@@ -41,6 +41,9 @@ export function initMap() {
   layers.himawari = satLayers.himawari
   layers.modis = satLayers.modis
   layers.aod = satLayers.aod
+  // MODIS_Aqua_Aerosol_Optical_Depth_3km — 3 km resolution AOD, near-JAXA-class
+  // (JAXA SGLI AROT sits behind G-Portal auth; this is the closest live tile).
+  layers.aodAqua3km = satLayers.aodAqua3km
   layers.nightlights = satLayers.nightlights
   layers.aerosolIndex = satLayers.aerosolIndex
   layers.co = satLayers.co
@@ -259,6 +262,7 @@ function addLegend() {
       <div class="lrow"><span class="lsw round" style="background:#1565C0;opacity:.5"></span>${tr('GPM IMERG ฝนดาวเทียม', 'GPM IMERG satellite rain')}</div>
       <div class="lrow"><span class="lsw" style="background:#5C6BC0;opacity:.6"></span>${tr('Himawari-9 IR เมฆ', 'Himawari-9 IR clouds')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#f7f4b8,#f0a030,#c0341a,#6b1f10)"></span>${tr('หมอกควัน/ละอองลอย AOD (เหลือง→น้ำตาล = หนาแน่นขึ้น)', 'smoke/aerosol AOD (yellow→brown = thicker)')}</div>
+      <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#f7f4b8,#f0a030,#c0341a,#6b1f10)"></span>${tr('AOD 3 กม. (MODIS Aqua — ใกล้เคียงดาวเทียม JAXA SGLI, ละเอียดกว่า AOD ด้านบน 50 เท่า)', 'AOD 3 km (MODIS Aqua — near-JAXA SGLI, 50× sharper than the AOD above)')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#05060f,#3b3f6b,#f2e6b8)"></span>${tr('แสงไฟกลางคืน — จุดสว่างนอกเมือง = อาจเป็นการเผากลางคืน', 'night lights — bright spots outside towns can be night burning')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#e8edf2,#c9a227,#8a4b1f)"></span>${tr('ดัชนีควัน UV — ค่าสูง = ควันดูดกลืนแสงลอยอยู่เหนือพื้นที่', 'UV smoke index — higher = absorbing smoke aloft')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#0f2f4a,#2f8fa8,#d8e04a)"></span>${tr('CO 500 hPa — ควันที่ลอยมาจากที่อื่น ไม่ใช่ไฟที่กำลังไหม้ตรงนี้', 'CO 500 hPa — smoke transported from elsewhere, not fire below')}</div>

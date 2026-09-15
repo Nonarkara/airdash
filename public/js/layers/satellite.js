@@ -85,6 +85,28 @@ export function createSatelliteLayers(map, pane) {
         crossOrigin: true,
       },
     ),
+    // MODIS Aqua AOD at 3 km native resolution — the satellite-retrieved
+    // plume view at a useful zoom for a single province. NASA GIBS hosts
+    // the daily 3-km Aqua product separately from the combined value-added
+    // AOD above; this is the same MODIS instrument, just a sharper
+    // retrieval pipeline and at the higher native 3-km pixel size. The
+    // instrument and algorithm are the same family as what JAXA's GCOM-C
+    // SGLI uses for its own aerosol product (the JAXA SGLI AROT — Aerosol
+    // Optical Thickness over Land and Ocean at 500 nm — is on JAXA's
+    // G-Portal but not behind a public tile service, so this layer is
+    // the closest live equivalent you can toggle on the map without an
+    // account). Each daily tile is published one day behind.
+    aodAqua3km: L.tileLayer(
+      `${GIBS}/MODIS_Aqua_Aerosol_Optical_Depth_3km/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.72,
+        pane,
+        attribution: '© NASA GIBS · MODIS Aqua AOD 3km (NASA / same family as JAXA GCOM-C SGLI AROT)',
+        crossOrigin: true,
+      },
+    ),
     // Carbon monoxide, 500 hPa (AIRS/Aqua). CO is THE tracer for biomass
     // burning: incomplete combustion of vegetation produces it in bulk, it
     // survives in the atmosphere for weeks, and — unlike CO2 — it is not
@@ -225,8 +247,9 @@ export const LAYER_GROUPS = [
     en: 'SATELLITE · RADAR',
     layers: [
       { id: 'aod', th: 'หมอกควัน/ละอองลอย (AOD ดาวเทียม)', en: 'Smoke / aerosol (satellite AOD)', on: false, kind: 'sat' },
+      { id: 'aodAqua3km', th: 'AOD 3 กม. (Aqua/JAXA-คลาส)', en: 'AOD 3 km (Aqua / JAXA-class)', on: false, kind: 'sat' },
       { id: 'aerosolIndex', th: 'ดัชนีควัน UV (ควันดูดกลืนแสง)', en: 'UV smoke index (absorbing aerosol)', on: false, kind: 'sat' },
-      { id: 'co', th: 'คาร์บอนมอนอกไซด์ (ควันไฟที่ลอยมา)', en: 'Carbon monoxide (transported smoke)', on: false, kind: 'sat' },
+      { id: 'co', th: 'คาร์บอนมอนอกไซด์ (คันไฟที่ลอยมา)', en: 'Carbon monoxide (transported smoke)', on: false, kind: 'sat' },
       { id: 'nightlights', th: 'แสงไฟกลางคืน (เผากลางคืน/ฟุ้งกระจาย)', en: 'Night lights (night burning / haze glow)', on: false, kind: 'sat' },
       { id: 'gsmap', th: 'GSMaP/GPM ฝนดาวเทียม', en: 'GSMaP/GPM rain', on: false, kind: 'sat' },
       { id: 'himawari', th: 'Himawari-9 เมฆ IR', en: 'Himawari-9 IR', on: false, kind: 'sat' },
