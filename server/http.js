@@ -24,6 +24,47 @@ const MIME = {
   '.md': 'text/markdown; charset=utf-8',
 }
 
+// ── CORS for the public open-data API ───────────────────────────────────
+// Until 2026-09-16 this server sent NO CORS headers at all, so a browser on
+// any other origin — the user's other dashboards included — could not read a
+// single byte of /api/. Same policy as the FloodDash twin (server/http.js
+// there, since 2026-09-08): read-only requests to /api/ answer `*` because
+// publishing an API is the point; the operator surfaces (admin, LINE /
+// Telegram webhooks + config, chat logs/FAQ moderation, export builds) never
+// get CORS from any origin, so a stranger's page cannot even preflight them.
+export const PRIVATE_API_PREFIXES = [
+  '/api/admin/',
+  '/api/telegram/',
+  '/api/line/',
+  '/api/chat/logs',
+  '/api/chat/faqs',
+  '/api/exports/build',
+]
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+export function isPublicApiRead(method, pathname) {
+  if (!READ_METHODS.has(method)) return false
+  if (!pathname.startsWith('/api/')) return false
+  return !PRIVATE_API_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+}
+
+export const PUBLIC_API_CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, HEAD, OPTIONS',
+  'access-control-allow-headers': 'Accept, Content-Type, If-None-Match',
+  'access-control-expose-headers': 'x-airdash-stale-seconds, Retry-After',
+  'access-control-max-age': '86400',
+}
+
+/** Set the public CORS headers on a read-only /api/ response. Returns true
+ *  when they were applied. Uses setHeader so json()/sendPrebuilt()'s
+ *  writeHead() merges them in instead of replacing them. */
+export function applyPublicApiCors(req, res) {
+  if (!isPublicApiRead(req.method, new URL(req.url, 'http://x').pathname)) return false
+  for (const [k, v] of Object.entries(PUBLIC_API_CORS)) res.setHeader(k, v)
+  return true
+}
+
 export const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
@@ -204,6 +245,12 @@ export function startHttp(routes) {
       for (const [k, v] of Object.entries(params)) {
         url.searchParams.set(':' + k, v)
       }
+    }
+    if (url.pathname.startsWith('/api/')) {
+      const isCors = applyPublicApiCors(req, res)
+      // Preflight for a public read: answer here, before the rate limiter
+      // and the route table — OPTIONS has no handler and would otherwise 405.
+      if (isCors && req.method === 'OPTIONS') { res.writeHead(204).end(); return }
     }
     if (!allow(req, { key: 'general', limit: 300, windowMs: 60_000 })) {
       res.writeHead(429, { ...SECURITY_HEADERS, 'content-type': 'application/json; charset=utf-8', 'retry-after': '30' })

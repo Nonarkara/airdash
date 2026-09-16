@@ -12,6 +12,7 @@ import { listExportDays, buildDailyExport, dailyToCsv, buildFullExport, fullToCs
 import { listWeeklyExports, getExportPath, buildWeeklyExport as buildWeeklyExportJob, startWeeklyBuild, getBuildState } from './weeklyExport.js'
 import { libraryToc, searchLibrary, libraryDoc } from './library.js'
 import { searchGazetteer, placeDetail, searchTambons, searchDistricts, lookupPostal, lookupPlace, resolvePlaceSlug } from './gazetteer.js'
+import { buildTwin, readAppVersion } from './twin.js'
 import { provinceVerdict } from './verdict.js'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -62,6 +63,12 @@ const SERIES_DAILY_TTL_MS = 30 * 60_000 // daily bars barely move intraday; reco
 // live between fetches, so a few seconds of staleness is invisible).
 let snapshotCache = null // { at, built:{ body, gz } }
 const SNAPSHOT_TTL_MS = 6_000
+// /api/twin: same idea, longer TTL — it is a 77-row summary that the
+// FloodDash twin and other dashboards poll every few minutes.
+let twinCache = null // { at, built:{ body, gz } }
+const TWIN_TTL_MS = 30_000
+// The ops.html asset token is the release version (scripts/bump-version.mjs).
+const APP_VERSION = readAppVersion()
 
 // Cache for /api/insights — buildInsights + sensorHealth scan readings and cost
 // ~0.7s; without a cache, N concurrent loads each recompute serially on the one
@@ -278,6 +285,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       json(res, 200, {
         ok: true,
         service: 'airdash',
+        version: APP_VERSION,
         now: new Date().toISOString(),
         uptime_s: Math.round((Date.now() - startedAt) / 1000),
         db: { ...dbStats, size_mb: Math.round(dbSize / 1048576 * 10) / 10 },
@@ -360,6 +368,25 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         sources: scheduler.health(),
       })
       snapshotCache = { at: Date.now(), built }
+      sendPrebuilt(res, 200, built)
+    },
+
+    // The Twin API — one compact, keyless, CORS-open per-province summary
+    // for the FloodDash twin and any other dashboard. Contract and field
+    // meanings in docs/TWIN-API.md; shape built by server/twin.js. Cached
+    // like the snapshot: identical for every client at a given moment.
+    'GET /api/twin': (req, res) => {
+      if (twinCache && Date.now() - twinCache.at < TWIN_TTL_MS) {
+        res.setHeader('x-airdash-stale-seconds', String(Math.round((Date.now() - twinCache.at) / 1000)))
+        return sendPrebuilt(res, 200, twinCache.built)
+      }
+      const built = prebuild(buildTwin({
+        risk: riskEngine.get(),
+        dangerRows: danger ? danger.get() : [],
+        version: APP_VERSION,
+      }))
+      twinCache = { at: Date.now(), built }
+      res.setHeader('x-airdash-stale-seconds', '0')
       sendPrebuilt(res, 200, built)
     },
 
