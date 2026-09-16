@@ -186,6 +186,34 @@ CREATE TABLE IF NOT EXISTS burn_area (
 );
 CREATE INDEX IF NOT EXISTS burn_area_month ON burn_area(yyyymm);
 
+-- Regional fire detections (NASA FIRMS VIIRS, global 24h NRT feed,
+-- filtered to a bounding box over mainland Southeast Asia). Built to
+-- answer one honest question the domestic hotspot feeds structurally
+-- cannot: how much of the smoke is actually coming from OUTSIDE
+-- Thailand. in_thailand is a real point-in-polygon test against the
+-- province boundaries in public/geo/province-boundaries.geojson — see
+-- server/geo/pointInThailand.js — not a bounding-box guess.
+--
+-- detection_key is satellite + acq_date + acq_time + rounded lat/lon:
+-- FIRMS has no detection ID, and re-fetching the same 24h window on
+-- every daily run would either need this deduplication or would grow
+-- the table by the full 24h volume every single day forever.
+CREATE TABLE IF NOT EXISTS regional_hotspots (
+  detection_key TEXT PRIMARY KEY,
+  lat           REAL NOT NULL,
+  lng           REAL NOT NULL,
+  acq_date      TEXT NOT NULL,
+  acq_time      TEXT,
+  satellite     TEXT,
+  confidence    TEXT,
+  frp           REAL,
+  in_thailand   INTEGER NOT NULL,
+  province_th   TEXT,
+  province_en   TEXT,
+  fetched_at    TEXT
+);
+CREATE INDEX IF NOT EXISTS regional_hotspots_date ON regional_hotspots(acq_date);
+
 -- ── Drought risk (GISTDA cropsdrought) ────────────────────────────────────
 -- Weekly province-level drought-risk polygons from GISTDA's Check
 -- Drought system (cropsdrought.gistda.or.th). The polygon is the

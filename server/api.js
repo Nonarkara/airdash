@@ -816,6 +816,43 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       })
     },
 
+    // Cross-border hotspot share — the honest answer to "is this our own
+    // farmers, or is it blowing in from outside Thailand". Every other
+    // hotspot figure in this system (GISTDA/HRDI) is Thailand-only by
+    // construction and structurally cannot answer that question; this is
+    // the one feed (NASA FIRMS, see server/sources/firms-regional.js)
+    // that sees both sides of the border, classified by a real
+    // point-in-polygon test, not a bounding-box guess.
+    //
+    // ?days=1..14 windows the query over acq_date (default 1, i.e. the
+    // rolling last day actually held — the table itself only retains a
+    // 14-day window; see the source's own retention comment).
+    'GET /api/regional-fire-share': (req, res) => {
+      const url = new URL(req.url, 'http://x')
+      const days = Math.min(14, Math.max(1, Number(url.searchParams.get('days')) || 1))
+      const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10)
+      const rows = db.all(
+        `SELECT in_thailand, COUNT(*) n FROM regional_hotspots
+         WHERE acq_date >= ? GROUP BY in_thailand`, since)
+      const inTh = rows.find((r) => r.in_thailand)?.n ?? 0
+      const outTh = rows.find((r) => !r.in_thailand)?.n ?? 0
+      const total = inTh + outTh
+      json(res, 200, {
+        windowDays: days,
+        since,
+        total,
+        thailand: { count: inTh, pct: total ? Math.round((inTh / total) * 1000) / 10 : null },
+        outsideThailand: { count: outTh, pct: total ? Math.round((outTh / total) * 1000) / 10 : null },
+        source: {
+          name_en: 'NASA FIRMS — VIIRS (Suomi NPP), global 24h NRT bulk file, filtered to mainland Southeast Asia',
+          name_th: 'NASA FIRMS — VIIRS (Suomi NPP) ข้อมูลดิบ 24 ชม. ทั่วโลก กรองเฉพาะแผ่นดินใหญ่เอเชียตะวันออกเฉียงใต้',
+          method_en: 'in/out classified by point-in-polygon against real Thai province boundaries, not a bounding box',
+          method_th: 'จำแนกในไทย/นอกไทยด้วยการทดสอบจุดในรูปหลายเหลี่ยมของขอบเขตจังหวัดจริง ไม่ใช่กรอบสี่เหลี่ยม',
+          url: 'https://firms.modaps.eosdis.nasa.gov/',
+        },
+      })
+    },
+
     // GISTDA Check Drought — province-level drought risk (weekly) +
     // actual vs baseline crop ET (weekly). Two endpoints: `latest` for
     // the dashboard map fill (returns the most recent week's risk

@@ -41,6 +41,8 @@ export const CONFIG = {
     // dust-smoke season, so this is deliberately slow. Outside the
     // season it is a legitimate no-op rather than a stalled feed.
     burnArea: 24 * HOUR,     // agricultural burn scars, crop-split
+    // Bulk 7MB global file; the same daily cadence rationale as burnArea.
+    firmsRegional: 24 * HOUR,  // cross-border hotspot share (FIRMS)
     news: 30 * MINUTE,
     imerg: 30 * MINUTE,      // IMERG Early publishes half-hourly (~4h latency)
     gistda_pm25: 1 * HOUR,   // GISTDA satellite+ground PM2.5 fusion
