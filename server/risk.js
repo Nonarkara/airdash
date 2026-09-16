@@ -13,6 +13,7 @@
 import { CONFIG } from './config.js'
 import { nationalVerdict, provinceVerdict } from './verdict.js'
 import { isThaiProvinceCode } from './provinces.js'
+import { readTwinFlood, floodByCode } from './sources/twin-flood.js'
 
 const FRESH_PM_HOURS = 6
 const FRESH_FC_HOURS = 13
@@ -284,6 +285,15 @@ export function createRisk(db, washout) {
       p.washout_expected_pct = w?.expected_relief_pct ?? null
       p.projected_pm25 = w?.projected_pm25 ?? null
       p.washout_helps = w?.helps_dust ?? false
+    }
+
+    // FloodDash twin (2026-09-16): the same province's FLOOD verdict, relayed
+    // by sources/twin-flood.js. Parallel signal, NOT in the score — the
+    // verdict uses it to say "the rain that clears the dust may also raise
+    // the rivers". Missing relay → p.flood = null, nothing else moves.
+    const floodMap = floodByCode(readTwinFlood(db))
+    for (const p of provinces.values()) {
+      p.flood = (p.province_code && floodMap.get(String(p.province_code))) || null
     }
 
     const w = CONFIG.risk.weights

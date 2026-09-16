@@ -37,6 +37,7 @@ export const CONFIG = {
     openmeteo_aq: 6 * HOUR,  // CAMS air-quality forecast (12-hourly cycles upstream)
     thaiwater_rain: 10 * MINUTE,
     enso: 12 * HOUR,         // ONI revises monthly; cheap to recheck
+    twin_flood: 10 * MINUTE, // FloodDash /api/twin relay — localhost, 4 min cached there
     // Tam Roy Pao publishes MONTHLY CSVs and only for the Nov-Apr
     // dust-smoke season, so this is deliberately slow. Outside the
     // season it is a legitimate no-op rather than a stalled feed.

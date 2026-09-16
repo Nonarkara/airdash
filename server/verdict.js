@@ -185,6 +185,25 @@ export function provinceVerdict(p, sat = null, near = null) {
     `ฝนมีโอกาส ${Math.round(p.precip_prob_24h ?? 0)}% ใน 24 ชม. คาดช่วยลดฝุ่น ~${p.washout_relief_pct}%`,
     `${Math.round(p.precip_prob_24h ?? 0)}% chance of rain in 24h — could wash out ~${p.washout_relief_pct}% of the dust`)
 
+  // The FloodDash twin (2026-09-16). Same province, the water side of the
+  // same rain — relayed by sources/twin-flood.js, never scored. Two lines:
+  //  · the flood verdict itself when it is at prepare/danger, because a
+  //    person reading the AIR page still has to leave the house; and
+  //  · the joint insight: the washout the line above celebrates is the
+  //    flood engine's hazard. อาจ/may, never จะ/will.
+  const flood = p?.flood
+  const floodBad = flood && (flood.level === 'prepare' || flood.level === 'danger')
+  const floodWatch = floodBad || flood?.level === 'watch'
+  if (floodBad) {
+    const LV = { prepare: { th: 'ควรเตรียมพร้อม', en: 'prepare' }, danger: { th: 'วิกฤต', en: 'danger' } }[flood.level]
+    const l5 = flood.stations_l5 > 0 ? ` · ${flood.stations_l5} ${flood.stations_l5 === 1 ? 'gauge' : 'gauges'} overflowing` : ''
+    R(`FloodDash: จังหวัดนี้อยู่ระดับ “${LV.th}” เรื่องน้ำท่วม${flood.stations_l5 > 0 ? ` · สถานีน้ำล้นตลิ่ง ${flood.stations_l5} แห่ง` : ''} — ${flood.head_th ?? ''}`.trim(),
+      `FloodDash: this province is at "${LV.en}" for flooding${l5} — ${flood.head_en ?? ''}`.trim())
+  }
+  if (p?.washout_helps && floodWatch) R(
+    'ฝนที่อาจช่วยล้างฝุ่นก้อนนี้ อาจทำให้แม่น้ำในจังหวัดขึ้นด้วย — ดูหน้า FloodDash ก่อนวางใจ',
+    'The rain that may clear the dust may also raise the rivers here — check FloodDash before relying on it')
+
   // Level: highest trigger wins, never lower than what the band says.
   let level = 'safe'
   if (p?.band === 'watch' || (pm25 ?? 0) >= PM_GOOD || (p?.rise_6h_ug ?? 0) >= 8 || (fc48 ?? 0) >= PM_GOOD) level = 'watch'
