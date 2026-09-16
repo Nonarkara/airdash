@@ -27,6 +27,7 @@ import {
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare,
 } from './citizenLife.js?v=2.4.30'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.30'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -388,6 +389,15 @@ function renderForProvince(province) {
   // ("ฝนช่วยล้างฝุ่นพรุ่งนี้ · washout rain tomorrow, 8mm @98%") plus the
   // honest "worse before better" warning when CAMS says so. Filled async;
   // the empty div costs nothing when there is nothing to say.
+  // TMD 5-day weather for the province (via /api/weather/at) — the
+  // pedestrian block a person plans a day on, next to the dust verdict.
+  const weatherWrap = el('div', { class: 'citizen-weather' })
+  if (live?.lat != null && live?.lng != null) {
+    getJson(`/api/weather/at?lat=${live.lat}&lng=${live.lng}&province=${encodeURIComponent(live.province_code ?? '')}`, 300_000)
+      .then((w) => { weatherWrap.innerHTML = weatherStripHtml(w?.weather, { compact: true }) })
+      .catch(() => {})
+  }
+
   const reliefWrap = el('div', { class: 'citizen-relief' })
   getJson('/api/washout', 60_000).then((w) => {
     const entry = (w?.provinces ?? []).find((x) =>
@@ -462,7 +472,7 @@ function renderForProvince(province) {
   // then the standard AQ-stations row, then migrant-worker phrases
   // (only at elevated+ bands, when they're needed).
   const out = [
-    head, why, reliefWrap,
+    head, why, weatherWrap, reliefWrap,
     tomorrowHost,
     personaHost,
     useTimeline ? renderActionTimeline(band) : null,

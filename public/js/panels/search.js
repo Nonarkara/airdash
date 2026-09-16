@@ -5,6 +5,7 @@ import { on, store, emit } from '../state.js?v=2.4.30'
 import { tr, pick, BAND } from '../i18n.js?v=2.4.30'
 import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.30'
 import { getJson } from '../cache.js?v=2.4.30'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.30'
 
 // Cached province centroids — fetched once, used to give postal results
 // a fly-to target. Same numbers the server's gazetteer uses (see
@@ -598,6 +599,7 @@ function renderPlaceCard(sel) {
 
   html += `<div class="pc-cols"><div class="pc-main">`
   html += verdictHero(v)
+  html += weatherStripHtml(d.weather)
   html += rainOutlook(d.province_forecast, d.sat_rain)
 
   // Province context — where this city's province sits nationally, for every

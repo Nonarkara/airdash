@@ -3653,3 +3653,22 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
   .api-fact-grid { grid-template-columns: 1fr; }
   .api-copy-block { position: static; display: block; margin-bottom: 6px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TMD weather strip (public/js/weatherStrip.js) — place card + citizen
+   page, 2026-09-17. Five day cells + the nearest station's "now" line.
+   ═══════════════════════════════════════════════════════════════════════ */
+.wx-now { display: flex; align-items: center; gap: 12px; margin: 4px 0 2px; }
+.wx-temp { font-family: var(--font-num); font-size: 30px; font-weight: 700; line-height: 1; color: var(--ink); }
+.wx-nowmeta { font-size: 12.5px; line-height: 1.5; color: var(--ink-mid); }
+.wx-basis { font-size: 11px; color: var(--ink-low); margin-top: 4px; line-height: 1.4; }
+.wx-days { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 8px; }
+.wx-day { padding: 6px 4px; text-align: center; background: var(--well); border: 1px solid var(--rule); border-radius: var(--r-sm); min-width: 0; }
+.wx-dl { font-family: var(--font-num); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-low); }
+.wx-ic { font-size: 20px; line-height: 1.3; }
+.wx-t { font-family: var(--font-num); font-size: 13px; color: var(--ink); }
+.wx-dim { color: var(--ink-low); }
+.wx-r { font-size: 11px; color: var(--rain); }
+.wx-c { font-size: 10.5px; line-height: 1.25; color: var(--ink-mid); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.citizen-weather .place-section.wx { margin: 8px 0; padding: 8px 10px; border-top: 1px solid var(--rule); }
+@media (max-width: 420px) { .wx-c { display: none; } .wx-temp { font-size: 26px; } }

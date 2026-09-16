@@ -73,7 +73,7 @@ const base = { province_th: 'น่าน', province_en: 'Nan', province_code: '
   const entry = SOURCES.find((s) => s.id === 'twin_flood')
   check('twin_flood is catalogued with the FloodDash URL', !!entry && /flood\.nonarkara\.org\/api\/twin/.test(entry.url))
   const index = readFileSync(join(ROOT, 'server', 'index.js'), 'utf8')
-  check('index.js registers the source', /twinFlood\]/.test(index))
+  check('index.js registers the source', /twinFlood[,\]]/.test(index))
   const risk = readFileSync(join(ROOT, 'server', 'risk.js'), 'utf8')
   check('risk.js joins p.flood', /p\.flood = /.test(risk))
   const config = readFileSync(join(ROOT, 'server', 'config.js'), 'utf8')

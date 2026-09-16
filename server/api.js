@@ -13,6 +13,8 @@ import { listWeeklyExports, getExportPath, buildWeeklyExport as buildWeeklyExpor
 import { libraryToc, searchLibrary, libraryDoc } from './library.js'
 import { searchGazetteer, placeDetail, searchTambons, searchDistricts, lookupPostal, lookupPlace, resolvePlaceSlug } from './gazetteer.js'
 import { buildTwin, readAppVersion } from './twin.js'
+import { weatherAtDb, haversineKm } from './weather.js'
+import { readTmdWeather } from './sources/tmd-relay.js'
 import { provinceVerdict } from './verdict.js'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -66,6 +68,8 @@ const SNAPSHOT_TTL_MS = 6_000
 // /api/twin: same idea, longer TTL — it is a 77-row summary that the
 // FloodDash twin and other dashboards poll every few minutes.
 let twinCache = null // { at, built:{ body, gz } }
+let weatherCache = null // GET /api/weather (relayed TMD), prebuilt gzip
+const WEATHER_TTL_MS = 60_000
 const TWIN_TTL_MS = 30_000
 // The ops.html asset token is the release version (scripts/bump-version.mjs).
 const APP_VERSION = readAppVersion()
@@ -388,6 +392,34 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       twinCache = { at: Date.now(), built }
       res.setHeader('x-airdash-stale-seconds', '0')
       sendPrebuilt(res, 200, built)
+    },
+
+    // TMD weather — relayed from the FloodDash twin (sources/tmd-relay.js):
+    // the 7-day forecast for 77 provinces + Pattaya, Hua Hin, Ko Samui,
+    // Hat Yai and 125 synoptic stations' 3-hourly observations.
+    'GET /api/weather': (req, res) => {
+      if (weatherCache && Date.now() - weatherCache.at < WEATHER_TTL_MS) return sendPrebuilt(res, 200, weatherCache.built)
+      const rel = readTmdWeather(db)
+      const built = prebuild(rel ?? { available: false, reason_th: 'ยังไม่ได้รับข้อมูลอากาศจาก FloodDash', reason_en: 'TMD relay from FloodDash not received yet' })
+      weatherCache = { at: Date.now(), built }
+      sendPrebuilt(res, 200, built)
+    },
+    'GET /api/weather/at': (req, res, url) => {
+      const lat = Number(url.searchParams.get('lat')), lng = Number(url.searchParams.get('lng'))
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return json(res, 400, { error: 'lat and lng required' })
+      if (lat < 4 || lat > 22 || lng < 95 || lng > 108) return json(res, 400, { error: 'lat/lng outside Thailand coverage' })
+      if (!allow(req, { key: 'weather_at', limit: 60, windowMs: 60_000 })) return json(res, 429, { error: 'too many weather lookups, slow down' })
+      let province_code = url.searchParams.get('province') || null
+      if (!province_code) {
+        let best = null
+        for (const p of riskEngine.get().provinces) {
+          if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue
+          const km = haversineKm(lat, lng, p.lat, p.lng)
+          if (!best || km < best.km) best = { code: p.province_code, km }
+        }
+        province_code = best?.code ?? null
+      }
+      json(res, 200, { lat, lng, province_code, weather: weatherAtDb(db, { lat, lng, province_code }) })
     },
 
     'GET /api/risk': (req, res) => {
@@ -1277,6 +1309,8 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       // Pass the actual nearest stations so the verdict catches a smoky valley
       // near this city even when it sits across a province border.
       detail.verdict = provinceVerdict(prov, sat, detail.nearest_air ?? detail.nearest_water)
+      // TMD weather for the card: 5-day forecast + nearest synoptic station.
+      detail.weather = weatherAtDb(db, { lat, lng, province_code: prov?.province_code ?? null })
       json(res, 200, detail)
     },
 

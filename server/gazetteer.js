@@ -555,6 +555,47 @@ export function placeDetail(db, { lat, lng, province_th = null, radius_km = 30 }
 // expects results of shape { type, name_th, name_en, province_th, lat, lng, … }.
 //
 // `db` is the open SQLite handle (used only for station / focus queries).
+// ── Landmark layer — ported from the FloodDash twin 2026-09-17 ──────────
+// "I don't know the tambon, but I know the park / airport / temple / mall."
+// public/geo/landmarks.json (12,854 OSM places, built by FloodDash's
+// scripts/build-landmarks.mjs; keep the two copies identical).
+let _landmarks = null
+function loadLandmarks() {
+  if (_landmarks) return _landmarks
+  let raw = []
+  try { raw = JSON.parse(readFileSync(join(GEO, 'landmarks.json'), 'utf8')) } catch { raw = [] }
+  const seen = new Set()
+  _landmarks = raw.filter((lm) => {
+    const key = `${String(lm.name_th).toLowerCase()}|${Number(lm.lat).toFixed(3)}|${Number(lm.lng).toFixed(3)}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  return _landmarks
+}
+export const LANDMARK_CATEGORY = {
+  airport: { th: 'สนามบิน', en: 'Airport' }, temple: { th: 'วัด/สถานที่ศักดิ์สิทธิ์', en: 'Temple / place of worship' },
+  mall: { th: 'ห้างสรรพสินค้า', en: 'Shopping mall' }, market: { th: 'ตลาด', en: 'Market' },
+  attraction: { th: 'สถานที่ท่องเที่ยว', en: 'Attraction' }, museum: { th: 'พิพิธภัณฑ์', en: 'Museum' },
+  monument: { th: 'อนุสาวรีย์/โบราณสถาน', en: 'Monument / historic site' }, university: { th: 'มหาวิทยาลัย', en: 'University' },
+  hospital: { th: 'โรงพยาบาล', en: 'Hospital' }, dam: { th: 'เขื่อน', en: 'Dam' },
+  rail: { th: 'สถานีรถไฟ/รถไฟฟ้า', en: 'Rail / metro station' }, stadium: { th: 'สนามกีฬา', en: 'Stadium' },
+  park: { th: 'อุทยานแห่งชาติ', en: 'National park' },
+}
+/** A destination's names with the type word stripped ("อุทยานแห่งชาติเขาใหญ่"
+ *  → "เขาใหญ่", "Khao Yai National Park" → "Khao Yai"). */
+export function destinationCore(r) {
+  const out = []
+  const th = String(r.name_th ?? '').replace(/^อุทยานแห่งชาติ\s*/, '').replace(/^(ท่าอากาศยาน|สนามบิน)\s*/, '').replace(/\s*(ท่าอากาศยาน|สนามบิน)$/, '').trim()
+  const en = String(r.name_en ?? '').replace(/\s*National Park$/i, '').replace(/\s*(International\s+)?Airport$/i, '').trim()
+  if (th) out.push(th)
+  if (en) out.push(en)
+  return out
+}
+export function searchLandmarks(q, lang = 'en', limit = 6) {
+  return searchList(loadLandmarks(), q, ['name_th', 'name_en'], limit)
+}
+
 export function searchGazetteer(db, { q = '', limit = 20, lang = 'en' } = {}) {
   q = (q ?? '').trim()
   if (!q || q.length < 2) return { q, results: [] }
@@ -589,6 +630,26 @@ export function searchGazetteer(db, { q = '', limit = 20, lang = 'en' } = {}) {
   }
 
   // ── Provinces (in-memory) ─────────────────────────────────────────────
+  // Destinations: a park or airport whose core name equals the query is a
+  // candidate even when six temples named "…เขาใหญ่" would fill the slots
+  // ("Khao Yai" used to answer with tambon เขาใหญ่ in Cha-Am, 200 km away).
+  const qNorm = q.toLowerCase()
+  const isDestinationLm = (lm) => (lm.category === 'park' || lm.category === 'airport')
+    && destinationCore(lm).some((n) => n === q || n.toLowerCase() === qNorm)
+  const destinationHits = loadLandmarks().filter(isDestinationLm)
+  for (const lm of [...destinationHits, ...searchLandmarks(q, lang, 6).filter((lm) => !destinationHits.includes(lm))]) {
+    const cat = LANDMARK_CATEGORY[lm.category] ?? { th: 'แลนด์มาร์ก', en: 'Landmark' }
+    results.push({
+      type: 'landmark', subtype: lm.category,
+      type_th: cat.th, type_en: cat.en,
+      name_th: lm.name_th, name_en: lm.name_en,
+      province_th: lm.province_th, province_en: lm.province_en,
+      province_code: lm.province_code ?? null,
+      lat: lm.lat, lng: lm.lng, zoom: lm.zoom ?? 14,
+      destination: isDestinationLm(lm),
+    })
+  }
+
   for (const p of searchProvinces(q, lang, 5)) {
     const prov = loadProvinces().byCode.get(p.code)
     if (!prov) continue
@@ -663,7 +724,17 @@ export function searchGazetteer(db, { q = '', limit = 20, lang = 'en' } = {}) {
     }
   } catch { /* stations table may not exist in some test contexts */ }
 
-  return { q, results: results.slice(0, limit) }
+  // Destinations first, then exact-name admin units, then everything else.
+  const isExact = (r) => r.name_th === q || r.name_en?.toLowerCase() === qNorm
+  const isAdmin = (r) => r.type === 'province' || r.type === 'district' || r.type === 'subdistrict' || r.type === 'municipality'
+  const ordered = [
+    ...results.filter((r) => r.destination),
+    ...results.filter((r) => !r.destination && isAdmin(r) && isExact(r)),
+    ...results.filter((r) => !r.destination && !(isAdmin(r) && isExact(r)) && isExact(r) && r.type !== 'landmark'),
+    ...results.filter((r) => !r.destination && !isExact(r) && r.type !== 'landmark'),
+    ...results.filter((r) => !r.destination && r.type === 'landmark'),
+  ]
+  return { q, results: ordered.slice(0, limit) }
 }
 
 // Lookup a single tambon / district / province by code. Returns the same

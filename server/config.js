@@ -38,6 +38,7 @@ export const CONFIG = {
     thaiwater_rain: 10 * MINUTE,
     enso: 12 * HOUR,         // ONI revises monthly; cheap to recheck
     twin_flood: 10 * MINUTE, // FloodDash /api/twin relay — localhost, 4 min cached there
+    tmd_relay: 15 * MINUTE,  // TMD weather relay from FloodDash /api/weather (3-hourly upstream)
     // Tam Roy Pao publishes MONTHLY CSVs and only for the Nov-Apr
     // dust-smoke season, so this is deliberately slow. Outside the
     // season it is a legitimate no-op rather than a stalled feed.
