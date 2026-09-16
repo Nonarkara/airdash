@@ -10,6 +10,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.2.0] — 2026-09-17 · **Weather a person plans a day on, the first skill measurement, and an honesty pass**
+
+> Asset token `?v=2.4.31` · service-worker cache `airdash-v49`.
+
+### Added
+
+* **TMD weather everywhere a place is shown** (`d7c4819`) — `sources/tmd-relay.js`
+  copies FloodDash's `/api/weather` (TMD's 7-day forecast for 77 provinces +
+  Pattaya, Hua Hin, Ko Samui, Hat Yai; 125 synoptic stations 3-hourly) into
+  kv every 15 min: one ingestion, two dashboards. `server/weather.js` joins a
+  point to five upcoming days and the nearest station ≤ 80 km / ≤ 6 h old with
+  name, distance and age. `GET /api/weather` (edge-mirrored), `GET /api/weather/at`,
+  `weather` on `/api/place`; `weatherStrip.js` renders the strip on the place
+  card and the citizen page. Landmarks (12,854 OSM places) in search, with the
+  same destination rule as FloodDash — **"Khao Yai" now means the national
+  park**, not the Cha-Am tambon.
+* **The promise, measured** (`0df920f`) — `risk_history` records every
+  province's score hourly (from 2026-09-16 17:00 UTC); `GET /api/skill` replays
+  the CAMS 24-h forecast and the score band against real ≥ 37.5 µg/m³ station
+  crossings, with POD / FAR and an honest "not measurable yet" state. **First
+  replay, 60 days: 18 events, 0 caught; 81 alarms, none verified.** The wet
+  season's crossings are single-station industrial spikes (Rayong ×9,
+  Chonburi, Ayutthaya) that a 0.4° CAMS field cannot see. Published as-is,
+  with the per-province breakdown; the dust season is the real test and the
+  ledger now exists to run it.
+
+### Fixed (honesty audit, 25 findings across both twins)
+
+* The Wallet chapter printed "0.0 million school lunches … every kid gets 0
+  each" when national PM2.5 sat below the WHO line; it now says what ฿0 means.
+  "Damaged crops" removed from a caption whose formula never computed crops.
+* "The live map, 4,400+ stations" plotted 174 — copy now says ~170 AQ stations
+  + ~1,900 rain gauges live (5,300+ registered), in both pages.
+* "What's driving it right now" was a permanent heading over "no data" for
+  71 % of provinces on a clean day — hidden when there is nothing to say.
+* LINE copy said "national-level severe haze episode"; the trigger is any
+  station over 37.5 µg/m³ — copy now says so.
+* `/api/danger` carries `method_*` / `disclaimer_*` and states that the heat
+  amplifier is 0 outside the hot season and noise covers 9 provinces.
+
+### Known and not fixed today
+
+* `top_stations` is `[]` and `region_th/en` null for all 77 provinces in
+  `/api/risk` (air4thai.js never fills region); the burn-area panel shows
+  off-season data without a "last published month" header; washout relief
+  is a four-step literature lookup, not locally calibrated.
+
 ## [3.1.0] — 2026-09-16 · **The twins finally speak — CORS, the Twin API, explainable bands**
 
 > Asset token `?v=2.4.30` · service-worker cache `airdash-v48`. Audit of both twin systems with FloodDash the same day; five commits, each one shippable on its own.
