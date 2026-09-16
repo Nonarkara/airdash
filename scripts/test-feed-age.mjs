@@ -1,6 +1,6 @@
 // The freshness a reader sees must trace to a MEASUREMENT (newest obs_time),
 // not to when an ingest last succeeded. Ported from FloodDash 2026-09-05.
-import { newestObservationAgeMin, newestObservationAgeMinAll, parseObsTime, feedBand, staleFeed, feedThresholds, FEED_STALE_MIN, FEED_ALARM_MIN } from '/Users/axiom/AirDash/public/js/feedAge.js'
+import { newestObservationAgeMin, newestObservationAgeMinAll, parseObsTime, feedBand, staleFeed, feedThresholds, FEED_STALE_MIN, FEED_ALARM_MIN } from '../public/js/feedAge.js'
 
 let pass = 0, fail = 0
 const check = (name, cond) => { cond ? pass++ : fail++; console.log(`${cond ? 'PASS' : 'FAIL'} ${name}`) }

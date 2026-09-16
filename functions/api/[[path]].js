@@ -32,6 +32,8 @@ const MIRROR_PATHS = new Set([
   '/api/snapshot', '/api/risk', '/api/wetness', '/api/insights',
   '/api/series/daily', '/api/forecast', '/api/sources', '/api/washout',
   '/api/series', '/api/stations',
+  // The Twin API (docs/TWIN-API.md) — polled by FloodDash and other dashboards.
+  '/api/twin',
 ])
 const MIRROR_TTL_S = 86_400
 

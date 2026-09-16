@@ -1,7 +1,7 @@
 // A daily quota is not a rate limit — retrying it is pure harm. Ported from
 // FloodDash's 2026-09-01 outage (exhausted Open-Meteo allowance + retries →
 // socket storm → dead process → crash loop on restart).
-import { isDailyQuotaExhausted, markQuotaExhausted, quotaBlockMsRemaining } from '/Users/axiom/AirDash/server/util.js'
+import { isDailyQuotaExhausted, markQuotaExhausted, quotaBlockMsRemaining } from '../server/util.js'
 
 let pass = 0, fail = 0
 const check = (name, cond) => { cond ? pass++ : fail++; console.log(`${cond ? 'PASS' : 'FAIL'} ${name}`) }

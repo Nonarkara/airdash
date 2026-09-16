@@ -15,8 +15,8 @@
 // a bind MUST present a code that belongs to that exact chat, and the
 // code MUST be single-use. If you refactor bindChat and these fail, the
 // vulnerability is back — do not "fix" the test.
-import { openDb } from '/Users/axiom/AirDash/server/db.js'
-import { bindChat, generateBindingCode } from '/Users/axiom/AirDash/server/telegramPush.js'
+import { openDb } from '../server/db.js'
+import { bindChat, generateBindingCode } from '../server/telegramPush.js'
 
 const db = openDb(':memory:')
 const now = new Date().toISOString()

@@ -1,6 +1,6 @@
 // Scratch test for the alert-engine fixes (P1). In-memory DB, no network.
-import { openDb } from '/Users/axiom/AirDash/server/db.js'
-import { createAlerts } from '/Users/axiom/AirDash/server/alerts.js'
+import { openDb } from '../server/db.js'
+import { createAlerts } from '../server/alerts.js'
 
 const db = openDb(':memory:')
 const bus = { publish() {} }

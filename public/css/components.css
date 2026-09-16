@@ -3508,3 +3508,148 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 /* Wide figure (the 6-month burning calendar) needs to breathe; .rp-figure
    already scrolls horizontally on narrow screens. */
 .bn-svg--wide { max-width: 100%; min-width: 380px; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   API documentation tab (public/js/panels/apidocs.js) — ported from FloodDash 2026-09-16
+   Reuses the research-paper shell (.rp-hero / .rp-section) so the About
+   overlay reads as one document, and adds only what an API reference
+   genuinely needs: an endpoint card, a parameter table, and code blocks
+   that survive being copied out.
+   ═══════════════════════════════════════════════════════════════════════ */
+.api-hero { border-left: 4px solid var(--rain); }
+.api-hero .rp-hero-meta code {
+  background: var(--well); padding: 2px 6px; border-radius: var(--r-sm);
+}
+
+/* The 30-second block: one command, big enough to read across a room in a
+   workshop, which is where this page gets demoed. */
+.api-code {
+  margin: 8px 0 0; padding: 12px 14px;
+  background: #14122b; color: #e8e6f5;
+  border: 1px solid var(--rule); border-radius: var(--r-md);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12.5px; line-height: 1.65;
+  overflow-x: auto; white-space: pre;
+}
+.api-code code { font: inherit; color: inherit; background: none; padding: 0; }
+.api-code-hero { font-size: 14px; }
+
+/* Facts grid — the six things that decide whether an integration is
+   correct before a line of code is written. */
+.api-fact-grid {
+  display: grid; gap: 10px; margin-top: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.api-fact {
+  padding: 10px 12px; background: var(--well);
+  border: 1px solid var(--rule); border-left: 3px solid var(--rain);
+  border-radius: var(--r-md);
+}
+.api-fact-k {
+  font-family: var(--font-num); font-size: 10px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-low);
+}
+.api-fact-v { font-size: 15px; font-weight: 700; color: var(--ink); margin: 2px 0 4px; }
+.api-fact-n { font-size: 12px; line-height: 1.5; color: var(--ink-mid); }
+.api-fact-n code, .api-endpoint-desc code, .rp-section p code, .api-codes code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92em; background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 3px; padding: 0 4px;
+}
+
+/* Language tabs over the worked examples. */
+.api-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.api-tab {
+  padding: 6px 14px; min-height: 32px;
+  background: var(--paper); color: var(--ink-mid);
+  border: 1px solid var(--rule); border-bottom: none;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  font-family: var(--font-num); font-size: 12px; font-weight: 700;
+  cursor: pointer;
+}
+.api-tab:hover { color: var(--ink); }
+.api-tab.active { background: #14122b; color: #fff; border-color: #14122b; }
+.api-sample { display: none; position: relative; }
+.api-sample.active { display: block; }
+.api-sample .api-code { margin-top: 0; border-top-left-radius: 0; }
+
+/* Copy buttons: the difference between a reference someone uses and one
+   they retype with a typo. */
+.api-copy {
+  padding: 4px 10px; min-height: 28px;
+  background: transparent; color: var(--ink-mid);
+  border: 1px solid var(--rule); border-radius: var(--r-sm);
+  font-family: var(--font-num); font-size: 11px; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.api-copy:hover { background: var(--rain); color: #fff; border-color: var(--rain); }
+.api-copy.is-copied { background: var(--ok, #00933C); color: #fff; border-color: var(--ok, #00933C); }
+.api-copy-block { position: absolute; top: 8px; right: 8px; z-index: 2; background: rgba(20,18,43,.85); color: #cfcbe8; }
+
+/* Endpoint cards. */
+.api-endpoints { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.api-endpoint {
+  padding: 12px 14px; background: var(--paper);
+  border: 1px solid var(--rule); border-radius: var(--r-md);
+}
+.api-endpoint-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap;
+}
+.api-endpoint-path { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.api-endpoint-path code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13.5px; font-weight: 700; color: var(--ink);
+  word-break: break-all;
+}
+.api-badge {
+  font-family: var(--font-num); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; padding: 3px 7px; border-radius: 3px;
+  background: var(--rain); color: #fff; flex: none;
+}
+.api-badge-sse { background: var(--th-red); }
+.api-badge-soft { background: var(--well); color: var(--ink-mid); border: 1px solid var(--rule); }
+.api-endpoint-desc { font-size: 13px; line-height: 1.55; color: var(--ink); margin: 8px 0 0; }
+.api-endpoint-note {
+  font-size: 12px; line-height: 1.5; color: var(--ink-mid);
+  margin: 8px 0 0; padding: 7px 9px;
+  background: var(--well); border-left: 3px solid var(--band-watch, #F0B400);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.api-try {
+  display: inline-block; margin-top: 8px;
+  font-family: var(--font-num); font-size: 11.5px; font-weight: 700;
+  color: var(--rain); text-decoration: none;
+}
+.api-try:hover { text-decoration: underline; }
+
+/* Parameter + response-code tables. */
+.api-params {
+  width: 100%; margin-top: 10px; border-collapse: collapse;
+  font-size: 12.5px;
+}
+.api-params th {
+  text-align: left; padding: 6px 8px;
+  font-family: var(--font-num); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-low);
+  border-bottom: 1px solid var(--rule);
+}
+.api-params td { padding: 6px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; line-height: 1.5; }
+.api-params tr:last-child td { border-bottom: none; }
+.api-params code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; }
+.api-req { color: var(--th-red); font-weight: 700; }
+.api-opt { color: var(--ink-low); }
+.api-codes td:first-child { width: 68px; }
+
+/* The obligation block is the one thing on this page that must not read as
+   boilerplate — it is why the data is allowed to travel. */
+.api-duty { margin-top: 10px; }
+.api-duty p { margin: 6px 0 0; font-size: 13px; line-height: 1.6; }
+.api-contact { font-size: 12.5px; color: var(--ink-mid); margin-top: 10px; }
+
+@media (max-width: 700px) {
+  .api-code { font-size: 11.5px; }
+  .api-code-hero { font-size: 12.5px; }
+  .api-fact-grid { grid-template-columns: 1fr; }
+  .api-copy-block { position: static; display: block; margin-bottom: 6px; }
+}

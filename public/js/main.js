@@ -25,6 +25,7 @@ import { initLibrary } from './panels/library.js?v=2.4.29'
 import { initResearch } from './panels/research.js?v=2.4.29'
 import { initManual } from './panels/manual.js?v=2.4.29'
 import { initBurning } from './panels/burning.js?v=2.4.29'
+import { initApiDocs } from './panels/apidocs.js?v=2.4.29'
 import { initSearch } from './panels/search.js?v=2.4.29'
 import { initDataFreshness } from './dataFreshness.js?v=2.4.29'
 import { refreshSensorHealth } from './sensorHealth.js?v=2.4.29'
@@ -489,6 +490,7 @@ async function boot() {
   safeInit('research', initResearch)
   safeInit('manual', initManual)
   safeInit('burning', initBurning)
+  safeInit('apidocs', initApiDocs)
   safeInit('search', initSearch)
   safeInit('tabs', initTabs)
   safeInit('dataFreshness', initDataFreshness)
