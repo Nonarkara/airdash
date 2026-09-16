@@ -263,6 +263,21 @@ CREATE INDEX IF NOT EXISTS crop_water_week ON crop_water(week DESC);
 
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT);
 
+-- ── Score history — one row per province per hour, written by risk.js.
+-- Until 2026-09-17 the Air Watch Score had never been recorded, so the
+-- system could not say whether it had ever warned before the air got bad
+-- (honesty audit). /api/skill replays this table against real PM2.5
+-- threshold crossings once enough hours exist.
+CREATE TABLE IF NOT EXISTS risk_history (
+  hour TEXT NOT NULL,            -- ISO UTC, truncated to the hour
+  province_code TEXT NOT NULL,
+  score INTEGER NOT NULL,
+  band TEXT NOT NULL,
+  level TEXT,                    -- verdict level (safe/watch/prepare/danger)
+  pm25 REAL,
+  PRIMARY KEY (hour, province_code)
+);
+
 -- ── Chat telemetry — every question the operator asks is logged here so we
 -- can build a FAQ over time. ip_hash is the SHA-256 of the client IP so
 -- the table is usable for analytics without storing PII.

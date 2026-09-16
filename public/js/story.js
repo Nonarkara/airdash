@@ -316,7 +316,14 @@ function renderWallet() {
   const taxNode = $('#tax-num')
   if (taxNode) taxNode.textContent = tax == null ? '—' : `฿${fmtNum(tax, 2)}`
 
-  if (costM != null) {
+  // ฿0 is a real answer (national PM2.5 below the WHO 24-h line → no
+  // attributable cost today), but "0.0 million school lunches … every kid
+  // gets 0 each" is not — it read as a broken page (honesty audit
+  // 2026-09-17). Say what zero means instead.
+  if (costM != null && costM <= 0) {
+    const cmp = $('#wallet-compare')
+    if (cmp) cmp.innerHTML = `<li>${tr('วันนี้ฝุ่นทั้งประเทศต่ำกว่าเส้น WHO (15 µg/m³) — ไม่มีค่าเสียหายที่โยงกับฝุ่นได้ในวันนี้ ตัวเลขนี้จะกลับมาเมื่อฝุ่นข้ามเส้น', 'National PM2.5 is below the WHO line (15 µg/m³) today — no cost can be attributed to dust. The number returns when the air crosses the line.')}</li>`
+  } else if (costM != null) {
     const lunches = (costM * 1e6) / 25       // a Thai school lunch ≈ ฿25
     const masks = (costM * 1e6) / 30         // an N95 ≈ ฿30
     const cmKids = 200_000                   // ≈ school-age kids in Chiang Mai
@@ -394,11 +401,15 @@ function renderSky() {
         chips.append(chip)
       }
     } else {
-      const chip = document.createElement('span')
-      chip.className = 'chip'
-      chip.textContent = tr('ยังไม่มีข้อมูลสาเหตุรายจังหวัดในตอนนี้', 'No per-province cause data right now')
-      chips.append(chip)
+      // A permanent heading over a permanent shrug (71 % of provinces have no
+      // cause on a clean day) reads as broken. Hide the pair; the heading
+      // returns the moment there is a cause to show (honesty audit 2026-09-17).
+      chips.hidden = true
+      if (chips.previousElementSibling) chips.previousElementSibling.hidden = true
+      return
     }
+    chips.hidden = false
+    if (chips.previousElementSibling) chips.previousElementSibling.hidden = false
   }
 
   // 72h outlook — today / +24h / +48h from the snapshot's own forecast fields.

@@ -14,6 +14,7 @@ import { libraryToc, searchLibrary, libraryDoc } from './library.js'
 import { searchGazetteer, placeDetail, searchTambons, searchDistricts, lookupPostal, lookupPlace, resolvePlaceSlug } from './gazetteer.js'
 import { buildTwin, readAppVersion } from './twin.js'
 import { weatherAtDb, haversineKm } from './weather.js'
+import { buildSkill } from './skill.js'
 import { readTmdWeather } from './sources/tmd-relay.js'
 import { provinceVerdict } from './verdict.js'
 import { readFileSync } from 'node:fs'
@@ -69,6 +70,8 @@ const SNAPSHOT_TTL_MS = 6_000
 // FloodDash twin and other dashboards poll every few minutes.
 let twinCache = null // { at, built:{ body, gz } }
 let weatherCache = null // GET /api/weather (relayed TMD), prebuilt gzip
+let skillCache = null // GET /api/skill — a 60-day replay, cached an hour
+const SKILL_TTL_MS = 3_600_000
 const WEATHER_TTL_MS = 60_000
 const TWIN_TTL_MS = 30_000
 // The ops.html asset token is the release version (scripts/bump-version.mjs).
@@ -422,6 +425,17 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       json(res, 200, { lat, lng, province_code, weather: weatherAtDb(db, { lat, lng, province_code }) })
     },
 
+    // Skill — does the system warn before the air gets bad? Replayed from
+    // the DB (server/skill.js); cached an hour because the truth scan is a
+    // 60-day readings pass. Honest about "not measurable yet".
+    'GET /api/skill': (req, res) => {
+      if (skillCache && Date.now() - skillCache.at < SKILL_TTL_MS) return json(res, 200, skillCache.body)
+      if (!allow(req, { key: 'skill', limit: 6, windowMs: 60_000 })) return json(res, 429, { error: 'skill replay is rate-limited; it is cached for an hour' })
+      const body = buildSkill(db)
+      skillCache = { at: Date.now(), body }
+      json(res, 200, body)
+    },
+
     'GET /api/risk': (req, res) => {
       const r = riskEngine.get()
       // Augment the per-province risk payload with the Danger Score for
@@ -527,7 +541,14 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     // breakdown so the UI can render every modifier.
     'GET /api/danger': (req, res) => {
       if (!danger) return json(res, 200, { updated: new Date().toISOString(), provinces: [] })
-      return json(res, 200, { updated: new Date().toISOString(), provinces: danger.get() })
+      return json(res, 200, {
+        updated: new Date().toISOString(),
+        method_th: 'Danger Score = ฐานฝุ่น PM2.5 + ตัวขยายความร้อน (เมื่ออุณหภูมิสูง — เป็น 0 นอกฤดูร้อน) + ตัวขยายความชื้น + ตัวขยายเสียง (เฉพาะ 9 จังหวัดที่ คพ. มีสถานีวัดเสียง) − การบรรเทาจากฝน · "ออกไปข้างนอกตอนนี้ปลอดภัยไหม" ไม่ใช่ดัชนีระยะยาว',
+        method_en: 'Danger Score = PM2.5 base + heat amplifier (only when hot — 0 outside the hot season) + humidity amplifier + noise amplifier (only the 9 provinces where PCD has a noise station) − rain relief · "is it safe to go outside right now", not a long-horizon index',
+        disclaimer_th: 'ดัชนีจากเซ็นเซอร์ ไม่ใช่ประกาศของ คพ. หรือกระทรวงสาธารณสุข',
+        disclaimer_en: 'A sensor-derived index, not a PCD or Ministry of Public Health announcement',
+        provinces: danger.get(),
+      })
     },
 
     // Effective Harm — Watch Score × Social Load. Parallel to /api/danger:

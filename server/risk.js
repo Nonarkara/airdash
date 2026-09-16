@@ -422,6 +422,16 @@ export function createRisk(db, washout) {
           }))
           db.kvSet('risk_provinces', JSON.stringify(slim))
         } catch {}
+        // Record the score once per hour per province (INSERT OR IGNORE on
+        // the (hour, province) key) so /api/skill can measure the promise.
+        try {
+          const hour = new Date(now).toISOString().slice(0, 13) + ':00'
+          for (const p of cache.provinces) {
+            if (!p.province_code) continue
+            db.run(`INSERT OR IGNORE INTO risk_history (hour, province_code, score, band, level, pm25) VALUES (?, ?, ?, ?, ?, ?)`,
+              hour, String(p.province_code), Math.round(p.score ?? 0), p.band ?? 'normal', p.card?.level ?? null, Number.isFinite(p.pm25) ? p.pm25 : null)
+          }
+        } catch {}
       }
       return cache
     },
