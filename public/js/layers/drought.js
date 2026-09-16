@@ -15,7 +15,7 @@
 // fill color carries the risk score (0-100). When the user clicks a
 // province the popup shows the categorical Thai description
 // ("โอกาสได้รับความเสี่ยง...") plus the absolute score.
-import { tr } from '../i18n.js?v=2.4.29'
+import { tr } from '../i18n.js?v=2.4.30'
 
 // Same colour philosophy as the AQI bands: low → sage, watch →
 // amber, elevated → orange, high → brick. Score ranges here are

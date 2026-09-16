@@ -10,6 +10,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.0] — 2026-09-16 · **The twins finally speak — CORS, the Twin API, explainable bands**
+
+> Asset token `?v=2.4.30` · service-worker cache `airdash-v48`. Audit of both twin systems with FloodDash the same day; five commits, each one shippable on its own.
+
+### Fixed
+
+* **No CORS at all** — AirDash sent no `Access-Control-*` header on any
+  route, so no browser on another origin (the user's other dashboards,
+  the FloodDash twin) could read a byte of `/api/`. Ports the FloodDash
+  public-read policy: read-only `/api/` answers `*`, preflight → 204
+  before the rate limiter; `/api/admin/`, `/api/telegram/`, `/api/line/`,
+  chat logs + FAQ moderation and export builds never get CORS from any
+  origin. (`564a013`)
+* **Bands with no reasons** — 60 % of the Air Watch Score (pollutants,
+  trend, forecast, stagnation) could move a province to `watch` while
+  `provinceVerdict()` returned zero reasons, because each component only
+  spoke at its ALARM threshold while the score ladder starts far lower.
+  Every component now has a mid-tier line keyed to the ladder; moderate
+  PM2.5 (25–37.5) is named; the cap is 5 and `risk.js` no longer trims
+  the list to 2. (`594b357`)
+* **Citizen page discarded the server card** — it rendered band + score +
+  a client-side advice table. A "why this band · evidence" block now
+  shows the card's reasons, action and disclaimer.
+* **Undefined CSS tokens** — `--lv1..5`, `--bg-soft`, `--card`,
+  `--font-en`, `--r-sm/md/lg` were used 26× and defined nowhere; the
+  UNHEALTHY / VERY UNHEALTHY station badges rendered with no colour.
+* `max_province_score` was `list[0]` of a list sorted by PM2.5; LINE
+  cancel-alerts line was in the wrong language.
+
+### Added
+
+* **`GET /api/twin`** — one compact, keyless per-province summary
+  (`code`, `score`, `band`, `level`, bilingual headline + top reason,
+  `pm25`, `aqi`, `pm25_fc_24h`, `washout_*`, `danger_*`) in the shape
+  FloodDash publishes too. Contract in `docs/TWIN-API.md`; 30 s prebuilt
+  cache; edge-mirrored with `x-airdash-stale-seconds`.
+* **`version` in `/api/health`**, read once at boot from the `ops.html`
+  asset token — the one source of truth `scripts/bump-version.mjs` keeps.
+* **API reference tab** ("API · FOR DEVELOPERS" in About) — 7 groups, 59
+  endpoints, every parameter one the handler reads, hotlines 1650 / 1422
+  / 1669 and the PCD / MoPH duty block. `scripts/check-api-docs.mjs`
+  fails the build on a documented route that is not served and on a
+  public route that is not documented. (`92ba6d5`)
+* **FloodDash twin relay** — `server/sources/twin-flood.js` polls
+  FloodDash `/api/twin` every 10 min; `p.flood` on every province (never
+  scored); two verdict reasons: the flood verdict when FloodDash has the
+  province at prepare/danger, and *"the rain that may clear the dust may
+  also raise the rivers here"* when `washout_helps` and the flood side is
+  at watch or above. (`5e22ff8`)
+* Four new test scripts in `npm test` (explainability 18, twin/CORS 26,
+  API-docs coverage 61, twin-flood 21); the older scripts now import
+  relatively instead of via `/Users/axiom/AirDash/…`.
+
 ## [3.0.0] — 2026-07-24
 
 ### AirDash 3.0 — communication facelift + overlap-free layout
