@@ -850,6 +850,11 @@
      already has the well context. */
 }
 .citizen-section-head:first-child { border-top: 0; }
+/* WHY this band — the server verdict rendered verbatim (citizen.js). */
+.citizen-why { padding: 0 0 6px; }
+.citizen-why-reason { font-size: 12.5px; line-height: 1.45; color: var(--ink); padding: 2px 0; }
+.citizen-why-action { margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.citizen-why-disc { margin-top: 6px; font-size: 10.5px; color: var(--ink-low); font-family: var(--font-num); }
 /* Sub-label inside a section head — small all-caps that follows the
    headline verb (e.g. "RISK · 4/100" next to the persona title). */
 .citizen-section-head .sub {

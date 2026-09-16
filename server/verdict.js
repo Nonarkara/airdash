@@ -137,18 +137,44 @@ export function provinceVerdict(p, sat = null, near = null) {
   else if (pm25 !== null && pm25 >= PM_UNHEALTHY) R(
     `PM2.5 สูงสุดในจังหวัด ${Math.round(pm25)} µg/m³ — เริ่มมีผลต่อสุขภาพ`,
     `Worst PM2.5 in the province: ${Math.round(pm25)} µg/m³ — starting to affect health`)
+  // Every reason below the "alarm" lines exists for one reason: a Watch
+  // Score is 60% non-PM2.5 (pollutants 10 · trend 15 · forecast 20 ·
+  // stagnation 15), and each of those components starts SCORING well
+  // below the level at which its alarm reason used to fire. Audited
+  // 2026-09-16: PM2.5 20 µg/m³ + pollutants 45 + rise +14 + CAMS 30 +
+  // stagnation 55 → score 30 → band `watch`, and this function returned
+  // zero reasons. The citizen was told "Keep watch, 30/100" and the
+  // system could not say why. Each mid-tier line is keyed to where its
+  // component begins to move the number (risk.js trendScore /
+  // stagnationScore / PM25_ANCHORS), so a reason appears exactly when a
+  // signal starts counting — never a louder threshold chosen separately.
+  else if (pm25 !== null && pm25 >= PM_GOOD) R(
+    `PM2.5 สูงสุดในจังหวัด ${Math.round(pm25)} µg/m³ — ปานกลาง (เส้นอากาศดีคือ ${PM_GOOD})`,
+    `Worst PM2.5 in the province: ${Math.round(pm25)} µg/m³ — moderate (the "good" line is ${PM_GOOD})`)
   if ((p?.rise_6h_ug ?? 0) >= 15) R(
     `ฝุ่นเพิ่มเร็ว +${Math.round(p.rise_6h_ug)} µg/m³ ใน 6 ชม.`,
     `PM2.5 climbing fast: +${Math.round(p.rise_6h_ug)} µg/m³ in 6h`)
+  else if ((p?.rise_6h_ug ?? 0) >= 4) R(
+    `ฝุ่นกำลังเพิ่ม +${Math.round(p.rise_6h_ug)} µg/m³ ใน 6 ชม.`,
+    `PM2.5 rising: +${Math.round(p.rise_6h_ug)} µg/m³ in 6h`)
   if (fc48 !== null && fc48 >= PM_UNHEALTHY) R(
     `แบบจำลอง CAMS คาดฝุ่น ~${Math.round(fc48)} µg/m³ ใน 24–48 ชม.`,
     `CAMS model expects ~${Math.round(fc48)} µg/m³ within 24–48h`)
+  else if (fc48 !== null && fc48 >= PM_GOOD) R(
+    `แบบจำลอง CAMS คาดฝุ่น ~${Math.round(fc48)} µg/m³ ใน 24–48 ชม. — เหนือเส้นอากาศดี`,
+    `CAMS model expects ~${Math.round(fc48)} µg/m³ within 24–48h — above the "good" line`)
   if (stagnant) R(
     'อากาศนิ่ง ลมอ่อน ไม่มีฝน — ฝุ่นสะสมไม่ระบาย',
     'Stagnant air: weak wind, no rain — nothing disperses the dust')
+  else if ((p?.stagnation_comp ?? 0) >= 30) R(
+    `อากาศระบายไม่ดี${Number.isFinite(p?.wind_fc_kmh) ? ` — ลม ${Math.round(p.wind_fc_kmh)} กม./ชม.` : ''}${Number.isFinite(p?.precip_prob_24h) ? ` · โอกาสฝน ${Math.round(p.precip_prob_24h)}%` : ''}`,
+    `Poor ventilation${Number.isFinite(p?.wind_fc_kmh) ? ` — wind ${Math.round(p.wind_fc_kmh)} km/h` : ''}${Number.isFinite(p?.precip_prob_24h) ? ` · rain chance ${Math.round(p.precip_prob_24h)}%` : ''}`)
   if (p?.pollutant_worst && p.pollutant_worst.score >= 50) R(
     `ค่ามลพิษ ${p.pollutant_worst.metric.toUpperCase()} สูงผิดปกติ (${Math.round(p.pollutant_worst.value)})`,
     `Elevated ${p.pollutant_worst.metric.toUpperCase()} reading (${Math.round(p.pollutant_worst.value)})`)
+  else if (p?.pollutant_worst && p.pollutant_worst.score >= 25) R(
+    `ค่า ${p.pollutant_worst.metric.toUpperCase()} เริ่มสูง (${Math.round(p.pollutant_worst.value)})`,
+    `${p.pollutant_worst.metric.toUpperCase()} starting to rise (${Math.round(p.pollutant_worst.value)})`)
 
   // Relief signals — the washout story. Rain already falling beats forecast.
   const satFresh = sat && (Date.now() - new Date(sat.obs_time).getTime()) < 8 * 3600_000
@@ -178,7 +204,11 @@ export function provinceVerdict(p, sat = null, near = null) {
   return {
     level,
     head_th: HEAD.th, head_en: HEAD.en,
-    reasons: reasons.slice(0, 3),
+    // Was 3. Five mid-tier reasons now compete for the slots; with 3 a real
+    // contributor lost the coin-flip on which survived (same fix as
+    // FloodDash v4.22.0). risk.js and the citizen panel render this list
+    // directly — bump both together if this ever changes again.
+    reasons: reasons.slice(0, 5),
     window: threatWindow(level, { pm25, fc48, stagnant }),
     action_th: ACTIONS[level].th, action_en: ACTIONS[level].en,
     checklist: CHECKLIST[level],

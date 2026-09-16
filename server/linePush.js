@@ -78,8 +78,8 @@ export function buildMessage(province_th, province_en, band, score, lang = 'th')
   const pEn = province_en || pTh
   const display = lang === 'en' ? pEn : pTh
   const cancelLine = lang === 'en'
-    ? 'ยกเลิกการแจ้งเตือน: https://air.nonarkara.org/?linecancel=1'
-    : 'Cancel alerts: https://air.nonarkara.org/?linecancel=1'
+    ? 'Cancel alerts: https://air.nonarkara.org/?linecancel=1'
+    : 'ยกเลิกการแจ้งเตือน: https://air.nonarkara.org/?linecancel=1'
   const live = lang === 'en' ? 'Live: https://air.nonarkara.org' : 'ดูสด: https://air.nonarkara.org'
   return (
     `${head.verb} · ${head.emoji}\n` +

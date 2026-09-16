@@ -306,7 +306,11 @@ export function createRisk(db, washout) {
         checklist: v.checklist,
         window: v.window,
         disclaimer_th: v.disclaimer_th, disclaimer_en: v.disclaimer_en,
-        reasons: v.reasons.slice(0, 2),
+        // Was slice(0, 2) — this is the ONLY reason list the citizen panel
+        // and ranking row ever see, and the cross-border "near you" line is
+        // pushed first, so the 2-cap could drop the province's own PM2.5
+        // line. verdict.js already caps at 5; carry all of them.
+        reasons: v.reasons,
       }
       return { ...p, score, band: band(score), delta, card }
     // Worst air first: live PM2.5 leads (nulls last), watch score breaks ties.
@@ -368,7 +372,9 @@ export function createRisk(db, washout) {
         dustSeason,                      // true ⇒ "Normal" → "LOW" UI override
         // Worst-case province score — used by the hero to show
         // the national-scale confidence interval (±5 by default).
-        max_province_score: list.length ? list[0].score : 0,
+        // list is sorted by live PM2.5 first (score only breaks ties), so
+        // list[0].score was the dirtiest-air province's score, not the max.
+        max_province_score: list.length ? Math.max(...list.map((p) => p.score)) : 0,
       },
       provinces: list,
     }

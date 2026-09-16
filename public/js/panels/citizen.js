@@ -363,6 +363,27 @@ function renderForProvince(province) {
     ),
   )
 
+  // WHY this band — the server's own verdict (server/verdict.js via
+  // risk.js card). This panel used to render only the band + score and
+  // re-derive advice from a client table; the reasons, the action verb and
+  // the "not an official advisory" disclaimer that ranking.js, header.js
+  // and search.js all show were discarded here — on the one screen a
+  // resident actually reads (audit 2026-09-16). Render exactly what the
+  // server decided; nothing is re-derived.
+  const card = live?.card ?? null
+  const why = card && (card.reasons?.length || card.action_th) ? el('div', { class: `citizen-why b-${band}` },
+    el('div', { class: 'citizen-section-head' },
+      el('span', { 'aria-hidden': 'true' }, '🤔 '),
+      tr('ทำไมระดับนี้ · หลักฐาน', 'why this band · evidence')),
+    ...(card.reasons ?? []).map((r) => el('div', { class: 'citizen-why-reason' }, `▸ ${tr(r.th, r.en)}`)),
+    (card.action_th || card.action_en)
+      ? el('div', { class: 'citizen-why-action' }, `▶ ${tr(card.action_th ?? '', card.action_en ?? '')}`)
+      : null,
+    card.disclaimer_th
+      ? el('div', { class: 'citizen-why-disc' }, tr(card.disclaimer_th, card.disclaimer_en))
+      : null,
+  ) : null
+
   // WHEN does relief come — the province's washout relief timeline
   // ("ฝนช่วยล้างฝุ่นพรุ่งนี้ · washout rain tomorrow, 8mm @98%") plus the
   // honest "worse before better" warning when CAMS says so. Filled async;
@@ -441,7 +462,7 @@ function renderForProvince(province) {
   // then the standard AQ-stations row, then migrant-worker phrases
   // (only at elevated+ bands, when they're needed).
   const out = [
-    head, reliefWrap,
+    head, why, reliefWrap,
     tomorrowHost,
     personaHost,
     useTimeline ? renderActionTimeline(band) : null,
