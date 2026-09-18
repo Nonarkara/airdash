@@ -13,11 +13,18 @@
   The other three runs (08/14/20) keep each incremental batch small so a
   single missed night can never turn into a multi-million-row catch-up.
 
-  Install:
+  launchd does NOT start a second instance while one is still running: a
+  slot that fires mid-run is silently skipped. If the log shows nothing at
+  all for a slot, look for a still-running instance
+  (pgrep -fl archive-longterm) before suspecting the schedule.
+
+  Install / reinstall after editing this file (re-bootstrapping KILLS a run
+  in progress — watermarks make that safe, but do it between runs):
     cp ops/com.dash.archive.plist ~/Library/LaunchAgents/
+    launchctl bootout gui/$(id -u)/com.dash.archive 2>/dev/null
     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.dash.archive.plist
-  Run once now:
-    launchctl kickstart -k gui/$(id -u)/com.dash.archive
+  Run once now (no -k: -k kills a run already in progress):
+    launchctl kickstart gui/$(id -u)/com.dash.archive
 -->
 <plist version="1.0">
 <dict>
@@ -46,12 +53,27 @@
   <key>RunAtLoad</key>
   <false/>
 
-  <!-- Lowest I/O priority: the archive must never compete with an ingest
-       or an alert fan-out for disk. It is allowed to be slow. -->
-  <key>LowPriorityIO</key>
-  <true/>
+  <!-- Deliberately NOT LowPriorityIO. That key was here until 2026-09-16
+       and it is why the FloodDash phase never finished. On macOS it means
+       IOPOL_THROTTLE: the kernel sleeps the process on EVERY disk I/O for
+       as long as any other process is using the same device — and the
+       archive shares the USB volume with the NSP rsync loops. Measured on
+       the archive file itself: 0.7 MB/s throttled vs 20 MB/s normal (30×),
+       i.e. ~1.4 s per I/O. Recovering a 94 MB WAL frame-by-frame took
+       hours before a single row was copied; the FloodDash phase ran at
+       ~500 rows/min instead of ~700k; every run overran the next slot
+       (skipped) until a reboot or unmount killed it mid-FloodDash.
+       Disk politeness now comes from the script (20k-row batches with a
+       yield, 256 MB page cache so it reads far less) plus Nice. -->
   <key>Nice</key>
   <integer>10</integer>
+
+  <!-- SIGTERM (kickstart -k, bootout, shutdown) is handled by the script:
+       it finishes the current batch, records "interrupted" in
+       archive_runs and exits. Give it long enough to do that on a slow
+       disk before launchd escalates to SIGKILL. -->
+  <key>ExitTimeOut</key>
+  <integer>60</integer>
 
   <key>StandardOutPath</key>
   <string>/Users/axiom/AirDash/logs/archive.out.log</string>

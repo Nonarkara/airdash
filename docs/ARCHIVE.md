@@ -43,8 +43,8 @@ This runs beside a system people rely on during haze and flood emergencies.
 2. **Separate process, never in the server event loop.** A slow archive can
    never delay an alert.
 3. **Batched with a yield** between batches (20k rows, 25 ms) plus
-   `LowPriorityIO` and `Nice 10`, so it never competes with an ingest for
-   disk.
+   `Nice 10`, so it never competes with an ingest for CPU. It is
+   deliberately **not** `LowPriorityIO` — see *Why a run stalls* below.
 4. **Fails soft.** Volume unmounted or unwritable → log and `exit 0`. A
    missing archive is an inconvenience; a crash-looping job that fills the
    internal disk is an outage. Never trade the second for the first.
@@ -57,8 +57,21 @@ This runs beside a system people rely on during haze and flood emergencies.
 ```bash
 node ops/archive-longterm.mjs           # incremental (what the schedule runs)
 node ops/archive-longterm.mjs --stats   # what's in there; copies nothing
-node ops/archive-longterm.mjs --verify  # integrity_check + coverage
+node ops/archive-longterm.mjs --verify  # integrity_check + coverage + staleness
 ```
+
+`--verify` exits 0 when the file is intact and a run succeeded in the last
+24 h, 2 when the archive is stale, 1 when `integrity_check` fails. A run
+ends with `flooddash: done` and `archive run complete`, followed by a
+coverage block (archive watermark vs live max id per table). The full
+row-count report only runs for `--stats` / `--verify` — counting 38 M rows
+takes minutes and used to sit inside every scheduled run.
+
+A run takes `/Volumes/Data/dash-archive/.archive.lock` (pid + start time).
+A second run started while it is held logs `another archive run is still
+in progress` and exits 0; a lock whose pid is dead is taken over.
+`SIGTERM`/`SIGINT` stop a run cleanly at the next batch boundary and record
+`interrupted` in `archive_runs`; the next run resumes from the watermark.
 
 ## Install the schedule
 
@@ -77,7 +90,7 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.dash.archive.plist
 > add `/opt/homebrew/bin/node`. Then confirm:
 >
 > ```bash
-> launchctl kickstart -k gui/$(id -u)/com.dash.archive
+> launchctl kickstart gui/$(id -u)/com.dash.archive   # -k would kill a run in progress
 > tail -5 /Volumes/Data/dash-archive/archive.log
 > ```
 >
@@ -115,7 +128,47 @@ the end of the B-tree. Two earlier designs were rejected under measurement:
   same problem from the table into the index, with the same collapse.
 
 The wide index is now built once, after the copy pass
-(`ensureAnalysisIndexes`). Sustained load rate is ~700k rows/min.
+(`ensureAnalysisIndexes`). Sustained load rate is ~700k rows/min on the
+initial backfill. Incremental runs maintain that index; the archive
+connection uses a 256 MB page cache (`PRAGMA cache_size`, default is 2 MB)
+so the hot leaf per active series stays in memory instead of being a USB
+read per insert, and `wal_autocheckpoint` is raised to 20k pages so
+successive batches re-dirtying the same pages cost one checkpoint write,
+not one per batch.
+
+## Why a run stalls (post-mortem, 2026-09-16)
+
+Symptom: the log showed `airdash: done` but never `flooddash: done`, and
+nothing at all for later slots. Cause, in order:
+
+1. `LowPriorityIO` in the plist is `IOPOL_THROTTLE`: the kernel sleeps the
+   process on every disk I/O while any other process uses the same device,
+   and the archive shares the USB volume with the NSP rsync loops. Measured
+   on the archive file: 0.7 MB/s throttled vs 20 MB/s normal — about 1.4 s
+   per I/O. Recovering a 94 MB WAL frame-by-frame after a reboot took hours
+   before the first row was copied (and held the recovery lock, so even
+   read-only queries saw `database is locked`); the FloodDash phase then ran
+   at ~500 rows/min.
+2. Every run also ended with a full-table stats report whose span query
+   scanned the whole series index — 3.5 to 8.5 h per run.
+3. launchd never starts a second instance while one is running, so the
+   02:00 / 08:00 / 14:00 slots were skipped silently until a reboot or a
+   volume unmount killed the run mid-FloodDash. Watermarks are per batch,
+   so no data was lost — only the `done` line.
+
+The script also relaunches itself once under `taskpolicy -d default`
+(`DASH_ARCHIVE_UNTHROTTLED=1` marks the child). Tested: that escapes a
+throttle set with `taskpolicy -d throttle`. **Not verified:** that launchd's
+`LowPriorityIO` is the same knob — so do not rely on it instead of
+reloading the plist. The per-stream `rows/min` lines in the first
+launchd-started run are the check (hundreds/min = still throttled).
+
+Fixes: `LowPriorityIO` removed (Nice stays), big page cache, cheap
+coverage block instead of the scan in run mode, lock file so overlapping
+runs are visible in the log, graceful SIGTERM, `ExitTimeOut 60`. If a
+throttled instance from before the fix is still running, only killing it
+(`launchctl kickstart -k`) ends it; `taskpolicy -B -p <pid>` was tested and
+does not lift the throttle.
 
 ## Example queries
 

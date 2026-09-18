@@ -30,25 +30,38 @@
 //      the first.
 //   5. Idempotent: watermark-driven + INSERT OR IGNORE. Safe to run twice,
 //      safe to interrupt, safe to re-run after a failure.
+//   6. One run at a time, visibly: a lock file makes an overlapping start
+//      log "still in progress" instead of silently doing nothing (launchd
+//      skips a slot while the previous instance is alive — that skip used
+//      to be invisible). SIGTERM/SIGINT end a run at the next batch boundary
+//      and record it, so a kill never looks like a hang in the audit trail.
 //
 // Usage:
-//   node ops/archive-longterm.mjs            # incremental (what cron runs)
+//   node ops/archive-longterm.mjs            # incremental (what launchd runs)
 //   node ops/archive-longterm.mjs --stats    # report only, copies nothing
-//   node ops/archive-longterm.mjs --verify   # integrity + coverage check
+//   node ops/archive-longterm.mjs --verify   # integrity + coverage + staleness
+//                                            #   exit 0 ok · 1 corrupt · 2 stale
 import { DatabaseSync } from 'node:sqlite'
-import { existsSync, mkdirSync, statSync, appendFileSync, writeFileSync, unlinkSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { existsSync, mkdirSync, statSync, appendFileSync, writeFileSync, unlinkSync, readFileSync } from 'node:fs'
+import { spawn } from 'node:child_process'
+import { parseMode, lockDecision, fmtInt, fmtRate, lagLine, staleHours } from './archive-lib.mjs'
 
-const ARCHIVE_DIR = '/Volumes/Data/dash-archive'
+// DASH_ARCHIVE_* env overrides exist only so scripts/test-archive-smoke.mjs
+// can run the real code path against throwaway fixtures. Production never
+// sets them.
+const { env } = process
+const VOLUME = env.DASH_ARCHIVE_VOLUME ?? '/Volumes/Data'
+const ARCHIVE_DIR = env.DASH_ARCHIVE_DIR ?? `${VOLUME}/dash-archive`
 const ARCHIVE_DB = `${ARCHIVE_DIR}/dash-archive.db`
 const LOG = `${ARCHIVE_DIR}/archive.log`
+const LOCK = `${ARCHIVE_DIR}/.archive.lock`
 
 // The two live systems. `db` is opened read-only; `tables` lists what to
 // pull. Tables absent from a given system are skipped silently (FloodDash
 // has water quality and escalations; AirDash does not).
 const SYSTEMS = [
-  { name: 'airdash', db: '/Users/axiom/AirDash/data/airdash.db' },
-  { name: 'flooddash', db: '/Users/axiom/Projects/FloodDash/data/flooddash.db' },
+  { name: 'airdash', db: env.DASH_ARCHIVE_AIRDASH_DB ?? '/Users/axiom/AirDash/data/airdash.db' },
+  { name: 'flooddash', db: env.DASH_ARCHIVE_FLOODDASH_DB ?? '/Users/axiom/Projects/FloodDash/data/flooddash.db' },
 ]
 
 // Append-only streams, copied incrementally by integer id watermark.
@@ -66,6 +79,18 @@ const STREAMS = [
 const BATCH = 20_000          // rows per transaction — bounded WAL growth
 const YIELD_MS = 25           // breathe between batches; keeps disk I/O polite
 
+// Page cache for the ARCHIVE connection. SQLite's default is 2 MB, which on
+// a 9 GB file over USB meant nearly every index page an insert touched was
+// a disk read. 256 MB holds the hot leaf of every index for every active
+// series, so a day's inserts are served from memory.
+const CACHE_KIB = 262_144
+// Let the WAL reach ~80 MB between checkpoints. Successive batches re-dirty
+// the same hot pages; one checkpoint then writes each page once instead of
+// every batch spraying random 4 KB writes across the 9 GB file.
+const WAL_AUTOCHECKPOINT_PAGES = 20_000
+const BUSY_TIMEOUT_MS = 30_000   // --stats/--verify during a run: wait, don't throw
+const STALE_AFTER_H = 24         // --verify exits 2 with no success inside this window
+
 const now = () => new Date().toISOString()
 function log(msg) {
   const line = `[${now()}] ${msg}`
@@ -74,10 +99,50 @@ function log(msg) {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+// ── Graceful stop ────────────────────────────────────────────────────────
+// The handler only runs on the event loop, i.e. during the yield between
+// batches — exactly where stopping is safe (rows and watermark committed).
+let stopSignal = null
+class Interrupted extends Error {
+  constructor(signal) { super(`interrupted by ${signal}`); this.signal = signal }
+}
+const checkStop = () => { if (stopSignal) throw new Interrupted(stopSignal) }
+let copiedThisRun = 0
+
+// ── Lock file ────────────────────────────────────────────────────────────
+function readLock() {
+  try { return JSON.parse(readFileSync(LOCK, 'utf8')) } catch { return null }
+}
+function isAlive(pid) {
+  try { process.kill(pid, 0); return true } catch (err) { return err?.code === 'EPERM' }
+}
+function acquireLock() {
+  const d = lockDecision({ existing: readLock(), isAlive, selfPid: process.pid })
+  if (d.action === 'skip') {
+    log(`another archive run is still in progress (pid ${d.pid}, started ${d.startedAt}) — skipping this run`)
+    return false
+  }
+  if (d.action === 'takeover') log(`taking over ${d.reason}`)
+  writeFileSync(LOCK, JSON.stringify({ pid: process.pid, startedAt: now() }))
+  return true
+}
+function releaseLock() {
+  try { if (readLock()?.pid === process.pid) unlinkSync(LOCK) } catch { /* volume gone */ }
+}
+
 // ── Archive schema ───────────────────────────────────────────────────────
 // Mirrors the live tables plus a `system` discriminator. The natural key of
 // each stream becomes the PRIMARY KEY so re-running can never duplicate.
 // No DELETE path exists anywhere in this file — that is the point.
+function tunePragmas(db) {
+  db.exec(`
+    PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS};
+    PRAGMA cache_size = -${CACHE_KIB};
+    PRAGMA temp_store = MEMORY;
+    PRAGMA wal_autocheckpoint = ${WAL_AUTOCHECKPOINT_PAGES};
+  `)
+}
+
 function ensureSchema(db) {
   db.exec(`
     PRAGMA journal_mode = WAL;
@@ -106,8 +171,9 @@ function ensureSchema(db) {
     -- reintroduces exactly the random-insert page-splitting that the PK
     -- change above fixed (throughput fell off a cliff a second time when
     -- it lived here). SQLite builds it far faster in one sorted pass at
-    -- the end, and incremental daily loads are small enough that
-    -- maintaining it afterwards costs nothing.
+    -- the end. Incremental loads maintain it afterwards; that is cheap
+    -- only because tunePragmas() gives the connection a cache big enough
+    -- to keep the hot leaf of every series in memory.
 
     CREATE TABLE IF NOT EXISTS alerts (
       system TEXT NOT NULL, src_id INTEGER NOT NULL,
@@ -228,23 +294,30 @@ async function copyStream(archive, live, system, { table, cols }) {
     `SELECT ${cols.join(', ')} FROM ${table} WHERE id > ? ORDER BY id LIMIT ${BATCH}`)
 
   let total = 0
+  const t0 = Date.now()
   for (;;) {
     const rows = select.all(watermark)
     if (!rows.length) break
+    watermark = rows[rows.length - 1].id
+    // Rows and their watermark commit together: a kill between the two can
+    // no longer leave rows archived but unaccounted for (harmless thanks to
+    // OR IGNORE, but it made the audit trail lie about what a run copied).
     archive.exec('BEGIN')
     try {
       for (const r of rows) insert.run(system, ...cols.map((c) => r[c] ?? null))
+      setWatermark(archive, system, table, watermark)
       archive.exec('COMMIT')
     } catch (err) {
       archive.exec('ROLLBACK')
       throw err
     }
-    watermark = rows[rows.length - 1].id
     total += rows.length
-    setWatermark(archive, system, table, watermark)
+    copiedThisRun += rows.length
     if (rows.length < BATCH) break
     await sleep(YIELD_MS)   // let the live system have the disk
+    checkStop()             // SIGTERM/SIGINT land here, between batches
   }
+  if (total) log(`  ${system}.${table}: ${fmtRate(total, Date.now() - t0)}`)
   return total
 }
 
@@ -281,33 +354,196 @@ function openLiveReadOnly(path) {
   return new DatabaseSync(`file:${path}?mode=ro`, { readOnly: true })
 }
 
+/** All streams of one system. Returns rows copied. */
+async function copySystem(archive, sys, detail) {
+  if (!existsSync(sys.db)) { log(`${sys.name}: live DB missing — skipped`); return 0 }
+  const t0 = Date.now()
+  let n = 0
+  const live = openLiveReadOnly(sys.db)
+  try {
+    for (const stream of STREAMS) {
+      const c = await copyStream(archive, live, sys.name, stream)
+      if (c > 0) { detail.push(`${sys.name}.${stream.table}=${c}`); n += c }
+    }
+    const st = copyStations(archive, live, sys.name)
+    if (st > 0) detail.push(`${sys.name}.stations=${st}`)
+  } finally {
+    live.close()
+  }
+  log(`${sys.name}: done — ${fmtInt(n)} new rows in ${((Date.now() - t0) / 60_000).toFixed(1)} min`)
+  return n
+}
+
+// ── Reports ──────────────────────────────────────────────────────────────
+
+/**
+ * Cheap: archive watermark vs live max(id) per table (rowid lookups, ms).
+ * This is what every scheduled run prints instead of the full row counts.
+ * Returns the largest lag seen.
+ */
+function coverageReport(archive) {
+  log('coverage (archive watermark vs live max id):')
+  let maxBehind = 0
+  for (const sys of SYSTEMS) {
+    if (!existsSync(sys.db)) { log(`  ${sys.name}: live DB missing`); continue }
+    const live = openLiveReadOnly(sys.db)
+    try {
+      for (const { table } of STREAMS) {
+        if (!tableExists(live, table)) continue
+        const liveMax = live.prepare(`SELECT MAX(id) AS m FROM ${table}`).get()?.m ?? 0
+        const wm = getWatermark(archive, sys.name, table)
+        maxBehind = Math.max(maxBehind, liveMax - wm)
+        log(lagLine(sys.name, table, wm, liveMax))
+      }
+    } finally {
+      live.close()
+    }
+  }
+  if (existsSync(ARCHIVE_DB)) log(`  archive size: ${(statSync(ARCHIVE_DB).size / 1e9).toFixed(2)} GB`)
+  return maxBehind
+}
+
+/**
+ * Expensive: row counts per table — a COUNT over 38 M rows walks the whole
+ * primary index and takes minutes over USB. Only for --stats / --verify.
+ * Span uses single index seeks (first/last archived row per system) rather
+ * than MIN/MAX GROUP BY, which scanned the whole series index: 3.5–8.5 h
+ * per run when it lived inside the scheduled job.
+ */
 function reportStats(archive) {
   const tables = ['readings', 'alerts', 'events', 'ingest_runs', 'news_items',
     'wq_readings', 'escalations', 'stations']
-  log('archive contents:')
+  log('archive contents (counting — minutes on a large archive):')
   for (const t of tables) {
     const rows = archive.prepare(
       `SELECT system, COUNT(*) AS n FROM ${t} GROUP BY system ORDER BY system`).all()
-    const summary = rows.length ? rows.map((r) => `${r.system}=${r.n.toLocaleString()}`).join('  ') : '(empty)'
+    const summary = rows.length ? rows.map((r) => `${r.system}=${fmtInt(r.n)}`).join('  ') : '(empty)'
     log(`  ${t.padEnd(14)} ${summary}`)
   }
-  const span = archive.prepare(
-    'SELECT system, MIN(obs_time) AS a, MAX(obs_time) AS b FROM readings GROUP BY system').all()
-  for (const s of span) log(`  span ${s.system}: ${s.a} → ${s.b}`)
+  const one = (sql, ...args) => Object.values(archive.prepare(sql).get(...args) ?? {})[0] ?? null
+  log(`  span (all systems): ${one('SELECT MIN(obs_time) FROM readings')} → ${one('SELECT MAX(obs_time) FROM readings')}`)
+  for (const { name } of SYSTEMS) {
+    const first = one('SELECT obs_time FROM readings WHERE system = ? ORDER BY src_id LIMIT 1', name)
+    const last = one('SELECT obs_time FROM readings WHERE system = ? ORDER BY src_id DESC LIMIT 1', name)
+    if (first) log(`  ${name}: first archived row ${first} → newest archived row ${last}`)
+  }
   if (existsSync(ARCHIVE_DB)) {
     log(`  archive size: ${(statSync(ARCHIVE_DB).size / 1e9).toFixed(2)} GB`)
   }
 }
 
+/** --verify: integrity + coverage + staleness. Returns the exit code. */
+function verify(archive) {
+  const gb = existsSync(ARCHIVE_DB) ? (statSync(ARCHIVE_DB).size / 1e9).toFixed(1) : '?'
+  log(`integrity_check: running (reads the whole ${gb} GB file — minutes, not seconds)`)
+  const t0 = Date.now()
+  const result = Object.values(archive.prepare('PRAGMA integrity_check').get())[0]
+  log(`integrity_check: ${result} (${((Date.now() - t0) / 60_000).toFixed(1)} min)`)
+
+  const lastOk = archive.prepare(
+    'SELECT finished_at FROM archive_runs WHERE ok = 1 ORDER BY id DESC LIMIT 1').get()?.finished_at ?? null
+  const hours = staleHours(lastOk, Date.now())
+  log(`last successful run finished: ${lastOk ?? 'never'}${hours == null ? '' : ` (${hours.toFixed(1)} h ago)`}`)
+
+  coverageReport(archive)
+  reportStats(archive)
+
+  if (result !== 'ok') return 1
+  if (hours == null || hours > STALE_AFTER_H) {
+    log(`STALE: no successful run in the last ${STALE_AFTER_H} h`)
+    return 2
+  }
+  return 0
+}
+
+// ── The run ──────────────────────────────────────────────────────────────
+
+/** Runs that never wrote a finish record died mid-way (kill, unmount, reboot). */
+function markAbandonedRuns(archive) {
+  return Number(archive.prepare(
+    `UPDATE archive_runs SET error = 'abandoned: no finish record (killed, unmounted or rebooted mid-run)'
+     WHERE finished_at IS NULL AND error IS NULL`).run().changes)
+}
+
+function finishRun(archive, runId, ok, error) {
+  archive.prepare(
+    'UPDATE archive_runs SET finished_at = ?, ok = ?, rows_copied = ?, error = ? WHERE id = ?')
+    .run(now(), ok ? 1 : 0, copiedThisRun, error, runId)
+}
+
+/** Incremental copy of every system. Returns the exit code. */
+async function runArchive(archive) {
+  const abandoned = markAbandonedRuns(archive)
+  if (abandoned) log(`marked ${abandoned} earlier run(s) as abandoned — they never wrote a finish record`)
+
+  const runRow = archive.prepare(
+    'INSERT INTO archive_runs (started_at, ok) VALUES (?, 0)').run(now())
+  const runId = Number(runRow.lastInsertRowid)
+  const detail = []
+
+  try {
+    for (const sys of SYSTEMS) await copySystem(archive, sys, detail)
+    ensureAnalysisIndexes(archive)
+    archive.prepare('UPDATE archive_runs SET detail = ? WHERE id = ?').run(detail.join(' '), runId)
+    finishRun(archive, runId, true, null)
+    log(`archive run complete — ${fmtInt(copiedThisRun)} new rows [${detail.join(' ') || 'nothing new'}]`)
+    coverageReport(archive)
+    return 0
+  } catch (err) {
+    if (err instanceof Interrupted) {
+      finishRun(archive, runId, false, err.message)
+      log(`archive run interrupted (${err.signal}) after ${fmtInt(copiedThisRun)} rows — watermarks saved, the next run resumes from here`)
+      return 0
+    }
+    const msg = String(err?.message ?? err)
+    finishRun(archive, runId, false, msg)
+    log(`ARCHIVE FAILED: ${msg}`)
+    return 1
+  }
+}
+
+// ── Self-unthrottle ──────────────────────────────────────────────────────
+// launchd's LowPriorityIO (IOPOL_THROTTLE) is inherited and costs ~1.4 s per
+// disk I/O whenever anything else touches the same device: measured 0.2 MB/s
+// vs 17 MB/s on the archive file, 290 rows/min vs hundreds of thousands. The
+// plist no longer sets it, but launchd keeps the OLD definition until the
+// job is re-bootstrapped, and a future edit could bring the key back. So the
+// script does not trust its launcher: it relaunches itself once under
+// `taskpolicy -d default`, which resets the disk policy before exec.
+// WHAT IS TESTED: a child started this way escapes a throttle set with
+// `taskpolicy -d throttle` (0.2 -> 17 MB/s on the archive file).
+// WHAT IS NOT: that launchd's LowPriorityIO is that same per-process disk
+// policy rather than the darwin-background task policy, which this does
+// NOT lift (taskpolicy -B was tested and did nothing). Treat this as
+// belt-and-braces; the real fix is the plist without LowPriorityIO,
+// re-bootstrapped. Check: the first launchd run logs rows/min per stream —
+// thousands+ means it worked, hundreds means it did not.
+// taskpolicy execs node, so the child is the real run; this parent only
+// forwards signals and the exit code.
+const TASKPOLICY = '/usr/sbin/taskpolicy'
+function relaunchUnthrottled() {
+  return new Promise((resolve) => {
+    const child = spawn(TASKPOLICY, ['-d', 'default', process.execPath, ...process.argv.slice(1)],
+      { stdio: 'inherit', env: { ...env, DASH_ARCHIVE_UNTHROTTLED: '1' } })
+    for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => child.kill(sig))
+    child.on('error', () => resolve(null))            // taskpolicy unusable → run in-process
+    child.on('close', (code) => resolve(code ?? 1))
+  })
+}
+
 async function main() {
-  const mode = process.argv.includes('--stats') ? 'stats'
-    : process.argv.includes('--verify') ? 'verify' : 'run'
+  const mode = parseMode(process.argv)
+
+  if (!env.DASH_ARCHIVE_UNTHROTTLED && existsSync(TASKPOLICY)) {
+    const code = await relaunchUnthrottled()
+    if (code !== null) return code
+  }
 
   // Volume gone (USB unplugged / not yet mounted) → log, exit 0. Never
   // crash-loop: a failing archive must not become an operational incident.
-  if (!existsSync('/Volumes/Data')) {
-    console.log(`[${now()}] archive volume /Volumes/Data not mounted — skipping this run`)
-    process.exit(0)
+  if (!existsSync(VOLUME)) {
+    console.log(`[${now()}] archive volume ${VOLUME} not mounted — skipping this run`)
+    return 0
   }
 
   // REAL WRITE PROBE — not just existsSync/-w. On macOS, a launchd agent
@@ -326,63 +562,25 @@ async function main() {
     console.log(`[${now()}] cannot WRITE to ${ARCHIVE_DIR} (${String(err?.message ?? err)})`)
     console.log(`[${now()}] if this is a scheduled run, grant Full Disk Access to /opt/homebrew/bin/node`)
     console.log(`[${now()}] (System Settings → Privacy & Security → Full Disk Access). Skipping — no data lost.`)
-    process.exit(0)   // exit 0: a blocked archive is not a crash
+    return 0   // exit 0: a blocked archive is not a crash
   }
+
+  if (mode === 'run' && !acquireLock()) return 0
 
   const archive = new DatabaseSync(ARCHIVE_DB)
-  ensureSchema(archive)
-
-  if (mode === 'stats') { reportStats(archive); archive.close(); return }
-
-  if (mode === 'verify') {
-    const res = archive.prepare('PRAGMA integrity_check').get()
-    const ok = Object.values(res)[0] === 'ok'
-    log(`integrity_check: ${Object.values(res)[0]}`)
-    reportStats(archive)
-    archive.close()
-    process.exit(ok ? 0 : 1)
-  }
-
-  const startedAt = now()
-  const runRow = archive.prepare(
-    'INSERT INTO archive_runs (started_at, ok) VALUES (?, 0)').run(startedAt)
-  const runId = Number(runRow.lastInsertRowid)
-  const detail = []
-  let grandTotal = 0
-
   try {
-    for (const sys of SYSTEMS) {
-      if (!existsSync(sys.db)) { log(`${sys.name}: live DB missing — skipped`); continue }
-      const live = openLiveReadOnly(sys.db)
-      try {
-        for (const stream of STREAMS) {
-          const n = await copyStream(archive, live, sys.name, stream)
-          if (n > 0) { detail.push(`${sys.name}.${stream.table}=${n}`); grandTotal += n }
-        }
-        const st = copyStations(archive, live, sys.name)
-        if (st > 0) detail.push(`${sys.name}.stations=${st}`)
-      } finally {
-        live.close()
-      }
-      log(`${sys.name}: done`)
-    }
-
-    ensureAnalysisIndexes(archive)
-
-    archive.prepare(
-      'UPDATE archive_runs SET finished_at = ?, ok = 1, rows_copied = ?, detail = ? WHERE id = ?')
-      .run(now(), grandTotal, detail.join(' '), runId)
-    log(`archive run complete — ${grandTotal.toLocaleString()} new rows [${detail.join(' ') || 'nothing new'}]`)
-    reportStats(archive)
-  } catch (err) {
-    const msg = String(err?.message ?? err)
-    archive.prepare('UPDATE archive_runs SET finished_at = ?, ok = 0, error = ? WHERE id = ?')
-      .run(now(), msg, runId)
-    log(`ARCHIVE FAILED: ${msg}`)
-    archive.close()
-    process.exit(1)
+    tunePragmas(archive)
+    ensureSchema(archive)
+    if (mode === 'stats') { reportStats(archive); return 0 }
+    if (mode === 'verify') return verify(archive)
+    for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { stopSignal = sig })
+    return await runArchive(archive)
+  } finally {
+    try { archive.close() } catch { /* volume gone */ }
+    releaseLock()
   }
-  archive.close()
 }
 
-main().catch((err) => { log(`fatal: ${String(err?.message ?? err)}`); process.exit(1) })
+main()
+  .then((code) => process.exit(code))
+  .catch((err) => { log(`fatal: ${String(err?.message ?? err)}`); releaseLock(); process.exit(1) })
