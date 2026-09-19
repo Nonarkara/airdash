@@ -10,6 +10,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.0] — 2026-09-20 · token 2.4.32 · **Cameras that show the air**
+
+**The idea.** A PM2.5 number is abstract; a camera looking at the same place is not. AirDash now carries FloodDash's
+national CCTV catalog (GISTDA + iTIC + NST, 1,380 cameras) and pairs every camera with the nearest fresh PM2.5 reading.
+
+**Only cameras that work.** A sample of the catalog found ~28 % of GISTDA and ~44 % of iTIC streams serving a
+playlist while all were flagged "online". `cctvHealth` (copied from FloodDash 4.34) probes all 561 HLS streams every
+30 min (12 in flight, 3 per server, 8 s): a 404 hides a stream at once, a timeout needs two strikes. First cycle: **137
+live · 177 dead · 247 awaiting a second look.** The map shows proven-live streams and NST embeds only (348 pins).
+One-at-a-time tests confirm the live ones deliver video; 40 at once time out — these are small municipal servers.
+
+**Added**
+- **CCTV layer** (Ground observations → "CCTV"): pin ring colour = PM2.5 at the nearest station (Thai AQI 2023
+  bands), pulsing above 75; popup = the reading first, then the picture, then attribution and "not an official
+  announcement".
+- **Haze eyes** (layers panel → 👁): the working cameras facing the worst air right now, ranked by PM2.5. When nothing
+  is above 25 µg/m³ (most of the wet season) it shows the cameras near the highest readings instead and says so.
+  Only 4 streams autoplay; the rest have a play button.
+- `GET /api/cctv/all` (each camera carries `air`; `?live=1`, `?near=lat,lng`) and `GET /api/cctv/haze-eyes`.
+  Both rate-limited (30/min).
+- `server/airCctv.js` (pure: `pm25Band`, `pairAir`, `hazeEyes`) + `scripts/test-cctv-air.mjs` (16 checks, in `npm test`).
+
+**Found while building it**
+- Chrome now reports native HLS support, but its demuxer failed on these streams (`DEMUXER_ERROR_COULD_NOT_PARSE`).
+  The player uses **hls.js first**, native HLS only where hls.js cannot run (iPhone).
+- AirDash's global `article` / `header` CSS turned the wall cards into a 2-column grid. The cards are plain `div`s.
+
 ## [3.2.1] — 2026-09-19 · **Port hijack: a 20-hour API outage behind a healthy-looking site, and the watchdog that made it worse**
 
 **What broke.** From 02:49 to ~23:05 (ICT) every `/api/*` request returned a plain-text 404 while the static

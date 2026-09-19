@@ -35,6 +35,7 @@ import pcdNoise from './sources/pcd-noise.js'
 import cropsdrought from './sources/cropsdrought.js'
 import aqHistory from './sources/aq-history.js'
 import twinFlood from './sources/twin-flood.js'
+import cctvHealth from './sources/cctvHealth.js'
 import tmdRelay from './sources/tmd-relay.js'
 import { createLine } from './line.js'
 import { createTelegram } from './telegram.js'
@@ -68,7 +69,7 @@ for (const k of Object.keys(ragWithFaq)) {
 
 const scheduler = createScheduler({
   db, bus, alerts,
-  sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise, aqHistory, burnArea, cropsdrought, firmsRegional, twinFlood, tmdRelay],
+  sources: [air4thai, openmeteo, openmeteoAq, thaiwaterRain, enso, news, imerg, gistdaPm25, pcdNoise, aqHistory, burnArea, cropsdrought, firmsRegional, cctvHealth, twinFlood, tmdRelay],
 })
 
 const server = startHttp(buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, harm, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }))

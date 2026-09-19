@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.31'
-import { escapeHtml } from '../fmt.js?v=2.4.31'
+import { store, on } from '../state.js?v=2.4.32'
+import { escapeHtml } from '../fmt.js?v=2.4.32'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -74,6 +74,13 @@ function GROUPS() {
       rows: [
         { path: '/api/stations', th: 'ค้นสถานีตรวจวัดด้วยชื่อ จังหวัด หรือรหัส', en: 'Find monitoring stations by name, province or code.',
           params: [['q', true, tr('ข้อความค้นหา (ไทยหรืออังกฤษ)', 'search text, Thai or English')]] },
+        { path: '/api/cctv/all', th: 'กล้อง CCTV ทั่วประเทศ (GISTDA · iTIC · NST) ที่ตรวจแล้วว่าภาพสดจริง พร้อมค่า PM2.5 ที่ใกล้กล้องที่สุดในฟิลด์ air',
+          en: 'Nationwide CCTV catalog (GISTDA · iTIC · NST), health-checked every 30 min; each camera carries `air`, the nearest fresh PM2.5 reading.',
+          params: [['live', false, tr('1 = เฉพาะสตรีมที่พิสูจน์แล้วว่าสด', '1 = only streams proven alive')], ['near', false, tr('lat,lng — เรียงตามระยะ', 'lat,lng — sort by distance')], ['radius_km', false, tr('รัศมี (ค่าเริ่มต้น 50)', 'radius (default 50)')], ['limit', false, tr('จำนวนสูงสุดเมื่อใช้ near (ค่าเริ่มต้น 8)', 'max with near (default 8)')]],
+          note_th: 'stream_status: live / flaky / down / unknown / embed · กล้องที่สตรีมตายจะถูกซ่อน · ภาพและค่าฝุ่นเป็นข้อมูลอ้างอิง ไม่ใช่ประกาศราชการ', note_en: 'stream_status: live / flaky / down / unknown / embed · dead streams are hidden · pictures and readings are for reference, not an official announcement' },
+        { path: '/api/cctv/haze-eyes', th: 'กล้องที่กำลังมองพื้นที่ฝุ่นหนักที่สุดตอนนี้ — เรียงตาม PM2.5 จากมากไปน้อย เลือกเฉพาะกล้องที่ใช้งานได้จริง',
+          en: 'The cameras looking at the worst air right now — highest PM2.5 first, only cameras that actually work.',
+          params: [['limit', false, tr('จำนวน 1–24 (ค่าเริ่มต้น 12)', 'count 1–24 (default 12)')], ['min_pm25', false, tr('เกณฑ์ PM2.5 ขั้นต่ำ (ค่าเริ่มต้น 25)', 'minimum PM2.5 (default 25)')]] },
         { path: '/api/stations/nearest', th: 'สถานีที่ใกล้จุดที่กำหนดที่สุด พร้อมค่าล่าสุดและระยะทาง', en: 'Nearest stations to a point with their latest reading and distance.',
           params: [['lat', true, tr('ละติจูด', 'latitude')], ['lng', true, tr('ลองจิจูด', 'longitude')], ['limit', false, tr('จำนวน (ค่าเริ่มต้น 5)', 'count (default 5)')]] },
         { path: '/api/series', th: 'อนุกรมเวลารายชั่วโมงของสถานีหนึ่ง ตัวชี้วัดหนึ่ง', en: 'Hourly time series for one station and one metric.',

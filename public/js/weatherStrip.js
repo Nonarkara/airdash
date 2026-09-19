@@ -4,8 +4,8 @@
 // /api/weather/at (server/weather.js): TMD's own forecast and station,
 // relayed from the FloodDash twin. Absent data renders nothing — a silent
 // station is not "calm". Added 2026-09-17.
-import { store } from './state.js?v=2.4.31'
-import { escapeHtml } from './fmt.js?v=2.4.31'
+import { store } from './state.js?v=2.4.32'
+import { escapeHtml } from './fmt.js?v=2.4.32'
 
 const tr = (th, en) => (store.lang === 'th' ? th : en)
 const COND_ICON = [

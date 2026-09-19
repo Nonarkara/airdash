@@ -27,6 +27,9 @@ const provinceBoundariesGeoJson = JSON.parse(
   readFileSync(join(GEO_DIR, 'province-boundaries.geojson'), 'utf8'))
 import { buildInsights } from './insights.js'
 import { log } from './util.js'
+import { composeAll as composeAllCctv, listSources as listCctvSources } from './sources/cctvRegistry.js'
+import { hydrateOnce as hydrateCctvHealth } from './sources/cctvHealthStore.js'
+import { pairAir, hazeEyes } from './airCctv.js'
 import { sensorHealth } from './sensors.js'
 import { harmPayload, HARM_METHOD } from './harm.js'
 
@@ -84,6 +87,22 @@ const APP_VERSION = readAppVersion()
 let insightsCache = null // { at, payload }
 const INSIGHTS_TTL_MS = 60_000
 
+
+// Air4Thai stations with their latest PM2.5, for pairing cameras with the air
+// they look at. 60 s cache: the catalog route is polled, the readings hourly.
+let airStationsCache = null
+function airStationsNow(db) {
+  if (airStationsCache && Date.now() - airStationsCache.at < 60_000) return airStationsCache.rows
+  const rows = db.all(
+    `SELECT s.station_key, s.name_th, s.name_en, s.province_th, s.lat, s.lng,
+            pm.value AS pm25, pm.obs_time AS obs_time
+     FROM stations s
+     JOIN latest pm ON pm.source = s.source AND pm.station_key = s.station_key AND pm.metric = 'pm25'
+     WHERE s.source = 'air4thai' AND s.lat IS NOT NULL AND s.lng IS NOT NULL`)
+  airStationsCache = { at: Date.now(), rows }
+  return rows
+}
+let hazeEyesCache = null
 const clamp = (n, lo, hi, dflt) => {
   // Number(null) === 0, so an absent query param must fall back explicitly.
   if (n === null || n === undefined || n === '') return dflt
@@ -1508,6 +1527,57 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         count: stations.length,
         stations,
       })
+    },
+
+    // ── CCTV: cameras that show the air ────────────────────────────────────
+    // The catalog is FloodDash's (GISTDA + iTIC + NST), health-checked every
+    // 30 min so a dead stream is not shown as a working camera. Each camera
+    // carries `air`: the nearest fresh Air4Thai PM2.5 reading, so the picture
+    // and the number sit side by side. ?live=1 → only streams PROVEN alive.
+    'GET /api/cctv/all': async (req, res, url) => {
+      if (!allow(req, { key: 'cctv', limit: 30, windowMs: 60_000 })) return json(res, 429, { error: 'too many requests — wait a minute' })
+      try {
+        hydrateCctvHealth(db)
+        const out = await composeAllCctv({ timeoutMs: 30_000 })
+        let cameras = out.cameras
+        if (url.searchParams.get('live') === '1') cameras = cameras.filter((c) => c.stream_status === 'live')
+        const near = url.searchParams.get('near')
+        if (near) {
+          const [lat, lng] = near.split(',').map(Number)
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return json(res, 400, { error: 'near=lat,lng' })
+          const radius = clamp(url.searchParams.get('radius_km'), 0, 200, 50)
+          const limit = clamp(url.searchParams.get('limit'), 1, 50, 8)
+          cameras = cameras
+            .map((c) => ({ ...c, km: Math.round(Math.hypot((c.lat - lat) * 111, (c.lng - lng) * 104) * 10) / 10 }))
+            .filter((c) => c.km <= radius).sort((a, b) => a.km - b.km).slice(0, limit)
+        }
+        cameras = pairAir(cameras, airStationsNow(db))
+        json(res, 200, { ...out, cameras, total: cameras.length })
+      } catch (e) {
+        log('warn', 'cctv catalog failed', { error: String(e) })
+        json(res, 502, { error: 'cctv aggregate failed', sources: listCctvSources() })
+      }
+    },
+
+    // The cameras looking at the worst air right now: for each hazy station
+    // (highest PM2.5 first) the nearest camera that is actually working.
+    'GET /api/cctv/haze-eyes': async (req, res, url) => {
+      if (!allow(req, { key: 'cctv-eyes', limit: 30, windowMs: 60_000 })) return json(res, 429, { error: 'too many requests — wait a minute' })
+      try {
+        const limit = clamp(url.searchParams.get('limit'), 1, 24, 12)
+        const minPm25 = clamp(url.searchParams.get('min_pm25'), 0, 500, 25)
+        const ck = `${limit}|${minPm25}`
+        if (!hazeEyesCache || hazeEyesCache.ck !== ck || Date.now() - hazeEyesCache.at > 120_000) {
+          hydrateCctvHealth(db)
+          const cat = await composeAllCctv({ timeoutMs: 30_000 })
+          const eyes = hazeEyes(cat.cameras, airStationsNow(db), { limit, minPm25 })
+          hazeEyesCache = { ck, at: Date.now(), body: { generated_at: new Date().toISOString(), min_pm25: minPm25, count: eyes.length, health: cat.health, eyes } }
+        }
+        json(res, 200, hazeEyesCache.body)
+      } catch (e) {
+        log('warn', 'haze-eyes failed', { error: String(e) })
+        json(res, 502, { error: 'haze-eyes failed' })
+      }
     },
 
     // ── LINE Notify opt-in ────────────────────────────────────────────

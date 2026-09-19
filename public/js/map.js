@@ -1,15 +1,17 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.31'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.31'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.31'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.31'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.31'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.31'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.31'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.31'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.31'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.31'
+import { on, store } from './state.js?v=2.4.32'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.32'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.32'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.32'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.32'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.32'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.32'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.32'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.32'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.32'
+import { openHazeEyes } from './layers/cctvWall.js?v=2.4.32'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.32'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
@@ -18,6 +20,7 @@ let satLayers = null
 let osmBuildingsApi = null
 let newsFireApi = null
 let droughtApi = null
+let cctvApi = null
 let basemaps = null
 const BASEMAP_KEY = 'ad_basemap'
 let currentBasemap = (() => {
@@ -73,6 +76,12 @@ export function initMap() {
     layers.drought = droughtApi.group
   } catch (e) {
     console.error('drought layer init failed — continuing without it:', e)
+  }
+  try {
+    cctvApi = createCctvLayer(map)
+    layers.cctv = cctvApi.group
+  } catch (e) {
+    console.error('cctv layer init failed — continuing without it:', e)
   }
   osmBuildingsApi = createOsmBuildingsLayer({ getMap: () => map, getRisk: () => store.snapshot?.risk })
   layers.osmbuild = osmBuildingsApi.group
@@ -182,9 +191,11 @@ function toggleLayer(t) {
   if (t.on) {
     layer.addTo(map)
     if (t.id === 'osmbuild') osmBuildingsApi.onAdd()
+    if (t.id === 'cctv') cctvApi?.onAdd()
   } else {
     layer.remove()
     if (t.id === 'osmbuild') osmBuildingsApi.onRemove()
+    if (t.id === 'cctv') cctvApi?.onRemove()
   }
 }
 
@@ -236,6 +247,18 @@ function addLayerControl() {
         }
       }
     }
+
+    const eyes = L.DomUtil.create('button', 'row', body)
+    eyes.type = 'button'
+    eyes.innerHTML = `<span class="sw" style="background:var(--th-red)"></span><span class="lbl">👁 ${tr('ตาดูฝุ่น — กล้องที่มองพื้นที่ฝุ่นหนักสุด', 'Haze eyes — cameras on the worst air')}</span>`
+    eyes.onclick = () => openHazeEyes({
+      onLocate: (id, source) => {
+        const t = allLayerToggles().find((x) => x.id === 'cctv')
+        if (t && !t.on) { toggleLayer(t); addLayerControl() }
+        // The pins load on first add; give them a moment before opening the popup.
+        cctvApi?.refresh().then(() => cctvApi?.locate(id, source))
+      },
+    })
 
     return div
   }
@@ -289,6 +312,8 @@ function addLegend() {
       <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ฮีทแมป PM2.5', 'PM2.5 HEAT MAP')}</div>
       <div class="lrow">${tr('สีของแต่ละจุด = ค่า PM2.5 จริงที่สถานีนั้น ไม่ใช่ความหนาแน่นจุด', 'blob colour = the actual PM2.5 at that station, not point density')}</div>
+      <div class="eyebrow" style="margin-top:6px">${tr('กล้อง CCTV', 'CCTV')}</div>
+      <div class="lrow">📹 ${tr('ภาพสดที่ตรวจแล้ว · สีขอบ = PM2.5 ที่สถานีใกล้ที่สุด', 'verified live · ring colour = PM2.5 at the nearest station')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ข่าวไฟป่า/มลพิษ', 'FIRE & POLLUTION NEWS')}</div>
       <div class="lrow"><span class="lsw round" style="background:#A51931"></span>🔥 ${tr('ข่าวไฟป่า/การเผา', 'wildfire / open-burning news')}</div>
       <div class="lrow"><span class="lsw round" style="background:#A51931"></span>⚠ ${tr('ข่าวมลพิษอื่น + ค่าฝุ่นปัจจุบันของพื้นที่', 'other pollution news + current PM2.5 there')}</div>`
