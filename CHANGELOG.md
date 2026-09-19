@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.1] — 2026-09-20 · token 2.4.33 · **Camera video was blocked by the page's own security policy**
+
+**What was wrong.** 3.3.0 shipped camera video that played in local tests and could not play on the live site.
+AirDash's Content-Security-Policy lives only in `public/_headers` (Cloudflare Pages) — the local server sets none — so a
+local test cannot see it. The live policy did not allow hls.js to load (`script-src` lacked `cdn.jsdelivr.net`), the
+camera servers (`connect-src`), MSE playback from a `blob:` URL (`media-src` was absent, so `default-src 'self'`
+blocked it) or the NST iframes (`frame-src`). The same gap had silently broken FloodDash's cameras since they were
+added (FloodDash 4.34.2).
+
+**Fixed.** `script-src` += `https://cdn.jsdelivr.net`; `connect-src` and `media-src` += `*.iticfoundation.org`,
+`*.nakhoncity.org`, `*.highwaytraffic.go.th`; `media-src` += `blob:`; `frame-src https://nstcctv.nakhoncity.org`.
+`scripts/test-csp-cctv.mjs` (15 checks, in `npm test`) reads `_headers` and fails if any of them goes missing.
+
 ## [3.3.0] — 2026-09-20 · token 2.4.32 · **Cameras that show the air**
 
 **The idea.** A PM2.5 number is abstract; a camera looking at the same place is not. AirDash now carries FloodDash's

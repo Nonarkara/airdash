@@ -3,10 +3,10 @@
 // health-checked server-side every 30 min (server/sources/cctvHealth.js), so a
 // pin means "this picture worked recently", not "someone listed a camera".
 // Each camera carries `air`: the nearest fresh PM2.5 reading and its distance.
-import { tr } from '../i18n.js?v=2.4.32'
-import { escapeHtml } from '../fmt.js?v=2.4.32'
-import { pm25Color } from '../paint.js?v=2.4.32'
-import { airChipHtml, playerHtml, startVideos, stopVideos, linkUrl, NOT_OFFICIAL } from './cctvPlayer.js?v=2.4.32'
+import { tr } from '../i18n.js?v=2.4.33'
+import { escapeHtml } from '../fmt.js?v=2.4.33'
+import { pm25Color } from '../paint.js?v=2.4.33'
+import { airChipHtml, playerHtml, startVideos, stopVideos, linkUrl, NOT_OFFICIAL } from './cctvPlayer.js?v=2.4.33'
 
 const REFRESH_MS = 10 * 60_000
 const NO_AIR = '#7E8E9A'

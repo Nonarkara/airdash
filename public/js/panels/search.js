@@ -1,11 +1,11 @@
 // Universal place search — search any place name (province, station, focus area)
 // and get autocomplete results. Select one → map flies there + place card opens
 // with live data: nearest AQ stations, watch score, rain-washout outlook.
-import { on, store, emit } from '../state.js?v=2.4.32'
-import { tr, pick, BAND } from '../i18n.js?v=2.4.32'
-import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.32'
-import { getJson } from '../cache.js?v=2.4.32'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.32'
+import { on, store, emit } from '../state.js?v=2.4.33'
+import { tr, pick, BAND } from '../i18n.js?v=2.4.33'
+import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.33'
+import { getJson } from '../cache.js?v=2.4.33'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.33'
 
 // Cached province centroids — fetched once, used to give postal results
 // a fly-to target. Same numbers the server's gazetteer uses (see
