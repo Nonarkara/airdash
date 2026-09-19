@@ -3,7 +3,7 @@
 # LaunchAgent (com.airdash.watchdog, StartCalendarInterval Minute=0).
 #
 # Checks, in order:
-#   1. Local server (localhost:8341) — uses /api/ping first (zero-DB liveness
+#   1. Local server (127.0.0.1:$AD_PORT) — uses /api/ping first (zero-DB liveness
 #      probe) so a 25–45s thaiwater_rain ingest doesn't trigger a false
 #      "server is dead" verdict and a kill. /api/health is used as a
 #      deeper liveness signal (DB is responding too). See comment near
@@ -27,13 +27,63 @@
 # self-heals invisibly, and not on every successful hourly check.
 set -u
 UID_NUM=$(id -u)
-LOG="/Users/axiom/AirDash/logs/watchdog.log"
+STATE_DIR="${WATCHDOG_STATE_DIR:-/Users/axiom/AirDash/logs}"   # overridable so tests never touch real state
+LOG="${WATCHDOG_LOG:-/Users/axiom/AirDash/logs/watchdog.log}"
 NOW() { date '+%Y-%m-%dT%H:%M:%S%z' }
 log() { print -r -- "[$(NOW)] $*" >> "$LOG" }
 notify() {
   osascript -e "display notification \"$1\" with title \"AirDash watchdog\" sound name \"Basso\"" 2>/dev/null
 }
 up() { curl -sf --max-time 8 "$1" -o /dev/null; }
+
+# ── Port + IDENTITY (added after the 2026-09-19 port hijack) ─────────────
+# Another launchd service bound 127.0.0.1:8341 — AirDash's port — and answered
+# every request with a 404. This watchdog read "unreachable", concluded our
+# server was dead, and killed + restarted a perfectly healthy AirDash EVERY
+# HOUR for ~20 hours (22 kills), while the real cause sat untouched. Three
+# lessons, now enforced below:
+#   1. "Answered 200" is not "AirDash answered". Probes require the
+#      `x-service: airdash` identity header the server puts on every response.
+#   2. Find our PID from launchd, never `pgrep -f "node server/index.js"` —
+#      that pattern also matches FloodDash and DND, so it can kill the wrong
+#      project's server.
+#   3. If ANOTHER process is listening on our port, restarting us cannot help
+#      and killing is wrong (it is not ours). Report it; never kill it, and do
+#      not keep restarting ourselves in a loop.
+AD_PORT="${AIRDASH_PORT:-28341}"
+LOCAL="http://127.0.0.1:$AD_PORT"
+RECOVERY_STATE="$STATE_DIR/.watchdog-recovery-fails"
+CONFLICT_STATE="$STATE_DIR/.watchdog-conflict-notified"
+
+up_id() {  # url — 200 AND carries our identity header
+  local h
+  h=$(curl -s --max-time 12 -D - -o /dev/null "$1" 2>/dev/null | tr -d '\r') || return 1
+  print -r -- "$h" | head -1 | grep -q ' 200' || return 1
+  print -r -- "$h" | grep -qi '^x-service: airdash$'
+}
+up_retry_id() {  # url [tries=5] [gap_s=15]
+  local url="$1" tries="${2:-5}" gap="${3:-15}" i=1
+  while :; do
+    up_id "$url" && return 0
+    [ "$i" -ge "$tries" ] && return 1
+    i=$((i + 1)); sleep "$gap"
+  done
+}
+airdash_pid() {  # launchd's own record of our server pid ("" if not running)
+  launchctl list com.airdash.server 2>/dev/null | awk -F'= ' '/"PID"/{gsub(/;/,"",$2); print $2}'
+}
+port_squatters() {  # $1 = our pid. Prints PIDs of OTHER processes listening on our port.
+  local self="${1:-}" p out=""
+  for p in $(lsof -nP -iTCP:"$AD_PORT" -sTCP:LISTEN 2>/dev/null | awk 'NR>1{print $2}' | sort -u); do
+    [ "$p" = "$self" ] || out="$out $p"
+  done
+  print -r -- "${out# }"
+}
+describe_pid() {
+  local p="$1" cwd
+  cwd=$(lsof -a -p "$p" -d cwd -Fn 2>/dev/null | awk '/^n/{print substr($0,2)}')
+  print -r -- "pid=$p started=$(ps -o lstart= -p "$p" 2>/dev/null | sed 's/  */ /g') cmd=$(ps -o command= -p "$p" 2>/dev/null | cut -c1-110) cwd=${cwd:-?}"
+}
 
 # STARVED vs DEAD (ported from FloodDash cb38e84).
 # An unreachable server is not necessarily a broken one — the HOST may be
@@ -63,8 +113,8 @@ starve_detail() {
 #   .watchdog-health-fails — consecutive /api/health failure count
 #   .watchdog-disk-warn    — date (YYYY-MM-DD) of the last 85–91% disk
 #                            notification, so it fires at most once a day
-HEALTH_STATE="/Users/axiom/AirDash/logs/.watchdog-health-fails"
-DISK_STATE="/Users/axiom/AirDash/logs/.watchdog-disk-warn"
+HEALTH_STATE="$STATE_DIR/.watchdog-health-fails"
+DISK_STATE="$STATE_DIR/.watchdog-disk-warn"
 
 # The server is a single synchronous event loop: a 10-min-cadence ingest
 # write (or a cold boot) can freeze it for several seconds, and the hourly
@@ -116,15 +166,16 @@ problems=0
 # is alive — a slow ingest doesn't count as a dead server. We then
 # also try /api/health for a deeper signal but only require /api/ping
 # to consider the server healthy.
-if up_retry "http://localhost:8341/api/ping" 5 15; then
+if up_retry_id "$LOCAL/api/ping" 5 15; then
   log "ok: local server"
+  print -r -- 0 > "$RECOVERY_STATE"   # healthy: close the recovery circuit
   # Deeper check: is the DB responding too? A ping-ok/health-fail pattern
   # means the event loop is alive but something deeper is wedged (e.g.
   # SQLite). Escalates on CONSECUTIVE hourly failures, counted in
   # $HEALTH_STATE: 1st = log only, 2nd = macOS notification, 3rd =
   # kickstart the server (respecting the 300s boot grace). Any success
   # resets the counter to 0.
-  if up_retry "http://localhost:8341/api/health" 2 5; then
+  if up_retry "$LOCAL/api/health" 2 5; then
     print -r -- 0 > "$HEALTH_STATE"
   else
     hf_prev=$(cat "$HEALTH_STATE" 2>/dev/null || true)
@@ -133,7 +184,7 @@ if up_retry "http://localhost:8341/api/ping" 5 15; then
     hf_fails=$((hf_prev + 1))
     print -r -- "$hf_fails" > "$HEALTH_STATE"
     if [ "$hf_fails" -ge 3 ]; then
-      pid=$(pgrep -f "node server/index.js" | head -1)
+      pid=$(airdash_pid)
       age=$(proc_age_s "${pid:-0}")
       if [ -n "${pid:-}" ] && [ "$age" -lt 300 ]; then
         # Same boot-grace rule as the ping path: a process younger than
@@ -159,9 +210,22 @@ if up_retry "http://localhost:8341/api/ping" 5 15; then
     fi
   fi
 else
-  pid=$(pgrep -f "node server/index.js" | head -1)
+  pid=$(airdash_pid)
   age=$(proc_age_s "${pid:-0}")
-  if [ -n "${pid:-}" ] && [ "$age" -lt 300 ]; then
+  squatters=$(port_squatters "${pid:-}")
+  if [ -n "$squatters" ]; then
+    # Something ELSE holds our port. Do not kill it (not ours), do not restart
+    # ourselves (cannot help). Say exactly who, and tell a human.
+    log "PROBLEM: PORT CONFLICT on :$AD_PORT — another process is listening; AirDash (launchd pid=${pid:-none}) is being bypassed. NOT killing or restarting anything:"
+    for sq in ${=squatters}; do log "    squatter $(describe_pid "$sq")"; done
+    now_e=$(date +%s); last_e=$(cat "$CONFLICT_STATE" 2>/dev/null || echo 0)
+    [[ "$last_e" != <-> ]] && last_e=0
+    if [ $(( now_e - last_e )) -ge 21600 ]; then   # at most one alert per 6h
+      notify "PORT CONFLICT on :$AD_PORT — another service is answering AirDash's traffic. See logs/watchdog.log"
+      print -r -- "$now_e" > "$CONFLICT_STATE"
+    fi
+    problems=$((problems + 1))
+  elif [ -n "${pid:-}" ] && [ "$age" -lt 300 ]; then
     # Process exists and is younger than 5 minutes — it is BOOTING (initial
     # ingest + cache warm), not dead. Killing it here restarts the very boot
     # congestion that made it slow. Leave it alone; next hourly check will
@@ -172,6 +236,13 @@ else
     # A restart cannot help and adds load. Hold; the edge cache covers users.
     log "PROBLEM: local server unreachable BUT host is starved ($(starve_detail)) — pid=$pid is a victim, NOT killing"
     problems=$((problems + 1))
+  elif rf=$(cat "$RECOVERY_STATE" 2>/dev/null || echo 0); [[ "$rf" != <-> ]] && rf=0; [ "$rf" -ge 2 ]; then
+    # Circuit breaker. Two restarts in a row already failed; a third will not
+    # succeed and every restart re-runs the boot ingest against ten upstream
+    # APIs (Open-Meteo has 429'd us for exactly this). Stop and get a human.
+    log "PROBLEM: local server unreachable — recovery circuit OPEN ($rf consecutive failed restarts, pid=${pid:-none}). NOT restarting again. Investigate by hand; the next passing check resets this."
+    notify "AirDash server unreachable and $rf automatic restarts have failed — auto-recovery paused. See logs/watchdog.log"
+    problems=$((problems + 1))
   else
     log "PROBLEM: local server unreachable (pid=${pid:-none}, age=${age}s) — recovering"
     if [ -n "${pid:-}" ]; then
@@ -181,23 +252,25 @@ else
     fi
     launchctl kickstart -k "gui/$UID_NUM/com.airdash.server" 2>>"$LOG"
     sleep 20
-    if up_retry "http://localhost:8341/api/ping" 3 20; then
+    if up_retry_id "$LOCAL/api/ping" 3 20; then
       log "  RECOVERED: local server healthy after restart"
+      print -r -- 0 > "$RECOVERY_STATE"
     else
       log "  FAILED: local server still unreachable after recovery attempt"
+      print -r -- $(( rf + 1 )) > "$RECOVERY_STATE"
       problems=$((problems + 1))
     fi
   fi
 fi
 
 # ── 2. Tunnel backend ────────────────────────────────────────────────────
-if up_retry "https://api-air.nonarkara.org/api/ping"; then
+if up_retry_id "https://api-air.nonarkara.org/api/ping"; then
   log "ok: tunnel backend"
 else
   log "PROBLEM: tunnel backend unreachable — restarting tunnel"
   launchctl kickstart -k "gui/$UID_NUM/com.airdash.tunnel" 2>>"$LOG"
   sleep 6
-  if up "https://api-air.nonarkara.org/api/ping"; then
+  if up_id "https://api-air.nonarkara.org/api/ping"; then
     log "  RECOVERED: tunnel healthy after restart"
   else
     log "  FAILED: tunnel still unreachable after recovery attempt"
@@ -284,7 +357,7 @@ else
 fi
 
 # ── 5. LLM chat API (informational only — degraded ≠ down) ─────────────
-llm_reachable=$(curl -sf --max-time 8 "http://localhost:8341/api/chat/status" 2>/dev/null | grep -o '"reachable":[a-z]*' | cut -d: -f2)
+llm_reachable=$(curl -sf --max-time 8 "$LOCAL/api/chat/status" 2>/dev/null | grep -o '"reachable":[a-z]*' | cut -d: -f2)
 if [ "${llm_reachable:-}" = "true" ]; then
   log "ok: LLM chat API (NIM)"
 else

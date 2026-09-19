@@ -1,5 +1,5 @@
 #!/bin/bash
-# Expose the live AirDash server (localhost:8341) to the internet as
+# Expose the live AirDash server (localhost:28341) to the internet as
 # https://api-air.nonarkara.org via a named Cloudflare Tunnel, so the static
 # dashboard at air.nonarkara.org can reach the real backend on this Mac.
 #
@@ -10,7 +10,7 @@ set -euo pipefail
 
 NAME=airdash
 HOST=api-air.nonarkara.org
-PORT=8341
+PORT=28341
 CF="$HOME/.cloudflared"
 
 if [ ! -f "$CF/cert.pem" ]; then

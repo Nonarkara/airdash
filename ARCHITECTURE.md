@@ -347,7 +347,7 @@ edge** where it makes sense. The 779 KB snapshot gzips to 93 KB — a
 ```mermaid
 flowchart TB
   subgraph MAC["🖥 AirDash Mac mini (24/7)"]
-    S1["launchd · com.airdash.server<br/>Node.js :8341"]
+    S1["launchd · com.airdash.server<br/>Node.js :28341"]
     S2["launchd · com.airdash.tunnel<br/>cloudflared → Cloudflare"]
     S3["launchd · com.airdash.watchdog<br/>5-min restart on crash"]
     SQL[("SQLite WAL<br/>~50 MB")]
@@ -365,7 +365,7 @@ flowchart TB
     B3["SSE tap stream"]
   end
 
-  MAC -- port 8341 --> S2
+  MAC -- port 28341 --> S2
   S2 == "HTTPS / WebSocket" ==> T1
   T1 --> F1
   P1 -- static --> PHONE
@@ -378,7 +378,7 @@ flowchart TB
 
 | Service | What it does | What it watches |
 |---|---|---|
-| `com.airdash.server` | Node.js HTTP server on :8341 | nothing (long-lived) |
+| `com.airdash.server` | Node.js HTTP server on :28341 | nothing (long-lived) |
 | `com.airdash.tunnel` | `cloudflared` to api-air.nonarkara.org | restarts on tunnel death |
 | `com.airdash.watchdog` | every 5 min: `pgrep server`; restart if dead | everything |
 
@@ -419,7 +419,7 @@ sequenceDiagram
   U->>CF: GET /api/snapshot (10-s timeout)
   CF->>FN: proxy
   FN->>T: HTTPS tunnel
-  T->>M: fetch http://localhost:8341/api/snapshot
+  T->>M: fetch http://localhost:28341/api/snapshot
   M->>DB: SELECT readings + risk + danger
   DB-->>M: 779 KB JSON
   M-->>U: 93 KB gzipped
@@ -623,12 +623,12 @@ cd airdash
 # 2. Backend (Node 18+)
 npm install
 node server/index.js
-# listens on :8341, ingests 9 sources, fills SQLite
+# listens on :28341, ingests 9 sources, fills SQLite
 
 # 3. Frontend
 npx wrangler pages dev public --port 8788
 # opens on http://localhost:8788
-# (the Pages function will proxy /api/* to your local :8341)
+# (the Pages function will proxy /api/* to your local :28341)
 
 # 4. Open http://localhost:8788 in a browser
 # The boot screen should appear, then the dashboard within 2 s.

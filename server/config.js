@@ -8,7 +8,14 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 
 export const CONFIG = {
   host: '0.0.0.0', // reachable from phones on the LAN
-  port: Number(process.env.PORT) || 8341,
+  // 28341, not 8341. On 2026-09-19 a second launchd service (the Sikhio CCTV
+  // relay) claimed 8341 too, bound to 127.0.0.1 — and a specific-address
+  // bind BEATS a wildcard (0.0.0.0) bind for loopback traffic on macOS, so
+  // every request the Cloudflare tunnel sent to localhost:8341 landed on the
+  // wrong process and got a 404. ~20 hours of dead API behind a healthy-
+  // looking site. A port outside the 83xx/87xx/88xx dev-default cluster (and
+  // below the 49152 ephemeral range) makes an accidental repeat very unlikely.
+  port: Number(process.env.PORT) || 28341,
 
   root,
   dbPath: process.env.AIRDASH_DB_PATH || `${root}data/airdash.db`,

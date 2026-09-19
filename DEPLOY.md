@@ -15,7 +15,7 @@ the frontend stays same-origin with no CORS.
 ```
 Browser → air.nonarkara.org (Cloudflare Pages: static UI)
             └─ /api/* → Pages Function → api-air.nonarkara.org
-                                           └─ Cloudflare Tunnel → localhost:8341 (this Mac)
+                                           └─ Cloudflare Tunnel → localhost:28341 (this Mac)
 ```
 
 ## 1. Frontend → Cloudflare Pages
@@ -60,7 +60,7 @@ cloudflared tunnel login           # opens browser — pick the nonarkara.org zo
 bash ops/setup-tunnel.sh           # creates tunnel, DNS, and a 24/7 launchd service
 ```
 
-This maps `https://api-air.nonarkara.org → http://localhost:8341` and installs
+This maps `https://api-air.nonarkara.org → http://localhost:28341` and installs
 `com.airdash.tunnel` so it restarts on boot/crash — matching the
 `com.airdash.server` service.
 

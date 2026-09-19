@@ -23,7 +23,7 @@ the names and semantics below exactly.
 | Name | **AirDash** · แอร์แดช |
 | Tagline TH | เฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศประเทศไทย |
 | Tagline EN | Thailand Air Quality & Dust Watch |
-| Port | **8341** |
+| Port | **28341** |
 | DB | `data/airdash.db` (env `AIRDASH_DB_PATH`) |
 | launchd | `com.airdash.server` |
 | Hotlines | **1650** (PCD pollution hotline), **1422** (DDC health), **1669** (EMS) |

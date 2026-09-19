@@ -15,9 +15,9 @@ launchctl bootout "gui/$(id -u)/com.airdash.server" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST_DST"
 
 sleep 2
-if curl -sf http://localhost:8341/api/health > /dev/null; then
-  echo "✓ AirDash service running — http://localhost:8341"
-  echo "  (on your phone: http://$(ipconfig getifaddr en0 2>/dev/null || echo '<this-mac-ip>'):8341)"
+if curl -sf http://localhost:28341/api/health > /dev/null; then
+  echo "✓ AirDash service running — http://localhost:28341"
+  echo "  (on your phone: http://$(ipconfig getifaddr en0 2>/dev/null || echo '<this-mac-ip>'):28341)"
 else
   echo "✗ Service installed but health check failed — see logs/err.log"
   exit 1

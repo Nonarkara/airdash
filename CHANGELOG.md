@@ -10,6 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.2.1] — 2026-09-19 · **Port hijack: a 20-hour API outage behind a healthy-looking site, and the watchdog that made it worse**
+
+**What broke.** From 02:49 to ~23:05 (ICT) every `/api/*` request returned a plain-text 404 while the static
+shell loaded fine. A second launchd service (the Sikhio CCTV relay) defaulted to port 8341 and bound
+`127.0.0.1:8341`; AirDash was bound to `*:8341`. On macOS a specific-address bind beats a wildcard bind for loopback
+traffic and both binds succeed, so the Cloudflare tunnel's `localhost:8341` silently reached the wrong process.
+
+**Two components turned it into a 20-hour outage instead of a blip:**
+- The edge proxy called any non-5xx a healthy backend (`status >= 500`), so it passed the stranger's 404 through for
+  `/api/snapshot` and never used the stale mirror that exists precisely for outages.
+- The watchdog read "unreachable", blamed our own healthy server, and killed + restarted it **every hour (22 times)**,
+  never noticing the real cause. It also located "our" PID with `pgrep -f "node server/index.js"`, which matches
+  FloodDash and DND too — a latent way to kill the wrong project.
+
+**Fixed.**
+- AirDash moved to **28341** (outside the 83xx/87xx/88xx dev-default cluster, below the ephemeral range).
+- Every response carries `x-service: airdash` (set once at the top of the request handler, so raw `writeHead`
+  paths — SSE tap, chat, exports — are covered). The edge proxy treats any response without it as backend-down: serves
+  the stale mirror, else an honest 502; never caches or relays a stranger's body.
+- Watchdog: probes require the identity header; PID comes from launchd; if another process holds our port it
+  **reports who** (pid, start time, command) and refuses to kill or restart anything; a circuit breaker stops
+  restart loops after two consecutive failed recoveries.
+- The server self-probes its own port at boot and every 5 min and logs `PORT HIJACK` to the error log if the answer
+  isn't ours.
+- `scripts/test-port-hijack.mjs` (13 checks; the 6 incident cases fail against the pre-fix proxy).
+
 ## [3.2.0] — 2026-09-17 · **Weather a person plans a day on, the first skill measurement, and an honesty pass**
 
 > Asset token `?v=2.4.31` · service-worker cache `airdash-v49`.

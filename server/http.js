@@ -201,7 +201,7 @@ async function serveStatic(req, res, pathname) {
       createReadStream(filePath).pipe(res)
     }
   } catch {
-    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }).end('not found')
+    res.writeHead(404, { ...SECURITY_HEADERS, 'content-type': 'text/plain; charset=utf-8' }).end('not found')
   }
 }
 
@@ -224,6 +224,20 @@ export function startHttp(routes) {
   }
 
   const server = http.createServer(async (req, res) => {
+    // Service identity on EVERY response, set before any handler runs. It lets
+    // the edge proxy and the watchdog tell "AirDash answered" from "SOMETHING
+    // answered on this port". On 2026-09-19 another launchd service bound
+    // 127.0.0.1:8341 and answered every tunnel request with a plain-text 404
+    // for ~20 hours; nothing could tell that apart from an AirDash 404, so the
+    // proxy passed it through and the watchdog spent the night killing a
+    // perfectly healthy server. Any response without this header did not come
+    // from us.
+    //
+    // Deliberately here and NOT in SECURITY_HEADERS: plenty of responses (the
+    // SSE tap, chat streaming, exports, 403/204/405) call writeHead() without
+    // spreading SECURITY_HEADERS, and Node merges setHeader() values into
+    // writeHead() — so this is the only spot that covers all of them.
+    res.setHeader('x-service', 'airdash')
     const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`)
     const key = `${req.method} ${url.pathname}`
     let handler = routes[key]
@@ -270,6 +284,49 @@ export function startHttp(routes) {
   server.keepAliveTimeout = 65_000
   server.listen(CONFIG.port, CONFIG.host, () => {
     log('info', 'http listening', { host: CONFIG.host, port: CONFIG.port })
+    watchForPortHijack()
   })
   return server
+}
+
+// Port-hijack sentinel. Binding successfully does NOT mean we receive the
+// traffic: on macOS a listener bound to a SPECIFIC address (127.0.0.1) beats
+// one bound to the wildcard (0.0.0.0) for connections to that address, and
+// both binds succeed. That is exactly how a second service silently took over
+// this port on 2026-09-19. So after listening — and every few minutes after —
+// connect to ourselves the way the tunnel does (loopback) and check the
+// answer carries OUR identity header. If it doesn't, someone else is
+// answering; say so loudly in the error log with what we saw.
+//
+// Log-only by design: killing or restarting cannot fix a port we don't own,
+// and the last time automated recovery was aimed at this problem it made
+// things worse. The watchdog turns this into an alert.
+function watchForPortHijack() {
+  let hijacked = false
+  const probe = async () => {
+    try {
+      const r = await fetch(`http://127.0.0.1:${CONFIG.port}/api/ping`, {
+        signal: AbortSignal.timeout(5000), cache: 'no-store',
+      })
+      const ours = r.headers.get('x-service') === 'airdash'
+      if (!ours && !hijacked) {
+        hijacked = true
+        log('error', 'PORT HIJACK: loopback requests to our own port are answered by another process', {
+          port: CONFIG.port, status: r.status,
+          server: r.headers.get('server') ?? null,
+          contentType: r.headers.get('content-type') ?? null,
+          hint: `run: lsof -nP -iTCP:${CONFIG.port} -sTCP:LISTEN`,
+        })
+      } else if (ours && hijacked) {
+        hijacked = false
+        log('info', 'port hijack cleared — loopback traffic reaches us again', { port: CONFIG.port })
+      }
+    } catch (err) {
+      // Not reaching ourselves at all is also worth knowing about, but is
+      // more often boot timing; only the identity mismatch is actionable.
+      log('warn', 'port self-check could not connect', { error: String(err?.message ?? err) })
+    }
+  }
+  setTimeout(probe, 3000).unref()
+  setInterval(probe, 5 * 60_000).unref()
 }

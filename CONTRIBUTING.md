@@ -76,14 +76,14 @@ system should still work for someone who can't or won't sign up.
 git clone https://github.com/Nonarkara/airdash.git
 cd airdash
 npm install                          # Node 18+ required
-node server/index.js                # backend, listens :8341
+node server/index.js                # backend, listens :28341
 # In another terminal:
 npx wrangler pages dev public --port 8788
 # → open http://localhost:8788
 ```
 
 The `wrangler pages dev` command auto-starts the Pages Function that
-proxies `/api/*` to your local `:8341`. You should see the boot
+proxies `/api/*` to your local `:28341`. You should see the boot
 screen, then the dashboard, in under 2 seconds.
 
 ## How to deploy

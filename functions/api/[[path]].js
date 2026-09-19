@@ -22,7 +22,16 @@ function backendOrder(env) {
   const primary = env?.AIRDASH_BACKEND ?? BACKEND
   return [primary, ...ALL_BACKENDS.filter((b) => b !== primary)]
 }
-const isBackendDown = (res) => res.status >= 500
+// A response only counts as "from AirDash" if it carries the identity header
+// the server sets on EVERY response (server/http.js). Status alone is not
+// enough: on 2026-09-19 another local service bound our port and answered every
+// request with a plain-text 404. `status >= 500` called that a healthy backend,
+// so the proxy handed the dashboard a stranger's 404 for /api/snapshot and never
+// touched the stale mirror — ~20 hours of a dead API behind a healthy-looking
+// site. 4xx/2xx from a non-AirDash responder is a wrong-service answer, i.e. the
+// backend is DOWN as far as the dashboard is concerned.
+const isAirdash = (res) => res.headers.get('x-service') === 'airdash'
+const isBackendDown = (res) => res.status >= 500 || !isAirdash(res)
 
 const JSON_TIMEOUT_MS = 30_000
 const STREAM_TIMEOUT_MS = 300_000
@@ -119,12 +128,26 @@ export async function onRequest(context) {
     }
     if (!upstream) throw lastErr ?? new Error('no backend answered')
 
-    if (mirrorable && upstream.status >= 500) {
+    if (mirrorable && isBackendDown(upstream)) {
       const stale = await serveStale(cache, url, upstream.status)
       if (stale) return stale
     }
 
-    if (mirrorable && upstream.ok) {
+    // A non-AirDash responder must never have its body passed to the
+    // dashboard as if it were our API (a stranger's 200 would be worse than
+    // its 404). A genuine AirDash 5xx still passes through untouched.
+    if (!isAirdash(upstream) && upstream.status < 500) {
+      return new Response(
+        JSON.stringify({
+          error: 'wrong service answering',
+          hint: 'something other than AirDash is answering on the backend port — see watchdog.log',
+          upstream_status: upstream.status,
+        }),
+        { status: 502, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } },
+      )
+    }
+
+    if (mirrorable && upstream.ok && isAirdash(upstream)) {
       const write = storeMirror(cache, mirrorKey(url), upstream.clone()).catch(() => {})
       if (context.waitUntil) context.waitUntil(write)
       else await write

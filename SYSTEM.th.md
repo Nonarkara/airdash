@@ -303,7 +303,7 @@ first paint 1.4 วินาที กับ 10 วินาทีบนเค�
 ```mermaid
 flowchart TB
   subgraph MAC["🖥 AirDash Mac mini (24/7)"]
-    S1["launchd · com.airdash.server<br/>Node.js :8341"]
+    S1["launchd · com.airdash.server<br/>Node.js :28341"]
     S2["launchd · com.airdash.tunnel<br/>cloudflared → Cloudflare"]
     S3["launchd · com.airdash.watchdog<br/>5 นาที restart on crash"]
     SQL[("SQLite WAL<br/>~50 MB")]
@@ -321,7 +321,7 @@ flowchart TB
     B3["SSE tap stream"]
   end
 
-  MAC -- port 8341 --> S2
+  MAC -- port 28341 --> S2
   S2 == "HTTPS / WebSocket" ==> T1
   T1 --> F1
   P1 -- static --> PHONE
@@ -334,7 +334,7 @@ flowchart TB
 
 | Service | สิ่งที่ทำ | สิ่งที่เฝ้า |
 |---|---|---|
-| `com.airdash.server` | Node.js HTTP server บน :8341 | ไม่มี (long-lived) |
+| `com.airdash.server` | Node.js HTTP server บน :28341 | ไม่มี (long-lived) |
 | `com.airdash.tunnel` | `cloudflared` ไปยัง api-air.nonarkara.org | restart เมื่อ tunnel ตาย |
 | `com.airdash.watchdog` | ทุก 5 นาที: `pgrep server`; restart ถ้าตาย | ทุกอย่าง |
 
@@ -374,7 +374,7 @@ sequenceDiagram
   U->>CF: GET /api/snapshot (10s timeout)
   CF->>FN: proxy
   FN->>T: HTTPS tunnel
-  T->>M: fetch http://localhost:8341/api/snapshot
+  T->>M: fetch http://localhost:28341/api/snapshot
   M->>DB: SELECT readings + risk + danger
   DB-->>M: 779 KB JSON
   M-->>U: 93 KB gzipped
@@ -561,12 +561,12 @@ cd airdash
 # 2. Backend (Node 18+)
 npm install
 node server/index.js
-# ฟังบน :8341, ดึง 9 แหล่ง, เติม SQLite
+# ฟังบน :28341, ดึง 9 แหล่ง, เติม SQLite
 
 # 3. Frontend
 npx wrangler pages dev public --port 8788
 # เปิดที่ http://localhost:8788
-# (Pages function จะ proxy /api/* ไปยัง local :8341)
+# (Pages function จะ proxy /api/* ไปยัง local :28341)
 
 # 4. เปิด http://localhost:8788 ในเบราว์เซอร์
 # หน้า boot ควรปรากฏ แล้วแดชบอร์ดภายใน 2 วินาที

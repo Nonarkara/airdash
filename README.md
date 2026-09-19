@@ -180,7 +180,7 @@ flowchart LR
     IN["Adapters on a timer"]
     DB[("data/airdash.db")]
     ENG["Watch · Danger · Washout · Science"]
-    API["HTTP :8341 · /api/*"]
+    API["HTTP :28341 · /api/*"]
   end
 
   subgraph edge["Cloudflare · $0"]
@@ -249,16 +249,16 @@ bash setup.sh
 
 ```bash
 node server/index.js
-# listens on 0.0.0.0:8341  (override with PORT)
+# listens on 0.0.0.0:28341  (override with PORT)
 # SQLite file: data/airdash.db  (override with AIRDASH_DB_PATH)
 ```
 
-Open **http://localhost:8341** — the Node process serves `public/` and
+Open **http://localhost:28341** — the Node process serves `public/` and
 `/api/*` on the same origin. First ingest of Air4Thai / Open-Meteo /
 HII / etc. fills the database; the boot screen waits on
 `GET /api/snapshot`.
 
-Health check: `curl -s http://localhost:8341/api/health`
+Health check: `curl -s http://localhost:28341/api/health`
 
 ### 3. Optional: Cloudflare Pages frontend locally
 
@@ -270,7 +270,7 @@ npx wrangler pages dev public --port 8788
 **Honest caveat:** `functions/api/[[path]].js` proxies `/api/*` to the
 **live** tunnel `https://api-air.nonarkara.org`, not to your laptop.
 Use this to preview static UI against production data. For a fully
-local stack, use port **8341** from step 2.
+local stack, use port **28341** from step 2.
 
 ### 4. Tests (no network secrets)
 
@@ -288,9 +288,9 @@ Edit the hardcoded `WorkingDirectory` / log paths in
 **your** checkout, then:
 
 ```bash
-bash ops/install-service.sh          # launchd com.airdash.server → :8341
+bash ops/install-service.sh          # launchd com.airdash.server → :28341
 cloudflared tunnel login             # one-time, browser, nonarkara.org zone
-bash ops/setup-tunnel.sh             # api-air.nonarkara.org → localhost:8341
+bash ops/setup-tunnel.sh             # api-air.nonarkara.org → localhost:28341
 bash scripts/deploy-frontend.sh      # Cloudflare Pages direct-upload
 ```
 

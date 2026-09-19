@@ -385,7 +385,7 @@ of the same burning weeks is how a province knows whether policy is working.
 ```bash
 ./setup.sh          # once: vendor Leaflet + fonts (offline-safe UI)
 npm start           # run in the foreground
-# → http://localhost:8341  (LAN: http://<mac-ip>:8341 for phones/big screens)
+# → http://localhost:28341  (LAN: http://<mac-ip>:28341 for phones/big screens)
 
 bash ops/install-service.sh    # OR: install as a 24/7 launchd service
 bash ops/uninstall-service.sh  # remove the service

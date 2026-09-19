@@ -169,7 +169,7 @@ flowchart LR
     IN["อะแดปเตอร์ตามจังหวะเวลา"]
     DB[("data/airdash.db")]
     ENG["เฝ้าระวัง · อันตราย · Washout · วิทยาศาสตร์"]
-    API["HTTP :8341 · /api/*"]
+    API["HTTP :28341 · /api/*"]
   end
 
   subgraph edge["Cloudflare · $0"]
@@ -238,15 +238,15 @@ bash setup.sh
 
 ```bash
 node server/index.js
-# ฟังที่ 0.0.0.0:8341  (เปลี่ยนด้วย PORT)
+# ฟังที่ 0.0.0.0:28341  (เปลี่ยนด้วย PORT)
 # ไฟล์ SQLite: data/airdash.db  (เปลี่ยนด้วย AIRDASH_DB_PATH)
 ```
 
-เปิด **http://localhost:8341** — โปรเซส Node เสิร์ฟ `public/` และ `/api/*`
+เปิด **http://localhost:28341** — โปรเซส Node เสิร์ฟ `public/` และ `/api/*`
 บนออริจินเดียวกัน การดึง Air4Thai / Open-Meteo / สสน. รอบแรกจะเติมฐานข้อมูล
 หน้า boot รอ `GET /api/snapshot`
 
-ตรวจสุขภาพ: `curl -s http://localhost:8341/api/health`
+ตรวจสุขภาพ: `curl -s http://localhost:28341/api/health`
 
 ### 3. ไม่บังคับ: ฟรอนต์เอนด์ Cloudflare Pages บนเครื่อง
 
@@ -258,7 +258,7 @@ npx wrangler pages dev public --port 8788
 **ข้อควรรู้:** `functions/api/[[path]].js` พร็อกซี `/api/*` ไปยังทันเนล
 **สด** `https://api-air.nonarkara.org` ไม่ใช่แล็ปท็อปของคุณ
 ใช้โหมดนี้เพื่อดู UI สแตติกกับข้อมูลผลิต สำหรับสแตกท้องถิ่นเต็ม ๆ
-ใช้พอร์ต **8341** จากขั้นที่ 2
+ใช้พอร์ต **28341** จากขั้นที่ 2
 
 ### 4. เทสต์ (ไม่ต้องมีซีเคร็ตเครือข่าย)
 
@@ -275,9 +275,9 @@ npm test
 (และ plist ทันเนล / watchdog) ให้ชี้ไปที่ checkout **ของคุณ** แล้ว:
 
 ```bash
-bash ops/install-service.sh          # launchd com.airdash.server → :8341
+bash ops/install-service.sh          # launchd com.airdash.server → :28341
 cloudflared tunnel login             # ครั้งเดียว เปิดเบราว์เซอร์ โซน nonarkara.org
-bash ops/setup-tunnel.sh             # api-air.nonarkara.org → localhost:8341
+bash ops/setup-tunnel.sh             # api-air.nonarkara.org → localhost:28341
 bash scripts/deploy-frontend.sh      # อัปโหลดตรงไป Cloudflare Pages
 ```
 
