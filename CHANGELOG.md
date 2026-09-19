@@ -36,6 +36,17 @@ traffic and both binds succeed, so the Cloudflare tunnel's `localhost:8341` sile
   isn't ours.
 - `scripts/test-port-hijack.mjs` (13 checks; the 6 incident cases fail against the pre-fix proxy).
 
+**Found in the same health sweep — backups had silently stopped for 3+ days.** No nightly backup completed after
+2026-09-16 and nothing said so. The backup destination is a USB *spinning* drive (~2 MB/s under load, shared with your other
+jobs). `PRAGMA integrity_check` on the 3.7 GB snapshot *on that drive* took 7 h on 09-16 and never finished on 09-18 (44 h in
+uninterruptible I/O); launchd won't start a second instance of a job that is still running, so every later night was skipped.
+- `ops/backup-db.sh` redesigned: **VACUUM INTO the SSD → `quick_check` on the SSD (34 s) → `cp` to the USB drive as `.partial` →
+  `cmp` against the verified SSD file → atomic rename → gzip from the SSD.** Only big sequential streams touch the HDD. Every stage has a hard
+  ceiling; a failed or timed-out run publishes nothing and prunes nothing. Falls back (loudly) to direct-to-USB if the SSD lacks room.
+  Superseded internal fallback snapshots are removed once a newer verified off-device one exists.
+- Fixed a `set -e` bug in the earlier VACUUM INTO change: `cmd; RC=$?` exits before `RC=$?` runs, so the FATAL log and partial-file cleanup were unreachable.
+- Watchdog: new **backup-freshness** alarm — no *completed* backup for ≥ 36 h → notification (once/day).
+
 ## [3.2.0] — 2026-09-17 · **Weather a person plans a day on, the first skill measurement, and an honesty pass**
 
 > Asset token `?v=2.4.31` · service-worker cache `airdash-v49`.
