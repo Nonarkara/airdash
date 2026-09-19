@@ -364,6 +364,39 @@ else
   log "info: LLM chat API unavailable (chat falls back to structured data summary — degraded, not down)"
 fi
 
+# ── 5b. Backup freshness (a dead backup must never be silent again) ─────
+# From 2026-09-17 no nightly backup completed for 3+ days and NOTHING said so:
+# an unbounded PRAGMA integrity_check hung on the USB backup drive, launchd
+# will not start a second instance of a job that is still running, so every
+# later night was skipped. The job "existing" and the plist being loaded look
+# healthy from every angle except this one — has a backup actually COMPLETED
+# recently? Looks in .old too, since log rotation can move the last completion
+# out of backup.log.
+BACKUP_LOG_DIR="/Users/axiom/AirDash/logs"
+last_line=$(cat "$BACKUP_LOG_DIR/backup.log.old" "$BACKUP_LOG_DIR/backup.log" 2>/dev/null | grep "backup run complete" | tail -1)
+if [ -z "$last_line" ]; then
+  log "PROBLEM: no completed backup on record in backup.log"
+  problems=$((problems + 1))
+else
+  ts=${last_line#\[}; ts=${ts%%\]*}
+  last_e=$(date -j -f "%Y-%m-%dT%H:%M:%S%z" "$ts" +%s 2>/dev/null || echo 0)
+  age_h=$(( ( $(date +%s) - last_e ) / 3600 ))
+  if [ "$last_e" -eq 0 ]; then
+    log "warn: could not parse last backup timestamp ($ts)"
+  elif [ "$age_h" -ge 36 ]; then
+    log "PROBLEM: last COMPLETED backup was ${age_h}h ago ($ts) — nightly backup is not finishing (>= 36h)"
+    now_e=$(date +%s); bl=$(cat "$STATE_DIR/.watchdog-backup-notified" 2>/dev/null || echo 0)
+    [[ "$bl" != <-> ]] && bl=0
+    if [ $(( now_e - bl )) -ge 86400 ]; then   # at most one alert per day
+      notify "No completed AirDash backup for ${age_h}h — check logs/backup.log and the USB backup drive"
+      print -r -- "$now_e" > "$STATE_DIR/.watchdog-backup-notified"
+    fi
+    problems=$((problems + 1))
+  else
+    log "ok: backup fresh (last completed ${age_h}h ago)"
+  fi
+fi
+
 # ── 6. Log rotation (hourly, size-capped) ──────────────────────────────
 # logs/*.log grew forever (tunnel.err.log hit 520KB in 6 days). Simple
 # rotation: any .log over 10MB moves to <name>.old (overwriting the
