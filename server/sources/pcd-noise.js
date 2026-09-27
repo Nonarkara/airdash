@@ -127,15 +127,21 @@ export default {
     db.tx(() => {
       for (const { s, series } of results) {
         if (!series || series.length === 0) continue
-        // Latest entry = most recent completed 24h window.
-        const latest = series[series.length - 1]
-        const prev = series.length >= 2 ? series[series.length - 2] : null
-        const leq = validNum(latest[1], 'noise_leq', 'pcd_noise')
-        if (leq === null) continue
+        // The upstream returns up to 7 days of daily Leq in
+        // LeqDayInMonth = [[ts, db, n], ...]. We previously stored only
+        // the latest entry — which left us with one data point per
+        // station forever, useless for the trend panel citizens need to
+        // see "is this louder than yesterday?". Insert every entry so
+        // the readings table grows as a real time series; the
+        // (source, station_key, metric, obs_time) UNIQUE on readings
+        // keeps re-runs idempotent.
+        //
         // Dead upstream stations keep returning the last entry of an old
-        // month series; skip anything whose latest 24h window is older
-        // than ~48h so stale data never upserts as "current".
-        if (Date.now() - latest[0] > 48 * 3600_000) continue
+        // month series; reject the whole batch when the newest entry
+        // is older than ~48 h so a stale series never overwrites the
+        // history we already have.
+        const newest = series[series.length - 1]
+        if (Date.now() - newest[0] > 48 * 3600_000) continue
         // We don't have station-level coords from PCD; use the province
         // centroid so the station sits on the map where readers expect.
         const prov = provinceByName(s.province_th, s.province_en ?? null)
@@ -150,22 +156,41 @@ export default {
           lat: prov?.lat ?? null, lng: prov?.lng ?? null,
           meta_json: JSON.stringify({ upstream: 'noisemonitor.net', pcd_station_id: s.id }),
         }
-        // Use the timestamp from the upstream data (start of the 24h
-        // window) so the observation time is honest. Convert to the
-        // system-wide Bangkok-local YYYY-MM-DDTHH:MM convention — raw
-        // toISOString() is UTC, 7h behind every other source, which
-        // starved danger.js freshness cutoffs.
-        const obs_time = new Date(latest[0] + 7 * 3600_000).toISOString().slice(0, 16)
-        added += storeReadings({
-          db, alerts, source: 'pcd_noise', station,
-          metrics: {
-            noise_leq_db: leq,
-            noise_leq_prev_db: prev ? validNum(prev[1], 'noise_leq', 'pcd_noise') : null,
-            noise_samples: latest[2],
-          },
-          obs_time, fetched_at, now,
-        })
-        if (leq >= 70) worst.push({ name_th: s.province_th, name_en: s.province_en ?? s.name_th, leq })
+        for (let i = 0; i < series.length; i++) {
+          const [tsMs, dbVal, nSamples] = series[i]
+          const leq = validNum(dbVal, 'noise_leq', 'pcd_noise')
+          if (leq === null) continue
+          // Convert the upstream unix-ms timestamp to Bangkok-local
+          // YYYY-MM-DDTHH:MM. raw toISOString() would land UTC 7 h
+          // behind every other source on the dashboard, which
+          // starvation tripped danger.js freshness cutoffs.
+          const obs_time = new Date(tsMs + 7 * 3600_000).toISOString().slice(0, 16)
+          // Per-entry metrics: same noise_leq_db so the trend chart
+          // reads one metric, but `noise_leq_prev_db` only on the
+          // newest entry to keep the latest-pair logic downstream
+          // working.
+          const isLatest = i === series.length - 1
+          added += storeReadings({
+            db, alerts, source: 'pcd_noise', station,
+            metrics: {
+              noise_leq_db: leq,
+              noise_leq_prev_db: isLatest && i > 0
+                ? validNum(series[i - 1][1], 'noise_leq', 'pcd_noise')
+                : null,
+              noise_samples: nSamples,
+            },
+            obs_time, fetched_at, now,
+          })
+        }
+        // Worst-station list for the bus event uses the latest entry
+        // of the series (same value that drives the Danger Score), not
+        // the historical peak — peak-day noise is more usefully shown
+        // on the per-station chart than surfaced as a banner.
+        const latest = newest
+        const leq = validNum(latest[1], 'noise_leq', 'pcd_noise')
+        if (leq !== null && leq >= 70) {
+          worst.push({ name_th: s.province_th, name_en: s.province_en ?? s.name_th, leq })
+        }
       }
     })
 

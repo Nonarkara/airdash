@@ -40,10 +40,10 @@
 // 7-year-old the panel is meant to help has an even shorter attention
 // span. The English side uses a registered-nurse register: warm,
 // direct, never preachy. "Don't" is reserved for emergencies.
-import { on, store } from '../state.js?v=2.4.35'
-import { tr } from '../i18n.js?v=2.4.35'
-import { el } from '../fmt.js?v=2.4.35'
-import { getJson } from '../cache.js?v=2.4.35'
+import { on, store } from '../state.js?v=2.4.36'
+import { tr } from '../i18n.js?v=2.4.36'
+import { el } from '../fmt.js?v=2.4.36'
+import { getJson } from '../cache.js?v=2.4.36'
 
 // ── 1. PERSONA SELECTOR + SPECIFIC ADVICE ─────────────────────────────────
 
@@ -861,7 +861,6 @@ export function renderTellFamily(province, band) {
 // airways are extra sensitive. This is the kind of life-saving
 // information that turns a dashboard from "me-focused" to
 // "family-focused" — including the furry family.
-export function renderPetCare(band) {
   if (band === 'normal' || band === 'low') return null  // Only show at watch+
   const head = el('div', { class: 'citizen-section-head' },
     el('span', {}, tr('🐕 สัตว์เลี้ยงก็เสี่ยงเหมือนกัน', '🐕 your pet is at risk too')))
@@ -890,5 +889,208 @@ export function renderPetCare(band) {
   )
   const out = el('div', { class: 'citizen-pet-wrap' })
   out.append(head, tips)
+  return out
+}
+
+// ── 10. NOISE — TOP STATIONS WITH 7-DAY HISTORY ─────────────────────────
+
+// AirDash has always treated noise as a Danger Score amplifier ("x1.08 RR
+// per 10 dB IHD" — see research.js §2.5 and AIRCARD 2025) but never
+// shown citizens WHICH STATION is loud and HOW LOUD. This panel closes
+// that gap: a per-station 7-day Leq trend for the loudest 5 PCD noise
+// stations, with two reference lines drawn over the same axes so the
+// reader can see at a glance whether the area is above the WHO safe zone
+// (53 dB Lden) or the Thai PCD residential limit (55 dB day / 45 dB night).
+//
+// Two design choices worth noting:
+//   1. We show only the top 5, not all 27. A list of 27 trend charts is
+//      unreadable; the user wants the "what's loud near me" answer
+//      quickly, not a census. The map popup gives the full census.
+//   2. The reference lines are colour-coded by their *purpose* (safety
+//      vs regulation) not by their source — a reader who doesn't know
+//      WHO/PCD sees "safe to here / loud to here" without needing the
+//      legend. The full citation is in research.js.
+//
+// Returns null when there's no data (a province with zero PCD stations)
+// rather than rendering an empty card — the user already has enough
+// empty-state noise elsewhere.
+export function renderNoiseTrends() {
+  const head = el('div', { class: 'citizen-section-head' },
+    el('span', {}, tr('🔊 เสียงรบกวนตามสถานี PCD', '🔊 noise per PCD station')),
+    el('span', { class: 'citizen-section-sub' },
+      tr('7 วันย้อนหลัง · เส้นอ้างอิง WHO 53 / PCD 55 dB(A)', '7-day trend · WHO 53 / PCD 55 dB(A) reference')))
+
+  // Async fetch — show "loading" skeleton first, then replace in place.
+  // The shell is non-blocking so the rest of the citizen panel stays
+  // interactive while /api/noise fetches (cold-cache first call on the
+  // external drive can take 10–30 s, the user's eyes should not stare
+  // at a blank screen that long).
+  const list = el('div', { class: 'citizen-noise-list' },
+    el('div', { class: 'citizen-loading' },
+      el('span', { class: 'citizen-loading-dot' }),
+      el('span', { class: 'citizen-loading-dot' }),
+      el('span', { class: 'citizen-loading-dot' }),
+      el('span', { class: 'citizen-loading-text' },
+        tr('กำลังโหลดข้อมูลสถานีเสียง…', 'Loading noise stations…'))))
+
+  // Render the bar chart for one station. SVG-based so the WHO/PCD
+  // reference lines sit on the same axes as the data, no DOM gymnastics.
+  // Y-axis domain: 30 dB (silence, the floor of any real measurement) to
+  // 90 dB (above any PCD station's typical max).
+  function renderStationRow(s, idx) {
+    const card = el('div', { class: 'citizen-noise-card' })
+    // Header line: station name, province, latest Leq with delta vs
+    // yesterday. The delta colour-coding follows the PM2.5 chip
+    // convention — green down, amber flat, red up — because that is
+    // what the citizen panel already taught them.
+    const leq = s.latest?.leq_db
+    const delta = s.delta_db
+    const deltaCls = delta == null ? 'noise-delta-zero'
+      : delta > 0.5 ? 'noise-delta-up'
+      : delta < -0.5 ? 'noise-delta-down' : 'noise-delta-flat'
+    const deltaStr = delta == null ? '—' : `${delta > 0 ? '+' : ''}${delta.toFixed(1)} dB`
+    const head = el('div', { class: 'citizen-noise-head' },
+      el('span', { class: 'citizen-noise-rank' }, String(idx + 1) + '.'),
+      el('div', { class: 'citizen-noise-id' },
+        el('div', { class: 'citizen-noise-name' }, s.name_th || s.name_en || s.station_key),
+        el('div', { class: 'citizen-noise-prov' },
+          (s.province_th || s.province_en || '') +
+          (s.station_id ? ` · ${s.station_id}` : ''))),
+      el('div', { class: `citizen-noise-now ${leq >= 70 ? 'loud' : leq >= 55 ? 'mid' : 'ok'}` },
+        el('div', { class: 'citizen-noise-now-val' }, leq != null ? leq.toFixed(1) : '—'),
+        el('div', { class: 'citizen-noise-now-unit' }, 'dB(A)')),
+      el('div', { class: `citizen-noise-delta ${deltaCls}` }, deltaStr))
+    card.append(head)
+
+    // The trend chart. Plot 7 days of Leq as bars on a 30–90 dB axis.
+    // Reference lines at WHO 53 and PCD residential-day 55 are dashed
+    // because they are guidelines, not data.
+    const W = 320, H = 60, Y0 = 30, Y1 = 90, PAD = 6
+    const series = (s.series || []).slice(-7)
+    if (series.length > 1) {
+      const innerW = W - PAD * 2, innerH = H - PAD * 2
+      const bw = innerW / series.length
+      const xFor = (i) => PAD + i * bw + bw / 2
+      const yFor = (db) => PAD + (1 - (db - Y0) / (Y1 - Y0)) * innerH
+      const svg = elNS('svg', {
+        viewBox: `0 0 ${W} ${H}`, width: '100%', height: H,
+        'aria-hidden': 'true',
+        class: 'citizen-noise-svg',
+      })
+      // Reference lines
+      const lineWho = elNS('line', {
+        x1: PAD, x2: W - PAD, y1: yFor(53), y2: yFor(53),
+        stroke: '#7be3c0', 'stroke-width': 1, 'stroke-dasharray': '3,3',
+      })
+      const linePcd = elNS('line', {
+        x1: PAD, x2: W - PAD, y1: yFor(55), y2: yFor(55),
+        stroke: '#f5b13b', 'stroke-width': 1, 'stroke-dasharray': '3,3',
+      })
+      svg.append(lineWho, linePcd)
+      // Bars
+      series.forEach((p, i) => {
+        const v = p.leq_db
+        if (v == null) return
+        const isLatest = i === series.length - 1
+        const top = yFor(v)
+        const bot = yFor(Y0)
+        const rect = elNS('rect', {
+          x: xFor(i) - bw * 0.35, y: top,
+          width: bw * 0.7, height: Math.max(1, bot - top),
+          fill: v >= 70 ? '#e85a4f' : v >= 55 ? '#f5b13b' : '#a4d36a',
+          opacity: isLatest ? 1 : 0.65,
+          rx: 1.5,
+        })
+        svg.append(rect)
+        if (isLatest) {
+          // Highlight the latest bar with a value label
+          const txt = elNS('text', {
+            x: xFor(i), y: Math.max(8, top - 3),
+            'text-anchor': 'middle', 'font-size': 8, fill: 'var(--ink)',
+          })
+          txt.textContent = v.toFixed(0)
+          svg.append(txt)
+        }
+      })
+      // Reference line labels
+      const lblWho = elNS('text', {
+        x: W - PAD - 2, y: yFor(53) - 2,
+        'text-anchor': 'end', 'font-size': 8, fill: '#5ad17f',
+      })
+      lblWho.textContent = 'WHO 53'
+      const lblPcd = elNS('text', {
+        x: W - PAD - 2, y: yFor(55) - 2,
+        'text-anchor': 'end', 'font-size': 8, fill: '#c69436',
+      })
+      lblPcd.textContent = 'PCD 55'
+      svg.append(lblWho, lblPcd)
+      card.append(svg)
+    }
+
+    // Footer: date label of latest reading + sample count
+    const foot = el('div', { class: 'citizen-noise-foot' },
+      el('span', {}, s.latest?.obs_time
+        ? tr(`อัปเดต ${formatNoiseTime(s.latest.obs_time)}`, `updated ${formatNoiseTime(s.latest.obs_time)}`)
+        : tr('ไม่มีข้อมูล', 'no data')))
+    card.append(foot)
+    return card
+  }
+
+  // elNS — like el but accepts an SVG namespace prefix for the chart
+  // bars. Keeps us off the createElementNS dance.
+  function elNS(tag, attrs) {
+    const n = document.createElementNS('http://www.w3.org/2000/svg', tag)
+    for (const k in attrs) {
+      if (k === 'class') n.setAttribute('class', attrs[k])
+      else n.setAttribute(k, attrs[k])
+    }
+    return n
+  }
+
+  function formatNoiseTime(iso) {
+    if (!iso) return ''
+    // obs_time arrives as YYYY-MM-DDTHH:MM Bangkok local — keep the date,
+    // show the hour so the reader knows this is yesterday's 24 h window.
+    const m = String(iso).match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/)
+    if (!m) return iso
+    return `${m[1]} ${m[2]}:${m[3]}`
+  }
+
+  // Fetch + render. Top 5 stations from the API.
+  fetch('/api/noise?days=7', { cache: 'no-store' })
+    .then((r) => r.json())
+    .then((data) => {
+      const top = (data?.top_noisy ?? []).slice(0, 5)
+      if (top.length === 0) {
+        list.replaceChildren(el('div', { class: 'citizen-empty-sub' },
+          tr('ยังไม่มีข้อมูลสถานีเสียงสำหรับจังหวัดนี้', 'no noise station data for this province yet')))
+        return
+      }
+      // Pull full series for each top station from data.stations
+      const stationDetail = (key) => data.stations?.[key] ?? null
+      list.replaceChildren(...top.map((s, i) => {
+        const detail = stationDetail(s.station_key) ?? {}
+        return renderStationRow({
+          station_key: s.station_key,
+          station_id: s.station_key.replace('pcd_noise_', ''),
+          name_th: detail.name_th || '',
+          name_en: detail.name_en || '',
+          province_th: detail.province_th || '',
+          province_en: detail.province_en || '',
+          latest: detail.latest,
+          prev: detail.prev,
+          delta_db: detail.delta_db,
+          series: detail.series,
+        }, i)
+      }))
+    })
+    .catch((e) => {
+      console.error('noise fetch failed:', e)
+      list.replaceChildren(el('div', { class: 'citizen-empty-sub' },
+        tr('โหลดข้อมูลเสียงไม่สำเร็จ', 'noise fetch failed')))
+    })
+
+  const out = el('div', { class: 'citizen-noise-wrap' })
+  out.append(head, list)
   return out
 }

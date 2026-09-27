@@ -3770,3 +3770,42 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .aeronet-popup-name .muted { font-weight: 400; color: var(--ink-mid); font-size: 11px; }
 .aeronet-popup-line { font-size: 12px; line-height: 1.55; }
 .aeronet-popup-line.muted { color: var(--ink-mid); font-size: 11px; margin-top: 4px; }
+
+/* ── Noise Trends panel ───────────────────────────────────────────────── */
+/* Top-5 loudest PCD stations with 7-day mini-bars, WHO 53 dB safe line
+   (green dashed) and Thai PCD 55 dB residential-day line (amber dashed).
+   Latest bar is fully opaque; prior days are 65% to focus the eye on
+   "today" without hiding the trend entirely. */
+.citizen-noise-wrap { margin: 0 0 14px; }
+.citizen-noise-list { display: flex; flex-direction: column; gap: 8px; }
+.citizen-noise-card {
+  padding: 10px 12px;
+  background: var(--well);
+  border-radius: var(--r-md);
+  border: 1px solid var(--rule);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.citizen-noise-head {
+  display: grid;
+  grid-template-columns: 22px 1fr auto auto;
+  align-items: center; gap: 8px;
+}
+.citizen-noise-rank { font-weight: 700; color: var(--ink-mid); font-size: 13px; }
+.citizen-noise-id { min-width: 0; }
+.citizen-noise-name { font-weight: 700; font-size: 13.5px; color: var(--ink); }
+.citizen-noise-prov { font-size: 11px; color: var(--ink-mid); }
+.citizen-noise-now {
+  font-variant-numeric: tabular-nums; text-align: right;
+  padding: 2px 8px; border-radius: var(--r-ctl);
+}
+.citizen-noise-now-val { font-size: 16px; font-weight: 700; line-height: 1.1; }
+.citizen-noise-now-unit { font-size: 10px; color: var(--ink-mid); line-height: 1.1; }
+.citizen-noise-now.ok { background: rgba(123, 227, 192, 0.18); color: #1f6b48; }
+.citizen-noise-now.mid { background: rgba(245, 177, 59, 0.20); color: #8a5210; }
+.citizen-noise-now.loud { background: rgba(232, 90, 79, 0.22); color: #a51931; }
+.citizen-noise-delta { font-size: 11px; font-variant-numeric: tabular-nums; padding: 2px 6px; border-radius: 999px; }
+.citizen-noise-delta.noise-delta-up { background: rgba(232, 90, 79, 0.18); color: #a51931; }
+.citizen-noise-delta.noise-delta-down { background: rgba(123, 227, 192, 0.18); color: #1f6b48; }
+.citizen-noise-delta.noise-delta-flat, .citizen-noise-delta.noise-delta-zero { background: var(--well-dim); color: var(--ink-mid); }
+.citizen-noise-svg { display: block; width: 100%; height: 60px; }
+.citizen-noise-foot { font-size: 10.5px; color: var(--ink-mid); }

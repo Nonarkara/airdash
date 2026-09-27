@@ -1203,6 +1203,93 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       })
     },
 
+    // PCD noise monitoring — per-station latest Leq + 7-day series for
+    // the noise panel on the citizen dashboard. Drives the trend chart
+    // ("is this station louder than yesterday?") and the legend marker.
+    // Standards are embedded so the frontend can render the WHO/PCD
+    // reference lines without needing to keep a separate constants file
+    // in sync with the research section in research.js.
+    'GET /api/noise': (req, res, url) => {
+      const days = clamp(url.searchParams.get('days'), 1, 30, 7)
+      const since = new Date(Date.now() - days * 86400_000).toISOString()
+      const rows = db.all(
+        `SELECT station_key, obs_time, value
+           FROM readings
+          WHERE source = 'pcd_noise' AND metric = 'noise_leq_db' AND obs_time >= ?
+          ORDER BY station_key, obs_time DESC`,
+        since,
+      )
+      // Group into per-station series (newest first); the latest entry is
+      // also the "current" reading.
+      const byStation = {}
+      for (const r of rows) {
+        const k = r.station_key
+        if (!byStation[k]) byStation[k] = { series: [], latest: null, prev: null }
+        // obs_time arrives as YYYY-MM-DDTHH:MM (Bangkok local); store the
+        // raw value so the frontend can chart it directly.
+        const entry = { obs_time: r.obs_time, leq_db: r.value }
+        byStation[k].series.push(entry)
+        if (!byStation[k].latest) {
+          byStation[k].latest = entry
+          // prev = the second entry (already DESC-sorted)
+          if (r._nextRow && r._nextRow.station_key === k) byStation[k].prev = { obs_time: r._nextRow.obs_time, leq_db: r._nextRow.value }
+        }
+      }
+      // The above trick leaves prev un-set because of the cursor-less
+      // driver; rebuild prev cleanly per station from the already-sorted
+      // series.
+      for (const k of Object.keys(byStation)) {
+        const s = byStation[k]
+        if (s.series.length >= 2) {
+          s.prev = s.series[1]
+          s.delta_db = s.latest.leq_db - s.prev.leq_db
+        } else {
+          s.delta_db = null
+        }
+      }
+      // Top noisy stations — sort by latest.leq_db DESC, top 10
+      const top = Object.entries(byStation)
+        .filter(([, v]) => v.latest?.leq_db != null)
+        .sort((a, b) => b[1].latest.leq_db - a[1].latest.leq_db)
+        .slice(0, 10)
+        .map(([k, v]) => ({ station_key: k, leq_db: v.latest.leq_db, obs_time: v.latest.obs_time, delta_db: v.delta_db }))
+      json(res, 200, {
+        updated: new Date().toISOString(),
+        window_days: days,
+        stations: byStation,
+        top_noisy: top,
+        // Standards are the same as the in-document references — keep the
+        // endpoint self-contained so the frontend doesn't have to maintain
+        // a parallel constants file.
+        standards: {
+          who_lden: { value: 53, unit: 'dB(A) Lden',
+                      label_th: 'WHO 53 dB Lden — ปกป้องหัวใจและหลอดเลือด',
+                      label_en: 'WHO 53 dB Lden — cardiovascular protection' },
+          who_night: { value: 44, unit: 'dB(A) Lnight',
+                       label_th: 'WHO 44 dB Lnight — ปกป้องการนอนหลับ',
+                       label_en: 'WHO 44 dB Lnight — sleep protection' },
+          pcd_residential_day: { value: 55, unit: 'dB(A)',
+                                 label_th: 'เกณฑ์อาคารที่พักอาศัย (กลางวัน) — ตามประกาศ คพ.',
+                                 label_en: 'PCD residential day limit' },
+          pcd_residential_night: { value: 45, unit: 'dB(A)',
+                                   label_th: 'เกณฑ์อาคารที่พักอาศัย (กลางคืน) — ตามประกาศ คพ.',
+                                   label_en: 'PCD residential night limit' },
+          pcd_commercial_day: { value: 70, unit: 'dB(A)',
+                                label_th: 'เกณฑ์เขตพาณิชยกรรม (กลางวัน)',
+                                label_en: 'PCD commercial day limit' },
+          pcd_industrial_day: { value: 75, unit: 'dB(A)',
+                                label_th: 'เกณฑ์เขตอุตสาหกรรม (กลางวัน)',
+                                label_en: 'PCD industrial day limit' },
+          // Loudest reading observed in the 7-day window → useful as a
+          // "you'll see this again" baseline for the trend chart.
+          loud_threshold: { value: 70, unit: 'dB(A)',
+                            label_th: '70 dB(A) — ระดับที่ควรลดการสัมผัสเรื้อรัง',
+                            label_en: '70 dB(A) — chronic exposure should be reduced' },
+        },
+        source_url: 'http://noisemonitor.net/web/station.php',
+      })
+    },
+
     // Historical daily exports compiled from our SQLite collection.
     'GET /api/export/days': (req, res, url) => {
       const limit = clamp(url.searchParams.get('limit'), 1, 730, 365)

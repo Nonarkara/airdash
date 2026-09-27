@@ -5,9 +5,9 @@
 // Upstream URLs come from third-party feeds, so nothing is dropped into
 // markup unchecked: embeds are HTTPS only (an http stream is blocked as mixed
 // content anyway), links may be http(s), everything else is refused.
-import { tr } from '../i18n.js?v=2.4.35'
-import { escapeHtml } from '../fmt.js?v=2.4.35'
-import { pm25Color } from '../paint.js?v=2.4.35'
+import { tr } from '../i18n.js?v=2.4.36'
+import { escapeHtml } from '../fmt.js?v=2.4.36'
+import { pm25Color } from '../paint.js?v=2.4.36'
 
 const HLS_CDN = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js'
 

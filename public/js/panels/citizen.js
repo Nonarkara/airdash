@@ -15,19 +15,19 @@
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.35'
-import { tr, BAND } from '../i18n.js?v=2.4.35'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.35'
-import { getJson } from '../cache.js?v=2.4.35'
-import { flyToProvince } from '../map.js?v=2.4.35'
-import { sharePlace, copyText } from '../share.js?v=2.4.35'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.35'
+import { on, store, emit } from '../state.js?v=2.4.36'
+import { tr, BAND } from '../i18n.js?v=2.4.36'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.36'
+import { getJson } from '../cache.js?v=2.4.36'
+import { flyToProvince } from '../map.js?v=2.4.36'
+import { sharePlace, copyText } from '../share.js?v=2.4.36'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.36'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
-  renderTomorrowOutlook, renderTellFamily, renderPetCare,
-} from './citizenLife.js?v=2.4.35'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.35'
+  renderTomorrowOutlook, renderTellFamily, renderPetCare, renderNoiseTrends,
+} from './citizenLife.js?v=2.4.36'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.36'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -84,7 +84,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.35').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.36').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -451,6 +451,11 @@ function renderForProvince(province) {
   const migrant = renderMigrantPhrases(band)
   const pet = renderPetCare(band)
   const tellFamily = renderTellFamily(province, band)
+  // Noise trends — top 5 loudest PCD stations with 7-day mini bars.
+  // Always visible (the WHO 53 dB safe zone is a useful baseline even
+  // when the air is good — readers want to know their city is quiet
+  // too, not just loud).
+  const noise = renderNoiseTrends()
 
   // "What am I breathing" — three nearest AQ stations (loaded async below)
   const stationHead = el('div', { class: 'citizen-section-head' },
@@ -482,6 +487,7 @@ function renderForProvince(province) {
     stationHead, stationList,
     symptom,
     pet,
+    noise,
     migrant,
     tellFamily,
   ].filter(Boolean)
