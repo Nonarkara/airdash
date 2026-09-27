@@ -69,8 +69,12 @@ async function render() {
             worseBeforeBetterChip(p)),
           el('div', { class: 'q' },
             tr('ฝุ่น ', 'PM2.5 '), el('b', {}, fmtNum(p.pm25, 0)), ' µg/m³',
-            ` · ${tr('โอกาสฝน 24ชม.', 'rain 24h')} ${fmtNum(p.prob24 ?? 0, 0)}%`,
-            ` · ${tr('คาด', 'fc')} ${fmtNum(p.rain_fc_24 ?? 0, 0)} ${tr('มม.', 'mm')}`),
+            // Missing forecast renders as missing, not 0 (audit 2026-09-28).
+            p.band === 'unknown'
+              ? (Array.isArray(p.tmd_rain_pct) && p.tmd_rain_pct[0] != null
+                  ? ` · ${tr('กรมอุตุฯ: โอกาสฝน', 'TMD: rain chance')} ${p.tmd_rain_pct[0]}%`
+                  : ` · ${tr('ไม่มีข้อมูลพยากรณ์ฝน', 'no rain forecast')}`)
+              : ` · ${tr('โอกาสฝน 24ชม.', 'rain 24h')} ${fmtNum(p.prob24 ?? 0, 0)}% · ${tr('คาด', 'fc')} ${fmtNum(p.rain_fc_24 ?? 0, 0)} ${tr('มม.', 'mm')}`),
           // Relief timeline — which forecast day first brings washout-grade
           // rain ("ฝนช่วยล้างฝุ่นพรุ่งนี้ · washout rain tomorrow, 8mm @98%").
           reliefEtaLine(p),

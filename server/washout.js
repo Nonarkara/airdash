@@ -15,6 +15,7 @@
 //
 // This is a heuristic from published washout ratios, not dispersion modelling
 // — the UI says so wherever these numbers show.
+import { readTmdWeather } from './sources/tmd-relay.js'
 import { num } from './util.js'
 import { reliefPct } from './washout-curve.js'
 import { isThaiProvinceCode } from './provinces.js'
@@ -32,6 +33,11 @@ export function reliefIfRainPct(mm) {
 
 // Washout band: amount AND probability must both clear the bar.
 export function washoutBand(mm, prob) {
+  // No forecast is not "no rain". On 2026-09-25..28 Open-Meteo's quota was
+  // spent for days; this returned 'none' for all 77 provinces and the
+  // dashboard told everyone "No rain relief expected" while Rayong's gauges
+  // read 290 mm (audit 2026-09-28). Absence of data must read as absence.
+  if (mm == null && prob == null) return 'unknown'
   const m = mm ?? 0
   const p = prob ?? 0
   if (m >= 15 && p >= 60) return 'strong'
@@ -45,7 +51,7 @@ export const WASHOUT_LABELS = {
   moderate: { th: 'ฝนช่วยลดฝุ่นได้', en: 'Moderate washout likely' },
   light: { th: 'ฝนช่วยได้เล็กน้อย', en: 'Slight washout possible' },
   none: { th: 'ไม่มีฝนช่วยล้างฝุ่น', en: 'No rain relief expected' },
-  unknown: { th: 'ไม่ทราบ', en: 'Unknown' },
+  unknown: { th: 'ไม่มีข้อมูลพยากรณ์ฝน', en: 'Rain forecast unavailable' },
 }
 
 // Relief-timeline labels — which forecast day first brings washout-grade
@@ -55,10 +61,15 @@ export const RELIEF_ETA_LABELS = {
   1: { th: 'ฝนช่วยล้างฝุ่นพรุ่งนี้', en: 'washout rain tomorrow' },
   2: { th: 'ฝนช่วยล้างฝุ่นมะรืนนี้', en: 'washout rain the day after' },
   none: { th: 'ยังไม่มีฝนใน 3 วัน', en: 'no washout rain in sight (3 days)' },
+  unknown: { th: 'ไม่มีข้อมูลพยากรณ์ฝน', en: 'rain forecast unavailable' },
 }
 
 /** First forecast day (0/1/2) whose rain clears the moderate washout bar. */
 export function reliefEta(days) {
+  if ([0, 1, 2].every((d) => days?.[d]?.mm == null && days?.[d]?.prob == null)) {
+    const l = RELIEF_ETA_LABELS.unknown
+    return { day: null, unknown: true, label_th: l.th, label_en: l.en, mm: null, prob: null }
+  }
   for (let d = 0; d < 3; d++) {
     const { mm, prob } = days[d] ?? {}
     const band = washoutBand(mm ?? null, prob ?? null)
@@ -102,6 +113,13 @@ export function createWashout(db) {
     const rainRows = latestByProvince('thaiwater_rain', ['rain_24h'], localCutoff(FRESH_RAIN_HOURS))
     // CAMS PM2.5 forecast — used only by the worse_before_better flag.
     const camsRows = latestByProvince('openmeteo_aq', ['pm25_fc_24h', 'pm25_fc_48h'], localCutoff(FRESH_FC_HOURS))
+
+    // TMD per-province forecast (rain chance only), for the fallback line.
+    let tmd = null
+    try {
+      const rel = readTmdWeather(db)
+      if (rel) tmd = new Map(rel.forecast.locations.filter((l) => l.province_code).map((l) => [String(l.province_code), l]))
+    } catch { /* fallback is optional */ }
 
     const out = new Map()
     const entry = (row) => {
@@ -167,6 +185,15 @@ export function createWashout(db) {
       e.relief_if_rain_pct = reliefIfRainPct(e.rain_fc_24)
       e.expected_relief_pct = Math.round(e.relief_if_rain_pct * (e.prob24 ?? 0)) / 100
       e.band = washoutBand(e.rain_fc_24, e.prob24)
+      e.forecast_available = e.band !== 'unknown'
+      // TMD fallback: the Thai Meteorological Department's rain CHANCE per day
+      // (relayed from FloodDash, server/sources/tmd-relay.js). It has no rain
+      // AMOUNT, so it cannot produce a relief % — it is shown as information,
+      // never folded into the band.
+      if (!e.forecast_available && tmd) {
+        const loc = tmd.get(e.province_code)
+        if (loc) e.tmd_rain_pct = loc.days.slice(0, 3).map((d) => d?.rain_pct ?? null)
+      }
       e.projected_pm25 = e.pm25 !== null
         ? Math.round(e.pm25 * (1 - e.relief_if_rain_pct / 100))
         : null

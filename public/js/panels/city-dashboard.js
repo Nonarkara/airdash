@@ -287,11 +287,17 @@ function cityScoreRow(data, L) {
       ? el('div', { class: 'cd-score-card' },
           el('div', { class: 'cd-score-label' }, L('ฝนล้างฝุ่น', 'WASHOUT')),
           el('div', { class: 'cd-score-value mono', style: 'color:var(--rain)' },
-            w.expected_relief_pct != null ? `${w.expected_relief_pct}%` : '0%'),
+            // 'unknown' = no rain forecast at all (feed down) — never render 0%.
+            w.band === 'unknown' ? '—'
+              : w.expected_relief_pct != null ? `${w.expected_relief_pct}%` : '0%'),
           el('div', { class: 'cd-score-sub' },
             w.band === 'strong' ? L('ฝนล้างฝุ่นได้มาก', 'Strong washout')
             : w.band === 'moderate' ? L('ฝนช่วยได้', 'Moderate')
             : w.band === 'light' ? L('ช่วยเล็กน้อย', 'Light')
+            : w.band === 'unknown'
+              ? (Array.isArray(w.tmd_rain_pct) && w.tmd_rain_pct[0] != null
+                  ? L(`ไม่มีพยากรณ์ปริมาณฝน · กรมอุตุฯ: โอกาสฝน ${w.tmd_rain_pct[0]}%`, `No rain-amount forecast · TMD: ${w.tmd_rain_pct[0]}% chance of rain`)
+                  : L('ไม่มีข้อมูลพยากรณ์ฝน', 'Rain forecast unavailable'))
             : L('ไม่มีฝนช่วย', 'No rain relief')),
         )
       : null,

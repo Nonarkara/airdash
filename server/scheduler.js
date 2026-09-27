@@ -20,6 +20,20 @@ const MAX_RUN_MS = 10 * 60_000 // 10 min hard ceiling; a hung source must not bl
 // when this is set.
 const RATE_LIMIT_PARK_MS = 24 * 60 * 60_000
 
+/** When to try a rate-limited source again. util.js's host breaker says
+ *  "daily quota exhausted" and lifts at UTC midnight; parking 24 h from the
+ *  FIRST failure instead kept Open-Meteo off until ~17:00 UTC the next day —
+ *  up to 17 h of extra outage, during which the washout feature showed no
+ *  forecast (audit 2026-09-28). For that case, retry 5 min after UTC
+ *  midnight. Any other 429 keeps the conservative 24 h. */
+export function parkUntil(err, now = Date.now()) {
+  if (/daily quota exhausted/i.test(String(err?.message ?? err))) {
+    const d = new Date(now)
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 5)
+  }
+  return now + RATE_LIMIT_PARK_MS
+}
+
 function isRateLimit(err) {
   if (!err) return false
   const s = String(err?.message ?? err)
@@ -101,16 +115,16 @@ export function createScheduler({ db, bus, alerts, sources }) {
       // day-locked quota would punish healthy sources later when the
       // quota resets.
       if (isRateLimit(err)) {
-        s.parkedUntil = Date.now() + RATE_LIMIT_PARK_MS
+        s.parkedUntil = parkUntil(err)
         s.failures = 0
-        log('warn', 'ingest rate-limited — parked for 24h', {
+        log('warn', 'ingest rate-limited — parked', {
           source: name, error: s.lastError,
           retry_at: new Date(s.parkedUntil).toISOString(),
         })
         bus.publish({
           kind: 'status', source: name, severity: 1,
-          title_th: `แหล่งข้อมูล ${s.source.label_th} ถูก rate-limit — จะลองอีกครั้งใน 24 ชม.`,
-          title_en: `Source ${s.source.label_en} rate-limited — next attempt in 24h`,
+          title_th: `แหล่งข้อมูล ${s.source.label_th} ถูก rate-limit — จะลองอีกครั้ง ${new Date(s.parkedUntil).toISOString().slice(11, 16)} UTC`,
+          title_en: `Source ${s.source.label_en} rate-limited — next attempt ${new Date(s.parkedUntil).toISOString().slice(11, 16)} UTC`,
           payload: { error: s.lastError, retry_at: new Date(s.parkedUntil).toISOString() },
         })
       } else {

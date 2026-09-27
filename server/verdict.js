@@ -317,8 +317,11 @@ export function nationalVerdict(risk) {
     action_en: 'Nothing to do right now — check your city link again tomorrow',
     checklist: NATIONAL_CHECKLIST.safe,
     window: null,
-    disclaimer_th: 'อากาศระบายได้ดี ฝุ่นไม่สะสม',
-    disclaimer_en: 'The atmosphere is ventilating well — dust is not accumulating',
+    // Say only what the data shows: PM2.5 is low. The old text asserted good
+    // ventilation, a wind/mixing claim this branch never checks (and made even
+    // while the weather feed was down, audit 2026-09-28).
+    disclaimer_th: 'ค่าฝุ่นต่ำทั่วประเทศในขณะนี้',
+    disclaimer_en: 'PM2.5 is low across the country right now',
   }
 }
 

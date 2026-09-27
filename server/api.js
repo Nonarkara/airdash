@@ -126,8 +126,18 @@ function safeMeta(json) {
   try { return JSON.parse(json) } catch { return null }
 }
 
-/** Pivot latest-readings rows into one object per station. */
-function pivotLatest(db, source, metrics) {
+/** Pivot latest-readings rows into one object per station.
+ *
+ *  maxAgeH: drop any metric older than this (Bangkok-local obs_time), set the
+ *  station's obs_time from the metrics that survive, and drop stations with
+ *  nothing fresh. Before this (audit 2026-09-28) there was no age cutoff at
+ *  all: mobile unit 32t's PM2.5 from 2026-07-17 was the HIGHEST reading on the
+ *  national map, and 72t's PM2.5 from 09-15 was stamped with today's time
+ *  because its placeholder AQI 0 was fresh. The windows match the ones the
+ *  risk engine already scores with (risk.js FRESH_*_HOURS). */
+function pivotLatest(db, source, metrics, { maxAgeH = null } = {}) {
+  const cutoff = maxAgeH == null ? null
+    : new Date(Date.now() + 7 * 3600_000 - maxAgeH * 3600_000).toISOString().slice(0, 16)
   const placeholders = metrics.map(() => '?').join(',')
   const rows = db.all(
     `SELECT l.station_key, l.metric, l.value, l.obs_time,
@@ -140,6 +150,10 @@ function pivotLatest(db, source, metrics) {
   )
   const byStation = new Map()
   for (const r of rows) {
+    if (cutoff && r.obs_time < cutoff) continue
+    // Air4Thai publishes AQI 0 as a placeholder when it has no reading (an
+    // AQI of exactly 0 needs every pollutant at zero). Treat it as missing.
+    if (source === 'air4thai' && r.metric === 'aqi' && !(r.value > 0)) continue
     let st = byStation.get(r.station_key)
     if (!st) {
       st = {
@@ -147,7 +161,7 @@ function pivotLatest(db, source, metrics) {
         province_th: r.province_th, province_en: r.province_en, province_code: r.province_code,
         region_th: r.region_th, region_en: r.region_en, basin_th: r.basin_th, basin_en: r.basin_en,
         lat: r.lat, lng: r.lng, meta: safeMeta(r.meta_json),
-        obs_time: r.obs_time,
+        obs_time: '',
       }
       byStation.set(r.station_key, st)
     }
@@ -375,16 +389,16 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       }
       foldHarm(risk.provinces, harm)
       // Primary layer: every AQ station with the full pollutant set.
-      const air = pivotLatest(db, 'air4thai', ['pm25', 'pm10', 'o3', 'co', 'no2', 'so2', 'aqi'])
+      const air = pivotLatest(db, 'air4thai', ['pm25', 'pm10', 'o3', 'co', 'no2', 'so2', 'aqi'], { maxAgeH: 6 })
       // Rain gauges currently seeing washout-grade rain (≥5mm/24h).
-      const rain = pivotLatest(db, 'thaiwater_rain', ['rain_24h', 'rain_1h'])
+      const rain = pivotLatest(db, 'thaiwater_rain', ['rain_24h', 'rain_1h'], { maxAgeH: 26 })
         .filter((s) => (s.rain_24h ?? 0) >= CONFIG.thresholds.rainWashout24h && s.lat !== null)
       // Per-province weather forecast (rain chance + wind — washout & ventilation).
       const weather = pivotLatest(db, 'openmeteo',
-        ['precip_fc_d0', 'precip_fc_48h', 'precip_prob_24h', 'precip_prob_48h', 'wind_fc_kmh'])
+        ['precip_fc_d0', 'precip_fc_48h', 'precip_prob_24h', 'precip_prob_48h', 'wind_fc_kmh'], { maxAgeH: 13 })
       // Per-province CAMS air-quality forecast.
       const aqForecast = pivotLatest(db, 'openmeteo_aq',
-        ['pm25_fc_24h', 'pm25_fc_48h', 'pm25_fc_72h', 'pm10_fc_24h', 'dust_fc_24h'])
+        ['pm25_fc_24h', 'pm25_fc_48h', 'pm25_fc_72h', 'pm10_fc_24h', 'dust_fc_24h'], { maxAgeH: 13 })
       const alerts = db.all('SELECT * FROM alerts ORDER BY id DESC LIMIT 20')
       // LIMIT 40 (not 15): the map's news/fire layer only plots the subset
       // that got geotagged (province named in the headline), so it needs a
@@ -687,11 +701,19 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       }
       const w = CONFIG.risk.weights
       // Latest CAMS PM2.5 + rain forecast rows per province.
+      // Same 13 h freshness bar risk.js / danger.js / washout.js use. Without
+      // it, `latest` happily returned a forecast issued days earlier, so a
+      // 2026-09-25 run was served as today / tomorrow / the day after while
+      // /api/washout (which does filter) said there was no forecast at all
+      // (audit 2026-09-28). A stale forecast is worse than none: it has dates.
+      const fcCutoff = new Date(Date.now() + 7 * 3600_000 - 13 * 3600_000).toISOString().slice(0, 16)
       const fcRows = db.all(
         `SELECT l.source, l.station_key AS province_code, l.metric, l.value
          FROM latest l
-         WHERE (l.source = 'openmeteo_aq' AND l.metric IN ('pm25_fc_24h','pm25_fc_48h','pm25_fc_72h'))
-            OR (l.source = 'openmeteo' AND l.metric IN ('precip_fc_d0','precip_fc_d1','precip_fc_d2','precip_prob_d0','precip_prob_d1','precip_prob_d2'))`)
+         WHERE l.obs_time >= ?
+           AND ((l.source = 'openmeteo_aq' AND l.metric IN ('pm25_fc_24h','pm25_fc_48h','pm25_fc_72h'))
+             OR (l.source = 'openmeteo' AND l.metric IN ('precip_fc_d0','precip_fc_d1','precip_fc_d2','precip_prob_d0','precip_prob_d1','precip_prob_d2')))`,
+        fcCutoff)
       const byProv = new Map()
       for (const r of fcRows) {
         let p = byProv.get(r.province_code)
