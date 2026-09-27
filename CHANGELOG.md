@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.2] — 2026-09-27 · backend only · **AirDash on the external disk: a real page cache, and the archive off the evening peak**
+
+**What was wrong.** The live DB moved to the external USB disk on 26 Sep (it is a spinning drive, a Seagate One Touch). With SQLite's default ~2 MB page cache every request went back to the disk head, and the shared archive job (`com.dash.archive`) ran at 20:00 — Thai evening peak — copying into its 11 GB archive on the same disk. On 27 Sep the server sat in uninterruptible I/O from ~20:00 for over an hour; `api-air` answered nothing. The archive was also still reading the old `~/AirDash/data/airdash.db` path ("live DB missing — skipped").
+
+**Fixed.** `openDb` sets a 192 MB page cache (`AIRDASH_DB_CACHE_MB`), `mmap_size = 0` (a page fault on a busy USB disk is the same uninterruptible wait) and in-memory temp tables. The archive runs at 02/05/11/15 (never 17–23 or 06–09) and reads AirDash's DB from `DASH_ARCHIVE_AIRDASH_DB` on the external disk. The data stays on the external disk.
+
 ## [3.3.1] — 2026-09-20 · token 2.4.33 · **Camera video was blocked by the page's own security policy**
 
 **What was wrong.** 3.3.0 shipped camera video that played in local tests and could not play on the live site.

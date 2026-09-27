@@ -10,7 +10,7 @@
   guarantees a full hour of margin: nothing is ever destroyed before it has
   been copied. If you change retention.runAtHour, change this too.
 
-  The other three runs (08/14/20) keep each incremental batch small so a
+  The other three runs (05/11/15) keep each incremental batch small so a
   single missed night can never turn into a multi-million-row catch-up.
 
   launchd does NOT start a second instance while one is still running: a
@@ -40,10 +40,22 @@
   <key>StartCalendarInterval</key>
   <array>
     <dict><key>Hour</key><integer>2</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>14</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>20</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>5</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>15</integer><key>Minute</key><integer>0</integer></dict>
   </array>
+  <!-- 2026-09-27: was 02/08/14/20. The 20:00 run (Thai evening peak) was
+       still copying into the 11 GB archive on the spinning USB disk when
+       AirDash's live DB — now on that same disk — stalled for over an hour
+       and both sites stopped answering. Off-peak slots only: never 17–23,
+       never 06–09. -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- AirDash's live DB moved to the external disk on 2026-09-26; the
+         default path in archive-longterm.mjs no longer exists. -->
+    <key>DASH_ARCHIVE_AIRDASH_DB</key>
+    <string>/Volumes/Data/Offload-2026-09-26-air/AirDash-data/airdash.db</string>
+  </dict>
 
   <!-- Deliberately NOT KeepAlive. This is a batch job: it should run,
        finish, and exit. A crash-restart loop on a job that writes to a
