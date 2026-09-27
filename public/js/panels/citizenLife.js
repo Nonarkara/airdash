@@ -861,6 +861,7 @@ export function renderTellFamily(province, band) {
 // airways are extra sensitive. This is the kind of life-saving
 // information that turns a dashboard from "me-focused" to
 // "family-focused" — including the furry family.
+export function renderPetCare(band) {
   if (band === 'normal' || band === 'low') return null  // Only show at watch+
   const head = el('div', { class: 'citizen-section-head' },
     el('span', {}, tr('🐕 สัตว์เลี้ยงก็เสี่ยงเหมือนกัน', '🐕 your pet is at risk too')))
