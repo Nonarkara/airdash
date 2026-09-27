@@ -222,6 +222,49 @@ export function createSatelliteLayers(map, pane) {
         crossOrigin: true,
       },
     ),
+    // OMPS PyroCb UV Aerosol Index (Suomi-NPP) — the smoke-from-intense-fire
+    // view. A "pyrocumulonimbus" is the towering thunderstorm a really hot
+    // biomass fire can seed; OMPS reads the absorbing aerosol it injects
+    // straight up to the stratosphere. That is also the smoke that travels
+    // furthest, so this is the layer that flags a haze plume arriving from
+    // across SE Asia BEFORE the AOD tile shows it and well before any
+    // ground station downwind reads it. The positive UV aerosol index is
+    // keyed to absorbing smoke and dust — exactly the spectrum we want
+    // for "is this plume from a fire, or just humidity?".
+    // Verified 2026-09-27: 81 KB PNG for the SE Asia tile. NASA GIBS hosts
+    // this as a separate product from the standard OMPS AI on purpose, so
+    // its colour ramp is biased to the high-altitude-smoke range.
+    ompsPyroCb: L.tileLayer(
+      `${GIBS}/OMPS_Aerosol_Index_PyroCumuloNimbus/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.78,
+        pane,
+        attribution: '© NASA GIBS · OMPS PyroCb UV Aerosol Index',
+        crossOrigin: true,
+      },
+    ),
+    // VIIRS NOAA-20 aerosol type (Deep Blue, land & ocean). The Deep
+    // Blue retrieval sorts the AOD column into TYPE — smoke vs dust vs
+    // sea salt vs sulphate — at 6 km native. This is the JAXA SGLI-class
+    // layer the user originally asked about: where JAXA's own aerosol-type
+    // product is gated behind G-Portal, NASA publishes VIIRS equivalent
+    // keylessly on GIBS. Crucial for SE Asia where the smoke-vs-dust
+    // attribution decides which policy lever actually moves the air-quality
+    // number (ban the burn vs control construction / driving).
+    // Verified 2026-09-27: 8130-byte PNG for the SE Asia tile today.
+    viirsAerosolType: L.tileLayer(
+      `${GIBS}/VIIRS_NOAA20_Aerosol_Type_Deep_Blue_Land_Ocean/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.72,
+        pane,
+        attribution: '© NASA GIBS · VIIRS NOAA-20 aerosol type (Deep Blue)',
+        crossOrigin: true,
+      },
+    ),
     // Night lights — VIIRS Day/Night Band at-sensor radiance. Two things
     // make this meaningful for a dust dashboard, not just pretty:
     //   1. ACTIVE NIGHT BURNING. Agricultural fires are frequently lit in
@@ -327,6 +370,8 @@ export const LAYER_GROUPS = [
       { id: 'jaxaAerosol', th: 'ละอองลอย Himawari-9 (JAXA สด ทุก 10 นาที)', en: 'Himawari-9 aerosol (JAXA, live 10-min)', on: false, kind: 'sat' },
       { id: 'aodAqua3km', th: 'AOD 3 กม. (Aqua ความละเอียดสูง)', en: 'AOD 3 km (Aqua, high-res)', on: false, kind: 'sat' },
       { id: 'aerosolIndex', th: 'ดัชนีควัน UV (ควันดูดกลืนแสง)', en: 'UV smoke index (absorbing aerosol)', on: false, kind: 'sat' },
+      { id: 'ompsPyroCb', th: 'ดัชนีควัน PyroCb (ชั้นบรรยากาศบน — ควันข้ามพรมแดน)', en: 'PyroCb smoke index (upper-air — cross-border smoke transport)', on: false, kind: 'sat' },
+      { id: 'viirsAerosolType', th: 'ชนิดละอองลอย VIIRS (ควัน vs ฝุ่น vs ละอองเกลือทะเล)', en: 'VIIRS aerosol type (smoke vs dust vs sea-salt)', on: false, kind: 'sat' },
       { id: 'co', th: 'คาร์บอนมอนอกไซด์ (ควันไฟที่ลอยมา)', en: 'Carbon monoxide (transported smoke)', on: false, kind: 'sat' },
       { id: 'nightlights', th: 'แสงไฟกลางคืน (เผากลางคืน/ฟุ้งกระจาย)', en: 'Night lights (night burning / haze glow)', on: false, kind: 'sat' },
       { id: 'gsmap', th: 'GSMaP/GPM ฝนดาวเทียม', en: 'GSMaP/GPM rain', on: false, kind: 'sat' },

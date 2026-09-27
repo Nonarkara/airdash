@@ -1,17 +1,17 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.33'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.33'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.33'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.33'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.33'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.33'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.33'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.33'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.33'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.33'
-import { openHazeEyes } from './layers/cctvWall.js?v=2.4.33'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.33'
+import { on, store } from './state.js?v=2.4.34'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.34'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.34'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.34'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.34'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.34'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.34'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.34'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.34'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.34'
+import { openHazeEyes } from './layers/cctvWall.js?v=2.4.34'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.34'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
@@ -50,6 +50,12 @@ export function initMap() {
   // stand-in for genuine JAXA data; see jaxaAerosol below for the real
   // thing, now that one exists.
   layers.aodAqua3km = satLayers.aodAqua3km
+  // OMPS PyroCb index + VIIRS aerosol type — see satellite.js for the
+  // reasoning behind each. These are the smoke attribution layers (was
+  // it a fire? is it above us? is it heading this way?) that the rest
+  // of the dashboard combines with the ground stations.
+  layers.ompsPyroCb = satLayers.ompsPyroCb
+  layers.viirsAerosolType = satLayers.viirsAerosolType
   layers.nightlights = satLayers.nightlights
   layers.aerosolIndex = satLayers.aerosolIndex
   layers.co = satLayers.co
@@ -306,6 +312,8 @@ function addLegend() {
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#e8f0e8,#8fb98f,#3a6b3a,#1f3a1f)"></span>${tr('ละอองลอย JAXA Himawari-9 — สดทุก 10 นาทีตอนกลางวัน (ดาวเทียม JAXA จริง ไม่ใช่ตัวแทน)', 'JAXA Himawari-9 aerosol — live every 10 min in daylight (genuine JAXA data, not a stand-in)')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#05060f,#3b3f6b,#f2e6b8)"></span>${tr('แสงไฟกลางคืน — จุดสว่างนอกเมือง = อาจเป็นการเผากลางคืน', 'night lights — bright spots outside towns can be night burning')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#e8edf2,#c9a227,#8a4b1f)"></span>${tr('ดัชนีควัน UV — ค่าสูง = ควันดูดกลืนแสงลอยอยู่เหนือพื้นที่', 'UV smoke index — higher = absorbing smoke aloft')}</div>
+      <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#7be3c0,#5ad17f,#f5b13b,#e85a4f)"></span>${tr('ดัชนี PyroCb (ควันที่พุ่งขึ้นสตราโทสเฟียร์ — ใช้ดูการขนส่งข้ามพรมแดน)', 'PyroCb index (smoke lofted to stratosphere — cross-border transport)')}</div>
+      <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#7ee3a6,#d6c84b,#c37936,#855ad1)"></span>${tr('ชนิดละอองลอย VIIRS (ควัน/ฝุ่น/เกลือทะเล) — ใกล้เคียงดาวเทียม JAXA SGLI', 'VIIRS aerosol type (smoke/dust/sea-salt) — near-JAXA SGLI')}</div>
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#0f2f4a,#2f8fa8,#d8e04a)"></span>${tr('CO 500 hPa — ควันที่ลอยมาจากที่อื่น ไม่ใช่ไฟที่กำลังไหม้ตรงนี้', 'CO 500 hPa — smoke transported from elsewhere, not fire below')}</div>
       <div class="lrow"><span class="lsw" style="background:var(--th-red)"></span>${tr('รอยเผาภาคเกษตร — สะสมทั้งฤดู ธ.ค.68–เม.ย.69 (ไม่ใช่ไฟวันนี้) เฉพาะภาคเหนือ+กลาง', 'agri burn scars — whole season Dec 25–Apr 26 (not today\'s fires), north+central only')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
