@@ -132,6 +132,7 @@ function setupBootStuckEscape() {
 
 async function loadTapHistory() {
   const res = await fetch('/api/tap/recent?limit=200')
+  if (!res.ok) throw new Error(`tap/recent ${res.status}`)
   const j = await res.json()
   emit('tap-history', j.events ?? [])
 }
@@ -191,7 +192,9 @@ export function selectPane(pane) {
   // CSS (!important). Selecting a hidden pane would mark it .active while
   // it stays display:none — on mobile that leaves the whole sheet blank
   // (the ASK AI chip used to do exactly this). Refuse the no-op instead.
-  if (document.body.classList.contains('mode-citizen') && pane !== 'citizen' && pane !== 'alerts') return
+  // Chat is allowed: it has no tab in citizen mode, but the header's ASK AI
+  // button is visible there and must open it.
+  if (document.body.classList.contains('mode-citizen') && !['citizen', 'alerts', 'chat'].includes(pane)) return
   const tabBtns = Array.from(tabsEl.querySelectorAll('button'))
   const panes = document.querySelectorAll('#rail-right .tabpane')
   tabBtns.forEach((b) => {
@@ -514,10 +517,18 @@ async function boot() {
 
   on('snapshot', renderTicker)
   on('lang', () => { paintChrome(); renderTicker(store.snapshot) })
-  on('resync', () => { loadSnapshot(); loadTapHistory() })
+  on('resync', () => { loadSnapshot(); loadTapHistory().catch(() => {}) })
   // The ask-ai button in the header fires this event; we listen here
   // (not in header.js) to keep the boot flow acyclic.
-  window.addEventListener('ask-ai', () => { try { selectPane('chat') } catch (e) { console.error('ask-ai:', e) } })
+  // On compact screens the chat lives in the right rail, which is only
+  // visible as the active sheet — selectPane alone switched a tab nobody
+  // could see, so the button did nothing on phones.
+  window.addEventListener('ask-ai', () => {
+    try {
+      if (applyMobileSheet && window.matchMedia(COMPACT_VIEW).matches) applyMobileSheet('chat')
+      else selectPane('chat')
+    } catch (e) { console.error('ask-ai:', e) }
+  })
   // Refresh aggregates periodically; the tap keeps the feel live in between.
   setInterval(loadSnapshot, SNAPSHOT_MS)
   // A critical alert refreshes aggregates immediately.
@@ -525,7 +536,6 @@ async function boot() {
 
   try {
     await loadSnapshotWithRetry()
-    await loadTapHistory()
     refreshSensorHealth().catch(() => {})
     document.getElementById('boot')?.remove()
     // Announce readiness to screen readers via a hidden live region.
@@ -534,8 +544,13 @@ async function boot() {
     // the national JMA verb out is enough: a screen reader user knows
     // the dashboard is live AND the current situation in one line.
     announceReady()
-    startTap()
     invalidateMap()
+    // The event feed is secondary: it must never hold the map behind the
+    // splash. History first, then the live stream, so a late history load
+    // can't wipe live rows.
+    loadTapHistory()
+      .catch((e) => console.warn('tap history unavailable:', e))
+      .finally(startTap)
   } catch (err) {
     showBootError(err)
   }

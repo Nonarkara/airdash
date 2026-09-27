@@ -59,7 +59,11 @@ try {
 const hasOldShell = cacheNames.some((name) =>
   (name.startsWith('flooddash-') || name.startsWith('airdash-')) && name !== shell)
 
-if (!sessionStorage.getItem(migrated) && (registrations.length || hasOldShell)) {
+// Only a STALE shell triggers the migration. main.js registers /sw.js on
+// every load, so `registrations.length` was true for every returning
+// visitor: each new session unregistered the current SW and paid a full
+// reload (and the offline cache never survived a session).
+if (!sessionStorage.getItem(migrated) && hasOldShell) {
   sessionStorage.setItem(migrated, '1')
   // The migration is best-effort: even if unregister/delete hangs,
   // the new shell is what we just deployed, and it self-heals on the

@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict'
 import { washoutBand, reliefEta, WASHOUT_LABELS } from '../server/washout.js'
 import { parkUntil } from '../server/scheduler.js'
+import { isFutureObs } from '../server/db.js'
 
 let passed = 0
 const t = (name, fn) => { fn(); passed++; console.log('PASS', name) }
@@ -27,5 +28,14 @@ t('daily quota park ends 00:05 UTC next day', () => {
 t('other rate limit parks 24 h', () => {
   const now = Date.UTC(2026, 8, 27, 17, 0)
   assert.equal(parkUntil(new Error('429 Too Many Requests'), now), now + 24 * 3600_000)
+})
+t('obs 6 h ahead of Bangkok now is future', () => {
+  const now = Date.UTC(2026, 8, 27, 17, 43) // 00:43 Bangkok, 28 Sep
+  assert.equal(isFutureObs('2026-09-28T06:00', now), true)
+})
+t('obs within 2 h slack is accepted', () => {
+  const now = Date.UTC(2026, 8, 27, 17, 43)
+  assert.equal(isFutureObs('2026-09-28T01:00', now), false)
+  assert.equal(isFutureObs('2026-09-27T23:00', now), false)
 })
 console.log(`\n${passed} passed, 0 failed`)

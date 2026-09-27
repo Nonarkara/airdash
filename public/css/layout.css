@@ -1694,8 +1694,9 @@ body.mode-citizen #pane-sources,
 body.mode-citizen #pane-insights,
 body.mode-citizen #pane-history,
 body.mode-citizen #pane-library,
-body.mode-citizen #pane-news,
-body.mode-citizen #pane-chat { display: none !important; }
+body.mode-citizen #pane-news { display: none !important; }
+/* Chat has no tab in citizen mode but ASK AI opens it (selectPane allows it). */
+body.mode-citizen #pane-chat:not(.active) { display: none !important; }
 body.mode-citizen #pane-citizen:not([hidden]) { display: flex !important; }
 @media (min-width: 1101px) {
   body.mode-citizen #app {

@@ -95,5 +95,14 @@ const check = (name, cond) => { cond ? pass++ : fail++; console.log(`${cond ? 'P
   check('all-clear NOT fired without a prior danger alert', r === false)
 }
 
+// ── Washout alerts: one per PROVINCE per 12 h, not one per gauge ──
+{
+  const g = (key, code) => ({ ...st(key, code) })
+  const fire = (s) => alerts.considerReading({ source: 'thaiwater_rain', station: s, metric: 'rain_24h', value: 40, prev: 0 })
+  check('first gauge in a province raises washout', fire(g('rg1', '21')) === true)
+  check('second gauge, same province, suppressed', fire(g('rg2', '21')) === false)
+  check('gauge in another province still raises', fire(g('rg3', '22')) === true)
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

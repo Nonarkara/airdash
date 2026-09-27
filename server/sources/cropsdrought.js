@@ -17,7 +17,7 @@
 // against the disaster platform — invalid. The cropsdrought subdomain
 // uses the same origin security model as pm25.gistda.or.th — no auth.)
 import { CONFIG } from '../config.js'
-import { fetchJson } from '../util.js'
+import { fetchJson, log } from '../util.js'
 
 const RISK_URL = 'https://cropsdrought.gistda.or.th/api/rest/zonal/province'
 const ET_URL = 'https://cropsdrought.gistda.or.th/api/statwater/et/province'

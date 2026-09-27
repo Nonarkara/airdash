@@ -428,6 +428,17 @@ function migrate(db) {
   db.exec('CREATE INDEX IF NOT EXISTS idx_news_province ON news_items(province_code, fetched_at DESC)')
 }
 
+// Bangkok-local obs_time (YYYY-MM-DDTHH:MM) more than this ahead of now is a
+// timezone bug upstream or here, never a real observation.
+const FUTURE_OBS_SLACK_MS = 2 * 3600_000
+const BKK_OFFSET_MS = 7 * 3600_000
+export function isFutureObs(obsTime, nowMs = Date.now()) {
+  if (typeof obsTime !== 'string') return false
+  return obsTime > new Date(nowMs + BKK_OFFSET_MS + FUTURE_OBS_SLACK_MS).toISOString().slice(0, 16)
+}
+/** source → rows rejected as future-dated since boot (surfaced in /api/health). */
+export const futureRejects = new Map()
+
 export function openDb(path = CONFIG.dbPath) {
   mkdirSync(dirname(path), { recursive: true })
   const db = new DatabaseSync(path)
@@ -489,8 +500,15 @@ function wrap(db) {
              s.meta_json ?? null, s.now, s.now)
     },
 
-    /** Returns true when the row is genuinely new (dedupe via UNIQUE constraint). */
+    /** Returns true when the row is genuinely new (dedupe via UNIQUE constraint).
+     *  Rejects observations dated in the future: `latest` only moves forward,
+     *  so one future row freezes a station's "current" value until the clock
+     *  catches up (pcd_noise did this, 6 h ahead, on 2026-09-27). */
     insertReading(r) {
+      if (isFutureObs(r.obs_time)) {
+        futureRejects.set(r.source, (futureRejects.get(r.source) ?? 0) + 1)
+        return false
+      }
       const res = prep(`INSERT OR IGNORE INTO readings (source, station_key, metric, value, obs_time, fetched_at)
                         VALUES (?,?,?,?,?,?)`)
         .run(r.source, r.station_key, r.metric, r.value, r.obs_time, r.fetched_at)

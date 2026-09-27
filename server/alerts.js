@@ -44,6 +44,7 @@ import { log } from './util.js'
 const ALL_CLEAR_WINDOW_H = 2
 const ALL_CLEAR_MIN_READINGS = 2
 const ALL_CLEAR_COOLDOWN_MS = 12 * 60 * 60_000
+const WASHOUT_ALERT_COOLDOWN_MS = 12 * 60 * 60_000
 
 // Spike heuristic — mirrors sensors.js findAirAnomalies (kept in sync by
 // hand; both read the same CONFIG.sensorHealth constants).
@@ -81,9 +82,9 @@ export function createAlerts(db, bus, { line = null, telegramBroadcaster = null 
     return severity <= last.sev
   }
 
-  function raise({ rule, source, station, metric, value, prev, severity, message_th, message_en, cooldownMs: windowMs }) {
+  function raise({ rule, source, station, metric, value, prev, severity, message_th, message_en, cooldownMs: windowMs, cooldownScope }) {
     const now = Date.now()
-    const cdKey = `${rule}:${source}:${station.station_key}`
+    const cdKey = `${rule}:${source}:${cooldownScope ?? station.station_key}`
     const window = windowMs ?? cooldownMs
     if (inCooldown(cdKey, now, severity, window)) return false
     db.kvSet(`alert_cd:${cdKey}`, JSON.stringify({ at: now, sev: severity }))
@@ -300,8 +301,13 @@ export function createAlerts(db, bus, { line = null, telegramBroadcaster = null 
     // Severity 1 (notable): rain ≥5mm/24h starts scrubbing PM out of the air.
     if (metric === 'rain_24h' && source === 'thaiwater_rain' &&
         value >= t.rainWashout24h * 3 && (prev === null || prev < t.rainWashout24h * 3)) {
+      // Cooldown per PROVINCE, not per gauge: thaiwater has ~4,300 gauges,
+      // and per-gauge keys produced 43k washout alerts in 10 weeks (vs 124
+      // PM2.5 alerts), burying the ones that matter in the feed.
       return raise({
         rule: 'washout_rain', source, station, metric, value, prev, severity: 1,
+        cooldownScope: `province:${station.province_code ?? station.province_en ?? station.station_key}`,
+        cooldownMs: WASHOUT_ALERT_COOLDOWN_MS,
         message_th: `ฝนตก ${value.toFixed(0)} มม./24ชม. ที่ ${name}${provTh} — ช่วยชะล้างฝุ่นในพื้นที่`,
         message_en: `Rain ${value.toFixed(0)} mm/24h at ${nameEn}${provEn} — washing dust out locally`,
       })

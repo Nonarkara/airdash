@@ -66,7 +66,7 @@ export function createNewsFireLayer() {
 
       const safeLink = n.link && /^https?:\/\//i.test(n.link) ? n.link : null
       const linkRow = safeLink
-        ? `<a href="${safeLink}" target="_blank" rel="noopener" class="newsfire-link">${tr('อ่านข่าว', 'Read article')} →</a>`
+        ? `<a href="${escapeHtml(safeLink)}" target="_blank" rel="noopener noreferrer" class="newsfire-link">${tr('อ่านข่าว', 'Read article')} →</a>`
         : ''
       marker.bindPopup(() =>
         popupHtml(n.title, n.title_en ?? n.title, [

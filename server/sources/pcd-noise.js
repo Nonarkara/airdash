@@ -160,11 +160,12 @@ export default {
           const [tsMs, dbVal, nSamples] = series[i]
           const leq = validNum(dbVal, 'noise_leq', 'pcd_noise')
           if (leq === null) continue
-          // Convert the upstream unix-ms timestamp to Bangkok-local
-          // YYYY-MM-DDTHH:MM. raw toISOString() would land UTC 7 h
-          // behind every other source on the dashboard, which
-          // starvation tripped danger.js freshness cutoffs.
-          const obs_time = new Date(tsMs + 7 * 3600_000).toISOString().slice(0, 16)
+          // Upstream encodes Bangkok WALL time as if it were UTC: the
+          // daily Leq for 27 Sep arrives as 2026-09-27T23:00Z (the day's
+          // last hour, 24 samples). So toISOString() already IS the
+          // Bangkok-local YYYY-MM-DDTHH:MM. Adding +7 h (as this did until
+          // 2026-09-28) put every day on the NEXT date, 6 h in the future.
+          const obs_time = new Date(tsMs).toISOString().slice(0, 16)
           // Per-entry metrics: same noise_leq_db so the trend chart
           // reads one metric, but `noise_leq_prev_db` only on the
           // newest entry to keep the latest-pair logic downstream
