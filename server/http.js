@@ -59,8 +59,22 @@ export const PUBLIC_API_CORS = {
 /** Set the public CORS headers on a read-only /api/ response. Returns true
  *  when they were applied. Uses setHeader so json()/sendPrebuilt()'s
  *  writeHead() merges them in instead of replacing them. */
+/** Parse a request target WITHOUT ever letting it choose the host.
+ *  `new URL(req.url, base)` is not safe: a path starting with `//` is read as
+ *  a protocol-relative URL, so `GET //x:99999/` makes the parse THROW. That
+ *  throw happened outside any try/catch, the async handler's promise rejected,
+ *  and index.js's unhandledRejection handler exited the process — one
+ *  anonymous request took the server down (found in the 2026-09-28 audit;
+ *  reproduced on a scratch instance). Prefixing a fixed origin makes the whole
+ *  target a path. Returns null for anything still unparseable (e.g. an
+ *  absolute-form target), which the caller answers with 400. */
+export function requestUrl(req) {
+  try { return new URL('http://localhost' + (req.url ?? '/')) } catch { return null }
+}
+
 export function applyPublicApiCors(req, res) {
-  if (!isPublicApiRead(req.method, new URL(req.url, 'http://x').pathname)) return false
+  const u = requestUrl(req)
+  if (!u || !isPublicApiRead(req.method, u.pathname)) return false
   for (const [k, v] of Object.entries(PUBLIC_API_CORS)) res.setHeader(k, v)
   return true
 }
@@ -238,7 +252,8 @@ export function startHttp(routes) {
     // spreading SECURITY_HEADERS, and Node merges setHeader() values into
     // writeHead() — so this is the only spot that covers all of them.
     res.setHeader('x-service', 'airdash')
-    const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`)
+    const url = requestUrl(req)
+    if (!url) { res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end('bad request'); return }
     const key = `${req.method} ${url.pathname}`
     let handler = routes[key]
     let params = {}

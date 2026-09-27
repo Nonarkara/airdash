@@ -16,10 +16,6 @@
 //   news_items.csv        Google News TH + Khaosod headlines
 //   rag_docs.csv          knowledge base (Air Library BIBLE etc.)
 //   ingest_runs.csv       per-source poll history (last 90 d, by time)
-//   chat_logs.csv         AI chat history with feedback votes
-//   chat_faq.csv          FAQ cache (served_count, approval state)
-//   line_subs.csv         LINE Notify opt-ins
-//   kv.csv                key-value cache (risk_snapshot_cache etc.)
 //   risk_snapshot.json    current risk payload (in-memory, not in DB)
 //   meta.json             export metadata: date, row counts, freshness
 //   README.md             what each file is and how to load it
@@ -78,11 +74,21 @@ const TABLES = [
   { name: 'news_items',      desc: 'Google News TH + Khaosod headlines',                dump: 'node' },
   { name: 'rag_docs',        desc: 'knowledge base (Air Library BIBLE etc.)',           dump: 'node' },
   { name: 'ingest_runs',     desc: 'per-source poll history',                            dump: 'shell' },
-  { name: 'chat_logs',       desc: 'AI chat history (with feedback votes)',             dump: 'node' },
-  { name: 'chat_faq',        desc: 'FAQ cache (served_count, approval state)',          dump: 'node' },
-  { name: 'line_subs',       desc: 'LINE Notify opt-ins (token hash only — no raw token)', dump: 'node' },
-  { name: 'kv',              desc: 'key-value cache (risk snapshot etc.)',              dump: 'shell' },
 ]
+
+// NEVER EXPORTED. This archive is PUBLIC (GET /api/exports/<file>, no auth).
+// Until 2026-09-28 the list above also contained these four, and every weekly
+// archive from 2026-08-01 to 2026-09-19 published:
+//   kv        — admin_token, telegram_bot_token, line_channel_secret,
+//               line_channel_token, ip_hash_salt, line_id_salt (live secrets)
+//   chat_logs — every question anyone asked the chatbot, with an ip_hash whose
+//               salt shipped in the same archive (so the hashes were reversible)
+//   chat_faq  — moderation state
+//   line_subs — described as "token hash only"; it stores RAW tokens
+// scripts/test-export-no-secrets.mjs pins this: the export is an ALLOW-list,
+// and nothing on this deny-list may ever be added back to it.
+export const NEVER_EXPORT = ['kv', 'chat_logs', 'chat_faq', 'line_subs', 'telegram_subs', 'api_quota']
+export const EXPORT_TABLES = TABLES
 
 /** Stream a SQLite SELECT * into a CSV file using the SHELL sqlite3
  *  binary. ~50× faster than node:sqlite for the 4.6M-row readings
@@ -262,10 +268,6 @@ the in-memory risk snapshot and a meta.json with row counts and freshness.
 | news_items.csv      | varies   | Google News TH + Khaosod headlines with keyword filters. |
 | rag_docs.csv        | ~150     | Knowledge base — the Air Library BIBLE chapters + knowledge notes. |
 | ingest_runs.csv     | ~30 K    | Per-source poll history: started_at, dur_ms, ok, error. |
-| chat_logs.csv       | varies   | AI chat history. feedback column has +1 (👍) or -1 (👎). |
-| chat_faq.csv        | varies   | FAQ cache with served_count, approved flag, lang. |
-| line_subs.csv       | varies   | LINE Notify opt-ins. \`token\` is SHA-256-hashed, never the raw token. |
-| kv.csv              | varies   | Key-value cache (risk_snapshot_cache, knowledge_indexed_at, etc.). |
 | risk_snapshot.json  | 1 object | Current national + province air-watch payload, freshest live picture. |
 | meta.json           | 1 object | Export metadata: date, row counts, server uptime. |
 

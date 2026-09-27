@@ -39,14 +39,17 @@ function getIpSalt(db) {
 // edit response_template) and read every question ever asked — now that the
 // dashboard is public, this needs a gate. No user accounts in this codebase,
 // so: one shared secret, generated once and kept in the DB, required via
-// the X-Admin-Token header. Logged once at boot (only when first generated)
-// so the operator can retrieve it from the launchd log.
+// the X-Admin-Token header. Read it from the DB (never logged — see below).
 function getAdminToken(db) {
   let token = db.kvGet('admin_token')
   if (!token) {
     token = randomBytes(24).toString('hex')
     db.kvSet('admin_token', token)
-    log('info', 'generated admin token for FAQ/chat-log admin routes — save this, it will not be printed again', { admin_token: token })
+    // Never write the token itself to a log: logs get offloaded, rotated,
+    // copied and shared. Tell the operator where to read it instead.
+    log('info', 'generated admin token for FAQ/chat-log admin routes', {
+      read_it_with: `sqlite3 ${'data/airdash.db'} "SELECT value FROM kv WHERE key='admin_token'"`,
+    })
   }
   return token
 }
