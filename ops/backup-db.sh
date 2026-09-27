@@ -55,6 +55,10 @@ OFFDEVICE_RETAIN=7
 LOCAL_RETAIN=2
 
 NOW() { date '+%Y-%m-%dT%H:%M:%S%z'; }
+# Create the log's directory first. On 2026-09-27 logs/ had been offloaded to
+# the USB disk, so the very first log line failed, `set -e` exited, and that
+# night's backup never ran — without writing a single byte anywhere.
+mkdir -p "$(dirname "$LOG")"
 log() { printf '[%s] %s\n' "$(NOW)" "$*" >> "$LOG"; }
 
 mkdir -p "$LOCAL_DIR"

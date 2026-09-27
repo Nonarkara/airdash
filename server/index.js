@@ -20,6 +20,7 @@ import { ingestLibrary } from './library.js'
 import { scheduleRetention } from './retention.js'
 import { startHttp } from './http.js'
 import { buildRoutes } from './api.js'
+import { startOpsSentinel } from './opsSentinel.js'
 
 import air4thai from './sources/air4thai.js'
 import openmeteo from './sources/openmeteo.js'
@@ -85,6 +86,7 @@ setQuotaStore({
 
 scheduler.start()
 scheduleRetention(db)
+startOpsSentinel({ startedAt })
 
 // LINE push tick — every 5 min, check subscribers and push to anyone whose
 // province crossed into elevated/high. Self-throttles to one push per

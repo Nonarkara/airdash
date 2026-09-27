@@ -286,6 +286,22 @@ else
   problems=$((problems + 1))
 fi
 
+# ── 3b. Edge stale-mirror readiness (the net under a backend outage) ────
+# The Pages Function serves the last good /api/snapshot when the backend is
+# down — but only if it has one. On 2026-09-27 it didn't, and visitors got raw
+# 530 pages. Warn while the backend is still healthy, when it can be fixed.
+mirror_json=$(curl -s --max-time 15 "https://air.nonarkara.org/api/__edge/mirror" 2>/dev/null)
+snap_age=$(print -r -- "$mirror_json" | python3 -c 'import json,sys
+try:
+    e=json.load(sys.stdin)["entries"].get("/api/snapshot"); print(e["age_s"] if e else "none")
+except Exception: print("err")' 2>/dev/null)
+case "$snap_age" in
+  none) log "warn: edge mirror holds NO /api/snapshot — a backend outage now would show visitors an error page" ;;
+  err|"") log "warn: could not read edge mirror report" ;;
+  *) if [ "$snap_age" -gt 3600 ]; then log "warn: edge mirror /api/snapshot is ${snap_age}s old — snapshots may be too slow to mirror"
+     else log "ok: edge mirror holds a ${snap_age}s-old snapshot"; fi ;;
+esac
+
 # ── 4. Disk space (preventive — caused a 09:23 boot loop earlier) ─────
 # df -P /System/Volumes/Data gives POSIX-formatted output: a header line
 # + 1+ data lines, the "Use%" column on the data line is the percentage
@@ -364,36 +380,40 @@ else
   log "info: LLM chat API unavailable (chat falls back to structured data summary — degraded, not down)"
 fi
 
-# ── 5b. Backup freshness (a dead backup must never be silent again) ─────
-# From 2026-09-17 no nightly backup completed for 3+ days and NOTHING said so:
-# an unbounded PRAGMA integrity_check hung on the USB backup drive, launchd
-# will not start a second instance of a job that is still running, so every
-# later night was skipped. The job "existing" and the plist being loaded look
-# healthy from every angle except this one — has a backup actually COMPLETED
-# recently? Looks in .old too, since log rotation can move the last completion
-# out of backup.log.
-BACKUP_LOG_DIR="/Users/axiom/AirDash/logs"
-last_line=$(cat "$BACKUP_LOG_DIR/backup.log.old" "$BACKUP_LOG_DIR/backup.log" 2>/dev/null | grep "backup run complete" | tail -1)
-if [ -z "$last_line" ]; then
-  log "PROBLEM: no completed backup on record in backup.log"
+# ── 5b. Backup freshness — judged from the snapshot FILES, not log text ──
+# Two silent failures taught this: (1) 2026-09-17..19 an unbounded verify
+# hung and skipped nights while the job looked loaded; (2) 2026-09-26 logs/
+# was offloaded, so backup.log vanished from where this check read it and the
+# 09-27 backup died on its first log line. The files on disk are the truth.
+# Also flags DEGRADED mode: when the newest backup exists only on the internal
+# SSD (the USB drive was unavailable 09-22..24), it would not survive a disk
+# failure — "a backup ran" is not the same as "we are protected".
+OFF_DIR="${AIRDASH_OFFDEVICE_DIR:-/Volumes/Data/DBBackups/airdash}"
+INT_DIR="/Users/axiom/AirDash/data/backups"
+newest_mtime() {  # dir — epoch mtime of the newest airdash-YYYYMMDD-HHMM.db, 0 if none
+  local f; f=$(ls -1t "$1"/airdash-[0-9]*-[0-9]*.db 2>/dev/null | head -1)
+  [ -n "$f" ] && stat -f %m "$f" 2>/dev/null || echo 0
+}
+now_e=$(date +%s)
+off_e=$(newest_mtime "$OFF_DIR"); int_e=$(newest_mtime "$INT_DIR")
+best_e=$(( off_e > int_e ? off_e : int_e ))
+if [ "$best_e" -eq 0 ]; then
+  log "PROBLEM: no backup snapshot found in $OFF_DIR or $INT_DIR"
   problems=$((problems + 1))
 else
-  ts=${last_line#\[}; ts=${ts%%\]*}
-  last_e=$(date -j -f "%Y-%m-%dT%H:%M:%S%z" "$ts" +%s 2>/dev/null || echo 0)
-  age_h=$(( ( $(date +%s) - last_e ) / 3600 ))
-  if [ "$last_e" -eq 0 ]; then
-    log "warn: could not parse last backup timestamp ($ts)"
-  elif [ "$age_h" -ge 36 ]; then
-    log "PROBLEM: last COMPLETED backup was ${age_h}h ago ($ts) — nightly backup is not finishing (>= 36h)"
-    now_e=$(date +%s); bl=$(cat "$STATE_DIR/.watchdog-backup-notified" 2>/dev/null || echo 0)
-    [[ "$bl" != <-> ]] && bl=0
-    if [ $(( now_e - bl )) -ge 86400 ]; then   # at most one alert per day
-      notify "No completed AirDash backup for ${age_h}h — check logs/backup.log and the USB backup drive"
+  age_h=$(( (now_e - best_e) / 3600 )); off_age_h=$(( off_e > 0 ? (now_e - off_e) / 3600 : 9999 ))
+  if [ "$age_h" -ge 36 ]; then
+    log "PROBLEM: newest backup snapshot is ${age_h}h old — nightly backup is not completing (>= 36h)"
+    bl=$(cat "$STATE_DIR/.watchdog-backup-notified" 2>/dev/null || echo 0); [[ "$bl" != <-> ]] && bl=0
+    if [ $(( now_e - bl )) -ge 86400 ]; then
+      notify "No AirDash backup for ${age_h}h — check logs/backup.log and the USB backup drive"
       print -r -- "$now_e" > "$STATE_DIR/.watchdog-backup-notified"
     fi
     problems=$((problems + 1))
+  elif [ "$off_age_h" -ge 36 ]; then
+    log "warn: backups are DEGRADED — newest off-device snapshot is ${off_age_h}h old; only internal copies are recent (they would not survive an SSD failure). Is /Volumes/Data mounted?"
   else
-    log "ok: backup fresh (last completed ${age_h}h ago)"
+    log "ok: backup fresh (newest snapshot ${age_h}h old, off-device ${off_age_h}h)"
   fi
 fi
 
@@ -416,4 +436,8 @@ done
 if [ "$problems" -gt 0 ]; then
   notify "Unresolved issue — check logs/watchdog.log"
 fi
+# Heartbeat for the server's ops sentinel (server/opsSentinel.js). The
+# watchdog cannot report its own absence; the always-on server can, but only
+# if every run leaves proof that it happened.
+print -r -- "$(date +%s)" > "$STATE_DIR/.watchdog-heartbeat"
 log "check complete — $problems unresolved problem(s)"

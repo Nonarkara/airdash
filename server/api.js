@@ -33,6 +33,7 @@ import { hydrateOnce as hydrateCctvHealth } from './sources/cctvHealthStore.js'
 import { pairAir, hazeEyes } from './airCctv.js'
 import { sensorHealth } from './sensors.js'
 import { harmPayload, HARM_METHOD } from './harm.js'
+import { watchdogStatus, dbOnExternalVolume } from './opsSentinel.js'
 
 /** Fold Effective Harm onto each risk province row (Danger-style join). */
 function foldHarm(provinces, harmEngine) {
@@ -315,7 +316,8 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         version: APP_VERSION,
         now: new Date().toISOString(),
         uptime_s: Math.round((Date.now() - startedAt) / 1000),
-        db: { ...dbStats, size_mb: Math.round(dbSize / 1048576 * 10) / 10 },
+        db: { ...dbStats, size_mb: Math.round(dbSize / 1048576 * 10) / 10, on_external_volume: dbOnExternalVolume(CONFIG.dbPath) },
+        watchdog: watchdogStatus(),
         sources,
         data_freshness,
         sse: bus.stats(),

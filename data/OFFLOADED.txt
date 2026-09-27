@@ -1,1 +1,4 @@
-OFFLOADED 2026-09-26 16:51 +07 to /Volumes/Data/Offload-2026-09-26-air/AirDash-data/
+2026-09-26 16:51  live DB offloaded to /Volumes/Data/Offload-2026-09-26-air/AirDash-data/
+2026-09-28 00:1x  MOVED BACK to this directory. The synchronous server froze on the USB
+                  spinning disk (see CHANGELOG 3.3.3). The copy on the USB disk is now
+                  STALE — do not point anything at it. Keep the live DB on internal storage.

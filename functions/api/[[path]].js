@@ -44,7 +44,14 @@ const MIRROR_PATHS = new Set([
   // The Twin API (docs/TWIN-API.md) — polled by FloodDash and other dashboards.
   '/api/twin', '/api/weather',
 ])
-const MIRROR_TTL_S = 86_400
+// 7 days, not 1. On 2026-09-26/27 the backend was slow (DB on a USB disk) and
+// then down: snapshots were too slow to be re-mirrored within the 8 s edge
+// timeout all day, the 24 h TTL expired the last good copy, and visitors got
+// raw Cloudflare 530 pages. For a public-health dashboard a clearly-stale
+// picture beats an error page — and it IS clearly stale: the frontend's
+// freshness pill is computed from the observation timestamps inside the data
+// (public/js/dataFreshness.js), so old data shows red, never "live".
+const MIRROR_TTL_S = 7 * 86_400
 
 function isStreaming(pathname, method) {
   return pathname === '/api/tap' || (method === 'POST' && pathname === '/api/chat')
@@ -56,7 +63,11 @@ function mirrorKey(url) {
 
 async function storeMirror(cache, key, upstream) {
   const h = new Headers()
-  for (const k of ['content-type', 'content-encoding', 'vary']) {
+  // content-type ONLY. Never copy content-encoding: Workers fetch() already
+  // decompressed the body, so `upstream.arrayBuffer()` below is plain bytes —
+  // storing them labelled `content-encoding: gzip` makes the mirror claim an
+  // encoding it doesn't have. (And `vary` only matters for encoding negotiation.)
+  for (const k of ['content-type']) {
     const v = upstream.headers.get(k)
     if (v) h.set(k, v)
   }
@@ -81,9 +92,29 @@ async function serveStale(cache, url, upstreamStatus) {
   return new Response(cached.body, { status: 200, headers: h })
 }
 
+// Read-only edge diagnostic: is the stale mirror actually populated in THIS
+// datacenter, and how old is it? Added after 2026-09-27, when the backend was
+// down for hours and visitors got raw Cloudflare 530 pages — the mirror that
+// exists for exactly that case was empty, and there was no way to see it.
+// Public data only (the mirror holds public API responses); no writes.
+async function mirrorReport(cache, url, request) {
+  const out = { colo: request.cf?.colo ?? null, now: Date.now(), ttl_s: MIRROR_TTL_S, entries: {} }
+  for (const p of MIRROR_PATHS) {
+    const hit = cache ? await cache.match(mirrorKey(new URL(p, url.origin))) : null
+    if (!hit) { out.entries[p] = null; continue }
+    const at = Number(hit.headers.get('x-airdash-mirror-at') ?? 0)
+    const bytes = (await hit.arrayBuffer()).byteLength
+    out.entries[p] = { age_s: at ? Math.round((Date.now() - at) / 1000) : null, bytes, encoding: hit.headers.get('content-encoding') }
+  }
+  return new Response(JSON.stringify(out, null, 1), { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } })
+}
+
 export async function onRequest(context) {
   const { request } = context
   const url = new URL(request.url)
+  if (request.method === 'GET' && url.pathname === '/api/__edge/mirror') {
+    return mirrorReport(context.cache ?? globalThis.caches?.default ?? null, url, request)
+  }
   const streaming = isStreaming(url.pathname, request.method)
   const snapshot = request.method === 'GET' && url.pathname === '/api/snapshot'
   const cache = context.cache ?? globalThis.caches?.default ?? null

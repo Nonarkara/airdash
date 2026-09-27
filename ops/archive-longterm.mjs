@@ -539,6 +539,14 @@ async function main() {
     if (code !== null) return code
   }
 
+  // Listen for stop signals BEFORE the slow startup (write probe, lock, opening
+  // a multi-GB archive, pragmas, schema). Installing the handler only after all
+  // that meant a SIGTERM during startup — the slowest part when the USB disk is
+  // busy — killed the process with no "interrupted" log and a stale lock. A
+  // signal that arrives early now simply stops the run at its first batch
+  // boundary. Run mode only: stats/verify keep the default "stop now" behaviour.
+  if (mode === 'run') for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { stopSignal = sig })
+
   // Volume gone (USB unplugged / not yet mounted) → log, exit 0. Never
   // crash-loop: a failing archive must not become an operational incident.
   if (!existsSync(VOLUME)) {
@@ -573,7 +581,6 @@ async function main() {
     ensureSchema(archive)
     if (mode === 'stats') { reportStats(archive); return 0 }
     if (mode === 'verify') return verify(archive)
-    for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { stopSignal = sig })
     return await runArchive(archive)
   } finally {
     try { archive.close() } catch { /* volume gone */ }

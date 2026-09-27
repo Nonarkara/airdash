@@ -51,10 +51,12 @@
        never 06–09. -->
   <key>EnvironmentVariables</key>
   <dict>
-    <!-- AirDash's live DB moved to the external disk on 2026-09-26; the
-         default path in archive-longterm.mjs no longer exists. -->
+    <!-- AirDash's live DB was moved to the USB disk on 2026-09-26 and moved
+         BACK to the SSD on 2026-09-27: node:sqlite is synchronous, so every
+         cache miss against a seek-bound spinning disk froze the whole server
+         (see CHANGELOG 3.3.3). The live DB must stay on internal storage. -->
     <key>DASH_ARCHIVE_AIRDASH_DB</key>
-    <string>/Volumes/Data/Offload-2026-09-26-air/AirDash-data/airdash.db</string>
+    <string>/Users/axiom/AirDash/data/airdash.db</string>
   </dict>
 
   <!-- Deliberately NOT KeepAlive. This is a batch job: it should run,

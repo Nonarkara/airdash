@@ -109,7 +109,15 @@ const archive = () => new DatabaseSync(join(archiveDir, 'dash-archive.db'), { re
   const child = spawn(process.execPath, [SCRIPT], { env: bigEnv })
   let out = ''
   child.stdout.on('data', (d) => { out += d })
-  setTimeout(() => child.kill('SIGTERM'), 400)
+  // SIGTERM once the run has PROVABLY started — the lock file is written after
+  // the stop-signal handler is installed. A fixed 400 ms timer raced node's own
+  // boot under disk load (no JS handler can exist while node is still loading
+  // modules) and failed ~1 run in 4 whenever a backup was running.
+  const lockPath = join(archiveDir, '.archive.lock')
+  const started = Date.now()
+  const poll = setInterval(() => {
+    if (existsSync(lockPath) || Date.now() - started > 15_000) { clearInterval(poll); child.kill('SIGTERM') }
+  }, 5)
   const code = await new Promise((r) => child.on('close', r))
   const interrupted = /archive run interrupted \(SIGTERM\) after [\d,]+ rows — watermarks saved/.test(out)
   check('SIGTERM → exit 0 with "interrupted" line (or finished first)', code === 0 && (interrupted || /archive run complete/.test(out)))
