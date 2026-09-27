@@ -38,6 +38,12 @@ export function listExportDays(db, limit = 365) {
 /** Build a daily bundle: per-station min/max/avg from hourly + raw fallback. */
 export function buildDailyExport(db, day) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error('date must be YYYY-MM-DD')
+  // A range, not `LIKE ? || '%'`. SQLite's default LIKE is case-insensitive,
+  // which disables its index optimisation, so the old form scanned every one
+  // of ~15M readings whenever someone expanded a day in the history panel
+  // (audit 2026-09-28). 'T99' sorts after any 'THH:MM', so this is exactly the
+  // same prefix match — now served by idx_readings_time.
+  const dayEnd = `${day}T99`
 
   const hourly = db.all(
     `SELECT h.source, h.station_key, h.metric,
@@ -47,9 +53,9 @@ export function buildDailyExport(db, day) {
             s.province_code, s.lat, s.lng
      FROM readings_hourly h
      LEFT JOIN stations s ON s.source = h.source AND s.station_key = h.station_key
-     WHERE h.hour LIKE ? || '%'
+     WHERE h.hour >= ? AND h.hour < ?
      GROUP BY h.source, h.station_key, h.metric
-     ORDER BY h.source, s.province_th, h.station_key, h.metric`, `${day}`,
+     ORDER BY h.source, s.province_th, h.station_key, h.metric`, day, dayEnd,
   )
 
   // Same-day raw readings not yet rolled up (within retention window).
@@ -61,9 +67,9 @@ export function buildDailyExport(db, day) {
             s.province_code, s.lat, s.lng
      FROM readings r
      LEFT JOIN stations s ON s.source = r.source AND s.station_key = r.station_key
-     WHERE r.obs_time LIKE ? || '%'
+     WHERE r.obs_time >= ? AND r.obs_time < ?
      GROUP BY r.source, r.station_key, r.metric
-     ORDER BY r.source, s.province_th, r.station_key, r.metric`, `${day}`,
+     ORDER BY r.source, s.province_th, r.station_key, r.metric`, day, dayEnd,
   )
 
   // Merge: hourly wins when both exist for the same key.
@@ -76,12 +82,12 @@ export function buildDailyExport(db, day) {
   }
 
   const alerts = db.all(
-    'SELECT ts, rule, severity, province_th, province_en, message_th, message_en FROM alerts WHERE ts LIKE ? || \'%\' ORDER BY ts',
-    `${day}`,
+    'SELECT ts, rule, severity, province_th, province_en, message_th, message_en FROM alerts WHERE ts >= ? AND ts < ? ORDER BY ts',
+    day, dayEnd,
   )
   const ingest = db.all(
-    'SELECT source, started_at, dur_ms, ok, rows_seen, rows_new, error FROM ingest_runs WHERE started_at LIKE ? || \'%\' ORDER BY started_at',
-    `${day}`,
+    'SELECT source, started_at, dur_ms, ok, rows_seen, rows_new, error FROM ingest_runs WHERE started_at >= ? AND started_at < ? ORDER BY started_at',
+    day, dayEnd,
   )
 
   return {

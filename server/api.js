@@ -19,11 +19,15 @@ import { readTmdWeather } from './sources/tmd-relay.js'
 import { AERONET_STATIONS } from './sources/aeronet.js'
 import { provinceVerdict } from './verdict.js'
 import { readFileSync } from 'node:fs'
+import { gzipSync, gunzipSync } from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const GEO_DIR = join(__dirname, '..', 'public', 'geo')
+// Export caches (see GET /api/export/daily and /api/export/full).
+const dailyExportCache = new Map()   // day -> { bundle, at }, insertion-ordered, capped at 60
+const fullExportCache = { csv: null, json: null, lastBuildAt: 0 }
 const provinceBoundariesGeoJson = JSON.parse(
   readFileSync(join(GEO_DIR, 'province-boundaries.geojson'), 'utf8'))
 import { buildInsights } from './insights.js'
@@ -1303,7 +1307,25 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       const format = url.searchParams.get('format') === 'csv' ? 'csv' : 'json'
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return json(res, 400, { error: 'date required (YYYY-MM-DD)' })
       try {
-        const bundle = buildDailyExport(db, day)
+        // A recent day aggregates ~200k raw rows synchronously (~1 s of frozen
+        // event loop), and the history panel triggers it on every expand. A
+        // past day never changes, so build it once; today refreshes every
+        // 5 min. Only a cache MISS spends the per-IP build budget.
+        const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10)
+        const hit = dailyExportCache.get(day)
+        const fresh = hit && (day < today || Date.now() - hit.at < 5 * 60_000)
+        let bundle
+        if (fresh) {
+          bundle = hit.bundle
+        } else {
+          if (!allow(req, { key: 'export_daily_build', limit: 12, windowMs: 60_000 })) {
+            return json(res, 429, { error: 'too many day builds — try again in a minute' })
+          }
+          bundle = buildDailyExport(db, day)
+          dailyExportCache.delete(day)
+          dailyExportCache.set(day, { bundle, at: Date.now() })
+          while (dailyExportCache.size > 60) dailyExportCache.delete(dailyExportCache.keys().next().value)
+        }
         if (format === 'csv') {
           res.writeHead(200, {
             'content-type': 'text/csv; charset=utf-8',
@@ -1320,16 +1342,39 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     },
 
     'GET /api/export/full': (req, res, url) => {
+      // Whole readings_hourly table: measured 2.2 s of synchronous work and
+      // 23.7 MB per request, uncached — ~27 requests a minute from ONE client
+      // kept the event loop pinned (audit 2026-09-28, finding H4). Build at most
+      // once per 10 min for EVERYONE (a global guard, because per-IP limits can
+      // be bypassed via X-Forwarded-For on the tunnel host), keep it gzipped,
+      // and serve that. Stale-but-present beats rebuilding under load.
       const format = url.searchParams.get('format') === 'json' ? 'json' : 'csv'
       try {
-        const bundle = buildFullExport(db)
-        if (format === 'json') return json(res, 200, bundle)
-        res.writeHead(200, {
-          'content-type': 'text/csv; charset=utf-8',
-          'content-disposition': 'attachment; filename="airdash-full-dataset.csv"',
-          'cache-control': 'public, max-age=600',
-        })
-        res.end('\uFEFF' + fullToCsv(bundle))
+        const now = Date.now()
+        const entry = fullExportCache[format]
+        if (!entry || now - entry.at > 10 * 60_000) {
+          if (entry && now - fullExportCache.lastBuildAt < 60_000) {
+            // Someone just rebuilt the other format; serve what we have.
+          } else if (!entry && now - fullExportCache.lastBuildAt < 10_000) {
+            return json(res, 429, { error: 'the full export is being rebuilt — try again in a few seconds' })
+          } else {
+            fullExportCache.lastBuildAt = now
+            const bundle = buildFullExport(db)
+            const body = format === 'json' ? JSON.stringify(bundle) : '\uFEFF' + fullToCsv(bundle)
+            fullExportCache[format] = { at: now, gz: gzipSync(Buffer.from(body)) }
+          }
+        }
+        const { gz, at } = fullExportCache[format]
+        const headers = format === 'json'
+          ? { ...SECURITY_HEADERS, 'content-type': 'application/json; charset=utf-8' }
+          : { ...SECURITY_HEADERS, 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="airdash-full-dataset.csv"' }
+        headers['cache-control'] = 'public, max-age=600'
+        headers['x-airdash-built-at'] = new Date(at).toISOString()
+        if (/\bgzip\b/.test(req.headers['accept-encoding'] ?? '')) {
+          res.writeHead(200, { ...headers, 'content-encoding': 'gzip', vary: 'Accept-Encoding' }).end(gz)
+        } else {
+          res.writeHead(200, headers).end(gunzipSync(gz))
+        }
       } catch (err) {
         json(res, 500, { error: String(err?.message ?? err) })
       }
@@ -1343,7 +1388,13 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       const hours = clamp(url.searchParams.get('hours'), 1, 24 * 365, 72)
       const cutoffLocal = new Date(Date.now() + 7 * 3600_000 - hours * 3600_000).toISOString().slice(0, 16)
       const raw = db.all(
-        `SELECT obs_time, value FROM readings
+        // INDEXED BY: left to itself the planner picks the COVERING
+        // idx_readings_metric_cover (metric, obs_time, …), i.e. it walks every
+        // reading of this metric in the window across ALL ~4,400 stations and
+        // then filters to one. Measured 2.84 s cold for a rain gauge at the
+        // default 72 h vs 0.024 s seeking straight to the station (audit
+        // 2026-09-28). This runs on every station click (detail.js).
+        `SELECT obs_time, value FROM readings INDEXED BY idx_readings_lookup
          WHERE source = ? AND station_key = ? AND metric = ? AND obs_time >= ?
          ORDER BY obs_time`, source, station, metric, cutoffLocal)
       const hourly = db.all(

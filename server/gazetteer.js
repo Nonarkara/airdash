@@ -507,7 +507,10 @@ export function placeDetail(db, { lat, lng, province_th = null, radius_km = 30 }
     .toISOString().slice(0, 16)
   for (const s of nearest_air) {
     const past = db.get(
-      `SELECT value FROM readings
+      // INDEXED BY: the comment above assumed idx_readings_lookup, but the
+      // planner chose idx_readings_metric_cover and walked back through all
+      // pm25 history for a dead station (audit 2026-09-28). Pin it.
+      `SELECT value FROM readings INDEXED BY idx_readings_lookup
         WHERE source = ? AND station_key = ? AND metric = 'pm25' AND obs_time <= ?
         ORDER BY obs_time DESC LIMIT 1`,
       s.source, s.station_key, trendCutoff)

@@ -434,14 +434,17 @@ export function openDb(path = CONFIG.dbPath) {
   db.exec('PRAGMA journal_mode=WAL')
   db.exec('PRAGMA synchronous=NORMAL')
   db.exec('PRAGMA busy_timeout=5000')
-  // The live DB lives on the external USB disk (a spinning drive) since
-  // 2026-09-26. SQLite's default page cache is ~2 MB, so every request went
-  // back to the disk head, and when a batch job shared the disk the server
-  // sat in uninterruptible I/O for an hour (27 Sep, 20:00). 192 MB of cache
-  // keeps the hot pages in RAM. No mmap: a page fault on a busy USB disk is
-  // exactly the uninterruptible wait we saw.
-  db.exec(`PRAGMA cache_size = -${Number(process.env.AIRDASH_DB_CACHE_MB || 192) * 1024}`)
-  db.exec('PRAGMA mmap_size = 0')
+  // Page cache: 48 MB. History: 2026-09-26 the DB was moved to a USB spinning
+  // disk and 3.3.2 raised this to 192 MB to keep hot pages off that disk. It
+  // didn't save the server (a miss still waited on the disk head) and the DB
+  // was moved back to the SSD on 09-28 (opsSentinel.js now alerts if it ever
+  // leaves internal storage again). On the SSD the OS file cache serves misses
+  // in microseconds, and on this 8 GB host — shared with ~100 other services
+  // and several desktop apps, 4.7 GB into swap — a big private cache just gets
+  // compressed/swapped out (measured: 281 MB of the process compressed), which
+  // is slower than not caching. Keep our footprint small; let the OS cache.
+  db.exec(`PRAGMA cache_size = -${Number(process.env.AIRDASH_DB_CACHE_MB || 48) * 1024}`)
+  db.exec('PRAGMA mmap_size = 0')   // no mmap: a fault stalls the one thread with no timeout
   db.exec('PRAGMA temp_store = MEMORY')
   db.exec(SCHEMA)
   migrate(db)

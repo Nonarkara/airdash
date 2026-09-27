@@ -228,7 +228,7 @@ export function createAlerts(db, bus, { line = null, telegramBroadcaster = null 
   function isSustainedClear({ source, station }) {
     const t = CONFIG.thresholds
     const rows = db.all(
-      `SELECT value FROM readings
+      `SELECT value FROM readings INDEXED BY idx_readings_lookup
        WHERE source = ? AND station_key = ? AND metric = 'pm25' AND obs_time >= ?
        ORDER BY obs_time DESC LIMIT 6`,
       source, station.station_key, localCutoff(ALL_CLEAR_WINDOW_H),
