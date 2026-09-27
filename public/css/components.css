@@ -3742,3 +3742,31 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 
 .cctv-eye-play { position: absolute; inset: 0; display: grid; place-items: center; width: 100%; border: 0; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
 .cctv-eye-play:hover { background: rgba(0, 0, 0, 0.4); color: #fff; }
+
+/* AERONET ground-truth station pin — the only DIRECT aerosol
+   measurement on the dashboard. Two-piece pin: a coloured circle
+   marker (AOD-coloured) plus a label badge with the most recent
+   440 nm reading. Sized so it does not crowd out the air4thai PM2.5
+   pins at city zoom. */
+.aeronet-pin { background: none; border: 0; pointer-events: auto; }
+.aeronet-marker {
+  position: absolute; left: 0; top: 0;
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.aeronet-label {
+  position: absolute; left: 16px; top: -3px;
+  min-width: 22px; padding: 1px 4px;
+  font-size: 11px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: rgba(15, 17, 25, 0.86); color: #fff;
+  border-radius: 3px;
+  border-left: 3px solid;
+  white-space: nowrap;
+}
+.aeronet-popup { font-family: inherit; }
+.aeronet-popup-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.aeronet-popup-name .muted { font-weight: 400; color: var(--ink-mid); font-size: 11px; }
+.aeronet-popup-line { font-size: 12px; line-height: 1.55; }
+.aeronet-popup-line.muted { color: var(--ink-mid); font-size: 11px; margin-top: 4px; }

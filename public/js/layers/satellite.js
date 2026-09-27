@@ -386,6 +386,7 @@ export const LAYER_GROUPS = [
     en: 'GROUND OBSERVATIONS',
     layers: [
       { id: 'air', th: 'สถานีคุณภาพอากาศ (Air4Thai)', en: 'AQ stations (Air4Thai)', on: true },
+      { id: 'aeronet', th: 'สถานี AERONET (ภาคพื้นดิน — สอบเทียบ AOD ดาวเทียม)', en: 'AERONET stations (ground truth — satellite AOD calibration)', on: false, kind: 'aeronet' },
       { id: 'heatmap', th: 'ฮีทแมป PM2.5', en: 'PM2.5 heat map', on: false },
       { id: 'rain', th: 'ฝนสะสม 24 ชม. (ล้างฝุ่น)', en: 'rain 24h (washout)', on: false },
       { id: 'newsfire', th: 'ข่าวไฟป่า/มลพิษ', en: 'fire & pollution news', on: true },

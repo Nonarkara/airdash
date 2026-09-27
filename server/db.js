@@ -261,6 +261,36 @@ CREATE TABLE IF NOT EXISTS crop_water (
 );
 CREATE INDEX IF NOT EXISTS crop_water_week ON crop_water(week DESC);
 
+-- AERONET (NASA Aerosol Robotic Network) ground sunphotometer — the
+-- gold-standard reference for satellite AOD calibration. Eight
+-- Thailand stations exist; verified 2026-09-27 that Silpakorn_Univ
+-- (Bangkok, PI Serm Janjai @ Silpakorn University) and Ubon_Ratchathani
+-- publish daily L1.5 (near-real-time) multi-wavelength AOD on
+-- aeronet.gsfc.nasa.gov/cgi-bin/print_web_data_v3 with NO API KEY. The
+-- rest of the Thai stations either stopped reporting or never reported
+-- in 2024+ — we only ingest the ones that actually answer the endpoint
+-- so the dashboard never carries a "this station is offline" lie.
+--
+-- The whole point of AERONET on a PM2.5 dashboard is CALIBRATION: when
+-- MODIS/VIIRS/Aqua say AOD is 0.4, the ground truth at Silpakorn or
+-- Ubon says it is 0.38 ± 0.03, and that difference is what separates
+-- a believable satellite reading from a wishful one. We store the
+-- multi-wavelength AOD so the validation can use the 440/675/870 nm
+-- trio (the AERONET triplet) rather than collapsing to one band.
+CREATE TABLE IF NOT EXISTS aeronet_readings (
+  station        TEXT NOT NULL,
+  ts             TEXT NOT NULL,    -- UTC ISO from upstream
+  aod_440        REAL,
+  aod_500        REAL,
+  aod_675        REAL,
+  aod_870        REAL,
+  aod_1020       REAL,
+  precipitable_water_cm REAL,
+  fetched_at     TEXT NOT NULL,
+  PRIMARY KEY (station, ts)
+);
+CREATE INDEX IF NOT EXISTS aeronet_readings_ts ON aeronet_readings(ts DESC);
+
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT);
 
 -- ── Score history — one row per province per hour, written by risk.js.

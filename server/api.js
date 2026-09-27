@@ -16,6 +16,7 @@ import { buildTwin, readAppVersion } from './twin.js'
 import { weatherAtDb, haversineKm } from './weather.js'
 import { buildSkill } from './skill.js'
 import { readTmdWeather } from './sources/tmd-relay.js'
+import { AERONET_STATIONS } from './sources/aeronet.js'
 import { provinceVerdict } from './verdict.js'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -1171,6 +1172,36 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         note_en: 'JAXA GSMaP precipitation and Himawari-9 — map tiles via NASA GIBS WMTS (Web Mercator) aligned to the basemap',
       },
     }),
+
+    // AERONET ground truth — the only DIRECT aerosol measurement on the
+    // dashboard, vs every other "AOD" tile which is a satellite inference.
+    // Returns the most recent reading per active station (default = last
+    // 24 h window; widen with ?days=N). Frontend uses this to draw the
+    // ground-truth pins on the map and to flag where the satellite
+    // AOD layers disagree with the ground measurement.
+    'GET /api/aeronet': (req, res, url) => {
+      const days = clamp(url.searchParams.get('days'), 1, 30, 1)
+      const since = new Date(Date.now() - days * 86400_000).toISOString()
+      const rows = db.all(
+        `SELECT station, ts, aod_440, aod_500, aod_675, aod_870, aod_1020, precipitable_water_cm
+           FROM aeronet_readings
+          WHERE ts >= ?
+          ORDER BY station, ts DESC`,
+        since,
+      )
+      // Per-station latest (rows arrive ordered newest-first per station)
+      const latest = {}
+      for (const r of rows) {
+        if (!latest[r.station]) latest[r.station] = r
+      }
+      json(res, 200, {
+        updated: new Date().toISOString(),
+        window_days: days,
+        stations: AERONET_STATIONS,
+        latest,
+        count: rows.length,
+      })
+    },
 
     // Historical daily exports compiled from our SQLite collection.
     'GET /api/export/days': (req, res, url) => {

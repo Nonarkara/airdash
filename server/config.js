@@ -53,6 +53,9 @@ export const CONFIG = {
     burnArea: 24 * HOUR,     // agricultural burn scars, crop-split
     // Bulk 7MB global file; the same daily cadence rationale as burnArea.
     firmsRegional: 24 * HOUR,  // cross-border hotspot share (FIRMS)
+    // AERONET publishes L1.5 with a ~1-day lag; once-a-day is the natural
+    // cadence (and avoids hammering their CGI).
+    aeronet: 24 * HOUR,
     news: 30 * MINUTE,
     imerg: 30 * MINUTE,      // IMERG Early publishes half-hourly (~4h latency)
     gistda_pm25: 1 * HOUR,   // GISTDA satellite+ground PM2.5 fusion
