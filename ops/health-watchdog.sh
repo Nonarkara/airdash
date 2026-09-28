@@ -390,11 +390,24 @@ fi
 # failure — "a backup ran" is not the same as "we are protected".
 OFF_DIR="${AIRDASH_OFFDEVICE_DIR:-/Volumes/Data/DBBackups/airdash}"
 INT_DIR="/Users/axiom/AirDash/data/backups"
-newest_mtime() {  # dir — epoch mtime of the newest airdash-YYYYMMDD-HHMM.db, 0 if none
-  local f; f=$(ls -1t "$1"/airdash-[0-9]*-[0-9]*.db 2>/dev/null | head -1)
-  [ -n "$f" ] && stat -f %m "$f" 2>/dev/null || echo 0
+# Snapshots are airdash-YYYYMMDD-HHMM.db (USB) and airdash-latest.db.gz
+# (internal). null_glob: an empty dir must yield 0, not a zsh "no matches" abort.
+newest_mtime() {  # dir — epoch mtime of the newest snapshot, 0 if none
+  setopt local_options null_glob
+  local -a snaps; snaps=( "$1"/airdash-[0-9]*-[0-9]*.db(N.om) "$1"/airdash-latest.db.gz(N.om) )
+  (( ${#snaps} )) || { echo 0; return }
+  local newest=0 m f
+  for f in $snaps; do m=$(stat -f %m "$f" 2>/dev/null || echo 0); (( m > newest )) && newest=$m; done
+  echo $newest
 }
 now_e=$(date +%s)
+# A launchd job started as /bin/zsh has no macOS permission to read
+# /Volumes/Data, so every snapshot there looked missing and this raised a false
+# "no backup" PROBLEM hourly (2026-09-28). The plist now starts us through
+# tcc-run.mjs like the backup job; if the grant is ever lost, say so plainly.
+if [ -d "$OFF_DIR" ] && ! ls "$OFF_DIR" >/dev/null 2>&1; then
+  log "WARN: cannot read $OFF_DIR (macOS permission) — off-device backups unverified; run this job via tcc-run.mjs"
+fi
 off_e=$(newest_mtime "$OFF_DIR"); int_e=$(newest_mtime "$INT_DIR")
 best_e=$(( off_e > int_e ? off_e : int_e ))
 if [ "$best_e" -eq 0 ]; then

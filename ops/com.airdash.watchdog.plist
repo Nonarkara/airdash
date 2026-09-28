@@ -7,6 +7,10 @@
 
   <key>ProgramArguments</key>
   <array>
+    <!-- node holds the macOS grant for /Volumes/Data; bare /bin/zsh does not,
+         so the backup check could never see the USB snapshots (2026-09-28). -->
+    <string>/opt/homebrew/bin/node</string>
+    <string>/Users/axiom/Projects/_shared/scripts/tcc-run.mjs</string>
     <string>/bin/zsh</string>
     <string>/Users/axiom/AirDash/ops/health-watchdog.sh</string>
   </array>
