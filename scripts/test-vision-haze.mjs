@@ -15,7 +15,7 @@
 //
 // Pure: no network, no ffmpeg, no clock.
 
-import { readFrame, sobelField, darkChannel, chromaStats, edgeDecay, calibrateAgainstPm25, solidFrame, FRAME_W, FRAME_H, FRAME_BYTES } from '../server/vision/hazeRead.js'
+import { readFrame, calibrateAgainstPm25, varianceSplit, solidFrame, FRAME_W, FRAME_H, FRAME_BYTES } from '../server/vision/hazeRead.js'
 
 let pass = 0, fail = 0
 const check = (name, cond, detail = '') => {
@@ -248,6 +248,46 @@ function applyAirlightTinted(scene, beta, A) {
     typeof flat.pm25_range === 'number' && flat.pm25_range < 15, JSON.stringify(flat.pm25_range))
   check('the refusal explains WHY (a fit across a flat target is noise)',
     /noise/.test(flat.reason ?? ''), String(flat.reason))
+
+  // ── the camera-identity trap ──────────────────────────────────────────
+  // A pooled fit over many cameras can look great while having learned only
+  // "which camera is this". This is the failure mode that makes most
+  // image-predicts-PM2.5 work quietly wrong, and it is invisible without
+  // the between/within split.
+  const cameraIdentity = []
+  for (let c = 0; c < 8; c++) {
+    // Every camera sits at its own constant "haze" level …
+    for (let k = 0; k < 5; k++) {
+      cameraIdentity.push({ camera: `cam${c}`, hazeIndex: 20 + c * 8, pm25: 15 + c * 6 })
+    }
+  }
+  const trap = varianceSplit(cameraIdentity)
+  check('camera-identity data is detected', trap.ok === true, JSON.stringify(trap))
+  check('between-camera variation is reported as dominant',
+    trap.between > 0.9, `between=${trap.between}`)
+  check('a pooled fit is REJECTED when between-camera dominates',
+    trap.pooled_fit_valid === false)
+  check('the verdict explains it is learning camera identity, not haze',
+    /camera identity/i.test(trap.verdict), String(trap.verdict))
+
+  // Real signal WITHIN cameras: same cameras, but each one's haze moves
+  // together with its own PM2.5. Between-camera spread is also present here,
+  // which is realistic, so the test is that within is detectable at all.
+  const withinSignal = []
+  for (let c = 0; c < 6; c++) {
+    for (let k = 0; k < 6; k++) {
+      const h = 20 + c * 5 + k * 6
+      withinSignal.push({ camera: `cam${c}`, hazeIndex: h, pm25: 10 + c * 4 + k * 5 })
+    }
+  }
+  const real = varianceSplit(withinSignal)
+  check('within-camera signal is detected and a pooled fit is allowed',
+    real.ok === true && real.within > 0 && real.pooled_fit_valid === true,
+    JSON.stringify({ within: real.within, between: real.between }))
+  check('varianceSplit refuses too few samples',
+    varianceSplit([{ camera: 'a', hazeIndex: 1, pm25: 1 }]).ok === false)
+  check('varianceSplit refuses one camera with no within-camera info',
+    varianceSplit(Array.from({ length: 10 }, () => ({ camera: 'a', hazeIndex: 1, pm25: 1 }))).ok === false)
 }
 
 console.log(`\n${pass} passed, ${fail} failed`)

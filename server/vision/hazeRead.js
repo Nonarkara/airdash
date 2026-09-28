@@ -440,6 +440,91 @@ export function readFrame(buf) {
 }
 
 /**
+ * Split the variance of a frame feature into BETWEEN-camera and WITHIN-camera
+ * components, and decide whether a fit is measuring the air or measuring which
+ * camera you are looking at.
+ *
+ * WHY THIS EXISTS. Added 2026-09-28 after a research pass turned up the thing
+ * that makes most "image predicts PM2.5" papers quietly wrong. A single global
+ * regression over pooled frames from many cameras will happily reach a high
+ * R² while having learned almost nothing about haze. What it learns instead is
+ * the fixed optical character of each individual camera — lens, mount height,
+ * pitch, what it happens to be pointed at, how much of the frame is sky. Two
+ * Bangkok motorway cameras differ in mean contrast by more than a hazy day
+ * differs from a clear one, so a pooled fit reads that constant difference as
+ * "haze", reports a good correlation, and is completely wrong.
+ *
+ * The diagnostic is a one-way ANOVA-style variance split: the between-camera
+ * mean spread versus the within-camera spread. If between dominates, the model
+ * has learned camera identity.
+ *
+ * The fix, when within-camera signal is present, is to fit each camera against
+ * its OWN baseline — centre both variables within camera, then regress. That
+ * removes every constant property of the camera by construction, and what
+ * survives is the variation that tracks the air.
+ *
+ * `samples` is [{ camera, hazeIndex, pm25 }, ...]. Pure; no clock, no I/O.
+ * Returns the split plus a verdict, so a caller can refuse a pooled fit and
+ * explain why in one sentence.
+ */
+export function varianceSplit(samples) {
+  const pts = (samples ?? []).filter((s) =>
+    typeof s?.camera === 'string' && s.camera !== '' &&
+    Number.isFinite(s?.hazeIndex) && Number.isFinite(s?.pm25))
+  if (pts.length < 8) {
+    return { ok: false, reason: `need 8+ labelled samples with a camera id, have ${pts.length}`, n: pts.length }
+  }
+  const cams = new Map()
+  for (const p of pts) {
+    if (!cams.has(p.camera)) cams.set(p.camera, [])
+    cams.get(p.camera).push(p)
+  }
+  // A camera with a single sample contributes no within-camera information.
+  const usable = [...cams.entries()].filter(([, v]) => v.length >= 3)
+  if (usable.length < 2) {
+    return { ok: false, reason: `need 2+ cameras with 3+ samples each; got ${usable.length}`, n_cameras: cams.size }
+  }
+
+  const grand = (key) => pts.reduce((a, p) => a + p[key], 0) / pts.length
+  const muH = grand('hazeIndex'), muP = grand('pm25')
+
+  // Between-camera sum of squares, weighted by each camera's sample count.
+  let ssBetween = 0, nUsed = 0
+  for (const [, v] of usable) {
+    const mh = v.reduce((a, p) => a + p.hazeIndex, 0) / v.length
+    const mp = v.reduce((a, p) => a + p.pm25, 0) / v.length
+    ssBetween += v.length * ((mh - muH) ** 2 + (mp - muP) ** 2)
+    nUsed += v.length
+  }
+  // Within-camera sum of squares.
+  let ssWithin = 0
+  for (const [, v] of usable) {
+    const mh = v.reduce((a, p) => a + p.hazeIndex, 0) / v.length
+    const mp = v.reduce((a, p) => a + p.pm25, 0) / v.length
+    for (const p of v) ssWithin += (p.hazeIndex - mh) ** 2 + (p.pm25 - mp) ** 2
+  }
+  const between = ssBetween / (ssBetween + ssWithin)
+  const within = 1 - between
+  return {
+    ok: true,
+    n: pts.length,
+    n_cameras: cams.size,
+    n_cameras_usable: usable.length,
+    samples_used: nUsed,
+    between,
+    within,
+    // Below this the frame is telling you which camera it is, not the air.
+    // 0.65 is deliberately not a round number: it is the point at which the
+    // between-camera term stops dominating the pooled covariance, and it is
+    // configurable so the operator can tighten it once real data exists.
+    pooled_fit_valid: within >= 0.35,
+    verdict: within >= 0.35
+      ? 'within-camera variation is present; a per-camera fit is legitimate'
+      : `between-camera variation dominates (${Math.round(between * 100)}%): a pooled fit would be learning camera identity, not haze — fit per camera or collect more haze episodes`,
+  }
+}
+
+/**
  * Per-camera calibration of hazeIndex against the ground PM2.5 station the
  * camera is paired with. Ordinary least squares, plus four guards that exist
  * because the first version of this function produced a confident, wrong,
