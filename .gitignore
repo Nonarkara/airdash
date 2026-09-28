@@ -26,3 +26,4 @@ logs/plist-backup-*/
 
 # Archive receipt (written by ops/archive-longterm.mjs; runtime state)
 data/.archive-receipt.json*
+.deploy-state.json

@@ -16,6 +16,6 @@
     "test:alerts": "node scripts/test-alerts-fixes.mjs",
     "test:bind": "node scripts/test-telegram-bind.mjs",
     "bump": "node scripts/bump-version.mjs",
-    "deploy": "node scripts/test-frontend-syntax.mjs && node scripts/check-consistency.mjs && npx wrangler pages deploy public --project-name airdash --commit-hash $(git rev-parse HEAD) --commit-message \"$(git log -1 --format=%s)\""
+    "deploy": "node scripts/test-frontend-syntax.mjs && node scripts/check-consistency.mjs && node scripts/check-bump.mjs && npx wrangler pages deploy public --project-name airdash --commit-hash $(git rev-parse HEAD) --commit-message \"$(git log -1 --format=%s)\" && node scripts/check-bump.mjs --record"
   }
 }
