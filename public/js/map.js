@@ -1,18 +1,18 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.38'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.38'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.38'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.38'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.38'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.38'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.38'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.38'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.38'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.38'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.38'
-import { openHazeEyes } from './layers/cctvWall.js?v=2.4.38'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.38'
+import { on, store } from './state.js?v=2.4.39'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.39'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.39'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.39'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.39'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.39'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.39'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.39'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.39'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.39'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.39'
+import { openHazeEyes } from './layers/cctvWall.js?v=2.4.39'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.39'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map

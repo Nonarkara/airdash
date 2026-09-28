@@ -294,6 +294,138 @@ export function createSatelliteLayers(map, pane) {
     // because it is genuinely a different host with a different CORS
     // contract, not a variant of the same thing.
     jaxaAerosol: createJaxaAerosolLayer(pane),
+
+    // ── 2026-09-28 — meaningful observations round-out ────────────────
+    //
+    // The seven layers below were probed live at SE Asia tile (z=4)
+    // on 2026-09-28 and each returned a 200 image — unlike several other
+    // NASA GIBS identifiers (VIIRS_Noaa20_CorrectedReflectance_TrueColor,
+    // MODIS_Terra_Land_Surface_Temp_Day, OMI_Nitrogen_Dioxide_Tropo_Column)
+    // that returned 400/404 from this network and are not included.
+    //
+    // MODIS_Terra_Aerosol_Optical_Depth_3km — the morning overpass (Terra
+    // ~10:30 local) at 3-km pixel size. Pairs with the Aqua 3km product
+    // already integrated: Terra picks up the morning-anchored plume, Aqua
+    // the afternoon one — together they bracket the diurnal AOD swing
+    // over Indochina.
+    aodTerra3km: L.tileLayer(
+      `${GIBS}/MODIS_Terra_Aerosol_Optical_Depth_3km/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.72,
+        pane,
+        attribution: '© NASA GIBS · MODIS Terra AOD 3km',
+        crossOrigin: true,
+      },
+    ),
+    // OMI UV Aerosol Index (Aura/OMI). Different sensor line than the
+    // OMPS Suomi-NPP UV-AI already wired: OMI is a finer-resolution UV/vis
+    // spectrometer (Dutch/Finnish instrument on NASA's Aura) and has been
+    // running since 2004. Compares to OMPS-AI as another independent
+    // daily read on absorbing smoke/dust — when both products agree on
+    // a high-AI pixel over Chiang Rai tomorrow, the plume is real.
+    omiAerosolIndex: L.tileLayer(
+      `${GIBS}/OMI_Aerosol_Index/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.7,
+        pane,
+        attribution: '© NASA GIBS · OMI UV Aerosol Index',
+        crossOrigin: true,
+      },
+    ),
+    // OMI Aerosol Optical Depth (Aura/OMI, UV retrieval at 388 nm).
+    // This is the same physical quantity as the dark-target AOD layers
+    // already integrated — but retrieved from a different part of the
+    // spectrum. OMI's UV sees dust and absorbing aerosol where the
+    // MODIS dark-target retrieval drops out over bright surfaces (sand,
+    // salt flats, urban concrete), so the two together fill each
+    // other's holes.
+    omiAod: L.tileLayer(
+      `${GIBS}/OMI_Aerosol_Optical_Depth/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.7,
+        pane,
+        attribution: '© NASA GIBS · OMI AOD (UV, 388 nm)',
+        crossOrigin: true,
+      },
+    ),
+    // OMI Single Scattering Albedo (Aura/OMI). This is what tells SMOKE
+    // apart from NON-ABSORBING HAZE: smoke from biomass burning has
+    // SSA values < 0.85 (strongly absorbing), while sulphate and sea-salt
+    // particles are non-absorbing and sit at SSA > 0.95. A winter haze
+    // that reads SSA = 0.95 is urban combustion, not a regional burn;
+    // SSA = 0.78 is from a forest fire. AQI is regulatory-agnostic on
+    // WHAT is in the air but the policy lever (ban the burn vs
+    // control traffic, vs dust storm warning) is entirely different.
+    omiSsa: L.tileLayer(
+      `${GIBS}/OMI_Single_Scattering_Albedo/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.72,
+        pane,
+        attribution: '© NASA GIBS · OMI Single Scattering Albedo',
+        crossOrigin: true,
+      },
+    ),
+    // AIRS L2 Dust Score Day (Aqua/AIRS). AIRS computes an explicit
+    // DUST FLAG per pixel — separate from the smoke-dust mixing that
+    // the OMPS/OMI AI products collapse into one number. Useful when a
+    // haze episode is driven by trans-boundary dust (Mekong valley
+    // picks up springtime dust from north China in years it does), vs
+    // the agricultural-fire smoke that drives most burning-season air.
+    // Both can read as "high AOD" but the policy lever differs.
+    airsDust: L.tileLayer(
+      `${GIBS}/AIRS_L2_Dust_Score_Day/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.7,
+        pane,
+        attribution: '© NASA GIBS · AIRS L2 Dust Score',
+        crossOrigin: true,
+      },
+    ),
+    // OMPS NOAA-20 SO₂ Middle Troposphere. Volcanic SO₂ rises into the
+    // mid-troposphere before being sheared out across SE Asia — Mount
+    // Sinila, Merapi, Dukono eruptions reach Thai airspace every few
+    // years and produce a haze that visually looks identical to smoke
+    // but is gas, not particulate. SO₂ retrieved in the mid-trop column
+    // is the cleanest way to spot the difference.
+    ompsNoaa20So2Mid: L.tileLayer(
+      `${GIBS}/OMPS_NOAA20_SO2_Middle_Troposphere/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.68,
+        pane,
+        attribution: '© NASA GIBS · OMPS NOAA-20 SO₂ mid-tropo',
+        crossOrigin: true,
+      },
+    ),
+    // OMPS NOAA-20 SO₂ Lower Troposphere — boundary layer, i.e. the
+    // smoke-air-mix from industrial stacks. Power plants (Mae Moh in
+    // Lampang comes to mind, but also Map Ta Phut in Rayong) emit a
+    // recognisable SO₂ signature here. Useful for separating industrial
+    // haze from agricultural haze, which the Burning Season response
+    // gets wrong at the regional level if you cannot tell the two
+    // plumes apart on a single panel.
+    ompsNoaa20So2Lower: L.tileLayer(
+      `${GIBS}/OMPS_NOAA20_SO2_Lower_Troposphere/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.68,
+        pane,
+        attribution: '© NASA GIBS · OMPS NOAA-20 SO₂ boundary-layer',
+        crossOrigin: true,
+      },
+    ),
   }
 }
 
@@ -369,10 +501,17 @@ export const LAYER_GROUPS = [
       { id: 'aod', th: 'หมอกควัน/ละอองลอย (AOD ดาวเทียม)', en: 'Smoke / aerosol (satellite AOD)', on: false, kind: 'sat' },
       { id: 'jaxaAerosol', th: 'ละอองลอย Himawari-9 (JAXA สด ทุก 10 นาที)', en: 'Himawari-9 aerosol (JAXA, live 10-min)', on: false, kind: 'sat' },
       { id: 'aodAqua3km', th: 'AOD 3 กม. (Aqua ความละเอียดสูง)', en: 'AOD 3 km (Aqua, high-res)', on: false, kind: 'sat' },
+      { id: 'aodTerra3km', th: 'AOD 3 กม. (Terra — เช้า)', en: 'AOD 3 km (Terra — morning overpass)', on: false, kind: 'sat' },
       { id: 'aerosolIndex', th: 'ดัชนีควัน UV (ควันดูดกลืนแสง)', en: 'UV smoke index (absorbing aerosol)', on: false, kind: 'sat' },
+      { id: 'omiAerosolIndex', th: 'OMI UV Aerosol Index (อิสระจาก OMPS)', en: 'OMI UV AI (independent of OMPS)', on: false, kind: 'sat' },
+      { id: 'omiAod', th: 'AOD ย่าน UV (OMI 388 นาโนเมตร เห็นฝุ่นเหนือพื้นสว่าง)', en: 'AOD UV band (OMI 388 nm — sees dust over bright land)', on: false, kind: 'sat' },
+      { id: 'omiSsa', th: 'Single Scattering Albedo (จำแนกควันจากการเผา vs ละอองซัลเฟต/ทะเล)', en: 'Single Scattering Albedo (smoke vs sulphate/sea-salt)', on: false, kind: 'sat' },
       { id: 'ompsPyroCb', th: 'ดัชนีควัน PyroCb (ชั้นบรรยากาศบน — ควันข้ามพรมแดน)', en: 'PyroCb smoke index (upper-air — cross-border smoke transport)', on: false, kind: 'sat' },
       { id: 'viirsAerosolType', th: 'ชนิดละอองลอย VIIRS (ควัน vs ฝุ่น vs ละอองเกลือทะเล)', en: 'VIIRS aerosol type (smoke vs dust vs sea-salt)', on: false, kind: 'sat' },
       { id: 'co', th: 'คาร์บอนมอนอกไซด์ (ควันไฟที่ลอยมา)', en: 'Carbon monoxide (transported smoke)', on: false, kind: 'sat' },
+      { id: 'airsDust', th: 'AIRS Dust Score (ตรวจฝุ่นจากทะเลทราย/ดิน)', en: 'AIRS Dust Score (desert/soil dust detector)', on: false, kind: 'sat' },
+      { id: 'ompsNoaa20So2Mid', th: 'OMPS SO₂ กลางบรรยากาศ (ภูเขาไฟ Indone./ข้ามพรมแดน)', en: 'OMPS SO₂ mid-tropo (volcanic / cross-border gas)', on: false, kind: 'sat' },
+      { id: 'ompsNoaa20So2Lower', th: 'OMPS SO₂ ระดับพื้น (มลพิษอุตสาหกรรม)', en: 'OMPS SO₂ boundary-layer (industrial pollution)', on: false, kind: 'sat' },
       { id: 'nightlights', th: 'แสงไฟกลางคืน (เผากลางคืน/ฟุ้งกระจาย)', en: 'Night lights (night burning / haze glow)', on: false, kind: 'sat' },
       { id: 'gsmap', th: 'GSMaP/GPM ฝนดาวเทียม', en: 'GSMaP/GPM rain', on: false, kind: 'sat' },
       { id: 'himawari', th: 'Himawari-9 เมฆ IR', en: 'Himawari-9 IR', on: false, kind: 'sat' },

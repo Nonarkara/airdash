@@ -15,19 +15,19 @@
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.38'
-import { tr, BAND } from '../i18n.js?v=2.4.38'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.38'
-import { getJson } from '../cache.js?v=2.4.38'
-import { flyToProvince } from '../map.js?v=2.4.38'
-import { sharePlace, copyText } from '../share.js?v=2.4.38'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.38'
+import { on, store, emit } from '../state.js?v=2.4.39'
+import { tr, BAND } from '../i18n.js?v=2.4.39'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.39'
+import { getJson } from '../cache.js?v=2.4.39'
+import { flyToProvince } from '../map.js?v=2.4.39'
+import { sharePlace, copyText } from '../share.js?v=2.4.39'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.39'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare, renderNoiseTrends,
-} from './citizenLife.js?v=2.4.38'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.38'
+} from './citizenLife.js?v=2.4.39'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.39'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -84,7 +84,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.38').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.39').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
