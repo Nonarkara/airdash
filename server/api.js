@@ -33,7 +33,7 @@ const provinceBoundariesGeoJson = JSON.parse(
 import { buildInsights } from './insights.js'
 import { log } from './util.js'
 import { composeAll as composeAllCctv, listSources as listCctvSources } from './sources/cctvRegistry.js'
-import { hydrateOnce as hydrateCctvHealth } from './sources/cctvHealthStore.js'
+import { hydrateOnce as hydrateCctvHealth, getHealth as getCctvHealth } from './sources/cctvHealthStore.js'
 import { pairAir, hazeEyes, northHazeCams } from './airCctv.js'
 import { airStationsNow } from './airStationsNow.js'
 import { sensorHealth } from './sensors.js'
@@ -1941,9 +1941,20 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
            WHERE obs_time >= ?
            ORDER BY obs_time DESC LIMIT ?`, since, limit)
         const scored = rows.filter((r) => r.haze_index !== null)
-        const live = db.all(
-          `SELECT stream_status, count(*) AS n FROM cctv_haze_health
-           GROUP BY stream_status`).catch(() => [])
+        // Stream health lives in the KV key cctv_health_v1, not in a table —
+        // there is no cctv_haze_health table and asking for one throws. The
+        // first version of this endpoint wrapped a `db.all(...)` in
+        // `.catch(() => [])`, which cannot help: db.all throws synchronously
+        // on a missing table, so the catch never saw it and the whole route
+        // 500'd. Read it through the store's own API, like every other CCTV
+        // route does.
+        hydrateCctvHealth(db) // a fresh process has an empty in-memory map
+        const byStatus = {}
+        for (const [, v] of getCctvHealth()) {
+          const st = v?.status ?? 'unknown'
+          byStatus[st] = (byStatus[st] ?? 0) + 1
+        }
+        const live = Object.entries(byStatus).map(([stream_status, n]) => ({ stream_status, n }))
         json(res, 200, {
           generated_at: new Date().toISOString(),
           hours,
