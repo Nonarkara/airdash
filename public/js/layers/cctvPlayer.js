@@ -5,9 +5,9 @@
 // Upstream URLs come from third-party feeds, so nothing is dropped into
 // markup unchecked: embeds are HTTPS only (an http stream is blocked as mixed
 // content anyway), links may be http(s), everything else is refused.
-import { tr } from '../i18n.js?v=2.4.37'
-import { escapeHtml } from '../fmt.js?v=2.4.37'
-import { pm25Color } from '../paint.js?v=2.4.37'
+import { tr } from '../i18n.js?v=2.4.38'
+import { escapeHtml } from '../fmt.js?v=2.4.38'
+import { pm25Color } from '../paint.js?v=2.4.38'
 
 const HLS_CDN = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js'
 
@@ -88,24 +88,37 @@ export function detachHls(video) {
   instances.delete(video)
 }
 
-/** The picture itself. Live HLS → muted autoplay video; NST → its iframe; otherwise a link. */
+/** The picture itself. Live HLS → muted autoplay video; NST → its iframe; down
+ *  stream + a viewer_url → still show the source-page link so the user has
+ *  somewhere to go (haze season: many DOH motorway streams rotate offline for
+ *  hours at a time but the camera's page on iTIC/DOH still shows it). */
 export function playerHtml(c) {
   const hls = httpsUrl(c.hls_url)
   const viewer = linkUrl(c.viewer_url)
-  if (hls) {
+  if (hls && c.stream_status !== 'down') {
     return `<div class="cctv-video-wrap">
       <video class="cctv-video" controls muted autoplay playsinline loop data-hls-src="${escapeHtml(hls)}"></video>
       <span class="cctv-live">● ${tr('ภาพสด', 'LIVE')}</span>
       <p class="cctv-fail" data-cctv-fail hidden></p>
     </div>`
   }
-  if (c.source === 'nst' && httpsUrl(c.viewer_url)) {
+  if (c.source === 'nst' && httpsUrl(c.viewer_url) && c.stream_status !== 'down') {
     return `<div class="cctv-video-wrap">
       <iframe class="cctv-video" src="${escapeHtml(c.viewer_url)}" loading="lazy" allow="autoplay; fullscreen" allowfullscreen frameborder="0" title="NST CCTV"></iframe>
       <span class="cctv-live">● ${tr('ภาพสด', 'LIVE')}</span>
     </div>`
   }
-  if (viewer) return `<a class="cctv-linkout" href="${escapeHtml(viewer)}" target="_blank" rel="noopener noreferrer">▶ ${tr('เปิดภาพกล้องที่ต้นทาง', 'open the camera at its source')} ↗</a>`
+  if (viewer) {
+    // Down/unknown streams with a viewer_url: still provide the camera, but as
+    // an explicit "may be offline — open at source" call-to-action rather than
+    // an empty black box.
+    const down = c.stream_status === 'down' || c.stream_status === 'unknown'
+    const cls = down ? 'cctv-linkout cctv-linkout-down' : 'cctv-linkout'
+    const label = down
+      ? `▶ ${tr('กล้องอาจหยุดให้บริการ · เปิดภาพที่ต้นทาง', 'camera may be offline · open at its source')} ↗`
+      : `▶ ${tr('เปิดภาพกล้องที่ต้นทาง', 'open the camera at its source')} ↗`
+    return `<a class="${cls}" href="${escapeHtml(viewer)}" target="_blank" rel="noopener noreferrer">${label}</a>`
+  }
   return `<div class="cctv-air cctv-air-none">${tr('ไม่มีลิงก์ภาพ', 'no picture link')}</div>`
 }
 

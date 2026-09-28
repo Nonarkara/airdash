@@ -3740,6 +3740,12 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .cctv-eye .cctv-air { margin: 0; }
 .cctv-eye-locate { justify-self: start; font-size: 12px; padding: 4px 10px; border-radius: var(--r-ctl); border: 1px solid var(--rule-strong); background: var(--well); color: var(--ink); cursor: pointer; }
 .cctv-eye-locate:hover { background: var(--well-dim); color: var(--ink); }
+/* Haze season (2026-09-28): cameras whose stream is down but a viewer_url
+ * still takes the user to a working page on iTIC/DOH. Treat the card as a
+ * "fallback link" rather than a black box. */
+.cctv-eye-down { opacity: 0.94; border-left: 4px solid var(--aqi-sensitive, #c98b15); background: var(--well-dim, #f3f5f7); }
+.cctv-eye-down .cctv-eye-rank { color: var(--ink-mid); }
+.cctv-linkout-down { border-color: var(--aqi-sensitive, #c98b15) !important; color: var(--ink, #13201b) !important; background: rgba(248, 200, 50, 0.12) !important; }
 @media (max-width: 640px) { .cctv-wall-sheet { width: 100vw; max-height: 100vh; border-radius: 0; } }
 
 .cctv-wall-relaxed { margin: 0 0 12px; padding: 8px 12px; border-radius: var(--r-md); background: var(--well-dim); border-left: 5px solid var(--aqi-good); font-size: 12.5px; color: var(--ink); }

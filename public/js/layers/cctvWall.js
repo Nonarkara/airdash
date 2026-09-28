@@ -3,9 +3,9 @@
 // highest reading down and, for each, picks the nearest camera that a health
 // probe has shown to be alive. So this wall answers "what does that look
 // like, over there?" for the places the numbers say are worst.
-import { tr } from '../i18n.js?v=2.4.37'
-import { escapeHtml } from '../fmt.js?v=2.4.37'
-import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL } from './cctvPlayer.js?v=2.4.37'
+import { tr } from '../i18n.js?v=2.4.38'
+import { escapeHtml } from '../fmt.js?v=2.4.38'
+import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL } from './cctvPlayer.js?v=2.4.38'
 
 const MAX_AUTOPLAY = 4
 let overlay = null
@@ -15,7 +15,8 @@ function cardHtml(e) {
   const c = e.camera
   const name = escapeHtml(tr(c.name_th || c.name_en, c.name_en || c.name_th) || c.id)
   const prov = escapeHtml(tr(e.air.province_th || '', e.air.province_th || ''))
-  return `<div class="cctv-eye" data-cam="${escapeHtml(c.id)}" data-src="${escapeHtml(c.source)}">
+  const down = c.stream_status === 'down' || c.stream_status === 'unknown' ? ' cctv-eye-down' : ''
+  return `<div class="cctv-eye${down}" data-cam="${escapeHtml(c.id)}" data-src="${escapeHtml(c.source)}">
     <div class="cctv-eye-head"><span class="cctv-eye-rank">#${e.rank}</span><span class="cctv-eye-prov">${prov}</span></div>
     ${airChipHtml(e.air)}
     ${playerHtml(c)}
@@ -58,12 +59,14 @@ export async function openHazeEyes({ onLocate } = {}) {
   document.addEventListener('keydown', onKey)
 
   const body = overlay.querySelector('.cctv-wall-body')
-  const get = async (minPm25) => {
-    const res = await fetch(`/api/cctv/haze-eyes?limit=12&min_pm25=${minPm25}`)
+  const get = async (minPm25, includeDown = false) => {
+    const qs = new URLSearchParams({ limit: '12', min_pm25: String(minPm25) })
+    if (includeDown) qs.set('include_down', '1')
+    const res = await fetch(`/api/cctv/haze-eyes?${qs}`)
     if (!res.ok) throw new Error(String(res.status))
     return res.json()
   }
-  let data, relaxed = false
+  let data, relaxed = false, includedDown = false
   try {
     data = await get(25)
     // Most of the wet season nothing is hazy. An empty wall would be true but
@@ -72,6 +75,15 @@ export async function openHazeEyes({ onLocate } = {}) {
     if ((data.eyes?.length ?? 0) < 6) {
       const all = await get(0)
       if ((all.eyes?.length ?? 0) > (data.eyes?.length ?? 0)) { data = all; relaxed = true }
+    }
+    // Haze season (Dec–Apr, 2026-09-28 audit): when live streams are mostly
+    // offline, the wall becomes blank. Falling back to include_down gives
+    // users a list of the cameras that ARE on haze-prone roads even with the
+    // "open at source" card — far better than an empty box that says the air
+    // is hazy but offers no eyes.
+    if ((data.eyes?.length ?? 0) < 4) {
+      const withDown = await get(25, true)
+      if ((withDown.eyes?.length ?? 0) > (data.eyes?.length ?? 0)) { data = withDown; relaxed = true; includedDown = true }
     }
   } catch {
     body.innerHTML = `<p class="cctv-wall-msg">${tr('โหลดไม่สำเร็จ — ลองใหม่อีกครั้งในอีกสักครู่', 'could not load — try again in a moment')}</p>`
@@ -82,7 +94,13 @@ export async function openHazeEyes({ onLocate } = {}) {
     body.innerHTML = `<p class="cctv-wall-msg">${tr('ยังไม่มีกล้องที่ใช้งานได้ใกล้สถานีวัดฝุ่น', 'no working camera near a PM2.5 station yet')}</p>`
     return
   }
-  const note = relaxed ? `<p class="cctv-wall-relaxed">${tr('ตอนนี้ไม่มีพื้นที่ฝุ่นหนัก (PM2.5 เกิน 25) — แสดงกล้องที่ใกล้สถานีค่าสูงที่สุดแทน อากาศโดยรวมอยู่ในเกณฑ์ดี', 'No heavy haze right now (nothing above 25 µg/m³) — showing cameras near the highest readings instead. The air is broadly fine.')}</p>` : ''
+  let note = ''
+  if (includedDown) {
+    note += `<p class="cctv-wall-relaxed">${tr('สตรีมสดส่วนใหญ่ออฟไลน์ — แสดงกล้องที่อยู่บนเส้นทางหลักตามค่าฝุ่น แตะการ์ดเพื่อเปิดที่ต้นทาง iTIC/DOH', 'Most live streams are offline — showing motorway cameras near the highest readings. Tap a card to open it at the iTIC/DOH source page.')}</p>`
+  }
+  if (relaxed && !includedDown) {
+    note += `<p class="cctv-wall-relaxed">${tr('ตอนนี้ไม่มีพื้นที่ฝุ่นหนัก (PM2.5 เกิน 25) — แสดงกล้องที่ใกล้สถานีค่าสูงที่สุดแทน อากาศโดยรวมอยู่ในเกณฑ์ดี', 'No heavy haze right now (nothing above 25 µg/m³) — showing cameras near the highest readings instead. The air is broadly fine.')}</p>`
+  }
   body.innerHTML = `${note}<div class="cctv-wall-grid">${data.eyes.map(cardHtml).join('')}</div>`
   body.querySelectorAll('.cctv-eye-locate').forEach((b) => {
     b.onclick = () => { const a = b.closest('.cctv-eye'); closeHazeEyes(); onLocate?.(a.dataset.cam, a.dataset.src) }

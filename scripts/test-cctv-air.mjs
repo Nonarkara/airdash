@@ -1,7 +1,7 @@
 // CCTV x air: pair every camera with the PM2.5 reading nearest to it, and pick
 // the live cameras that look at the worst air right now. Pure functions — no
 // DB, no network. The point is "see the haze where the number says haze".
-import { pm25Band, pairAir, hazeEyes } from '../server/airCctv.js'
+import { pm25Band, pairAir, hazeEyes, northHazeCams } from '../server/airCctv.js'
 
 let pass = 0, fail = 0
 const check = (name, cond, detail = '') => {
@@ -55,6 +55,47 @@ check('no reading has no band', pm25Band(null) === null && pm25Band(NaN) === nul
   check('the same camera is never shown twice', new Set(dup.map((e) => e.camera.id)).size === dup.length)
   const hazeless = hazeEyes(cams, [st('clean', 'ภูเก็ต', 7.9, 98.4, 8)], { now: NOW, limit: 3, minPm25: 25 })
   check('clean air is not "haze eyes" — nothing to show', hazeless.length === 0)
+}
+
+// ── hazeEyes includeDown (haze season: do not blank the wall when streams die) ──
+{
+  // Two hazy stations, two streams — one live, one down-with-fallback, one down-without.
+  const stations = [
+    st('a', 'เชียงใหม่', 18.80, 98.95, 140),
+    st('b', 'ลำปาง', 18.30, 99.50, 95),
+  ]
+  const nearA_live = cam('live-near-a', 18.81, 98.96)
+  const nearB_downWithLink = cam('down-near-b', 18.31, 99.51, 'down', { viewer_url: 'https://live.iticfoundation.org/?camid=DOH-PER-7-026' })
+  const nearB_downNoLink = cam('down-near-b-noLink', 18.30, 99.50, 'down') // same coords as B but no viewer_url
+  const all = [nearA_live, nearB_downWithLink, nearB_downNoLink]
+  const eyes = hazeEyes(all, stations, { now: NOW, limit: 4 })
+  check('default includeDown=false: only live cam chosen', eyes.length === 1 && eyes[0].camera.id === 'live-near-a')
+  const withDown = hazeEyes(all, stations, { now: NOW, limit: 4, includeDown: true })
+  check('includeDown=true: 2 eyes (one per station, down filled when needed)', withDown.length === 2)
+  check('includeDown=true: down with viewer_url DOES surface', withDown.some((e) => e.camera.id === 'down-near-b'))
+  check('includeDown=true: down without viewer_url is NOT surfaced', withDown.every((e) => e.camera.id !== 'down-near-b-noLink'))
+}
+
+// ── northHazeCams: northern cameras paired + worst-air-first ──
+{
+  const stations = [
+    st('chiangmai-haze', 'เชียงใหม่', 18.80, 98.95, 140), // near hwy11
+    st('lampang', 'ลำปาง', 17.86, 99.31, 50),               // near hwy1
+    st('mae-sariang', 'แม่ฮ่องสอน', 18.21, 97.93, 60),      // near hwy108-far
+    st('bkk-low', 'กท', 13.75, 100.50, 50),                  // south — must be excluded by lat filter
+  ]
+  const cams = [
+    cam('hwy11', 18.81, 98.99, 'live'),                                                    // north, near chiangmai-haze
+    cam('hwy1', 17.86, 99.31, 'live'),                                                     // north, near lampang
+    cam('bkk-cam', 13.76, 100.51, 'live'),                                                 // south — filter out
+    cam('hwy108-far', 18.21, 97.93, 'down', { viewer_url: 'https://live.iticfoundation.org/?camid=x' }), // far north, down + viewer_url
+  ]
+  const out = northHazeCams(cams, stations, { now: NOW })
+  check('only lat>=17 cams are in the surface', out.length === 3 && !out.some((c) => c.id === 'bkk-cam'))
+  check('every northHazeCams cam pairs with the nearest fresh PM2.5', out.every((c) => c.air && c.air.station_key && Number.isFinite(c.air.km)))
+  check('down cams survive in northHazeCams (it never strictly filters them)', out.some((c) => c.stream_status === 'down'))
+  check('worst-air comes first in northHazeCams', out[0].air.station_key === 'chiangmai-haze')
+  check('lat<17 cams are filtered out even when their station is also in-range', !out.some((c) => c.id === 'bkk-cam'))
 }
 
 console.log(`\n${pass} passed, ${fail} failed`)

@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.37'
-import { escapeHtml } from '../fmt.js?v=2.4.37'
+import { store, on } from '../state.js?v=2.4.38'
+import { escapeHtml } from '../fmt.js?v=2.4.38'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -80,7 +80,12 @@ function GROUPS() {
           note_th: 'stream_status: live / flaky / down / unknown / embed · กล้องที่สตรีมตายจะถูกซ่อน · ภาพและค่าฝุ่นเป็นข้อมูลอ้างอิง ไม่ใช่ประกาศราชการ', note_en: 'stream_status: live / flaky / down / unknown / embed · dead streams are hidden · pictures and readings are for reference, not an official announcement' },
         { path: '/api/cctv/haze-eyes', th: 'กล้องที่กำลังมองพื้นที่ฝุ่นหนักที่สุดตอนนี้ — เรียงตาม PM2.5 จากมากไปน้อย เลือกเฉพาะกล้องที่ใช้งานได้จริง',
           en: 'The cameras looking at the worst air right now — highest PM2.5 first, only cameras that actually work.',
-          params: [['limit', false, tr('จำนวน 1–24 (ค่าเริ่มต้น 12)', 'count 1–24 (default 12)')], ['min_pm25', false, tr('เกณฑ์ PM2.5 ขั้นต่ำ (ค่าเริ่มต้น 25)', 'minimum PM2.5 (default 25)')]] },
+          params: [['limit', false, tr('จำนวน 1–24 (ค่าเริ่มต้น 12)', 'count 1–24 (default 12)')], ['min_pm25', false, tr('เกณฑ์ PM2.5 ขั้นต่ำ (ค่าเริ่มต้น 25)', 'minimum PM2.5 (default 25)')], ['include_down', false, tr('1 = รวมกล้องที่สตรีมออฟไลน์แต่มี viewer_url (iTIC/DOH) ใช้ในฤดูฝุ่น', '1 = include streams marked down but with an iTIC/DOH viewer_url (haze season)')]],
+          note_th: 'กล้องที่ stream_status = down จะถูกซ่อนเป็นค่าเริ่มต้น — ส่ง include_down=1 เพื่อแสดงเฉพาะกล้องที่มีลิงก์ต้นทางสาธารณะ (iTIC/DOH) เปิดเองได้', note_en: 'Cameras with stream_status=down are hidden by default — pass include_down=1 to surface those that have a public viewer page on iTIC/DOH instead, ranked after working streams.' },
+        { path: '/api/cctv/north', th: 'กล้องในภาคเหนือ (ละติจูด ≥ ?min_lat) พร้อมค่า PM2.5 ที่ใกล้ที่สุด — เรียงตามค่าฝุ่นของสถานีใกล้เคียง เหมาะกับช่วงวางแผนขับรถช่วงฤดูฝุ่น',
+          en: 'Cameras in northern Thailand (lat ≥ ?min_lat) paired with the nearest PM2.5 station, sorted by that station’s reading. Use ?live=1 to drop offline ones.',
+          params: [['limit', false, tr('จำนวน (ค่าเริ่มต้น 60)', 'count (default 60)')], ['min_lat', false, tr('ละติจูดขั้นต่ำ (ค่าเริ่มต้น 17)', 'minimum latitude (default 17)')], ['max_km', false, tr('รัศมี pair (ค่าเริ่มต้น 30)', 'pair radius km (default 30)')], ['live', false, tr('1 = ตัดสตรีมที่ตายออก', '1 = drop offline streams')]],
+          note_th: 'รวมกล้องที่สตรีมออฟไลน์ (stream_status=down) ด้วย — จัดอันดับหลังกล้อง live เสมอ · ภาพและค่าฝุ่นเป็นข้อมูลอ้างอิง ไม่ใช่ประกาศราชการ', note_en: 'Includes offline streams (stream_status=down) — they are ranked after live ones · pictures and readings are for reference, not an official announcement.' },
         { path: '/api/stations/nearest', th: 'สถานีที่ใกล้จุดที่กำหนดที่สุด พร้อมค่าล่าสุดและระยะทาง', en: 'Nearest stations to a point with their latest reading and distance.',
           params: [['lat', true, tr('ละติจูด', 'latitude')], ['lng', true, tr('ลองจิจูด', 'longitude')], ['limit', false, tr('จำนวน (ค่าเริ่มต้น 5)', 'count (default 5)')]] },
         { path: '/api/series', th: 'อนุกรมเวลารายชั่วโมงของสถานีหนึ่ง ตัวชี้วัดหนึ่ง', en: 'Hourly time series for one station and one metric.',

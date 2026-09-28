@@ -34,7 +34,7 @@ import { buildInsights } from './insights.js'
 import { log } from './util.js'
 import { composeAll as composeAllCctv, listSources as listCctvSources } from './sources/cctvRegistry.js'
 import { hydrateOnce as hydrateCctvHealth } from './sources/cctvHealthStore.js'
-import { pairAir, hazeEyes } from './airCctv.js'
+import { pairAir, hazeEyes, northHazeCams } from './airCctv.js'
 import { sensorHealth } from './sensors.js'
 import { harmPayload, HARM_METHOD } from './harm.js'
 import { watchdogStatus, dbOnExternalVolume, archiveStatus } from './opsSentinel.js'
@@ -1812,22 +1812,65 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
 
     // The cameras looking at the worst air right now: for each hazy station
     // (highest PM2.5 first) the nearest camera that is actually working.
+    // `?include_down=1` (haze season, 2026-09-28): also surface DOWN cameras
+    // that have a viewer_url pointing at a public source page (iTIC, DOH).
+    // They rank last so live streams always win ties, but a user driving
+    // Highway 11 from Chiang Mai to Lampang can still see "this cam exists
+    // at km 559 — open the source page".
     'GET /api/cctv/haze-eyes': async (req, res, url) => {
       if (!allow(req, { key: 'cctv-eyes', limit: 30, windowMs: 60_000 })) return json(res, 429, { error: 'too many requests — wait a minute' })
       try {
         const limit = clamp(url.searchParams.get('limit'), 1, 24, 12)
         const minPm25 = clamp(url.searchParams.get('min_pm25'), 0, 500, 25)
-        const ck = `${limit}|${minPm25}`
+        const includeDown = url.searchParams.get('include_down') === '1' || url.searchParams.get('include_down') === 'true'
+        const ck = `${limit}|${minPm25}|${includeDown ? 'd' : ''}`
         if (!hazeEyesCache || hazeEyesCache.ck !== ck || Date.now() - hazeEyesCache.at > 120_000) {
           hydrateCctvHealth(db)
           const cat = await composeAllCctv({ timeoutMs: 30_000 })
-          const eyes = hazeEyes(cat.cameras, airStationsNow(db), { limit, minPm25 })
-          hazeEyesCache = { ck, at: Date.now(), body: { generated_at: new Date().toISOString(), min_pm25: minPm25, count: eyes.length, health: cat.health, eyes } }
+          const eyes = hazeEyes(cat.cameras, airStationsNow(db), { limit, minPm25, includeDown })
+          hazeEyesCache = { ck, at: Date.now(), body: { generated_at: new Date().toISOString(), min_pm25: minPm25, include_down: includeDown, count: eyes.length, health: cat.health, eyes } }
         }
         json(res, 200, hazeEyesCache.body)
       } catch (e) {
         log('warn', 'haze-eyes failed', { error: String(e) })
         json(res, 502, { error: 'haze-eyes failed' })
+      }
+    },
+
+    // Every camera in northern Thailand (lat>=17) paired with its nearest
+    // fresh PM2.5 station. Different from /api/cctv/haze-eyes:
+    //   - includes DOWN cameras (with viewer_url fallback) so users can
+    //     see which cameras exist on their planned road and where to look
+    //     them up on the source's own page (DOH, iTIC). Filter logic
+    //     without a filter would return the whole map at once.
+    //   - sorted by nearest-station's PM2.5 descending so the most
+    //     air-relevant highway cams surface first.
+    //   - capped at `limit` (default 60) and `min_lat` (default 17)
+    //     so a future addition of more sources can't accidentally serve
+    //     the world.
+    // `?live=1` strips down / unknown cams.
+    'GET /api/cctv/north': async (req, res, url) => {
+      if (!allow(req, { key: 'cctv-eyes', limit: 30, windowMs: 60_000 })) return json(res, 429, { error: 'too many requests — wait a minute' })
+      try {
+        const limit = clamp(url.searchParams.get('limit'), 1, 200, 60)
+        const minLat = clamp(url.searchParams.get('min_lat'), 13, 21, 17)
+        const maxKm = clamp(url.searchParams.get('max_km'), 1, 100, 30)
+        const liveOnly = url.searchParams.get('live') === '1'
+        hydrateCctvHealth(db)
+        const cat = await composeAllCctv({ timeoutMs: 30_000 })
+        let cams = northHazeCams(cat.cameras, airStationsNow(db), { limit, minLat, maxKm })
+        if (liveOnly) cams = cams.filter((c) => c.stream_status === 'live')
+        json(res, 200, {
+          generated_at: new Date().toISOString(),
+          min_lat: minLat,
+          max_km: maxKm,
+          count: cams.length,
+          health: cat.health,
+          cameras: cams,
+        })
+      } catch (e) {
+        log('warn', 'cctv/north failed', { error: String(e) })
+        json(res, 502, { error: 'cctv north failed' })
       }
     },
 
