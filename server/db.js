@@ -296,6 +296,30 @@ CREATE TABLE IF NOT EXISTS aeronet_readings (
 );
 CREATE INDEX IF NOT EXISTS aeronet_readings_ts ON aeronet_readings(ts DESC);
 
+-- Camera-frame haze features (2026-09-28). One row per (camera, sample):
+-- the features are ABSOLUTE measurements, the haze_index is a provisional
+-- triage score, and the calibrated column is pinned 0 forever in this schema because
+-- nothing in this project has earned the right to set it. The pm25 columns
+-- are the paired ground reading at sample time; they are the training data
+-- that would let a real calibration be fitted, and until such a fit exists
+-- they are recorded, not used for any published number.
+CREATE TABLE IF NOT EXISTS cctv_haze_frames (
+  id            INTEGER PRIMARY KEY,
+  camera_key    TEXT NOT NULL,          -- 'source:id' — matches cctvHealthStore.keyOf
+  camera_source TEXT,
+  lat           REAL, lng REAL,
+  obs_time      TEXT NOT NULL,          -- sample time, ISO-8601 UTC
+  haze_index    REAL,                   -- NULL when the score was withheld
+  calibrated    INTEGER NOT NULL DEFAULT 0,
+  corridor_tail REAL, contrast REAL, edge_density REAL,
+  dark_channel  REAL, transmission REAL, edge_decay REAL,
+  saturation    REAL, warm_bias REAL, mean_luma REAL,
+  tint_hint     TEXT,                   -- 'smoke-like' | 'fog-like' | NULL
+  pm25          REAL, pm25_station TEXT, pm25_km REAL
+);
+CREATE INDEX IF NOT EXISTS cctv_haze_frames_cam_ts ON cctv_haze_frames(camera_key, obs_time DESC);
+CREATE INDEX IF NOT EXISTS cctv_haze_frames_ts    ON cctv_haze_frames(obs_time DESC);
+
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT);
 
 -- ── Score history — one row per province per hour, written by risk.js.

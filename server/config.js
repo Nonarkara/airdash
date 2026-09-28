@@ -31,6 +31,10 @@ export const CONFIG = {
   // Poll cadences follow each upstream's native update rhythm.
   intervals: {
     cctv_health: 30 * MINUTE, // probe every CCTV HLS stream; two strikes 30 min apart hide a camera
+    // Grab one frame per live stream and store its haze features paired with
+    // the nearby ground PM2.5. 30 min: the PM2.5 stations themselves only
+    // update hourly, so sampling faster mostly re-reads the same air.
+    haze_vision: 30 * MINUTE,
     air4thai: 1 * HOUR,      // PCD publishes hourly
     // Open-Meteo free tier has a daily request limit (10,000/day globally,
     // but smaller per-IP burst limits bite first). 6h = 4 calls/day per

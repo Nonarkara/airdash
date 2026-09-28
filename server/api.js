@@ -35,6 +35,7 @@ import { log } from './util.js'
 import { composeAll as composeAllCctv, listSources as listCctvSources } from './sources/cctvRegistry.js'
 import { hydrateOnce as hydrateCctvHealth } from './sources/cctvHealthStore.js'
 import { pairAir, hazeEyes, northHazeCams } from './airCctv.js'
+import { airStationsNow } from './airStationsNow.js'
 import { sensorHealth } from './sensors.js'
 import { harmPayload, HARM_METHOD } from './harm.js'
 import { watchdogStatus, dbOnExternalVolume, archiveStatus } from './opsSentinel.js'
@@ -98,20 +99,9 @@ let insightsCache = null // { at, payload }
 const INSIGHTS_TTL_MS = 60_000
 
 
-// Air4Thai stations with their latest PM2.5, for pairing cameras with the air
-// they look at. 60 s cache: the catalog route is polled, the readings hourly.
-let airStationsCache = null
-function airStationsNow(db) {
-  if (airStationsCache && Date.now() - airStationsCache.at < 60_000) return airStationsCache.rows
-  const rows = db.all(
-    `SELECT s.station_key, s.name_th, s.name_en, s.province_th, s.lat, s.lng,
-            pm.value AS pm25, pm.obs_time AS obs_time
-     FROM stations s
-     JOIN latest pm ON pm.source = s.source AND pm.station_key = s.station_key AND pm.metric = 'pm25'
-     WHERE s.source = 'air4thai' AND s.lat IS NOT NULL AND s.lng IS NOT NULL`)
-  airStationsCache = { at: Date.now(), rows }
-  return rows
-}
+// airStationsNow moved to its own module (server/airStationsNow.js) so the
+// haze-vision scheduler source can pair frames to stations without importing
+// the whole route table. See that file for why.
 let hazeEyesCache = null
 const clamp = (n, lo, hi, dflt) => {
   // Number(null) === 0, so an absent query param must fall back explicitly.
