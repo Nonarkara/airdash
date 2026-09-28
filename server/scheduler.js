@@ -26,6 +26,17 @@ const RATE_LIMIT_PARK_MS = 24 * 60 * 60_000
  *  up to 17 h of extra outage, during which the washout feature showed no
  *  forecast (audit 2026-09-28). For that case, retry 5 min after UTC
  *  midnight. Any other 429 keeps the conservative 24 h. */
+/** Boot guard: ms to wait before a source's first run after a restart.
+ *  A restart used to re-run EVERY source at once; 13 restarts on 2026-09-27
+ *  re-fetched Open-Meteo 13 extra times and spent the shared daily quota, so
+ *  forecasts went dark. A source that succeeded within its interval waits
+ *  for its normal turn instead. */
+export function bootDelayMs(lastOkIso, intervalMs, now = Date.now()) {
+  const t = Date.parse(lastOkIso ?? '')
+  if (!Number.isFinite(t) || !(intervalMs > 0)) return 0
+  return Math.max(0, t + intervalMs - now)
+}
+
 export function parkUntil(err, now = Date.now()) {
   if (/daily quota exhausted/i.test(String(err?.message ?? err))) {
     const d = new Date(now)
@@ -166,14 +177,30 @@ export function createScheduler({ db, bus, alerts, sources }) {
     s.timer.unref()
   }
 
+  function lastOkAt(name) {
+    try {
+      return db.get(`SELECT started_at FROM ingest_runs WHERE source = ? AND ok = 1
+                      ORDER BY started_at DESC LIMIT 1`, name)?.started_at ?? null
+    } catch { return null }
+  }
+
   function start() {
     // Stagger boot so seven sources don't slam the network at once.
     let offset = 0
-    for (const name of state.keys()) {
-      schedule(name, offset)
+    const deferred = []
+    for (const [name, s] of state) {
+      const last = lastOkAt(name)
+      const wait = bootDelayMs(last, s.source.intervalMs)
+      if (wait > 0) {
+        s.lastOk = last // health shows the real last success, not "never"
+        schedule(name, wait + offset)
+        deferred.push(name)
+      } else {
+        schedule(name, offset)
+      }
       offset += 5_000
     }
-    log('info', 'scheduler started', { sources: [...state.keys()] })
+    log('info', 'scheduler started', { sources: [...state.keys()], deferred_fresh: deferred })
   }
 
   function health() {

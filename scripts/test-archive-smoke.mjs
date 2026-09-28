@@ -3,10 +3,12 @@
 // SIGTERM mid-run. Exercises the real node:sqlite code path; never touches
 // /Volumes/Data or the live databases.
 import { DatabaseSync } from 'node:sqlite'
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
+
+const startedAt = Date.now()
 
 let pass = 0, fail = 0
 const check = (name, cond) => { cond ? pass++ : fail++; console.log(`${cond ? 'PASS' : 'FAIL'} ${name}`) }
@@ -80,6 +82,13 @@ const archive = () => new DatabaseSync(join(archiveDir, 'dash-archive.db'), { re
   check('watermark = live max id', db.prepare("SELECT last_src_id v FROM archive_meta WHERE system='flooddash' AND table_name='readings'").get().v === 45_000)
   check('archive_runs row ok=1', db.prepare('SELECT ok, rows_copied FROM archive_runs ORDER BY id DESC LIMIT 1').get().rows_copied === 46_004)
   check('analysis index built', !!db.prepare("SELECT 1 FROM sqlite_master WHERE name='idx_ar_readings_series'").get())
+  // The receipt authorises the live server to delete SSD rows, so it must be
+  // written beside the archived DB — never into the production data dir.
+  const receiptFile = join(dirname(airDb), '.archive-receipt.json')
+  check('receipt written beside the fixture DB', existsSync(receiptFile)
+    && JSON.parse(readFileSync(receiptFile, 'utf8')).readings_src_id > 0)
+  check('no receipt leaked into the production data dir',
+    !existsSync(new URL('../data/.archive-receipt.json', import.meta.url)) || statSync(new URL('../data/.archive-receipt.json', import.meta.url)).mtimeMs < startedAt)
   db.close()
 }
 

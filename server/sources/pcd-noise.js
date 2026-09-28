@@ -97,6 +97,21 @@ async function fetchOne(id) {
   }
 }
 
+/** Bangkok calendar date of a LeqDayInMonth timestamp. Upstream's encoding
+ *  is not stable: on 2026-09-27 a day D arrived as D 23:00 UTC (Bangkok wall
+ *  time written as if UTC); on 2026-09-28 as D 16:00 UTC (the real instant
+ *  of 23:00 Bangkok). Both mean "day D, last hour". Adding +7 h to the first
+ *  form put every day on the next date, 6 h in the future. */
+export function noiseDay(tsMs) {
+  const bkk = new Date(tsMs + 7 * 3600_000)
+  if (bkk.getUTCHours() === 23) return bkk.toISOString().slice(0, 10)
+  const utc = new Date(tsMs)
+  if (utc.getUTCHours() === 23) return utc.toISOString().slice(0, 10)
+  return bkk.toISOString().slice(0, 10)
+}
+
+const bangkokToday = (nowMs = Date.now()) => new Date(nowMs + 7 * 3600_000).toISOString().slice(0, 10)
+
 export default {
   name: 'pcd_noise',
   label_th: 'PCD เสียงรบกวน (noisemonitor.net)',
@@ -156,28 +171,27 @@ export default {
           lat: prov?.lat ?? null, lng: prov?.lng ?? null,
           meta_json: JSON.stringify({ upstream: 'noisemonitor.net', pcd_station_id: s.id }),
         }
-        for (let i = 0; i < series.length; i++) {
-          const [tsMs, dbVal, nSamples] = series[i]
-          const leq = validNum(dbVal, 'noise_leq', 'pcd_noise')
-          if (leq === null) continue
-          // Upstream encodes Bangkok WALL time as if it were UTC: the
-          // daily Leq for 27 Sep arrives as 2026-09-27T23:00Z (the day's
-          // last hour, 24 samples). So toISOString() already IS the
-          // Bangkok-local YYYY-MM-DDTHH:MM. Adding +7 h (as this did until
-          // 2026-09-28) put every day on the NEXT date, 6 h in the future.
-          const obs_time = new Date(tsMs).toISOString().slice(0, 16)
+        // Only COMPLETED days: upstream also lists today's unfinished day
+        // (flagged 24 samples mid-afternoon), and INSERT OR IGNORE would
+        // freeze that partial value forever.
+        const today = bangkokToday()
+        const days = series
+          .map(([tsMs, dbVal, nSamples]) => ({ day: noiseDay(tsMs), leq: validNum(dbVal, 'noise_leq', 'pcd_noise'), nSamples }))
+          .filter((d) => d.leq !== null && d.day < today)
+        for (let i = 0; i < days.length; i++) {
+          const { day, leq, nSamples } = days[i]
+          // Daily Leq, stamped at the day's last hour (Bangkok local).
+          const obs_time = `${day}T23:00`
           // Per-entry metrics: same noise_leq_db so the trend chart
           // reads one metric, but `noise_leq_prev_db` only on the
           // newest entry to keep the latest-pair logic downstream
           // working.
-          const isLatest = i === series.length - 1
+          const isLatest = i === days.length - 1
           added += storeReadings({
             db, alerts, source: 'pcd_noise', station,
             metrics: {
               noise_leq_db: leq,
-              noise_leq_prev_db: isLatest && i > 0
-                ? validNum(series[i - 1][1], 'noise_leq', 'pcd_noise')
-                : null,
+              noise_leq_prev_db: isLatest && i > 0 ? days[i - 1].leq : null,
               noise_samples: nSamples,
             },
             obs_time, fetched_at, now,

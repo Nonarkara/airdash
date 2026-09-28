@@ -225,7 +225,11 @@ function render(snap) {
     if (useHarm && p.pm25 !== null && p.pm25 !== undefined) {
       stats.push(el('div', { class: 'line' },
         tr('ฝุ่น ', 'PM2.5 '),
-        el('b', { class: p.pm25 >= 75 ? 'hot' : '' }, fmtNum(p.pm25, 0)), ' µg/m³'))
+        el('b', { class: p.pm25 >= 75 ? 'hot' : '' }, fmtNum(p.pm25, 0)), ' µg/m³',
+        // No ground sensor reporting: the value is GISTDA's satellite estimate.
+        p.pm25_source === 'gistda_satellite'
+          ? el('span', { class: 'src', title: tr('ค่าประมาณจากดาวเทียม GISTDA — ไม่มีสถานีภาคพื้นรายงาน', 'GISTDA satellite estimate — no ground station reporting') }, ' 🛰')
+          : ''))
     }
     if (useHarm && typeof p.score === 'number') {
       stats.push(el('div', { class: 'line' },
@@ -238,7 +242,7 @@ function render(snap) {
         p.stations_unhealthy > 0 ? `${tr('เกินเกณฑ์', 'unhealthy')} ${p.stations_unhealthy}` : ''))
     }
     if (p.pm25_fc_48h !== null && p.pm25_fc_48h >= 37.5) {
-      stats.push(el('div', { class: 'line' }, tr('คาดฝุ่น ', 'fc '), el('b', {}, fmtNum(p.pm25_fc_48h, 0)), ` ${tr('µg/48ชม.', 'µg/48h')}`))
+      stats.push(el('div', { class: 'line' }, tr('คาดฝุ่น ', 'fc '), el('b', {}, fmtNum(p.pm25_fc_48h, 0)), ` ${tr('µg พรุ่งนี้', 'µg tomorrow')}`))
     }
     if (p.washout_helps && p.washout_relief_pct) {
       stats.push(el('div', { class: 'line' },

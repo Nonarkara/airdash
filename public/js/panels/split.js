@@ -572,7 +572,7 @@ function dataCard(pane, rank, topScore) {
       (risk.aq_stations ? ` · ${risk.aq_stations} ${tr('สถานี', 'stn')}` : ''), klass))
   }
   if (risk.pm25_fc_48h != null) {
-    rows.append(numRow(tr('คาดฝุ่น 48 ชม.', 'PM2.5 FC 48H'),
+    rows.append(numRow(tr('คาดฝุ่นพรุ่งนี้', 'PM2.5 FC TOMORROW'),
       `${fmtNum(risk.pm25_fc_48h, 0)} µg/m³`))
   }
   // Washout chip — rain expected to scrub this province's dust.

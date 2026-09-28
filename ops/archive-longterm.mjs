@@ -42,8 +42,9 @@
 //   node ops/archive-longterm.mjs --verify   # integrity + coverage + staleness
 //                                            #   exit 0 ok · 1 corrupt · 2 stale
 import { DatabaseSync } from 'node:sqlite'
-import { existsSync, mkdirSync, statSync, appendFileSync, writeFileSync, unlinkSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, statSync, appendFileSync, writeFileSync, unlinkSync, readFileSync, renameSync } from 'node:fs'
 import { spawn } from 'node:child_process'
+import { dirname, join } from 'node:path'
 import { parseMode, lockDecision, fmtInt, fmtRate, lagLine, staleHours } from './archive-lib.mjs'
 
 // DASH_ARCHIVE_* env overrides exist only so scripts/test-archive-smoke.mjs
@@ -59,8 +60,12 @@ const LOCK = `${ARCHIVE_DIR}/.archive.lock`
 // The two live systems. `db` is opened read-only; `tables` lists what to
 // pull. Tables absent from a given system are skipped silently (FloodDash
 // has water quality and escalations; AirDash does not).
+// `receipt`: after a successful run, the archiver writes the highest readings
+// id it holds for that system to this file next to the live DB. The live
+// server only drops raw rows from its SSD working set once a receipt covers
+// them — the external drive holds the permanent copy, the SSD a bounded one.
 const SYSTEMS = [
-  { name: 'airdash', db: env.DASH_ARCHIVE_AIRDASH_DB ?? '/Users/axiom/AirDash/data/airdash.db' },
+  { name: 'airdash', db: env.DASH_ARCHIVE_AIRDASH_DB ?? '/Users/axiom/AirDash/data/airdash.db', receipt: true },
   { name: 'flooddash', db: env.DASH_ARCHIVE_FLOODDASH_DB ?? '/Users/axiom/Projects/FloodDash/data/flooddash.db' },
 ]
 
@@ -471,6 +476,27 @@ function finishRun(archive, runId, ok, error) {
     .run(now(), ok ? 1 : 0, copiedThisRun, error, runId)
 }
 
+/** Tell a live system how far the archive's committed copy reaches. */
+function writeReceipt(archive, sys) {
+  if (!sys.receipt) return
+  // Always beside the DB that was archived — so a test fixture's receipt can
+  // never land in (and authorise deletions from) the production data dir.
+  const path = join(dirname(sys.db), '.archive-receipt.json')
+  const receipt = {
+    system: sys.name,
+    readings_src_id: getWatermark(archive, sys.name, 'readings'),
+    archive_db: ARCHIVE_DB,
+    written_at: now(),
+  }
+  try {
+    // tmp + rename: the server never reads a half-written receipt.
+    writeFileSync(`${path}.tmp`, JSON.stringify(receipt) + '\n')
+    renameSync(`${path}.tmp`, path)
+  } catch (err) {
+    log(`WARN: could not write receipt ${path}: ${err.message}`)
+  }
+}
+
 /** Incremental copy of every system. Returns the exit code. */
 async function runArchive(archive) {
   const abandoned = markAbandonedRuns(archive)
@@ -482,7 +508,12 @@ async function runArchive(archive) {
   const detail = []
 
   try {
-    for (const sys of SYSTEMS) await copySystem(archive, sys, detail)
+    for (const sys of SYSTEMS) {
+      await copySystem(archive, sys, detail)
+      // Per system, right away: a slow or interrupted copy of the NEXT system
+      // must not hold back this one's receipt (the server trims on it).
+      writeReceipt(archive, sys)
+    }
     ensureAnalysisIndexes(archive)
     archive.prepare('UPDATE archive_runs SET detail = ? WHERE id = ?').run(detail.join(' '), runId)
     finishRun(archive, runId, true, null)

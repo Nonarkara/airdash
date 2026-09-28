@@ -18,10 +18,15 @@
 // checkpoints per batch and one TRUNCATE at the end.
 import { CONFIG } from './config.js'
 import { log } from './util.js'
-import { statSync } from 'node:fs'
+import { statSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 const BATCH = 5_000
 const PAUSE_MS = 25
+// Hot-tier trims run hourly, live: smaller batches keep each event-loop
+// block short (the first run clears a ~10M-row backlog).
+const HOT_BATCH = 2_000
+const HOT_FIRST_RUN_DELAY_MS = 10 * 60_000
 const WAL_TRUNCATE_BYTES = 64 * 1024 * 1024
 
 const pause = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -31,9 +36,80 @@ export function retentionCutoff(nowMs, rawDays) {
   return new Date(nowMs + 7 * 3600_000 - rawDays * 86_400_000).toISOString().slice(0, 16)
 }
 
-export async function runRetention(db, { nowMs = Date.now(), batch = BATCH, pauseMs = PAUSE_MS } = {}) {
+// ── Hot tier: the SSD keeps only a recent window of high-volume sources ──
+// The long-term archive on the external drive (ops/archive-longterm.mjs)
+// writes a receipt after each successful run: the highest readings id it has
+// committed. Rows are dropped here only if that receipt covers them, so a
+// stalled archive or an unmounted drive means rows WAIT on the SSD — never
+// that they are lost.
+
+export const receiptPath = () => join(dirname(CONFIG.dbPath), '.archive-receipt.json')
+
+/** The archive receipt, or null when missing/unreadable/implausible. */
+export function readArchiveReceipt(path = receiptPath()) {
+  try {
+    const j = JSON.parse(readFileSync(path, 'utf8'))
+    return Number.isInteger(j?.readings_src_id) && j.readings_src_id > 0 ? j : null
+  } catch { return null }
+}
+
+/** Delete archived rows of the hot-tier sources older than their window.
+ *  Keyset-paginated over idx_readings_time so each old row is visited once. */
+export async function trimArchivedHot(db, {
+  nowMs = Date.now(), receipt = readArchiveReceipt(), hotDays = CONFIG.retention.hotDays,
+  batch = HOT_BATCH, pauseMs = PAUSE_MS,
+} = {}) {
+  const sources = Object.entries(hotDays ?? {})
+  if (!sources.length) return { deleted: 0, batches: 0, slowestBatchMs: 0 }
+  if (!receipt) {
+    log('warn', 'hot-tier trim skipped: no archive receipt — rows stay on the SSD until the archive confirms them', { path: receiptPath() })
+    return { deleted: 0, batches: 0, slowestBatchMs: 0, skipped: 'no-receipt' }
+  }
+  const liveMax = db.get('SELECT MAX(id) AS m FROM readings')?.m ?? 0
+  if (receipt.readings_src_id > liveMax) {
+    // The live DB was replaced/restored: its ids no longer match the archive's.
+    log('warn', 'hot-tier trim skipped: receipt is ahead of the live DB (ids do not line up)', { receipt: receipt.readings_src_id, liveMax })
+    return { deleted: 0, batches: 0, slowestBatchMs: 0, skipped: 'receipt-ahead' }
+  }
+  let deleted = 0, batches = 0, slowestBatchMs = 0
+  db.exec('CREATE TEMP TABLE IF NOT EXISTS retention_ids (id INTEGER PRIMARY KEY)')
+  for (const [source, days] of sources) {
+    const cutoff = retentionCutoff(nowMs, days)
+    let cursor = ''
+    for (;;) {
+      const b0 = Date.now()
+      let n = 0
+      db.tx(() => {
+        db.run('DELETE FROM retention_ids')
+        n = db.run(
+          `INSERT INTO retention_ids (id)
+           SELECT id FROM readings INDEXED BY idx_readings_time
+            WHERE obs_time >= ? AND obs_time < ? AND source = ? AND id <= ?
+            ORDER BY obs_time LIMIT ?`, cursor, cutoff, source, receipt.readings_src_id, batch).changes
+        if (n === 0) return
+        cursor = db.get('SELECT MAX(obs_time) AS t FROM readings WHERE id IN (SELECT id FROM retention_ids)').t
+        deleted += db.run('DELETE FROM readings WHERE id IN (SELECT id FROM retention_ids)').changes
+      })
+      if (n === 0) break
+      batches++
+      const ms = Date.now() - b0
+      slowestBatchMs = Math.max(slowestBatchMs, ms)
+      db.exec('PRAGMA wal_checkpoint(PASSIVE)')
+      if (n < batch) break
+      await pause(Math.max(pauseMs, ms)) // at most ~50% duty cycle on the event loop
+    }
+  }
+  db.run('DELETE FROM retention_ids')
+  return { deleted, batches, slowestBatchMs }
+}
+
+export async function runRetention(db, { nowMs = Date.now(), batch = BATCH, pauseMs = PAUSE_MS, receipt } = {}) {
   const cutoff = retentionCutoff(nowMs, CONFIG.retention.rawDays)
   const t0 = Date.now()
+  const hot = await trimArchivedHot(db, { nowMs, pauseMs, ...(receipt !== undefined ? { receipt } : {}) })
+  // Hot-tier sources are never rolled up: they live in the archive.
+  const hotSources = Object.keys(CONFIG.retention.hotDays ?? {})
+  const notHot = hotSources.length ? `AND source NOT IN (${hotSources.map(() => '?').join(',')})` : ''
   let rolled = 0, deleted = 0, batches = 0, slowestBatchMs = 0
 
   db.exec('CREATE TEMP TABLE IF NOT EXISTS retention_ids (id INTEGER PRIMARY KEY)')
@@ -45,7 +121,7 @@ export async function runRetention(db, { nowMs = Date.now(), batch = BATCH, paus
     // never double-count on a re-run after a crash.
     db.tx(() => {
       db.run('DELETE FROM retention_ids')
-      n = db.run('INSERT INTO retention_ids (id) SELECT id FROM readings WHERE obs_time < ? LIMIT ?', cutoff, batch).changes
+      n = db.run(`INSERT INTO retention_ids (id) SELECT id FROM readings WHERE obs_time < ? ${notHot} LIMIT ?`, cutoff, ...hotSources, batch).changes
       if (n === 0) return
       rolled += db.run(
         `INSERT INTO readings_hourly (source, station_key, metric, hour, v_min, v_max, v_avg, n)
@@ -78,8 +154,8 @@ export async function runRetention(db, { nowMs = Date.now(), batch = BATCH, paus
   })
 
   db.exec('PRAGMA wal_checkpoint(TRUNCATE)')
-  log('info', 'retention done', { cutoff, rolled, deleted, batches, slowestBatchMs, durMs: Date.now() - t0 })
-  return { rolled, deleted, batches, slowestBatchMs }
+  log('info', 'retention done', { cutoff, rolled, deleted, batches, slowestBatchMs, hot, durMs: Date.now() - t0 })
+  return { rolled, deleted, batches, slowestBatchMs, hot }
 }
 
 /** Schedule the job daily at the configured quiet hour (local time), plus an
@@ -90,15 +166,27 @@ export async function runRetention(db, { nowMs = Date.now(), batch = BATCH, paus
  *  WAL small. */
 export function scheduleRetention(db) {
   let running = false
+  const exclusive = (name, job) => {
+    if (running) return
+    running = true
+    job()
+      .catch((err) => log('error', `${name} failed`, { error: String(err) }))
+      .finally(() => { running = false })
+  }
+  // Hourly, the hot tier sheds whatever the archive has confirmed and has
+  // aged past its window — a couple of small batches in steady state.
+  const trimHot = () => exclusive('hot-tier trim', async () => {
+    const t0 = Date.now()
+    const r = await trimArchivedHot(db)
+    if (r.deleted) log('info', 'hot-tier trim done', { ...r, durMs: Date.now() - t0 })
+  })
+  setTimeout(trimHot, HOT_FIRST_RUN_DELAY_MS).unref()
   const tick = () => {
     const hourLocal = (new Date().getUTCHours() + 7) % 24
     if (hourLocal === CONFIG.retention.runAtHour) {
-      if (running) return
-      running = true
-      runRetention(db)
-        .catch((err) => log('error', 'retention failed', { error: String(err) }))
-        .finally(() => { running = false })
+      exclusive('retention', () => runRetention(db))
     } else {
+      trimHot()
       // PASSIVE normally; TRUNCATE when the WAL has actually grown. Growth is
       // the failure we have seen take the site down; a TRUNCATE that waits on
       // a long reader is only a theoretical cost, so pay it when it matters.

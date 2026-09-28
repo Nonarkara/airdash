@@ -697,23 +697,28 @@ export async function renderTomorrowOutlook(province) {
     forecast = (j?.provinces ?? []).find((p) => String(p.code) === String(province.code))
   } catch { forecast = null }
   if (!forecast?.scores) return null
+  // CAMS windows are calendar days: p24h = TODAY, p48h = TOMORROW,
+  // p72h = the day after (see /api/forecast horizons). Reading p24h as
+  // "tomorrow" compared today with today. The server bias-corrects CAMS to
+  // local sensors, so comparing against the live score is fair.
   const today = forecast.scores.now
-  const t24 = forecast.scores.p24h
-  const t48 = forecast.scores.p48h
   const bandToday = bandFor(today)
-  const band24 = bandFor(t24)
-  const band48 = bandFor(t48)
-  // Only show the callout if tomorrow is a worse band than today.
-  // "Equal" is not interesting; "better" is reassurance that lives
-  // in the time-of-day forecast. The callout is for the "I need to
-  // do something today" signal.
-  if (!worseThan(band24, bandToday) && !worseThan(band48, bandToday)) return null
+  const bandTomorrow = bandFor(forecast.scores.p48h)
+  const bandDayAfter = bandFor(forecast.scores.p72h)
+  // Only show the callout if tomorrow (or the day after) is a worse band
+  // than today. "Equal" is not interesting; "better" is reassurance that
+  // lives in the time-of-day forecast. The callout is the "I need to do
+  // something today" signal.
+  if (!worseThan(bandTomorrow, bandToday) && !worseThan(bandDayAfter, bandToday)) return null
+  const band24 = worseThan(bandTomorrow, bandToday) ? bandTomorrow : bandDayAfter
   // Build a "what to prepare today" list
   const prepItems = prepForBand(band24)
   const out = el('div', { class: 'citizen-tomorrow-wrap' },
     el('div', { class: 'citizen-section-head' },
       el('span', { 'aria-hidden': 'true' }, '⚠️ '),
-      tr('พรุ่งนี้อากาศจะแย่ลง', 'tomorrow the air will be worse')),
+      band24 === bandTomorrow
+        ? tr('พรุ่งนี้อากาศจะแย่ลง', 'tomorrow the air will be worse')
+        : tr('มะรืนนี้อากาศจะแย่ลง', 'the day after tomorrow the air will be worse')),
     el('div', { class: 'citizen-tomorrow-band' },
       el('span', { class: 'citizen-tomorrow-band-arrow' }, '→'),
       el('span', { class: `citizen-tomorrow-band-tag b-${bandToday}` }, tr(BAND_TH[bandToday], BAND_EN[bandToday])),

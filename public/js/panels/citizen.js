@@ -608,9 +608,9 @@ function shareFactLines(live) {
     th.push(`PM2.5 ${Math.round(live.pm25)} µg/m³`)
     en.push(`PM2.5 ${Math.round(live.pm25)} µg/m³`)
   }
-  if (Number.isFinite(live.pm25_fc_24h) && live.pm25_fc_24h >= 15) {
-    th.push(`พยากรณ์ 24 ชม. ~${Math.round(live.pm25_fc_24h)} µg/m³`)
-    en.push(`24h forecast ~${Math.round(live.pm25_fc_24h)} µg/m³`)
+  if (Number.isFinite(live.pm25_fc_48h) && live.pm25_fc_48h >= 15) {
+    th.push(`พยากรณ์พรุ่งนี้ ~${Math.round(live.pm25_fc_48h)} µg/m³`)
+    en.push(`tomorrow's forecast ~${Math.round(live.pm25_fc_48h)} µg/m³`)
   }
   return { th: th.slice(0, 2), en: en.slice(0, 2) }
 }

@@ -37,8 +37,9 @@ import { hydrateOnce as hydrateCctvHealth } from './sources/cctvHealthStore.js'
 import { pairAir, hazeEyes } from './airCctv.js'
 import { sensorHealth } from './sensors.js'
 import { harmPayload, HARM_METHOD } from './harm.js'
-import { watchdogStatus, dbOnExternalVolume } from './opsSentinel.js'
-import { futureRejects } from './db.js'
+import { watchdogStatus, dbOnExternalVolume, archiveStatus } from './opsSentinel.js'
+import { futureRejects, SERIES_INDEX } from './db.js'
+import { forecastBias } from './forecastBias.js'
 
 /** Fold Effective Harm onto each risk province row (Danger-style join). */
 function foldHarm(provinces, harmEngine) {
@@ -336,6 +337,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         now: new Date().toISOString(),
         uptime_s: Math.round((Date.now() - startedAt) / 1000),
         db: { ...dbStats, size_mb: Math.round(dbSize / 1048576 * 10) / 10, on_external_volume: dbOnExternalVolume(CONFIG.dbPath), future_obs_rejected: Object.fromEntries(futureRejects) },
+        archive: archiveStatus(),
         watchdog: watchdogStatus(),
         sources,
         data_freshness,
@@ -398,8 +400,16 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       const weather = pivotLatest(db, 'openmeteo',
         ['precip_fc_d0', 'precip_fc_48h', 'precip_prob_24h', 'precip_prob_48h', 'wind_fc_kmh'], { maxAgeH: 13 })
       // Per-province CAMS air-quality forecast.
+      const bias = forecastBias(db)
       const aqForecast = pivotLatest(db, 'openmeteo_aq',
         ['pm25_fc_24h', 'pm25_fc_48h', 'pm25_fc_72h', 'pm10_fc_24h', 'dust_fc_24h'], { maxAgeH: 13 })
+        .map((f) => ({
+          ...f,
+          pm25_fc_24h: bias.adjust(f.station_key, f.pm25_fc_24h),
+          pm25_fc_48h: bias.adjust(f.station_key, f.pm25_fc_48h),
+          pm25_fc_72h: bias.adjust(f.station_key, f.pm25_fc_72h),
+          bias_ratio: bias.ratioFor(f.station_key).ratio,
+        }))
       const alerts = db.all('SELECT * FROM alerts ORDER BY id DESC LIMIT 20')
       // LIMIT 40 (not 15): the map's news/fire layer only plots the subset
       // that got geotagged (province named in the headline), so it needs a
@@ -688,10 +698,12 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     'GET /api/forecast': (req, res) => {
       const risk = riskEngine.get()
       const horizons = [
-        { hours: 0,  label_th: 'ตอนนี้',     label_en: 'NOW'    },
-        { hours: 24, label_th: '+24 ชม.',   label_en: '+24h'   },
-        { hours: 48, label_th: '+48 ชม.',   label_en: '+48h'   },
-        { hours: 72, label_th: '+72 ชม.',   label_en: '+72h'   },
+        // CAMS is requested in Bangkok time, so its three windows are the
+        // calendar days today / tomorrow / the day after — not now+24h.
+        { hours: 0,  label_th: 'ตอนนี้',     label_en: 'NOW'      },
+        { hours: 24, label_th: 'วันนี้',      label_en: 'TODAY'    },
+        { hours: 48, label_th: 'พรุ่งนี้',    label_en: 'TOMORROW' },
+        { hours: 72, label_th: 'มะรืนนี้',    label_en: 'DAY AFTER' },
       ]
       const bandOf = (s) => {
         const b = CONFIG.risk.bands
@@ -716,10 +728,12 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
              OR (l.source = 'openmeteo' AND l.metric IN ('precip_fc_d0','precip_fc_d1','precip_fc_d2','precip_prob_d0','precip_prob_d1','precip_prob_d2')))`,
         fcCutoff)
       const byProv = new Map()
+      const bias = forecastBias(db)
       for (const r of fcRows) {
         let p = byProv.get(r.province_code)
         if (!p) byProv.set(r.province_code, p = {})
-        p[r.metric] = r.value
+        p[r.metric] = r.metric.startsWith('pm25_fc_') ? bias.adjust(r.province_code, r.value) : r.value
+        if (r.metric.startsWith('pm25_fc_')) p[`raw_${r.metric}`] = r.value
       }
       // Probability-weighted washout discount for one horizon day.
       const washed = (pm, rainMm, prob) => {
@@ -749,6 +763,8 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
           lat: rp.lat, lng: rp.lng,
           forecast: {
             pm25_d0: fc.pm25_fc_24h ?? null, pm25_d1: fc.pm25_fc_48h ?? null, pm25_d2: fc.pm25_fc_72h ?? null,
+            cams_raw_d0: fc.raw_pm25_fc_24h ?? null, cams_raw_d1: fc.raw_pm25_fc_48h ?? null, cams_raw_d2: fc.raw_pm25_fc_72h ?? null,
+            bias_ratio: bias.ratioFor(rp.province_code).ratio, bias_scope: bias.ratioFor(rp.province_code).scope,
             rain_d0: fc.precip_fc_d0 ?? null, rain_d1: fc.precip_fc_d1 ?? null, rain_d2: fc.precip_fc_d2 ?? null,
             prob_d0: fc.precip_prob_d0 ?? null, prob_d1: fc.precip_prob_d1 ?? null, prob_d2: fc.precip_prob_d2 ?? null,
           },
@@ -771,8 +787,8 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         horizons,
         provinces,
         escalators,
-        method_th: 'คะแนนเฝ้าระวัง = 0.40·PM2.5 + 0.10·มลพิษอื่น + 0.15·แนวโน้ม + 0.20·พยากรณ์ + 0.15·การระบายอากาศ โดย PM2.5 ถูกแทนที่ด้วยค่าพยากรณ์ CAMS รายวัน หักส่วนที่ฝนคาดว่าจะล้างออก',
-        method_en: 'Watch score = 0.40·PM2.5 + 0.10·pollutants + 0.15·trend + 0.20·forecast + 0.15·ventilation, with ground PM2.5 swapped for the CAMS daily forecast, discounted by expected rain washout',
+        method_th: 'คะแนนเฝ้าระวัง = 0.40·PM2.5 + 0.10·มลพิษอื่น + 0.15·แนวโน้ม + 0.20·พยากรณ์ + 0.15·การระบายอากาศ โดย PM2.5 ถูกแทนที่ด้วยค่าพยากรณ์ CAMS รายวัน (ปรับให้ตรงกับเครื่องวัดในพื้นที่ ด้วยอัตราส่วนค่าจริง/ค่าแบบจำลอง 14 วันล่าสุดของแต่ละจังหวัด — CAMS ดิบอ่านต่ำกว่าจริง ~1.5 เท่า) หักส่วนที่ฝนคาดว่าจะล้างออก',
+        method_en: 'Watch score = 0.40·PM2.5 + 0.10·pollutants + 0.15·trend + 0.20·forecast + 0.15·ventilation, with ground PM2.5 swapped for the CAMS daily forecast — scaled to local sensors (each province\'s 14-day ground/CAMS ratio; raw CAMS reads ~1.5× low here) — and discounted by expected rain washout',
         disclaimer_th: 'ดัชนีบ่งชี้ ไม่ใช่แบบจำลองพยากรณ์ — มลพิษอื่น/การระบายอากาศคงที่ตามเวลาปัจจุบัน',
         disclaimer_en: 'Heuristic indicator, not a forecast model — pollutants/ventilation held constant at current observation',
       })
@@ -1417,7 +1433,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         // then filters to one. Measured 2.84 s cold for a rain gauge at the
         // default 72 h vs 0.024 s seeking straight to the station (audit
         // 2026-09-28). This runs on every station click (detail.js).
-        `SELECT obs_time, value FROM readings INDEXED BY idx_readings_lookup
+        `SELECT obs_time, value FROM readings INDEXED BY ${SERIES_INDEX}
          WHERE source = ? AND station_key = ? AND metric = ? AND obs_time >= ?
          ORDER BY obs_time`, source, station, metric, cutoffLocal)
       const hourly = db.all(

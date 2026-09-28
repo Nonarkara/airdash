@@ -201,7 +201,7 @@ export function createRag({ db, riskEngine, washout, faq }) {
     if (p.pm25 !== null) lines.push(`  worst PM2.5 now: ${p.pm25} µg/m³ at ${p.pm25_station_th ?? '-'}`)
     if (p.top_stations?.length) lines.push(`  worst stations: ${p.top_stations.map((s) => `${s.th}/${s.en ?? '-'} ${s.pm25} µg/m³`).join(' · ')}`)
     if (p.rise_6h_ug !== null) lines.push(`  6h PM2.5 trend: ${p.rise_6h_ug > 0 ? '+' : ''}${p.rise_6h_ug} µg/m³`)
-    if (p.pm25_fc_24h !== null) lines.push(`  CAMS forecast PM2.5 next 24h: ${Math.round(p.pm25_fc_24h)} µg/m³${p.pm25_fc_48h !== null ? `, 24–48h: ${Math.round(p.pm25_fc_48h)}` : ''}`)
+    if (p.pm25_fc_24h !== null) lines.push(`  PM2.5 forecast (CAMS, corrected to local sensors), today's mean: ${Math.round(p.pm25_fc_24h)} µg/m³${p.pm25_fc_48h !== null ? `, tomorrow: ${Math.round(p.pm25_fc_48h)}` : ''}${p.pm25_fc_72h != null ? `, day after: ${Math.round(p.pm25_fc_72h)}` : ''}`)
     if (p.precip_prob_24h !== null) lines.push(`  rain chance 24h: ${Math.round(p.precip_prob_24h)}% (${Math.round(p.precip_fc_24h ?? 0)} mm forecast)` +
       (p.washout_relief_pct ? ` — if it rains, PM2.5 washes out ~${p.washout_relief_pct}% → ~${p.projected_pm25} µg/m³` : ''))
     if (p.rain_obs_24h !== null && p.rain_obs_24h >= 5) lines.push(`  observed rain 24h: ${Math.round(p.rain_obs_24h)} mm (washout underway)`)

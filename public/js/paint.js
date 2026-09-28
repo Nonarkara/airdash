@@ -47,7 +47,7 @@ export function paintRisk(layers, risk) {
       `${store.lang === 'th' ? (p.province_en ?? '') : (p.province_th ?? '')} · ${BAND[p.band].en}`,
       [
         [tr('PM2.5 สูงสุด (มคก./ลบ.ม.)', 'worst PM2.5 (µg/m³)'), p.pm25 !== null ? fmtNum(p.pm25, 0) : '—'],
-        [tr('คาด PM2.5 +24 ชม.', 'PM2.5 forecast +24h'), p.pm25_fc_24h !== null ? fmtNum(p.pm25_fc_24h, 0) : '—'],
+        [tr('คาด PM2.5 พรุ่งนี้', 'PM2.5 forecast tomorrow'), p.pm25_fc_48h != null ? fmtNum(p.pm25_fc_48h, 0) : '—'],
         [tr('โอกาสฝน 24 ชม.', 'rain chance 24h'), p.precip_prob_24h !== null ? `${fmtNum(p.precip_prob_24h, 0)}%` : '—'],
       ],
     )).on('click', () => emit('province-select', p))

@@ -19,6 +19,8 @@
 // tambon-level which is the finest open granularity. Every Thai village
 // belongs to exactly one tambon, so searching at tambon level still means
 // every village is reachable from the search bar.
+import { SERIES_INDEX } from './db.js'
+import { forecastBias } from './forecastBias.js'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -510,7 +512,7 @@ export function placeDetail(db, { lat, lng, province_th = null, radius_km = 30 }
       // INDEXED BY: the comment above assumed idx_readings_lookup, but the
       // planner chose idx_readings_metric_cover and walked back through all
       // pm25 history for a dead station (audit 2026-09-28). Pin it.
-      `SELECT value FROM readings INDEXED BY idx_readings_lookup
+      `SELECT value FROM readings INDEXED BY ${SERIES_INDEX}
         WHERE source = ? AND station_key = ? AND metric = 'pm25' AND obs_time <= ?
         ORDER BY obs_time DESC LIMIT 1`,
       s.source, s.station_key, trendCutoff)
@@ -541,7 +543,10 @@ export function placeDetail(db, { lat, lng, province_th = null, radius_km = 30 }
           d0: m.precip_fc_d0 ?? null, d1: m.precip_fc_d1 ?? null, d2: m.precip_fc_d2 ?? null,
           prob_24h: m.precip_prob_24h ?? null, prob_48h: m.precip_prob_48h ?? null,
           wind_kmh: m.wind_fc_kmh ?? null,
-          pm25_24h: m.pm25_fc_24h ?? null, pm25_48h: m.pm25_fc_48h ?? null, pm25_72h: m.pm25_fc_72h ?? null,
+          // Bias-corrected to local sensors (server/forecastBias.js).
+          pm25_24h: forecastBias(db).adjust(province_code, m.pm25_fc_24h ?? null),
+          pm25_48h: forecastBias(db).adjust(province_code, m.pm25_fc_48h ?? null),
+          pm25_72h: forecastBias(db).adjust(province_code, m.pm25_fc_72h ?? null),
           dust_24h: m.dust_fc_24h ?? null,
           obs_time: rows[0].obs_time,
         }

@@ -11,18 +11,23 @@
 // A watchdog cannot report its own absence. The server can: it is KeepAlive'd
 // by launchd, so if anything on this stack is running, it is. Two checks:
 //   1. the live DB must be on internal storage (checked at boot);
-//   2. the watchdog must have run recently (it stamps a heartbeat file each run).
+//   2. the watchdog must have run recently (it stamps a heartbeat file each run);
+//   3. the long-term archive on the external drive must be keeping up (its
+//      receipt). The SSD holds only a hot window of rain data; while the
+//      archive is stalled those rows wait on the SSD and it slowly fills.
 // Both are alert-only — log an error and raise a macOS notification, at most
 // once per 6 h per problem. Neither restarts or kills anything.
 import { execFile } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { CONFIG } from './config.js'
+import { readArchiveReceipt } from './retention.js'
 import { log } from './util.js'
 
 const HEARTBEAT = process.env.AIRDASH_WATCHDOG_HEARTBEAT
   ?? resolve(CONFIG.root ?? '.', 'logs/.watchdog-heartbeat')
 const WATCHDOG_STALE_S = 3 * 3600      // hourly job; 3 missed runs = gone
+const ARCHIVE_STALE_H = 48             // archive runs several times a day
 const CHECK_EVERY_MS = 30 * 60_000
 const RENOTIFY_MS = 6 * 3600_000
 const BOOT_GRACE_MS = 90 * 60_000      // a fresh install/restart gets time for the first run
@@ -55,6 +60,18 @@ export function watchdogStatus() {
   return { heartbeat_age_min: age === null ? null : Math.round(age / 60), stale: age === null || age > WATCHDOG_STALE_S }
 }
 
+/** Pure: the archive receipt's age in hours, or null when there is none. */
+export function receiptAgeH(receipt, nowMs = Date.now()) {
+  const t = Date.parse(receipt?.written_at ?? '')
+  return Number.isFinite(t) ? Math.round(((nowMs - t) / 3600_000) * 10) / 10 : null
+}
+
+export function archiveStatus() {
+  const r = readArchiveReceipt()
+  const age = receiptAgeH(r)
+  return { archived_through_id: r?.readings_src_id ?? null, receipt_age_h: age, stale: age === null || age > ARCHIVE_STALE_H }
+}
+
 export function startOpsSentinel({ startedAt = Date.now() } = {}) {
   if (dbOnExternalVolume(CONFIG.dbPath)) {
     alert('db-external',
@@ -70,6 +87,14 @@ export function startOpsSentinel({ startedAt = Date.now() } = {}) {
           ? 'AirDash watchdog has no heartbeat — it may be unloaded. Nothing is monitoring the site.'
           : `AirDash watchdog last ran ${s.heartbeat_age_min} min ago — it may be unloaded. Nothing is monitoring the site.`,
         { heartbeat: HEARTBEAT, ...s, fix: 'launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.airdash.watchdog.plist' })
+    }
+    const a = archiveStatus()
+    if (a.stale) {
+      alert('archive-stale',
+        a.receipt_age_h === null
+          ? 'AirDash long-term archive has never confirmed a run — rain data is piling up on the SSD. Is the external drive mounted?'
+          : `AirDash long-term archive last confirmed ${a.receipt_age_h} h ago — rain data is piling up on the SSD. Is the external drive mounted?`,
+        { ...a, log: '/Volumes/Data/dash-archive/archive.log' })
     }
   }
   setInterval(check, CHECK_EVERY_MS).unref()

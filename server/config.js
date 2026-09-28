@@ -120,6 +120,13 @@ export const CONFIG = {
   retention: {
     rawDays: 90,       // raw readings older than this roll up into readings_hourly
     runAtHour: 3,      // local time, quiet hours
+    // High-volume sources kept on the SSD only for a short hot window. Their
+    // permanent home is the long-term archive on the external drive
+    // (ops/archive-longterm.mjs); rows leave the SSD only once the archive's
+    // receipt covers them, and are never rolled up (rain gauges report hourly,
+    // so an hourly roll-up would not shrink them — it grew ~200k rows/day).
+    // thaiwater_rain is ~90% of all rows.
+    hotDays: { thaiwater_rain: 14 },
   },
 
   risk: {

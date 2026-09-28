@@ -327,8 +327,8 @@ function multiMetricStrip(mm, weather, forecast, L) {
   }
   // CAMS forecast
   if (forecast) {
-    if (forecast.pm25_fc_24h != null) tiles.push(weatherTile('FC 24h', `${fmtNum(forecast.pm25_fc_24h, 0)} µg`, L('พยากรณ์ PM2.5 24 ชม.', 'PM2.5 forecast 24h')))
-    if (forecast.pm25_fc_48h != null) tiles.push(weatherTile('FC 48h', `${fmtNum(forecast.pm25_fc_48h, 0)} µg`, L('พยากรณ์ 48 ชม.', 'Forecast 48h')))
+    if (forecast.pm25_fc_24h != null) tiles.push(weatherTile(L('คาดวันนี้', 'FC today'), `${fmtNum(forecast.pm25_fc_24h, 0)} µg`, L('พยากรณ์ PM2.5 เฉลี่ยวันนี้', 'PM2.5 forecast, today\'s mean')))
+    if (forecast.pm25_fc_48h != null) tiles.push(weatherTile(L('คาดพรุ่งนี้', 'FC tomorrow'), `${fmtNum(forecast.pm25_fc_48h, 0)} µg`, L('พยากรณ์ PM2.5 เฉลี่ยพรุ่งนี้', 'PM2.5 forecast, tomorrow\'s mean')))
   }
 
   if (!tiles.length) return null

@@ -11,6 +11,7 @@
 //    disperses or washes the aerosol out
 // It also persists a snapshot in kv so the UI can show trend arrows.
 import { CONFIG } from './config.js'
+import { forecastBias } from './forecastBias.js'
 import { nationalVerdict, provinceVerdict } from './verdict.js'
 import { isThaiProvinceCode } from './provinces.js'
 import { readTwinFlood, floodByCode } from './sources/twin-flood.js'
@@ -170,9 +171,10 @@ export function createRisk(db, washout) {
   function compute() {
     const air = freshRows('air4thai',
       ['pm25', 'pm10', 'o3', 'no2', 'so2', 'co', 'aqi'], localCutoff(FRESH_PM_HOURS))
-    const fc = freshRows('openmeteo_aq', ['pm25_fc_24h', 'pm25_fc_48h', 'dust_fc_24h'], localCutoff(FRESH_FC_HOURS))
+    const fc = freshRows('openmeteo_aq', ['pm25_fc_24h', 'pm25_fc_48h', 'pm25_fc_72h', 'dust_fc_24h'], localCutoff(FRESH_FC_HOURS))
     const wx = freshRows('openmeteo', ['wind_fc_kmh', 'precip_prob_24h', 'precip_fc_d0'], localCutoff(FRESH_FC_HOURS))
     const rain = freshRows('thaiwater_rain', ['rain_24h'], localCutoff(FRESH_RAIN_HOURS))
+    const sat = freshRows('gistda_pm25', ['pm25', 'pm25_avg24h'], localCutoff(CONFIG.science.gistdaFreshHours))
     const riseByProvince = riseRateByProvince()
     const washoutAll = washout?.all ? washout.all() : new Map()
 
@@ -196,7 +198,7 @@ export function createRisk(db, washout) {
           pm25_comp: 0, pollutants_comp: 0, forecast_comp: 0,
           stations_unhealthy: 0, stations_very_unhealthy: 0,
           aq_stations: 0, rain_stations: 0,
-          pm25_fc_24h: null, pm25_fc_48h: null, dust_fc_24h: null,
+          pm25_fc_24h: null, pm25_fc_48h: null, pm25_fc_72h: null, dust_fc_24h: null,
           wind_fc_kmh: null, precip_prob_24h: null, precip_fc_24h: null,
           rain_obs_24h: null,
           top_stations: [],
@@ -242,12 +244,43 @@ export function createRisk(db, washout) {
       p.top_stations = p.top_stations.sort((a, b) => b.pm25 - a.pm25).slice(0, 3)
     }
 
-    // CAMS forecast per province centroid.
+    // Satellite gap-fill. When a province's ground PM2.5 sensor goes quiet
+    // (Tak 76t and Loei 72t stopped reporting PM2.5 mid-September while still
+    // sending AQI/NO2) the province used to show NO PM2.5 at all — in exactly
+    // the northern haze provinces that matter most. GISTDA's hourly satellite
+    // fusion covers every province; use it, labelled, only where no fresh
+    // ground station exists. Ground data always wins.
+    const satByCode = new Map()
+    for (const row of sat) {
+      const v = row.value
+      if (!(v >= 0)) continue
+      const cur = satByCode.get(row.province_code) ?? {}
+      satByCode.set(row.province_code, { ...cur, [row.metric]: v, row })
+    }
+    for (const [code, g] of satByCode) {
+      const v = g.pm25 ?? g.pm25_avg24h
+      if (v === undefined) continue
+      const p = prov(g.row)
+      if (!p || p.pm25 !== null) continue
+      p.pm25 = v
+      p.pm25_comp = pm25Score(v)
+      p.pm25_source = 'gistda_satellite'
+      p.pm25_station_th = 'ค่าประมาณจากดาวเทียม GISTDA (ไม่มีสถานีภาคพื้นรายงาน)'
+      p.pm25_station_en = 'GISTDA satellite estimate (no ground station reporting)'
+    }
+    for (const p of provinces.values()) {
+      if (p.pm25 !== null && !p.pm25_source) p.pm25_source = 'air4thai'
+    }
+
+    // CAMS forecast per province centroid — bias-corrected to local sensors
+    // (server/forecastBias.js: raw CAMS reads ~1.5× low in Thailand).
+    const bias = forecastBias(db)
     for (const row of fc) {
       const p = prov(row)
       if (!p) continue
-      if (row.metric === 'pm25_fc_24h') p.pm25_fc_24h = row.value
-      else if (row.metric === 'pm25_fc_48h') p.pm25_fc_48h = row.value
+      if (row.metric === 'pm25_fc_24h') p.pm25_fc_24h = bias.adjust(row.province_code, row.value)
+      else if (row.metric === 'pm25_fc_48h') p.pm25_fc_48h = bias.adjust(row.province_code, row.value)
+      else if (row.metric === 'pm25_fc_72h') p.pm25_fc_72h = bias.adjust(row.province_code, row.value)
       else if (row.metric === 'dust_fc_24h') p.dust_fc_24h = row.value
     }
     // Weather (ventilation + rain-chance) per province centroid.

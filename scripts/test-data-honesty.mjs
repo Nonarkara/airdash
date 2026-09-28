@@ -2,8 +2,9 @@
 // park must end at the provider's reset, not a flat 24 h later.
 import assert from 'node:assert/strict'
 import { washoutBand, reliefEta, WASHOUT_LABELS } from '../server/washout.js'
-import { parkUntil } from '../server/scheduler.js'
+import { parkUntil, bootDelayMs } from '../server/scheduler.js'
 import { isFutureObs } from '../server/db.js'
+import { noiseDay } from '../server/sources/pcd-noise.js'
 
 let passed = 0
 const t = (name, fn) => { fn(); passed++; console.log('PASS', name) }
@@ -37,5 +38,20 @@ t('obs within 2 h slack is accepted', () => {
   const now = Date.UTC(2026, 8, 27, 17, 43)
   assert.equal(isFutureObs('2026-09-28T01:00', now), false)
   assert.equal(isFutureObs('2026-09-27T23:00', now), false)
+})
+t('boot: source fresh within its interval waits for its turn', () => {
+  const now = Date.UTC(2026, 8, 28, 10, 0)
+  assert.equal(bootDelayMs(new Date(now - 60 * 60_000).toISOString(), 6 * 3600_000, now), 5 * 3600_000)
+})
+t('boot: stale or never-run source runs now', () => {
+  const now = Date.UTC(2026, 8, 28, 10, 0)
+  assert.equal(bootDelayMs(new Date(now - 7 * 3600_000).toISOString(), 6 * 3600_000, now), 0)
+  assert.equal(bootDelayMs(null, 6 * 3600_000, now), 0)
+})
+t('noise: wall-time-as-UTC encoding (2026-09-27 form) → same date', () => {
+  assert.equal(noiseDay(Date.UTC(2026, 8, 27, 23, 0)), '2026-09-27')
+})
+t('noise: real-instant encoding (2026-09-28 form) → same date', () => {
+  assert.equal(noiseDay(Date.UTC(2026, 8, 27, 16, 0)), '2026-09-27')
 })
 console.log(`\n${passed} passed, 0 failed`)

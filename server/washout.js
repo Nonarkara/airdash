@@ -17,6 +17,7 @@
 // — the UI says so wherever these numbers show.
 import { readTmdWeather } from './sources/tmd-relay.js'
 import { num } from './util.js'
+import { forecastBias } from './forecastBias.js'
 import { reliefPct } from './washout-curve.js'
 import { isThaiProvinceCode } from './provinces.js'
 
@@ -164,11 +165,14 @@ export function createWashout(db) {
       else if (row.metric === 'precip_prob_d1') e.fc_days[1].prob = v
       else if (row.metric === 'precip_prob_d2') e.fc_days[2].prob = v
     }
-    // CAMS PM2.5 forecast per province — worse_before_better input.
+    // CAMS PM2.5 forecast per province — worse_before_better input. Bias-
+    // corrected: it is compared against the GROUND reading, so raw CAMS
+    // (~1.5× low) made "worse tomorrow" almost impossible to trigger.
+    const bias = forecastBias(db)
     for (const row of camsRows) {
       const e = entry(row)
       if (!e) continue
-      const v = num(row.value)
+      const v = bias.adjust(row.province_code, num(row.value))
       if (v === null) continue
       if (row.metric === 'pm25_fc_24h') e.pm25_fc_24h = v
       else if (row.metric === 'pm25_fc_48h') e.pm25_fc_48h = v

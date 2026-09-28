@@ -40,7 +40,9 @@ CREATE TABLE IF NOT EXISTS readings (
   fetched_at  TEXT NOT NULL,
   UNIQUE (source, station_key, metric, obs_time)
 );
-CREATE INDEX IF NOT EXISTS idx_readings_lookup ON readings(source, station_key, metric, obs_time DESC);
+-- Per-series lookups use the UNIQUE constraint's own index (same columns;
+-- SQLite scans it backwards for "latest"). The old idx_readings_lookup
+-- duplicated it at 1.4 GB and is dropped by ops/shrink-hot-db.mjs.
 CREATE INDEX IF NOT EXISTS idx_readings_time ON readings(obs_time);
 -- Serves every metric+time-window analytics query as a COVERING index:
 --   /api/series/daily   WHERE metric=? AND obs_time>=?            (day GROUP BY)
@@ -427,6 +429,11 @@ function migrate(db) {
   // just added or already existed — the columns are guaranteed present now.
   db.exec('CREATE INDEX IF NOT EXISTS idx_news_province ON news_items(province_code, fetched_at DESC)')
 }
+
+/** The UNIQUE(source, station_key, metric, obs_time) index. Pin per-series
+ *  queries to it with INDEXED BY: left alone, the planner picks the covering
+ *  metric index and scans every station's rows for the metric. */
+export const SERIES_INDEX = 'sqlite_autoindex_readings_1'
 
 // Bangkok-local obs_time (YYYY-MM-DDTHH:MM) more than this ahead of now is a
 // timezone bug upstream or here, never a real observation.

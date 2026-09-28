@@ -32,6 +32,7 @@
 // An uncorroborated sev-3 is downgraded: no public alert, no fan-out; it
 // is logged and recorded as a severity-0 'pm25_spike_suppressed' row so
 // operators can audit suppressed spikes in /api/alerts.
+import { SERIES_INDEX } from './db.js'
 import { CONFIG } from './config.js'
 import { log } from './util.js'
 
@@ -229,7 +230,7 @@ export function createAlerts(db, bus, { line = null, telegramBroadcaster = null 
   function isSustainedClear({ source, station }) {
     const t = CONFIG.thresholds
     const rows = db.all(
-      `SELECT value FROM readings INDEXED BY idx_readings_lookup
+      `SELECT value FROM readings INDEXED BY ${SERIES_INDEX}
        WHERE source = ? AND station_key = ? AND metric = 'pm25' AND obs_time >= ?
        ORDER BY obs_time DESC LIMIT 6`,
       source, station.station_key, localCutoff(ALL_CLEAR_WINDOW_H),

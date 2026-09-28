@@ -412,13 +412,16 @@ function renderSky() {
     if (chips.previousElementSibling) chips.previousElementSibling.hidden = false
   }
 
-  // 72h outlook — today / +24h / +48h from the snapshot's own forecast fields.
+  // Outlook — now (ground) / tomorrow / day after. The CAMS fields are
+  // calendar-day means (pm25_fc_24h = TODAY, _48h = tomorrow, _72h = the day
+  // after), bias-corrected to local sensors server-side. The old strip put
+  // today's model value beside the ground reading as "+24h".
   const out = $('#outlook')
   if (out) {
     const cells = sp ? [
-      { d: tr('วันนี้', 'today'), v: sp.pm25 },
-      { d: tr('+24 ชม.', '+24h'), v: sp.pm25_fc_24h },
-      { d: tr('+48 ชม.', '+48h'), v: sp.pm25_fc_48h },
+      { d: tr('ตอนนี้', 'now'), v: sp.pm25 },
+      { d: tr('พรุ่งนี้', 'tomorrow'), v: sp.pm25_fc_48h },
+      { d: tr('มะรืนนี้', 'day after'), v: sp.pm25_fc_72h },
     ] : []
     out.innerHTML = cells.length
       ? cells.map((c) => `<div class="day"><div class="d">${c.d}</div><div class="v">${c.v == null ? '—' : fmtNum(c.v, 0)}</div><div class="u">µg/m³</div></div>`).join('')
