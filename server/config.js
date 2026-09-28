@@ -36,7 +36,7 @@ export const CONFIG = {
     // update hourly, so sampling faster mostly re-reads the same air.
     haze_vision: 30 * MINUTE,
     // DustBoy (CMU CCDC) — free API key, hourly, like PCD. Skips quietly
-    // until DUSTBOY_TOKEN is set; see server/sources/dustboy.js.
+    // until a token is stored (node scripts/set-dustboy-token.mjs).
     dustboy: 1 * HOUR,
     air4thai: 1 * HOUR,      // PCD publishes hourly
     // Open-Meteo free tier has a daily request limit (10,000/day globally,

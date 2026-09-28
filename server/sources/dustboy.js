@@ -23,9 +23,12 @@
 // The API is open and fully documented at https://open-api.cmuccdc.org/ —
 // free registration, no cost, no institutional agreement. Every endpoint
 // takes `Authorization: Bearer <token>`. The token is NOT shipped in this
-// repository and must be set by the operator:
+// repository and must be set by the operator, once:
 //
-//     launchctl setenv DUSTBOY_TOKEN '<paste your key here>'
+//     node scripts/set-dustboy-token.mjs     (hidden prompt → DB kv table)
+//
+// (DUSTBOY_TOKEN in the environment still wins, for tests. Not
+// `launchctl setenv`: it is lost at reboot and puts the key in shell history.)
 //
 // Without it this source skips quietly, exactly like the IMERG satellite-rain
 // source that also needs a free NASA token. That is deliberate: a missing
@@ -53,7 +56,8 @@ const BASE = 'https://open-api.cmuccdc.org'
 
 /** Read once at module load. launchctl setenv makes it visible to the
  *  process, so a key added this way survives restarts without editing a file. */
-export const DUSTBOY_TOKEN = process.env.DUSTBOY_TOKEN || ''
+/** Read at RUN time, so a token stored with the script needs no restart. */
+const tokenFor = (db) => process.env.DUSTBOY_TOKEN || db?.kvGet?.('dustboy_token') || ''
 
 const num = (v) => {
   if (v === null || v === undefined || v === '') return null
@@ -166,7 +170,7 @@ export function normalizeDustboy(json) {
   return { rows, skipped, fields: [...fields] }
 }
 
-async function dustboyFetch(path, { timeoutMs = 25_000 } = {}) {
+async function dustboyFetch(path, { token, timeoutMs = 25_000 } = {}) {
   const res = await fetch(`${BASE}${path}`, {
     signal: AbortSignal.timeout(timeoutMs),
     headers: {
@@ -174,7 +178,7 @@ async function dustboyFetch(path, { timeoutMs = 25_000 } = {}) {
       // A token is required for every documented endpoint. Send it even if
       // empty so the failure is a clean 401/403 we can report, not a
       // confusing shape error from a public-only route.
-      authorization: `Bearer ${DUSTBOY_TOKEN}`,
+      authorization: `Bearer ${token}`,
       'user-agent': 'AirDash/2.4 (public air-quality dashboard)',
     },
   })
@@ -191,15 +195,16 @@ export default {
   version: 1, // bump when the parser changes → runs at next boot
 
   async run({ db }) {
-    if (!DUSTBOY_TOKEN) {
+    const token = tokenFor(db)
+    if (!token) {
       // Skip quietly, like the IMERG token-gated source. The scheduler logs
       // this once per boot; /api/health shows the source as idle so the gap
       // is visible rather than invisible.
-      log('info', 'dustboy: no DUSTBOY_TOKEN set — skipping (see server/sources/dustboy.js for the one-time request)')
+      log('info', 'dustboy: no token set — skipping (run: node scripts/set-dustboy-token.mjs)')
       return { seen: 0, added: 0, skipped_no_token: true }
     }
 
-    const json = await dustboyFetch('/api/dustboy/stations')
+    const json = await dustboyFetch('/api/dustboy/stations', { token })
     const { rows, skipped, fields } = normalizeDustboy(json)
     if (!rows.length) {
       log('warn', 'dustboy: payload produced no usable rows', { skipped, fields })
