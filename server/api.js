@@ -1864,6 +1864,109 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       }
     },
 
+    // ── Citizen and press haze reports, pinned to the map ─────────────
+    // `?claims=smoke` filters to reports that say it is a fire; the claim
+    // label is the point of the layer, because ฝุ่น (combustion) and
+    // ฝนพิชั่น (an incoming washout that will clear it) are both "haze"
+    // and call for opposite advice.
+    'GET /api/citizen-reports': async (req, res, url) => {
+      if (!allow(req, { key: 'citizen-reports', limit: 60, windowMs: 60_000 })) {
+        return json(res, 429, { error: 'too many requests — wait a minute' })
+      }
+      try {
+        const limit = clamp(url.searchParams.get('limit'), 1, 400, 120)
+        const province = url.searchParams.get('province')
+        const claim = url.searchParams.get('claims')
+        const minConf = clamp(url.searchParams.get('min_confidence'), 0, 4, 1)
+        const where = [`status = 'live'`]
+        const args = []
+        if (province) { where.push('province_code = ?'); args.push(String(province).padStart(2, '0')) }
+        if (minConf) { where.push('geocode_confidence >= ?'); args.push(minConf) }
+        if (claim && /^(smoke|dust|fog|washout)$/.test(claim)) {
+          // claims_json is a small object per row; a LIKE on the boolean key
+          // is enough at this table's size and avoids a JSON extension that
+          // SQLite may or may not have been compiled with.
+          where.push(`claims_json LIKE ?`); args.push(`%"${claim}":true%`)
+        }
+        const rows = db.all(
+          `SELECT id, source, source_url, title_raw, lang, credit_line, lat, lng,
+                  place_name, place_kind, province_code, geocode_confidence,
+                  pin_precision, matched_text, claims_json, pm25_nearby, pm25_km,
+                  pm25_band, created_at, live_expires_at
+           FROM citizen_haze_reports
+           WHERE ${where.join(' AND ')}
+           ORDER BY created_at DESC LIMIT ?`, ...args, limit)
+        // Sources are listed so the layer can always show where its pins came
+        // from. A layer that can silently change its sources is a layer whose
+        // pins cannot be trusted.
+        const sources = db.all(
+          `SELECT source, count(*) AS n, max(created_at) AS latest
+           FROM citizen_haze_reports WHERE status = 'live' GROUP BY source ORDER BY n DESC`)
+        json(res, 200, {
+          generated_at: new Date().toISOString(),
+          count: rows.length,
+          sources,
+          // Stated so the UI can label a province-centroid pin as such rather
+          // than presenting it as a street-level observation.
+          note_th: 'หมุดแบบจังหวัดหมายถึงจุดกึ่งกลางของจังหวัด ไม่ใช่จุดที่รายงาน — ดูระดับความแม่นยำของแต่ละหมุด',
+          note_en: 'A province pin is the province centroid, not the reported location — read each pin\'s precision',
+          reports: rows.map((r) => ({ ...r, claims: safeMeta(r.claims_json) })),
+        })
+      } catch (e) {
+        log('warn', 'citizen-reports failed', { error: String(e) })
+        json(res, 500, { error: 'citizen reports unavailable' })
+      }
+    },
+
+    // ── Camera-frame haze features, reported honestly ──────────────────
+    // The read side of server/vision/hazeVision.js. Exists so the collected
+    // features are inspectable rather than being a private training set. It
+    // deliberately exposes `calibrated: false` and the reason a score was
+    // withheld, because a consumer that reads features without those two
+    // fields would be presenting a triage number as a measurement.
+    'GET /api/haze-vision': async (req, res, url) => {
+      if (!allow(req, { key: 'haze-vision', limit: 60, windowMs: 60_000 })) {
+        return json(res, 429, { error: 'too many requests — wait a minute' })
+      }
+      try {
+        const hours = clamp(url.searchParams.get('hours'), 1, 720, 48)
+        const limit = clamp(url.searchParams.get('limit'), 1, 500, 200)
+        const since = new Date(Date.now() - hours * 3600_000).toISOString()
+        const rows = db.all(
+          `SELECT camera_key, camera_source, lat, lng, obs_time, haze_index,
+                  calibrated, corridor_tail, contrast, edge_density,
+                  dark_channel, transmission, edge_decay, saturation, warm_bias,
+                  mean_luma, tint_hint, pm25, pm25_station, pm25_km
+           FROM cctv_haze_frames
+           WHERE obs_time >= ?
+           ORDER BY obs_time DESC LIMIT ?`, since, limit)
+        const scored = rows.filter((r) => r.haze_index !== null)
+        const live = db.all(
+          `SELECT stream_status, count(*) AS n FROM cctv_haze_health
+           GROUP BY stream_status`).catch(() => [])
+        json(res, 200, {
+          generated_at: new Date().toISOString(),
+          hours,
+          samples: rows.length,
+          scored: scored.length,
+          withheld: rows.length - scored.length,
+          tint: {
+            smoke_like: rows.filter((r) => r.tint_hint === 'smoke-like').length,
+            fog_like: rows.filter((r) => r.tint_hint === 'fog-like').length,
+          },
+          // The honest headline, not a number anyone can quote as a reading.
+          calibrated: false,
+          note_th: 'ค่านี้เป็นคะแนนคัดกรองเบื้องต้น ยังไม่ได้เทียบเทียบกับเครื่องวัดมาตรฐาน และค่าฝุ่นวันนี้แทบไม่มีความผันแปร — เลยยังสรุปเป็นค่าความเข้มข้นไม่ได้',
+          note_en: 'Provisional triage score, not calibrated against a reference instrument, and today’s PM2.5 has too little spread to fit anything. Do not quote as a concentration.',
+          stream_status: live,
+          samples_rows: rows,
+        })
+      } catch (e) {
+        log('warn', 'haze-vision failed', { error: String(e) })
+        json(res, 500, { error: 'haze vision unavailable' })
+      }
+    },
+
     // ── LINE Notify opt-in ────────────────────────────────────────────
     // Citizen flow: paste a LINE Notify token (issued at
     // https://notify-bot.line.me after adding the bot as a friend).

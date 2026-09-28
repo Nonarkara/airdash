@@ -320,6 +320,54 @@ CREATE TABLE IF NOT EXISTS cctv_haze_frames (
 CREATE INDEX IF NOT EXISTS cctv_haze_frames_cam_ts ON cctv_haze_frames(camera_key, obs_time DESC);
 CREATE INDEX IF NOT EXISTS cctv_haze_frames_ts    ON cctv_haze_frames(obs_time DESC);
 
+-- Citizen and social haze reports pinned to the map (2026-09-28).
+--
+-- Modelled on FloodDash's citizen_social_reports, with three air-specific
+-- additions and one FloodDash rule kept verbatim because it is right.
+--
+-- KEPT FROM FLOODDASH: credit_line is NOT NULL with a length check. A report
+-- that cannot be attributed to a source may not appear. That is not a
+-- formatting preference, it is the whole difference between a map of public
+-- reports and a map of anonymous assertions, and it is why this project does
+-- not scrape Facebook (see server/sources/citizen-social.js).
+--
+-- AIR-SPECIFIC: geocode_confidence AND pin_precision are stored separately.
+-- A tambon match is strong evidence about WHERE and yields a province
+-- centroid to draw; conflating the two would let the map look more precise
+-- than the evidence supports. See server/socialGeocode.js.
+CREATE TABLE IF NOT EXISTS citizen_haze_reports (
+  id                 TEXT PRIMARY KEY,   -- stable hash of (source, post id)
+  source             TEXT NOT NULL,      -- feed id, e.g. 'thai_rss:nation'
+  source_url         TEXT,               -- the post's own URL, always kept
+  title_raw          TEXT,               -- headline or post text, untranslated
+  lang               TEXT,               -- 'th' | 'en' | 'mixed'
+  credit_line        TEXT NOT NULL,      -- who published this, non-empty
+  lat                REAL,
+  lng                REAL,
+  place_name         TEXT,               -- what the geocoder matched
+  place_kind         TEXT,               -- province|district|tambon|landmark
+  province_code      TEXT,
+  geocode_confidence INTEGER,            -- how specific the match was
+  pin_precision      INTEGER,            -- what the drawn pin actually is
+  matched_text       TEXT,               -- the literal substring that matched
+  -- What the text claimed, so the map can distinguish a smoke report from a
+  -- washout report. Both are "haze" in Thai and mean opposite things.
+  claims_json        TEXT,               -- JSON: {smoke, dust, fog, washout, aqi}
+  pm25_nearby        REAL,               -- paired ground PM2.5 at ingest
+  pm25_km            REAL,
+  pm25_band          TEXT,
+  status             TEXT NOT NULL DEFAULT 'live',  -- live|archived|rejected
+  archived_reason    TEXT,               -- why it left the 'live' layer
+  live_expires_at    TEXT,               -- pins fade rather than accumulating
+  created_at         TEXT NOT NULL,
+  CHECK (status IN ('live', 'archived', 'rejected')),
+  CHECK (length(trim(credit_line)) > 0)
+);
+CREATE INDEX IF NOT EXISTS idx_citizen_haze_live
+  ON citizen_haze_reports(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_citizen_haze_prov
+  ON citizen_haze_reports(province_code, status, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT);
 
 -- ── Score history — one row per province per hour, written by risk.js.

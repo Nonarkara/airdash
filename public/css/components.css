@@ -3732,6 +3732,40 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .cctv-wall-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); }
 .cctv-wall-msg { padding: 28px 8px; text-align: center; color: var(--ink-mid); }
 .cctv-wall-foot { font-size: 11px; color: var(--ink-low); margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--rule); }
+/* ── citizen / press haze reports (2026-09-28) ───────────────────────────
+   The pin style carries information, not decoration: FILLED = the article
+   named a specific place and we have that place's own coordinate. HOLLOW =
+   we know the province and drew its centroid, which may be 80 km from what
+   the article meant. A reader must be able to tell those apart at a glance,
+   before clicking anything. */
+.citizen-pin-shell { background: none; border: none; }
+.citizen-pin {
+  display: grid; place-items: center; width: 24px; height: 24px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--air) 22%, transparent);
+  box-shadow: inset 0 0 0 2px var(--air);
+  font-size: 12px; line-height: 1;
+}
+.citizen-pin.is-exact { background: var(--air); box-shadow: inset 0 0 0 2px var(--surface, #fff); }
+.citizen-pin i { font-style: normal; filter: drop-shadow(0 0 1px rgba(0,0,0,.5)); }
+
+.citizen-pop { display: grid; gap: 6px; font-size: 13px; }
+.citizen-pop-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.citizen-pop-place { font-weight: 700; }
+.citizen-pop-claim { font-size: 12px; color: var(--ink-mid); white-space: nowrap; }
+.citizen-pop-title { margin: 0; line-height: 1.4; color: var(--ink); }
+.citizen-pop-pm-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px; }
+.citizen-pop-pm { font-family: var(--font-num); font-weight: 800; color: var(--air, var(--ink)); }
+.citizen-pop-dim { color: var(--ink-mid); font-size: 12px; }
+.citizen-pop-claims { font-size: 12px; color: var(--ink-mid); }
+.citizen-pop-prec {
+  font-size: 11px; color: var(--ink-mid); border-left: 3px solid var(--rule-strong);
+  padding-left: 7px;
+}
+.citizen-pop-prec.is-exact { border-left-color: var(--aqi-good, #2f8f5b); }
+.citizen-pop-src { font-size: 12px; color: var(--link, #1c6fd0); text-decoration: none; }
+.citizen-pop-src:hover { text-decoration: underline; }
+
 .cctv-eye { background: var(--well); border: 1px solid var(--rule); border-radius: var(--r-card); padding: 10px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; align-content: start; }
 /* plain <div>s on purpose: AirDash's global article/header rules gave the cards a 2-column grid */
 .cctv-eye-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--ink-mid); }

@@ -38,6 +38,9 @@ export const CONFIG = {
     // DustBoy (CMU CCDC) — free API key, hourly, like PCD. Skips quietly
     // until a token is stored (node scripts/set-dustboy-token.mjs).
     dustboy: 1 * HOUR,
+    // Public RSS haze reports. 20 min: these are news feeds, and the value is
+    // in catching a regional story while it is still breaking.
+    citizen_social: 20 * MINUTE,
     air4thai: 1 * HOUR,      // PCD publishes hourly
     // Open-Meteo free tier has a daily request limit (10,000/day globally,
     // but smaller per-IP burst limits bite first). 6h = 4 calls/day per

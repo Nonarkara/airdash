@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.39'
-import { escapeHtml } from '../fmt.js?v=2.4.39'
+import { store, on } from '../state.js?v=2.4.40'
+import { escapeHtml } from '../fmt.js?v=2.4.40'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -82,6 +82,16 @@ function GROUPS() {
           en: 'The cameras looking at the worst air right now — highest PM2.5 first, only cameras that actually work.',
           params: [['limit', false, tr('จำนวน 1–24 (ค่าเริ่มต้น 12)', 'count 1–24 (default 12)')], ['min_pm25', false, tr('เกณฑ์ PM2.5 ขั้นต่ำ (ค่าเริ่มต้น 25)', 'minimum PM2.5 (default 25)')], ['include_down', false, tr('1 = รวมกล้องที่สตรีมออฟไลน์แต่มี viewer_url (iTIC/DOH) ใช้ในฤดูฝุ่น', '1 = include streams marked down but with an iTIC/DOH viewer_url (haze season)')]],
           note_th: 'กล้องที่ stream_status = down จะถูกซ่อนเป็นค่าเริ่มต้น — ส่ง include_down=1 เพื่อแสดงเฉพาะกล้องที่มีลิงก์ต้นทางสาธารณะ (iTIC/DOH) เปิดเองได้', note_en: 'Cameras with stream_status=down are hidden by default — pass include_down=1 to surface those that have a public viewer page on iTIC/DOH instead, ranked after working streams.' },
+        { path: '/api/citizen-reports', th: 'รายงานหมอกควันจากผู้ใช้และสื่อ ผูกพิกัดอัตโนมัติจากชื่อสถานที่ในพาดหัว ทุกรายการระบุแหล่งที่มาและลิงก์ต้นฉบับเสมอ',
+          en: 'Citizen and press haze reports, auto-pinned by place name in the headline. Every row carries its publisher and a link to the original.',
+          params: [['limit', false, tr('จำนวน (สูงสุด 400)', 'count (max 400)')], ['province', false, tr('รหัสจังหวัด 2 หลัก เช่น 50', '2-digit province code, e.g. 50')], ['claims', false, tr('smoke|dust|fog|washout — กรองตามสิ่งที่พาดหัวอ้าง', 'smoke|dust|fog|washout — filter by what the text claims')], ['min_confidence', false, tr('1..4 ต่ำสุด', '1..4 minimum')]],
+          note_th: 'วงกลมโปร่ง = หมุดที่จุดกึ่งกลางของจังหวัด (อาจห่างจากจุดที่รายงานหลายสิบกิโลเมตร) · จุดเต็ม = สถานที่ที่พาดหัวระบุชื่อชัดเจน · ฝุ่นกับฝนพิชั่นคือคนละเรื่อง อย่าอ่านเหมือนกัน',
+          note_en: 'A hollow pin is a PROVINCE CENTROID and may be tens of km from the reported spot; a filled pin is a named place · combustion and an incoming washout are different things and are not drawn alike.' },
+        { path: '/api/haze-vision', th: 'คุณลักษณะหมอกควันจากภาพกล้อง — ยังเป็นคะแนนคัดกรองเบื้องต้น ยังไม่ได้เทียบเทียบ',
+          en: 'Camera-frame haze features — a provisional triage score, not calibrated',
+          params: [['hours', false, tr('ช่วงเวลาย้อนหลัง (สูงสุด 720)', 'lookback hours (max 720)')], ['limit', false, tr('จำนวนตัวอย่าง', 'sample count')]],
+          note_th: 'calibrated=false เสมอ — ค่านี้เป็นคะแนนจัดลำดับความเข้มข้น ไม่ใช่ค่า µg/m³ และไม่ใช่ระยะมองเห็น ห้ามอ้างเป็นค่าวัด',
+          note_en: 'calibrated is always false — this is a relative severity ranking, not a concentration in µg/m³ and not a visibility distance. Do not quote it as a measurement.' },
         { path: '/api/cctv/north', th: 'กล้องในภาคเหนือ (ละติจูด ≥ ?min_lat) พร้อมค่า PM2.5 ที่ใกล้ที่สุด — เรียงตามค่าฝุ่นของสถานีใกล้เคียง เหมาะกับช่วงวางแผนขับรถช่วงฤดูฝุ่น',
           en: 'Cameras in northern Thailand (lat ≥ ?min_lat) paired with the nearest PM2.5 station, sorted by that station’s reading. Use ?live=1 to drop offline ones.',
           params: [['limit', false, tr('จำนวน (ค่าเริ่มต้น 60)', 'count (default 60)')], ['min_lat', false, tr('ละติจูดขั้นต่ำ (ค่าเริ่มต้น 17)', 'minimum latitude (default 17)')], ['max_km', false, tr('รัศมี pair (ค่าเริ่มต้น 30)', 'pair radius km (default 30)')], ['live', false, tr('1 = ตัดสตรีมที่ตายออก', '1 = drop offline streams')]],
