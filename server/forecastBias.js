@@ -15,6 +15,15 @@
 // than MIN_DAYS paired days uses the national ratio; the ratio is clamped so
 // one bad sensor cannot multiply a forecast by 10. The raw CAMS value stays
 // in the DB (skill.js scores the raw model) and is returned alongside.
+//
+// BOUNDED EXTRAPOLATION (2026-09-28). A ratio learned on clean days is mostly
+// a LOCAL offset (Rayong: ground ~10 vs CAMS ~3.5 → ratio 2.9 — that is Map
+// Ta Phut, not a model that is 3× low at every level). Scaling a higher
+// forecast by it overshoots: raw 14 became "41 µg/m³", which crossed the
+// warning line and was broadcast. So the ratio applies only up to the mean
+// CAMS level it was learned on; beyond that the calibrated ABSOLUTE offset
+// is added instead. The range grows by itself once smoky days enter the
+// 14-day window.
 const WINDOW_DAYS = 14
 const MIN_DAYS = 5
 const RATIO_MIN = 0.5
@@ -39,11 +48,11 @@ export function computeRatios(groundRows, camsRows, { minDays = MIN_DAYS } = {})
     G += r.v; C += c; N++
   }
   const national = N >= minDays && C > 0
-    ? { ratio: round2(clampRatio(G / C)), n: N, scope: 'national' }
-    : { ratio: 1, n: N, scope: 'none' }
+    ? { ratio: round2(clampRatio(G / C)), n: N, scope: 'national', camsMean: C / N }
+    : { ratio: 1, n: N, scope: 'none', camsMean: 0 }
   const byCode = new Map()
   for (const [code, a] of acc) {
-    if (a.n >= minDays && a.c > 0) byCode.set(code, { ratio: round2(clampRatio(a.g / a.c)), n: a.n, scope: 'province' })
+    if (a.n >= minDays && a.c > 0) byCode.set(code, { ratio: round2(clampRatio(a.g / a.c)), n: a.n, scope: 'province', camsMean: a.c / a.n })
   }
   return { byCode, national }
 }
@@ -68,6 +77,12 @@ function load(db) {
   return computeRatios(groundRows.map((r) => ({ ...r, code: String(r.code) })), camsRows.map((r) => ({ ...r, code: String(r.code) })))
 }
 
+/** Pure: ratio inside the calibrated range, absolute offset beyond it. */
+export function correct(v, { ratio, camsMean = 0 }) {
+  if (!(camsMean > 0) || v <= camsMean) return v * ratio
+  return v + (ratio - 1) * camsMean
+}
+
 const cache = new WeakMap() // db → { at, ratios }
 
 /** Per-DB cached bias model. Never throws: on failure the forecast passes through raw. */
@@ -84,7 +99,7 @@ export function forecastBias(db) {
   return {
     ratioFor,
     /** Bias-corrected value (null stays null). */
-    adjust: (code, v) => (v === null || v === undefined || !Number.isFinite(v) ? v ?? null : round1(v * ratioFor(code).ratio)),
+    adjust: (code, v) => (v === null || v === undefined || !Number.isFinite(v) ? v ?? null : round1(correct(v, ratioFor(code)))),
     national,
     provinces: byCode.size,
   }

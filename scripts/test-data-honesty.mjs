@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { washoutBand, reliefEta, WASHOUT_LABELS } from '../server/washout.js'
 import { parkUntil, bootDelayMs } from '../server/scheduler.js'
 import { isFutureObs } from '../server/db.js'
+import { correct, computeRatios } from '../server/forecastBias.js'
 import { noiseDay } from '../server/sources/pcd-noise.js'
 
 let passed = 0
@@ -53,5 +54,18 @@ t('noise: wall-time-as-UTC encoding (2026-09-27 form) → same date', () => {
 })
 t('noise: real-instant encoding (2026-09-28 form) → same date', () => {
   assert.equal(noiseDay(Date.UTC(2026, 8, 27, 16, 0)), '2026-09-27')
+})
+t('bias: inside the calibrated range the ratio scales', () => {
+  assert.equal(correct(3, { ratio: 2, camsMean: 4 }), 6)
+})
+t('bias: beyond it only the calibrated offset is added (Rayong 2026-09-28: raw 14 was sent as 41)', () => {
+  assert.ok(Math.abs(correct(14, { ratio: 2.93, camsMean: 3.5 }) - 20.755) < 0.01)
+})
+t('bias: ratios need MIN_DAYS paired days, else national', () => {
+  const g = [1, 2, 3, 4, 5].map((d) => ({ code: '10', day: `2026-09-0${d}`, v: 20 }))
+  const c = [1, 2, 3, 4, 5].map((d) => ({ code: '10', day: `2026-09-0${d}`, v: 10 }))
+  const r = computeRatios(g, c)
+  assert.equal(r.byCode.get('10').ratio, 2)
+  assert.equal(computeRatios(g.slice(0, 2), c.slice(0, 2)).byCode.size, 0)
 })
 console.log(`\n${passed} passed, 0 failed`)
