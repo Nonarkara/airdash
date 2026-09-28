@@ -25,7 +25,8 @@ const STRINGS = {
       ? `สวัสดีค่ะ 👋 Air คือบอทแจ้งเตือนฝุ่น PM2.5 ของ AirDash\n\n` +
         `กำลังเชื่อมต่อกับรหัส <code>${code}</code>...`
       : `สวัสดีค่ะ 👋 Air คือบอทแจ้งเตือนฝุ่น PM2.5 ของ AirDash\n\n` +
-        `หากต้องการรับการแจ้งเตือน ให้เปิด AirDash → เลือกโหมดง่าย → เลือกจังหวัด → กดปุ่ม "เชื่อมต่อ Telegram"\n` +
+        `พิมพ์ชื่อจังหวัดของคุณได้เลย เช่น <b>เชียงใหม่</b> (หรือ /province เชียงใหม่)\n` +
+        `แล้ว Air จะเตือนล่วงหน้าเมื่อพยากรณ์ว่าฝุ่นจะถึงขั้นมีผลต่อสุขภาพ และเมื่อฝุ่นขึ้นจริง\n\n` +
         `https://air.nonarkara.org`,
     bound: (province) => `✅ เชื่อมต่อสำเร็จ — จะแจ้งเตือนเมื่อฝุ่นใน${province}ถึงขั้นต้องป้องกัน\n\n` +
       `สั่ง /stop เมื่อต้องการยกเลิก`,
@@ -51,7 +52,8 @@ const STRINGS = {
       ? `Hi 👋 I'm Air, the AirDash PM2.5 alert bot\n\n` +
         `Linking with code <code>${code}</code>...`
       : `Hi 👋 I'm Air, the AirDash PM2.5 alert bot\n\n` +
-        `To subscribe, open AirDash → EASY mode → pick your province → tap "Connect on Telegram"\n` +
+        `Just type your province, e.g. <b>Chiang Mai</b> (or /province Chiang Mai).\n` +
+        `I'll warn you the day before PM2.5 is forecast to reach a harmful level, and when it actually does.\n\n` +
         `https://air.nonarkara.org`,
     bound: (province) => `✅ Linked — you'll get an alert when PM2.5 in ${province} hits protect-now level\n\n` +
       `Send /stop anytime to unsubscribe`,
@@ -104,6 +106,12 @@ function resolveProvince(list, q) {
   return m ?? null
 }
 
+/** Exact (normalised) province-name match, or null. Also exported for tests. */
+export function resolveProvinceExact(list, q) {
+  const nq = norm(q)
+  return list.find((p) => norm(p.th) === nq || norm(p.en) === nq || norm(`จ.${p.th}`) === nq || norm(`จังหวัด${p.th}`) === nq) ?? null
+}
+
 // Process a single Telegram Update. Returns true if the update was
 // handled (or an async response was scheduled). Telegram sends one
 // update per message; we respond with the answer text immediately.
@@ -116,8 +124,23 @@ export async function processTelegramUpdate(db, update) {
   const chat = msg.chat
   if (!chat?.id) return false
   const chatId = chat.id
-  const text = (msg.text ?? '').trim()
-  if (!text.startsWith('/')) return false // ignore non-command messages
+  let text = (msg.text ?? '').trim()
+  if (!text.startsWith('/')) {
+    // A plain message that names a province is a subscription request —
+    // the /start welcome says "just type your province". Anything else is
+    // ignored as before (this is not a chat bot).
+    if (!text || text.length > 40) return false
+    // EXACT name only: the /province resolver also matches substrings, and a
+    // plain "hi" must not subscribe anyone to P-hi-tsanulok.
+    const list = await loadProvinceIndex(db)
+    if (!resolveProvinceExact(list, text)) return false
+    if (!db.get('SELECT id FROM telegram_subs WHERE chat_id = ?', chatId)) {
+      const now = new Date().toISOString()
+      db.run(`INSERT INTO telegram_subs (chat_id, binding_code, user_handle, first_name, lang, created_at, updated_at)
+              VALUES (?, NULL, ?, ?, 'th', ?, ?)`, chatId, msg.from?.username ?? null, msg.from?.first_name ?? null, now, now)
+    }
+    text = `/province ${text}`
+  }
 
   // /start [code] — the only path into a binding.
   if (text === '/start' || text.startsWith('/start ')) {

@@ -620,38 +620,58 @@ export function renderMigrantPhrases(band) {
 
 // ── 6. TIME-OF-DAY FORECAST ──────────────────────────────────────────────
 
-// /api/forecast returns 0/24/48/72h PM2.5 per province. We surface the
-// 24h band as a horizontal bar with 4 colored segments: night, morning,
-// afternoon, evening. The goal is to answer "when can I do X outdoors
-// today?" without the reader having to interpret a 24h PM2.5 curve
-// themselves.
+// /api/forecast?code= returns the province's HOURLY CAMS PM2.5 (bias-
+// corrected to local sensors; hour 0 = local midnight today). We fold the
+// next 24 hours into four 6-hour blocks (night 0–6, morning 6–12, afternoon
+// 12–18, evening 18–24) so the card answers "when can I do X outdoors?"
+// without a curve to read. This used to invent the blocks from one daily
+// mean (× 0.85 night, × 1.15 evening); with no hourly series the card now
+// stays hidden rather than guess.
+const TOD_BLOCKS = [
+  { from: 0, label_th: 'กลางคืน', label_en: 'Night' },
+  { from: 6, label_th: 'เช้า', label_en: 'Morning' },
+  { from: 12, label_th: 'บ่าย', label_en: 'Afternoon' },
+  { from: 18, label_th: 'เย็น', label_en: 'Evening' },
+]
+
+/** Pure: the next four 6-hour blocks from an hourly series. Exported for tests. */
+export function nextBlocks(values, startLocal, nowMs = Date.now()) {
+  const t0 = Date.parse(`${startLocal}:00+07:00`)
+  if (!Array.isArray(values) || !Number.isFinite(t0)) return []
+  const hourNow = Math.floor((nowMs - t0) / 3600_000) // index of the current hour
+  const blockStart = Math.floor(hourNow / 6) * 6
+  const out = []
+  for (let b = 0; b < 4; b++) {
+    const i0 = blockStart + b * 6
+    const from = Math.max(i0, hourNow) // the current block counts only its remaining hours
+    const vals = values.slice(from, i0 + 6).filter((v) => Number.isFinite(v))
+    if (!vals.length) continue
+    const def = TOD_BLOCKS[(i0 % 24) / 6]
+    const tomorrow = Math.floor(i0 / 24) > Math.floor(hourNow / 24)
+    // 00–06 after today's midnight is "late tonight", not "tomorrow night".
+    const lateTonight = tomorrow && def.from === 0
+    out.push({
+      label_th: lateTonight ? 'ดึกคืนนี้' : `${def.label_th}${tomorrow ? 'พรุ่งนี้' : 'นี้'}`,
+      label_en: lateTonight ? 'Late tonight' : (tomorrow ? `Tomorrow ${def.label_en.toLowerCase()}` : def.label_en),
+      pm25: vals.reduce((a, v) => a + v, 0) / vals.length,
+    })
+  }
+  return out
+}
+
 export async function renderTimeOfDay(province) {
   if (!province?.code) return null
-  let forecast
-  try {
-    const j = await getJson(`/api/forecast?code=${province.code}`, 5 * 60_000)
-    forecast = (j?.provinces ?? []).find((p) => String(p.code) === String(province.code))
-  } catch { forecast = null }
-  if (!forecast?.forecast) return null
-  const now = forecast.forecast.pm25_d0 ?? forecast.scores?.now ?? 0
-  const p24 = forecast.forecast.pm25_d1 ?? forecast.scores?.p24h ?? 0
-  const p48 = forecast.forecast.pm25_d2 ?? forecast.scores?.p48h ?? 0
-  // Compute heuristic time-of-day segments: 0-6 night, 6-12 morning,
-  // 12-18 afternoon, 18-24 evening. The PM2.5 at each segment is
-  // estimated from now and the 24h delta — a real hourly forecast
-  // would be better but this is what the data source offers.
-  const segs = [
-    { label_th: 'กลางคืน', label_en: 'Night',  pm25: now * 0.85 },
-    { label_th: 'เช้า',     label_en: 'Morning', pm25: Math.max(now, p24) },
-    { label_th: 'บ่าย',     label_en: 'Afternoon', pm25: (now + p24) / 2 },
-    { label_th: 'เย็น',     label_en: 'Evening', pm25: now * 1.15 },
-  ]
+  let j
+  try { j = await getJson(`/api/forecast?code=${province.code}`, 5 * 60_000) } catch { j = null }
+  const segs = nextBlocks(j?.hourly?.values, j?.hourly?.start_local)
+  if (segs.length < 2) return null
   // Find best (lowest) and worst (highest) hour
   const best = segs.reduce((a, b) => (a.pm25 <= b.pm25 ? a : b))
   const worst = segs.reduce((a, b) => (a.pm25 >= b.pm25 ? a : b))
   // Render
   const head = el('div', { class: 'citizen-section-head' },
-    el('span', {}, tr('🕐 ช่วงเวลาที่ดีที่สุดวันนี้', '🕐 Best time today')))
+    el('span', {}, tr('🕐 ช่วงเวลาที่ดีที่สุดใน 24 ชม.', '🕐 Best time, next 24 h')),
+    el('span', { class: 'citizen-section-sub' }, tr('พยากรณ์รายชั่วโมง CAMS ปรับตามเครื่องวัดในพื้นที่', 'hourly CAMS forecast, adjusted to local sensors')))
   const bar = el('div', { class: 'citizen-tod-bar' },
     ...segs.map((s) => {
       const c = s.pm25 < 25 ? '#00933C' : s.pm25 < 37.5 ? '#F0B400' : s.pm25 < 75 ? '#E86A10' : '#7A1F2B'

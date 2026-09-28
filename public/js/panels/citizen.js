@@ -398,6 +398,22 @@ function renderForProvince(province) {
       .catch(() => {})
   }
 
+  // SMOKE — fire burning upwind (server/smoke.js via snapshot.smoke). The
+  // ground sensor only says so once the smoke has arrived; this says it
+  // can arrive. Absent key = nothing upwind worth mentioning.
+  const smk = snap?.smoke?.[live?.province_code ?? province.code] ?? null
+  const smokeWrap = smk ? el('div', { class: `citizen-smoke smoke-${smk.level}` },
+    el('div', { class: 'citizen-section-head' },
+      el('span', { 'aria-hidden': 'true' }, '🔥 '),
+      tr('ไฟเหนือลม · ควันอาจพัดมา', 'fire upwind · smoke may drift in')),
+    el('div', { class: 'citizen-smoke-line' }, tr(
+      `ลมพรุ่งนี้พัดมาจากทิศ${smk.from_th} — มีจุดไฟ ${smk.fires} จุด (${smk.mw} MW)${smk.km != null ? ` ใกล้สุด ${smk.km} กม.` : ''}${smk.thai_share != null && smk.thai_share < 0.5 ? ' ส่วนใหญ่อยู่นอกประเทศ' : ''}`,
+      `Tomorrow's wind comes from the ${smk.from_en} — ${smk.fires} fire detections upwind (${smk.mw} MW)${smk.km != null ? `, nearest ${smk.km} km` : ''}${smk.thai_share != null && smk.thai_share < 0.5 ? ', mostly across the border' : ''}`)),
+    el('div', { class: 'citizen-smoke-note' }, tr(
+      smk.level === 'high' ? 'ควันมีโอกาสพัดเข้ามามาก — ปิดหน้าต่างตอนกลางคืน เตรียมหน้ากาก N95' : 'ติดตามค่าฝุ่นช่วงเช้า — ควันมักลงต่ำตอนกลางคืนถึงเช้า',
+      smk.level === 'high' ? 'Smoke is likely to reach you — keep windows shut overnight, have N95 masks ready' : 'Watch the morning readings — smoke settles lowest overnight into the morning')),
+  ) : null
+
   const reliefWrap = el('div', { class: 'citizen-relief' })
   getJson('/api/washout', 60_000).then((w) => {
     const entry = (w?.provinces ?? []).find((x) =>
@@ -477,7 +493,7 @@ function renderForProvince(province) {
   // then the standard AQ-stations row, then migrant-worker phrases
   // (only at elevated+ bands, when they're needed).
   const out = [
-    head, why, weatherWrap, reliefWrap,
+    head, why, smokeWrap, weatherWrap, reliefWrap,
     tomorrowHost,
     personaHost,
     useTimeline ? renderActionTimeline(band) : null,

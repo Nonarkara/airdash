@@ -1,6 +1,7 @@
 // Scratch test for the alert-engine fixes (P1). In-memory DB, no network.
 import { openDb } from '../server/db.js'
 import { createAlerts } from '../server/alerts.js'
+import { forecastWarnings, raiseForecastWarnings } from '../server/forecastAlerts.js'
 
 const db = openDb(':memory:')
 const bus = { publish() {} }
@@ -102,6 +103,17 @@ const check = (name, cond) => { cond ? pass++ : fail++; console.log(`${cond ? 'P
   check('first gauge in a province raises washout', fire(g('rg1', '21')) === true)
   check('second gauge, same province, suppressed', fire(g('rg2', '21')) === false)
   check('gauge in another province still raises', fire(g('rg3', '22')) === true)
+}
+
+// ── Forecast warnings: warn the day before, severity by level ──
+{
+  const mk = (code, tomorrow, dayAfter) => ({ code, province_th: 'ทดสอบ', province_en: 'Test', tomorrow, dayAfter })
+  const w = forecastWarnings([mk('30', 20, 30), mk('31', 40, 20), mk('32', 20, 90), mk('33', null, null)])
+  check('clean forecast → no warning', !w.some((x) => x.code === '30') && !w.some((x) => x.code === '33'))
+  check('tomorrow ≥ 37.5 → sev 2 warning for tomorrow', w.find((x) => x.code === '31')?.severity === 2 && w.find((x) => x.code === '31')?.day === 'tomorrow')
+  check('day after ≥ 75 → sev 3', w.find((x) => x.code === '32')?.severity === 3 && w.find((x) => x.code === '32')?.day === 'day_after')
+  check('warning is raised once', raiseForecastWarnings(alerts, w.filter((x) => x.code === '31')) === 1)
+  check('re-run inside 12 h is suppressed', raiseForecastWarnings(alerts, w.filter((x) => x.code === '31')) === 0)
 }
 
 console.log(`\n${pass} passed, ${fail} failed`)

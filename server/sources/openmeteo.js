@@ -27,7 +27,8 @@ export default {
     // by the Danger Score to capture heat + hygroscopic-growth modulation of
     // the live PM2.5 reading. Open-Meteo returns the current-hour value
     // alongside the daily rollups, no extra cost.
-    const daily = 'precipitation_sum,precipitation_probability_max,wind_speed_10m_max'
+    // wind_direction_10m_dominant feeds server/smoke.js (fire upwind?) — same call.
+    const daily = 'precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant'
     const current = 'temperature_2m,relative_humidity_2m,apparent_temperature'
     const url = `${BASE}?latitude=${lats}&longitude=${lngs}&current=${current}&daily=${daily}&forecast_days=3&timezone=Asia%2FBangkok`
     // 77 province centroids in one call can exceed 20s; allow headroom before backoff.
@@ -59,6 +60,7 @@ export default {
         const sums = [0, 1, 2].map((k) => validNum(val(d.precipitation_sum, k), 'rain_24h', 'openmeteo'))
         const probs = [0, 1, 2].map((k) => val(d.precipitation_probability_max, k))
         const winds = [0, 1, 2].map((k) => validNum(val(d.wind_speed_10m_max, k), 'wind_speed', 'openmeteo'))
+        const windDirs = [0, 1].map((k) => validNum(val(d.wind_direction_10m_dominant, k), 'wind_dir', 'openmeteo'))
 
         // Live temperature / humidity / apparent temperature — used by the
         // Danger Score to capture heat-amplification and hygroscopic-growth
@@ -97,6 +99,7 @@ export default {
             precip_prob_d0: probs[0], precip_prob_d1: probs[1], precip_prob_d2: probs[2],
             precip_prob_24h: probs[0], precip_prob_48h: prob48,
             wind_fc_kmh: winds[0], wind_fc_d1: winds[1],
+            wind_dir_d0: windDirs[0], wind_dir_d1: windDirs[1],
             temp_c: tempC, rh_pct: rh, apparent_c: apparentC,
           },
           obs_time, fetched_at, now,

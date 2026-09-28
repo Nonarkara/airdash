@@ -108,6 +108,9 @@ CREATE TABLE IF NOT EXISTS alerts (
   message_en  TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_alerts_ts ON alerts(ts DESC);
+-- Serious-alerts-first feed (snapshot, /api/alerts?min_severity=): rain
+-- notices are ~99% of rows, so walking id DESC for sev>=2 read the lot.
+CREATE INDEX IF NOT EXISTS idx_alerts_sev ON alerts(severity, id);
 
 -- province_code/th/en + lat/lng: best-effort geotag (province-name substring
 -- match against the headline, see server/provinces.js matchProvinceInText)

@@ -158,7 +158,7 @@ async function renderAlertStrip() {
 
   let severe = false
   try {
-    const data = await getJson('/api/alerts?limit=100', 300_000)
+    const data = await getJson('/api/alerts?limit=20&min_severity=2', 300_000)
     const cutoff = Date.now() - 24 * 3600_000
     severe = (data?.alerts ?? []).some((a) =>
       (a.severity ?? 0) >= 2 && Date.parse(a.ts ?? '') > cutoff)

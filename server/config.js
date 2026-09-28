@@ -52,7 +52,7 @@ export const CONFIG = {
     // season it is a legitimate no-op rather than a stalled feed.
     burnArea: 24 * HOUR,     // agricultural burn scars, crop-split
     // Bulk 7MB global file; the same daily cadence rationale as burnArea.
-    firmsRegional: 24 * HOUR,  // cross-border hotspot share (FIRMS)
+    firmsRegional: 6 * HOUR,   // 3 VIIRS satellites; feeds the smoke-upwind signal (server/smoke.js)
     // AERONET publishes L1.5 with a ~1-day lag; once-a-day is the natural
     // cadence (and avoids hammering their CGI).
     aeronet: 24 * HOUR,
@@ -113,6 +113,7 @@ export const CONFIG = {
     temperature: { min: -50, max:    60 },   // °C
     humidity:    { min:   0, max:   100 },   // %
     wind_speed:  { min:   0, max:   200 },   // km/h
+    wind_dir:    { min:   0, max:   360 },   // degrees, direction the wind comes FROM
     wind_gust:   { min:   0, max:   300 },   // km/h
     pressure:    { min: 870, max:  1080 },   // hPa
   },

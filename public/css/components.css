@@ -3243,6 +3243,10 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 }
 .relief-eta-none { color: var(--ink-low); font-weight: 400; }
 .citizen-relief { padding: 0 10px; }
+.citizen-smoke { margin: 6px 10px; padding: 8px 10px; border-left: 3px solid #E8A33D; background: rgba(232, 163, 61, 0.08); border-radius: 4px; }
+.citizen-smoke.smoke-high { border-left-color: #D64545; background: rgba(214, 69, 69, 0.08); }
+.citizen-smoke-line { font-size: 12.5px; line-height: 1.45; color: var(--ink); }
+.citizen-smoke-note { font-size: 11.5px; line-height: 1.4; color: var(--ink); opacity: 0.8; margin-top: 3px; }
 .citizen-relief .relief-eta { font-size: 11.5px; margin-top: 4px; }
 .citizen-relief .worse-chip { margin: 4px 0 0; }
 

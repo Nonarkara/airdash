@@ -40,6 +40,8 @@ import { harmPayload, HARM_METHOD } from './harm.js'
 import { watchdogStatus, dbOnExternalVolume, archiveStatus } from './opsSentinel.js'
 import { futureRejects, SERIES_INDEX } from './db.js'
 import { forecastBias } from './forecastBias.js'
+import { computeSmoke, SMOKE_METHOD } from './smoke.js'
+import { CAMS_HOURLY_KEY } from './sources/openmeteo-aq.js'
 
 /** Fold Effective Harm onto each risk province row (Danger-style join). */
 function foldHarm(provinces, harmEngine) {
@@ -410,7 +412,14 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
           pm25_fc_72h: bias.adjust(f.station_key, f.pm25_fc_72h),
           bias_ratio: bias.ratioFor(f.station_key).ratio,
         }))
-      const alerts = db.all('SELECT * FROM alerts ORDER BY id DESC LIMIT 20')
+      // Newest 20 serious alerts (PM2.5, forecast warnings) plus the newest
+      // 10 of anything — rain notices alone used to fill all 20 slots.
+      const alerts = db.all(
+        `SELECT * FROM (
+           SELECT * FROM (SELECT * FROM alerts INDEXED BY idx_alerts_sev WHERE severity >= 2 ORDER BY id DESC LIMIT 20)
+           UNION
+           SELECT * FROM (SELECT * FROM alerts ORDER BY id DESC LIMIT 10)
+         ) ORDER BY id DESC`)
       // LIMIT 40 (not 15): the map's news/fire layer only plots the subset
       // that got geotagged (province named in the headline), so it needs a
       // wider recent window to have enough pinnable items to show.
@@ -420,6 +429,11 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       const built = prebuild({
         now: new Date().toISOString(),
         risk, air, rain, weather, aqForecast,
+        // Fire upwind per province (server/smoke.js) — only provinces with
+        // something upwind, so a quiet day costs a few bytes.
+        smoke: Object.fromEntries(computeSmoke(db).provinces
+          .filter((p) => p.level !== 'none')
+          .map((p) => [p.code, { level: p.level, mw: p.upwind_frp_mw, fires: p.upwind_fires, km: p.nearest_km, from_th: p.from_th, from_en: p.from_en, thai_share: p.thai_share }])),
         // Back-compat key: the map's station layer reads `aqi`.
         aqi: air,
         alerts, news,
@@ -695,8 +709,9 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     // relief expected that day. Pollutants/stagnation stay at current values;
     // trend zeroes out (unknowable at horizon). Same formula as the live
     // indicator — we just swap inputs.
-    'GET /api/forecast': (req, res) => {
+    'GET /api/forecast': (req, res, url) => {
       const risk = riskEngine.get()
+      const onlyCode = url?.searchParams?.get('code') ?? null
       const horizons = [
         // CAMS is requested in Bangkok time, so its three windows are the
         // calendar days today / tomorrow / the day after — not now+24h.
@@ -782,11 +797,25 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         .filter((p) => p.delta > 0)
         .sort((a, b) => b.delta - a.delta)
         .slice(0, 5)
+      // ?code= → also the province's bias-corrected HOURLY series, for the
+      // citizen "best time" card. Only for one province: keeps the all-
+      // provinces payload the size it was. Stale (>13 h) series are dropped.
+      let hourly = null
+      if (onlyCode) {
+        try {
+          const h = JSON.parse(db.kvGet(CAMS_HOURLY_KEY) ?? 'null')
+          const raw = h?.byCode?.[onlyCode]
+          if (Array.isArray(raw) && Date.now() - Date.parse(h.issued_at) < 13 * 3600_000) {
+            hourly = { start_local: h.start_local, issued_at: h.issued_at, values: raw.map((v) => bias.adjust(onlyCode, v)) }
+          }
+        } catch { hourly = null }
+      }
       json(res, 200, {
         fetched_at: new Date().toISOString(),
         horizons,
         provinces,
         escalators,
+        ...(onlyCode ? { hourly } : {}),
         method_th: 'คะแนนเฝ้าระวัง = 0.40·PM2.5 + 0.10·มลพิษอื่น + 0.15·แนวโน้ม + 0.20·พยากรณ์ + 0.15·การระบายอากาศ โดย PM2.5 ถูกแทนที่ด้วยค่าพยากรณ์ CAMS รายวัน (ปรับให้ตรงกับเครื่องวัดในพื้นที่ ด้วยอัตราส่วนค่าจริง/ค่าแบบจำลอง 14 วันล่าสุดของแต่ละจังหวัด — CAMS ดิบอ่านต่ำกว่าจริง ~1.5 เท่า) หักส่วนที่ฝนคาดว่าจะล้างออก',
         method_en: 'Watch score = 0.40·PM2.5 + 0.10·pollutants + 0.15·trend + 0.20·forecast + 0.15·ventilation, with ground PM2.5 swapped for the CAMS daily forecast — scaled to local sensors (each province\'s 14-day ground/CAMS ratio; raw CAMS reads ~1.5× low here) — and discounted by expected rain washout',
         disclaimer_th: 'ดัชนีบ่งชี้ ไม่ใช่แบบจำลองพยากรณ์ — มลพิษอื่น/การระบายอากาศคงที่ตามเวลาปัจจุบัน',
@@ -909,6 +938,13 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     //
     // ?season=2025/26 filters to one Nov-Apr season; omit for all.
     // ?province=TH10 filters to one province.
+    // Smoke transport: fire radiative power burning UPWIND of each province
+    // (VIIRS × 3 satellites + tomorrow's dominant wind). See server/smoke.js.
+    'GET /api/smoke': (req, res) => {
+      const s = computeSmoke(db)
+      json(res, 200, { ...s, method_th: SMOKE_METHOD.th, method_en: SMOKE_METHOD.en })
+    },
+
     'GET /api/burn-area': (req, res) => {
       const url = new URL(req.url, 'http://x')
       const season = url.searchParams.get('season')
@@ -1461,7 +1497,12 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
 
     'GET /api/alerts': (req, res, url) => {
       const limit = clamp(url.searchParams.get('limit'), 1, 500, 100)
-      json(res, 200, { alerts: db.all('SELECT * FROM alerts ORDER BY id DESC LIMIT ?', limit) })
+      // min_severity: rain notices (sev 1) outnumber everything else, so
+      // "any serious alert lately?" must filter, not scan the newest N.
+      const minSev = clamp(url.searchParams.get('min_severity'), 0, 3, 0)
+      json(res, 200, { alerts: db.all(minSev > 0
+        ? 'SELECT * FROM alerts INDEXED BY idx_alerts_sev WHERE severity >= ? ORDER BY id DESC LIMIT ?'
+        : 'SELECT * FROM alerts WHERE severity >= ? ORDER BY id DESC LIMIT ?', minSev, limit) })
     },
 
     'GET /api/news': (req, res, url) => {

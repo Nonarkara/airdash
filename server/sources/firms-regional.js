@@ -18,8 +18,15 @@
 import { pointInThailand } from '../geo/pointInThailand.js'
 import { CONFIG } from '../config.js'
 
-const FIRMS_GLOBAL_24H =
-  'https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv'
+// All three VIIRS satellites. Suomi NPP alone (the original feed) sees each
+// place ~twice a day; adding NOAA-20 and NOAA-21 roughly triples the passes,
+// so short-lived agricultural burns are far less likely to be missed. Each
+// file is ~5.5 MB, keyless, public.
+const FIRMS_FEEDS = [
+  'https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv',
+  'https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-20-viirs-c2/csv/J1_VIIRS_C2_Global_24h.csv',
+  'https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-21-viirs-c2/csv/J2_VIIRS_C2_Global_24h.csv',
+]
 
 // Mainland Southeast Asia: Thailand, Myanmar, Laos, Cambodia, Vietnam,
 // and Yunnan (China) — wide enough to catch fires that could plausibly
@@ -61,16 +68,27 @@ export default {
   name: 'firms_regional',
   label_th: 'จุดความร้อนภูมิภาค (NASA FIRMS — ข้ามพรมแดน)',
   label_en: 'Regional hotspots (NASA FIRMS — cross-border)',
-  // Bulk 24h file, refreshed a few times daily upstream — daily is
-  // plenty, and a 7 MB fetch every 10 minutes would be pure waste.
-  intervalMs: CONFIG.intervals.firmsRegional ?? 24 * 3600_000,
+  // Bulk 24h files, refreshed several times daily upstream. Every 6 h: the
+  // smoke-upwind signal (server/smoke.js) needs today's fires, not
+  // yesterday's; 3 × 5.5 MB four times a day is modest.
+  intervalMs: CONFIG.intervals.firmsRegional ?? 6 * 3600_000,
   enabled: true,
 
   async run({ db }) {
-    const ctl = AbortSignal.timeout(60_000)
-    const r = await fetch(FIRMS_GLOBAL_24H, { signal: ctl })
-    if (!r.ok) throw new Error(`HTTP ${r.status} for FIRMS global 24h CSV`)
-    const rows = parseCsv(await r.text())
+    const rows = []
+    const failures = []
+    for (const url of FIRMS_FEEDS) {
+      try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(60_000) })
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        rows.push(...parseCsv(await r.text()))
+      } catch (err) {
+        failures.push(`${url.split('/').pop()}: ${err?.message ?? err}`)
+      }
+    }
+    // One satellite down is a gap, not an outage; all three down must throw
+    // so /api/health and the watchdog see it.
+    if (failures.length === FIRMS_FEEDS.length) throw new Error(`FIRMS: all feeds failed — ${failures.join('; ')}`)
 
     let added = 0
     const now = new Date().toISOString()

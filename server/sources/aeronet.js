@@ -75,9 +75,15 @@ function buildUrl(site, days) {
     site,
     year: String(start.y), month: String(start.m), day: String(start.d),
     year2: String(end.y), month2: String(end.m), day2: String(end.d),
-    level: '15',          // 1.5 = near-real-time, pre-field cal
-    AOD20: '1',           // 20 wavelength columns
-    AVG: '10',            // 10-min averages
+    // AOD15 = Level 1.5 (cloud-screened, near-real-time). This used to send
+    // AOD20=1 — Level 2.0, final calibration, published MONTHS late — plus a
+    // `level` param the API ignores, so every recent window came back empty.
+    AOD15: '1',
+    AVG: '10',            // all points (10); 20 = daily averages
+    // Without this the v3 API wraps the CSV in HTML and the header search
+    // below never matches: the feed reported "ok, 0 rows" since it shipped
+    // (2026-09-28 audit).
+    if_no_html: '1',
   })
   return `${BASE}?${p.toString()}`
 }

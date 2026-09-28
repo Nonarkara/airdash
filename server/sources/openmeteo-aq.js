@@ -3,6 +3,8 @@
 // stations tell us what the air IS, CAMS tells us where it's HEADED, and the
 // dust variable separates Saharan/desert advection from combustion smog.
 // Free, keyless, same multi-point call pattern as the weather API.
+import { forecastBias } from '../forecastBias.js'
+import { forecastWarnings, raiseForecastWarnings } from '../forecastAlerts.js'
 import { CONFIG } from '../config.js'
 import { fetchJson, nowLocal } from '../util.js'
 import { storeReadings } from './thaiwater-common.js'
@@ -30,6 +32,8 @@ function meanWindow(arr, from, to) {
   }
   return count > 0 ? Math.round((sum / count) * 10) / 10 : null
 }
+
+export const CAMS_HOURLY_KEY = 'cams_hourly_v1'
 
 export default {
   name: 'openmeteo_aq',
@@ -92,6 +96,34 @@ export default {
         })
       })
     })
+
+    // Keep the hourly series (it used to be averaged into 3 daily means and
+    // discarded). The citizen "best time" card showed made-up segments
+    // (daily mean × 0.85 / × 1.15); with the real hours it can say when.
+    // Hour 0 = local midnight today (timezone=Asia/Bangkok). ~30 KB.
+    try {
+      const byCode = {}
+      provinces.forEach((p, i) => {
+        const h = results[i]?.hourly?.pm2_5
+        if (Array.isArray(h)) byCode[p.province_code] = h.map((v) => (Number.isFinite(v) ? Math.round(v * 10) / 10 : null))
+      })
+      db.kvSet(CAMS_HOURLY_KEY, JSON.stringify({ issued_at: fetched_at, start_local: `${nowLocal().slice(0, 10)}T00:00`, byCode }))
+    } catch { /* best effort — daily means above are the contract */ }
+
+    // Forecast warnings on the bias-corrected values (raw CAMS reads ~1.5×
+    // low here, so a raw threshold would almost never fire).
+    if (added > 0 && alerts?.raise) {
+      const bias = forecastBias(db)
+      const entries = provinces.map((p, i) => {
+        const h = results[i]?.hourly
+        return h ? {
+          code: p.province_code, province_th: p.province_th, province_en: p.province_en,
+          tomorrow: bias.adjust(p.province_code, meanWindow(h.pm2_5, 24, 48)),
+          dayAfter: bias.adjust(p.province_code, meanWindow(h.pm2_5, 48, 72)),
+        } : null
+      }).filter(Boolean)
+      raiseForecastWarnings(alerts, forecastWarnings(entries))
+    }
 
     if (added > 0) {
       bus.publish({

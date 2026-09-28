@@ -122,6 +122,7 @@ function GROUPS() {
           params: [['season', false, tr('รูปแบบ 2025/26', 'format 2025/26')], ['province', false, tr('รหัส DOPA', 'DOPA code')]] },
         { path: '/api/regional-fire-share', th: 'สัดส่วนจุดความร้อนไทยเทียบเพื่อนบ้าน (FIRMS) — ควันข้ามแดนมาจากไหน', en: 'Thailand\'s share of regional hotspots (FIRMS) — where transboundary smoke comes from.',
           params: [['days', false, tr('ย้อนหลังกี่วัน', 'look-back days')]] },
+        { path: '/api/smoke', th: 'ไฟที่อยู่เหนือลมของแต่ละจังหวัด (จุดความร้อน VIIRS 3 ดาวเทียม × ทิศลมพรุ่งนี้) — ควันมีโอกาสพัดมาหรือไม่', en: 'Fire burning upwind of each province (VIIRS hotspots from 3 satellites × tomorrow\'s wind) — can smoke reach you.' },
         { path: '/api/aeronet', th: 'ค่าความหนาของฝุ่นในอากาศ (AOD) จากสถานีภาคพื้นดิน AERONET ของ NASA — ใช้ตรวจความแม่นของดาวเทียม', en: 'Aerosol optical depth measured from the ground by NASA AERONET stations — the check on the satellite layers.',
           params: [['days', false, tr('ย้อนหลังกี่วัน (1–30, ค่าเริ่มต้น 1)', 'look-back days (1–30, default 1)')]] },
         { path: '/api/noise', th: 'ระดับเสียงรายสถานี (Leq, dB) จากกรมควบคุมมลพิษ ย้อนหลังรายวัน', en: 'Noise level per station (Leq, dB) from the Pollution Control Department, with daily history.',
