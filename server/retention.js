@@ -27,6 +27,7 @@ const PAUSE_MS = 25
 // block short (the first run clears a ~10M-row backlog).
 const HOT_BATCH = 2_000
 const HOT_FIRST_RUN_DELAY_MS = 10 * 60_000
+const LIVE_MAX_BACKLOG_DAYS = 2  // beyond this, trimming is offline maintenance
 const WAL_TRUNCATE_BYTES = 64 * 1024 * 1024
 
 const pause = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -57,7 +58,7 @@ export function readArchiveReceipt(path = receiptPath()) {
  *  Keyset-paginated over idx_readings_time so each old row is visited once. */
 export async function trimArchivedHot(db, {
   nowMs = Date.now(), receipt = readArchiveReceipt(), hotDays = CONFIG.retention.hotDays,
-  batch = HOT_BATCH, pauseMs = PAUSE_MS,
+  batch = HOT_BATCH, pauseMs = PAUSE_MS, maxBacklogDays = null,
 } = {}) {
   const sources = Object.entries(hotDays ?? {})
   if (!sources.length) return { deleted: 0, batches: 0, slowestBatchMs: 0 }
@@ -75,6 +76,19 @@ export async function trimArchivedHot(db, {
   db.exec('CREATE TEMP TABLE IF NOT EXISTS retention_ids (id INTEGER PRIMARY KEY)')
   for (const [source, days] of sources) {
     const cutoff = retentionCutoff(nowMs, days)
+    // BACKLOG GUARD. Live, this job may only shed the last day or two. On
+    // 2026-09-28 the first live run faced ~10.7M rows (58 days) and froze
+    // the server for 4–10+ s per batch on this memory-starved host. A big
+    // backlog is maintenance work: stop the server, run ops/shrink-hot-db.mjs.
+    if (maxBacklogDays != null) {
+      const oldest = db.get(`SELECT obs_time FROM readings INDEXED BY idx_readings_time
+                              WHERE source = ? ORDER BY obs_time LIMIT 1`, source)?.obs_time
+      const limit = retentionCutoff(nowMs, days + maxBacklogDays)
+      if (oldest && oldest < limit) {
+        log('warn', 'hot-tier trim skipped: backlog too large for a live trim — stop the server and run ops/shrink-hot-db.mjs', { source, oldest, cutoff })
+        continue
+      }
+    }
     let cursor = ''
     for (;;) {
       const b0 = Date.now()
@@ -106,7 +120,7 @@ export async function trimArchivedHot(db, {
 export async function runRetention(db, { nowMs = Date.now(), batch = BATCH, pauseMs = PAUSE_MS, receipt } = {}) {
   const cutoff = retentionCutoff(nowMs, CONFIG.retention.rawDays)
   const t0 = Date.now()
-  const hot = await trimArchivedHot(db, { nowMs, pauseMs, ...(receipt !== undefined ? { receipt } : {}) })
+  const hot = await trimArchivedHot(db, { nowMs, pauseMs, maxBacklogDays: LIVE_MAX_BACKLOG_DAYS, ...(receipt !== undefined ? { receipt } : {}) })
   // Hot-tier sources are never rolled up: they live in the archive.
   const hotSources = Object.keys(CONFIG.retention.hotDays ?? {})
   const notHot = hotSources.length ? `AND source NOT IN (${hotSources.map(() => '?').join(',')})` : ''
@@ -177,7 +191,7 @@ export function scheduleRetention(db) {
   // aged past its window — a couple of small batches in steady state.
   const trimHot = () => exclusive('hot-tier trim', async () => {
     const t0 = Date.now()
-    const r = await trimArchivedHot(db)
+    const r = await trimArchivedHot(db, { maxBacklogDays: LIVE_MAX_BACKLOG_DAYS })
     if (r.deleted) log('info', 'hot-tier trim done', { ...r, durMs: Date.now() - t0 })
   })
   setTimeout(trimHot, HOT_FIRST_RUN_DELAY_MS).unref()

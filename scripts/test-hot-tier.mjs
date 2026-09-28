@@ -78,6 +78,16 @@ const count = (db, where, ...a) => db.get(`SELECT COUNT(*) AS n FROM readings WH
   check('non-hot source still rolled up', db.get("SELECT COUNT(*) AS n FROM readings_hourly WHERE source='air4thai'").n > 0)
 }
 
+// 5b. Live guard: a backlog deeper than maxBacklogDays is maintenance, not live work.
+{
+  const db = seed() // rain goes back 30 days; window 14 → 16 days of backlog
+  const maxId = db.get('SELECT MAX(id) AS m FROM readings').m
+  const r = await trimArchivedHot(db, { nowMs: NOW, receipt: { readings_src_id: maxId }, hotDays: HOT, pauseMs: 0, maxBacklogDays: 2 })
+  check('live: deep backlog is refused (offline job)', r.deleted === 0)
+  const r2 = await trimArchivedHot(db, { nowMs: NOW, receipt: { readings_src_id: maxId }, hotDays: HOT, pauseMs: 0, maxBacklogDays: 20 })
+  check('live: shallow backlog is trimmed', r2.deleted > 0)
+}
+
 // 6. Receipt file parsing.
 {
   const dir = mkdtempSync(join(tmpdir(), 'hot-'))
