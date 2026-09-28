@@ -1,11 +1,11 @@
 // Left rail: live province ranking — worst air first.
 // Sort mode: Worst air (default, by PM2.5) | Effective Harm (Watch × Social Load).
-import { on, store } from '../state.js?v=2.4.36'
-import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.36'
-import { fmtNum, el } from '../fmt.js?v=2.4.36'
-import { flyToProvince } from '../map.js?v=2.4.36'
-import { showProvinceDetail } from './detail.js?v=2.4.36'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.36'
+import { on, store } from '../state.js?v=2.4.37'
+import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.37'
+import { fmtNum, el } from '../fmt.js?v=2.4.37'
+import { flyToProvince } from '../map.js?v=2.4.37'
+import { showProvinceDetail } from './detail.js?v=2.4.37'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.37'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }

@@ -3,9 +3,9 @@
 // highest reading down and, for each, picks the nearest camera that a health
 // probe has shown to be alive. So this wall answers "what does that look
 // like, over there?" for the places the numbers say are worst.
-import { tr } from '../i18n.js?v=2.4.36'
-import { escapeHtml } from '../fmt.js?v=2.4.36'
-import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL } from './cctvPlayer.js?v=2.4.36'
+import { tr } from '../i18n.js?v=2.4.37'
+import { escapeHtml } from '../fmt.js?v=2.4.37'
+import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL } from './cctvPlayer.js?v=2.4.37'
 
 const MAX_AUTOPLAY = 4
 let overlay = null
