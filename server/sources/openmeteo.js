@@ -12,6 +12,7 @@ const MAX_POINTS = 100 // Open-Meteo multi-point limit safety
 
 export default {
   name: 'openmeteo',
+  version: 2, // bump when the fetch/parse logic changes → runs at next boot
   label_th: 'พยากรณ์ฝน/ลม Open-Meteo',
   label_en: 'Open-Meteo rain & wind forecast',
   intervalMs: CONFIG.intervals.openmeteo,

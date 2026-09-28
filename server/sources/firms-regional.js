@@ -66,6 +66,7 @@ function parseCsv(text) {
 
 export default {
   name: 'firms_regional',
+  version: 2, // bump when the fetch/parse logic changes → runs at next boot
   label_th: 'จุดความร้อนภูมิภาค (NASA FIRMS — ข้ามพรมแดน)',
   label_en: 'Regional hotspots (NASA FIRMS — cross-border)',
   // Bulk 24h files, refreshed several times daily upstream. Every 6 h: the

@@ -37,6 +37,7 @@ export const CAMS_HOURLY_KEY = 'cams_hourly_v1'
 
 export default {
   name: 'openmeteo_aq',
+  version: 2, // bump when the fetch/parse logic changes → runs at next boot
   label_th: 'พยากรณ์ฝุ่น CAMS',
   label_en: 'CAMS PM2.5 forecast',
   intervalMs: CONFIG.intervals.openmeteo_aq,

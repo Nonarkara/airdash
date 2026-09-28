@@ -110,6 +110,7 @@ export function createScheduler({ db, bus, alerts, sources }) {
       s.lastOk = startedAt
       s.lastError = null
       s.parkedUntil = null  // any prior rate-limit park is lifted on a clean run
+      if (s.source.version) db.kvSet(`src_version:${name}`, String(s.source.version))
       db.recordRun({ source: name, started_at: startedAt, dur_ms: durMs, ok: true,
                      rows_seen: result?.seen ?? 0, rows_new: result?.added ?? 0 })
       log('info', 'ingest ok', { source: name, durMs, seen: result?.seen ?? 0, added: result?.added ?? 0 })
@@ -190,7 +191,10 @@ export function createScheduler({ db, bus, alerts, sources }) {
     const deferred = []
     for (const [name, s] of state) {
       const last = lastOkAt(name)
-      const wait = bootDelayMs(last, s.source.intervalMs)
+      // A source whose fetch logic changed (its `version` bumped) runs now:
+      // the new code must not wait hours behind the quota guard.
+      const changed = (s.source.version ?? 1) !== Number(db.kvGet(`src_version:${name}`) ?? 1)
+      const wait = changed ? 0 : bootDelayMs(last, s.source.intervalMs)
       if (wait > 0) {
         s.lastOk = last // health shows the real last success, not "never"
         schedule(name, wait + offset)

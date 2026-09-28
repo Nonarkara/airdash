@@ -158,6 +158,7 @@ async function fetchSite(site) {
 
 export default {
   name: 'aeronet',
+  version: 2, // bump when the fetch/parse logic changes → runs at next boot
   label_th: 'AERONET (ภาคพื้นดิน — สอบเทียบดาวเทียม)',
   label_en: 'AERONET (ground truth — satellite calibration)',
   intervalMs: CONFIG.intervals.aeronet ?? 24 * 3600_000,
