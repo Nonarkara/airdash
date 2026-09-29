@@ -60,6 +60,8 @@
 //
 // Pure parsing, exported for tests. No clock, no network.
 
+import { log } from '../util.js'
+
 const BASE = 'https://aviationweather.gov/api/data/metar'
 
 /** Present-weather codes that ARE an aerosol event. The only cases where a
