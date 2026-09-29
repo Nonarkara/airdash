@@ -1,11 +1,11 @@
 // Universal place search — search any place name (province, station, focus area)
 // and get autocomplete results. Select one → map flies there + place card opens
 // with live data: nearest AQ stations, watch score, rain-washout outlook.
-import { on, store, emit } from '../state.js?v=2.4.43'
-import { tr, pick, BAND } from '../i18n.js?v=2.4.43'
-import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.43'
-import { getJson } from '../cache.js?v=2.4.43'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.43'
+import { on, store, emit } from '../state.js?v=2.4.44'
+import { tr, pick, BAND, bandColor, pmColorFor } from '../i18n.js?v=2.4.44'
+import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.44'
+import { getJson } from '../cache.js?v=2.4.44'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.44'
 
 // Cached province centroids — fetched once, used to give postal results
 // a fly-to target. Same numbers the server's gazetteer uses (see
@@ -458,7 +458,10 @@ async function loadPlaceDetail(r) {
 // nothing is pre-authored per city.
 
 const VICON = { safe: '✅', watch: '👀', prepare: '🎒', danger: '🚨' }
-const LEVEL_COLOR = { safe: '#00933C', watch: '#F0B400', prepare: '#E86A10', danger: '#A51931' }
+// The four severity colours, single source of truth (i18n.js) — this table
+// and the map layers disagreed, so a search result and the province it
+// named could be painted in different colours for the same band.
+const LEVEL_COLOR = { safe: bandColor('normal'), watch: bandColor('watch'), prepare: bandColor('elevated'), danger: bandColor('high') }
 const DAY_LABEL = [
   { th: 'วันนี้', en: 'Today' },
   { th: 'พรุ่งนี้', en: 'Tomorrow' },
@@ -606,7 +609,7 @@ function renderPlaceCard(sel) {
   // place type (a tambon inherits its province's regional picture).
   const provRisk = store.snapshot?.risk?.provinces?.find((p) => p.province_th === sel.province_th)
   if (provRisk) {
-    const bandColor = { normal: '#00933C', watch: '#F0B400', elevated: '#E86A10', high: '#A51931' }[provRisk.band]
+    const provBandColor = bandColor(provRisk.band)
     const rank = (store.snapshot?.risk?.provinces ?? [])
       // Real DOPA codes are 2 digits; cross-border spillover rows (e.g.
       // Myanmar '10499') must not count in the #rank/77 denominator.
@@ -621,8 +624,8 @@ function renderPlaceCard(sel) {
       })
       .findIndex((p) => p.province_th === sel.province_th) + 1
     html += `
-      <div class="place-section place-score-band" style="border-left-color:${bandColor}">
-        <div class="place-score-val" style="color:${bandColor}">${provRisk.score}</div>
+      <div class="place-section place-score-band" style="border-left-color:${provBandColor}">
+        <div class="place-score-val" style="color:${provBandColor}">${provRisk.score}</div>
         <div class="place-score-detail">
           <b>${tr('ภาพรวมจังหวัด', 'Province picture')}: ${BAND[provRisk.band][store.lang]}</b><br>
           ${rank > 0 ? `${tr('อันดับอากาศแย่สุด', 'worst-air rank')} #${rank}/77 · ` : ''}

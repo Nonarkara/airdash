@@ -19,7 +19,7 @@
   /* Ink — deep teal, not Thai-flag navy. Carries the AirDash identity. */
   --ink:      #0E4A5E;
   --ink-mid:  #4A6273;
-  --ink-low:  #7E8E9A;
+  --ink-low:  #66737D;   /* 4.56:1 on --paper (WCAG 1.4.3); was #7E8E9A at 3.16:1 */
   --ink-inv:  #FFFFFF;
 
   /* Air accents — sage green for "good air", terracotta for "watch",
@@ -340,7 +340,7 @@ a { color: var(--ink); }
     /* Ink — light teal/sage for the dark ground */
     --ink:      #B8D4E0;      /* primary text — light teal-white */
     --ink-mid:  #8DA8B8;      /* secondary text */
-    --ink-low:  #6A8294;      /* tertiary / labels */
+    --ink-low:  #6D8596;      /* 4.54:1 on --paper (WCAG 1.4.3); was #6A8294 at 4.36:1 */
     --ink-inv:  #0D1B24;      /* inverse — dark text on light fills */
 
     /* Accents stay the same hue but are brightened for dark contrast */

@@ -3,12 +3,12 @@
 // forecasts, sensor gaps. Each card has a severity colour, a
 // single-sentence title in both languages, and a body with the supporting
 // numbers. Clicking flies the map to the relevant province.
-import { on, store } from '../state.js?v=2.4.43'
-import { tr, BAND } from '../i18n.js?v=2.4.43'
-import { el, fmtNum } from '../fmt.js?v=2.4.43'
-import { getJson } from '../cache.js?v=2.4.43'
-import { flyToProvince } from '../map.js?v=2.4.43'
-import { refreshSensorHealth } from '../sensorHealth.js?v=2.4.43'
+import { on, store } from '../state.js?v=2.4.44'
+import { tr, BAND } from '../i18n.js?v=2.4.44'
+import { el, fmtNum } from '../fmt.js?v=2.4.44'
+import { getJson } from '../cache.js?v=2.4.44'
+import { flyToProvince } from '../map.js?v=2.4.44'
+import { refreshSensorHealth } from '../sensorHealth.js?v=2.4.44'
 
 const TYPE_LABEL = {
   compound:            { th: 'เหตุการณ์ซ้อน',        en: 'COMPOUND EVENT'      },

@@ -1,6 +1,6 @@
 // Bilingual helper — Thai first, always. Signage shows both; dynamic text
 // follows the selected language.
-import { store } from './state.js?v=2.4.43'
+import { store } from './state.js?v=2.4.44'
 
 export function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -63,6 +63,63 @@ export const LEVEL_NAME = {
   3: { th: 'ปานกลาง', en: 'moderate' },
   4: { th: 'เริ่มมีผลต่อสุขภาพ', en: 'unhealthy (start)' },
   5: { th: 'มีผลต่อสุขภาพ', en: 'UNHEALTHY' },
+}
+
+// ── Band colour, one source of truth ────────────────────────────────────────
+// WHY THIS LIVES HERE AND NOT IN THREE MAP FILES
+// The same literal `{ normal, watch, elevated, high }` table was duplicated
+// verbatim in paint.js, layers/osm-buildings.js and layers/province-boundaries.js.
+// A colour fix applied to one file would have left two layers showing the old
+// value — and "the map layers disagree about what 'watch' looks like" is not
+// a bug anyone reports, they just stop trusting the map.
+//
+// WHY IT IS THEME-AWARE
+// A single hex cannot clear WCAG SC 1.4.11 (3:1 for non-text UI) against BOTH
+// papers. Measured on the real tokens (public/css/tokens.css):
+//
+//   #F0B400 (watch)  1.75:1 on light paper  ← FAIL, and light is the default
+//   #A51931 (high)   2.32:1 on dark paper   ← FAIL, and "critical" is the
+//                                              band that must be noticed most
+//
+// So the amber is darkened for the light theme and the red lightened for the
+// dark one, by the smallest shift that clears 3:1 while preserving the hue's
+// channel ratios. Every value below is asserted by
+// scripts/test-band-contrast.mjs — if a future edit breaks one, the build does.
+//
+// A NOTE ON WHAT IS DELIBERATELY NOT FIXED HERE
+// These four bands are not monotonic in lightness (yellow peaks in the middle),
+// and a strictly monotonic ramp would be the more accessible choice under
+// greyscale and colour-vision deficiency. It would also destroy the green→
+// amber→red semantics that Thai AQI and every weather service use. That is a
+// real tradeoff and it is a deliberate design decision, not an oversight, so
+// the ramp is left alone and the ordering is instead carried by the text label
+// beside every band.
+
+const isDark = () =>
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(prefers-color-scheme: dark)').matches
+
+export const BAND_COLORS = {
+  light: { normal: '#00933C', watch: '#B58800', elevated: '#E86A10', high: '#A51931' },
+  dark:  { normal: '#00933C', watch: '#F0B400', elevated: '#E86A10', high: '#B23B4F' },
+}
+
+export const PM_COLORS = {
+  light: { 1: '#1A7A4A', 2: '#799B31', 3: '#B58800', 4: '#E86A10', 5: '#A51931' },
+  dark:  { 1: '#1A7A4A', 2: '#7FA334', 3: '#F0B400', 4: '#E86A10', 5: '#B23B4F' },
+}
+
+/** The colour a band's marks should use under the current colour scheme. */
+export function bandColor(band) {
+  const set = isDark() ? BAND_COLORS.dark : BAND_COLORS.light
+  return set[band] ?? BAND_COLORS.light.normal
+}
+
+/** The colour for a Thai AQI 1–5 level under the current colour scheme. */
+export function pmColorFor(lv) {
+  const set = isDark() ? PM_COLORS.dark : PM_COLORS.light
+  return set[lv] ?? null
 }
 
 /** Thai AQI 2023 PM2.5 level (1–5) for a µg/m³ reading, or null. */

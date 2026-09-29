@@ -2135,6 +2135,84 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       }
     },
 
+    // ── Airport visibility (METAR) — an optical, half-hourly dust signal ──
+    // The read side of server/sources/metarVisibility.js.
+    //
+    // The design decision worth stating in the response itself: a visibility
+    // drop is NOT reported as a haze measurement. The METAR names the cause —
+    // rain, fog, mist, smoke, blowing sand, dust storm — and only the aerosol
+    // causes populate `aerosol_vis_km`. Everything else leaves it null, so a
+    // client cannot render "5 km, therefore dusty" when the 5 km was rain.
+    // `aerosol_attributed` is exposed per station for the same reason.
+    'GET /api/visibility': async (req, res, url) => {
+      if (!allow(req, { key: 'visibility', limit: 60, windowMs: 60_000 })) {
+        return json(res, 429, { error: 'too many requests — wait a minute' })
+      }
+      try {
+        // Latest reading per station per metric, in one pass. The readings
+        // table's UNIQUE(source, station_key, metric, obs_time) index is
+        // exactly this shape, so this is a backward index scan.
+        const rows = db.all(
+          `SELECT r.station_key, r.metric, r.value, r.obs_time, r.fetched_at,
+                  s.name_th, s.name_en, s.lat, s.lng, s.meta_json
+           FROM readings r
+           JOIN stations s
+             ON s.source = r.source AND s.station_key = r.station_key
+           WHERE r.source = 'metar'
+             AND r.obs_time = (
+               SELECT max(r2.obs_time) FROM readings r2
+               WHERE r2.source = r.source AND r2.station_key = r.station_key
+                 AND r2.metric = r.metric)
+           ORDER BY r.station_key, r.metric`)
+
+        const byStation = new Map()
+        for (const r of rows) {
+          if (!byStation.has(r.station_key)) {
+            const meta = safeMeta(r.meta_json)
+            byStation.set(r.station_key, {
+              icao: r.station_key,
+              name_th: r.name_th,
+              name_en: r.name_en,
+              lat: r.lat, lng: r.lng,
+              vis_km: null,
+              beta_km1: null,
+              at_ceiling: false,
+              // null means "not attributed to an aerosol cause" — withheld,
+              // never 0.
+              aerosol_vis_km: null,
+              cause: meta?.cause ?? 'unknown',
+              wx: meta?.wx ?? null,
+              obs_time: r.obs_time,
+            })
+          }
+          const s = byStation.get(r.station_key)
+          if (r.metric === 'vis_km') { s.vis_km = r.value; s.obs_time = r.obs_time }
+          if (r.metric === 'beta_km1') s.beta_km1 = r.value
+          if (r.metric === 'aerosol_vis_km') s.aerosol_vis_km = r.value
+        }
+
+        const stations = [...byStation.values()].sort((a, b) => a.vis_km - b.vis_km)
+        const reduced = stations.filter((s) => s.vis_km !== null && s.vis_km < 9.999)
+        const aerosol = stations.filter((s) => s.aerosol_vis_km !== null)
+        json(res, 200, {
+          generated_at: new Date().toISOString(),
+          count: stations.length,
+          reduced_visibility: reduced.length,
+          aerosol_attributed: aerosol.length,
+          // The most reduced station is the one a citizen wants first.
+          lowest: stations[0] ?? null,
+          note_th: 'ระยะมองลดลงไม่เท่ากับมีฝุ่นเสมอไป — ฝน หมอก และควันลดทัศนวิสัยได้เหมือนกัน ระบบจะระบุสาเหตุให้ทุกครั้ง และจะไม่บันทึกค่าฝุ่นถ้าไม่พบสาเหตุที่เป็นฝุ่นจริง',
+          note_en: 'Reduced visibility is not the same as dust — rain, fog and smoke do the same thing. The cause is reported for every station, and no aerosol figure is recorded unless the METAR itself names an aerosol cause.',
+          method_th: 'β = 3.912 / ระยะมอง(กม.) ตามทฤษฎี Koschmieder (1924) — เป็นการวัดการลดทอดแสงโดยตรง',
+          method_en: 'β = 3.912 / visibility_km, after Koschmieder (1924) — a direct measurement of light extinction',
+          stations,
+        })
+      } catch (e) {
+        log('warn', 'visibility failed', { error: String(e) })
+        json(res, 500, { error: 'visibility data unavailable' })
+      }
+    },
+
     // ── LINE Notify opt-in ────────────────────────────────────────────
     // Citizen flow: paste a LINE Notify token (issued at
     // https://notify-bot.line.me after adding the bot as a friend).

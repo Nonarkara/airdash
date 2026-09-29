@@ -391,6 +391,36 @@ export function createSatelliteLayers(map, pane) {
         crossOrigin: true,
       },
     ),
+    // TROPOMI (Sentinel-5P) tropospheric NO₂.
+    //
+    // Why this and not the OMI NO₂ already above it: OMI samples at 13×24 km,
+    // TROPOMI at 5.5×3.5 km — an order of magnitude more detail over a city,
+    // which is the only scale a resident cares about. Both are polar orbiters
+    // covering the whole country, so this is an upgrade in resolution, not a
+    // change in coverage.
+    //
+    // What NO₂ means here: it is a combustion tracer. Traffic corridors,
+    // industrial estates and power stations show up as plumes. It is NOT a
+    // PM2.5 measurement and not a dust measurement — a high NO₂ day in
+    // Bangkok is a traffic-and-industry day, which is a different public-health
+    // story from a burning season. Read it beside the AOD layers, not instead.
+    //
+    // Verified 2026-09-29 by fetching real tiles over Bangkok, Chiang Mai and
+    // Nakhon Si Thammarat and decoding the pixels: 39-65% valid coverage
+    // across four consecutive days, cloud-masked (the magenta wash) rather
+    // than empty. Its sibling TEMPO layers are deliberately NOT here — those
+    // are a North America instrument and serve striping garbage over Thailand.
+    tropomiNo2: L.tileLayer(
+      `${GIBS}/TROPOMI_L2_Nitrogen_Dioxide_Tropospheric_Column/default/${yesterday}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`,
+      {
+        maxNativeZoom: 6,
+        maxZoom: 19,
+        opacity: 0.7,
+        pane,
+        attribution: '© ESA/NASA GIBS · Sentinel-5P TROPOMI NO₂',
+        crossOrigin: true,
+      },
+    ),
     // OMPS NOAA-20 SO₂ Middle Troposphere. Volcanic SO₂ rises into the
     // mid-troposphere before being sheared out across SE Asia — Mount
     // Sinila, Merapi, Dukono eruptions reach Thai airspace every few
@@ -510,6 +540,7 @@ export const LAYER_GROUPS = [
       { id: 'viirsAerosolType', th: 'ชนิดละอองลอย VIIRS (ควัน vs ฝุ่น vs ละอองเกลือทะเล)', en: 'VIIRS aerosol type (smoke vs dust vs sea-salt)', on: false, kind: 'sat' },
       { id: 'co', th: 'คาร์บอนมอนอกไซด์ (ควันไฟที่ลอยมา)', en: 'Carbon monoxide (transported smoke)', on: false, kind: 'sat' },
       { id: 'airsDust', th: 'AIRS Dust Score (ตรวจฝุ่นจากทะเลทราย/ดิน)', en: 'AIRS Dust Score (desert/soil dust detector)', on: false, kind: 'sat' },
+      { id: 'tropomiNo2', th: 'NO₂ ชั้นใกล้พื้น (TROPOMI 5 กม. — ไอเสียการเผาไหม้และการจราจร)', en: 'Tropospheric NO₂ (TROPOMI 5 km — combustion tracer)', on: false, kind: 'sat' },
       { id: 'ompsNoaa20So2Mid', th: 'OMPS SO₂ กลางบรรยากาศ (ภูเขาไฟ Indone./ข้ามพรมแดน)', en: 'OMPS SO₂ mid-tropo (volcanic / cross-border gas)', on: false, kind: 'sat' },
       { id: 'ompsNoaa20So2Lower', th: 'OMPS SO₂ ระดับพื้น (มลพิษอุตสาหกรรม)', en: 'OMPS SO₂ boundary-layer (industrial pollution)', on: false, kind: 'sat' },
       { id: 'nightlights', th: 'แสงไฟกลางคืน (เผากลางคืน/ฟุ้งกระจาย)', en: 'Night lights (night burning / haze glow)', on: false, kind: 'sat' },
@@ -525,6 +556,7 @@ export const LAYER_GROUPS = [
     en: 'GROUND OBSERVATIONS',
     layers: [
       { id: 'air', th: 'สถานีคุณภาพอากาศ (Air4Thai)', en: 'AQ stations (Air4Thai)', on: true },
+      { id: 'visibility', th: 'ระยะมองสนามบิน (METAR — สัญญาณฝุ่นเร็วที่สุด ทุก 30 นาที)', en: 'Airport visibility (METAR — fastest dust signal, 30-min)', on: false, kind: 'visibility' },
       { id: 'aeronet', th: 'สถานี AERONET (ภาคพื้นดิน — สอบเทียบ AOD ดาวเทียม)', en: 'AERONET stations (ground truth — satellite AOD calibration)', on: false, kind: 'aeronet' },
       { id: 'citizen', th: 'รายงานหมอกควันจากผู้ใช้และสื่อ (ผูกพิกัดอัตโนมัติ)', en: 'Citizen & press haze reports (auto-pinned)', on: false, kind: 'citizen' },
       { id: 'heatmap', th: 'ฮีทแมป PM2.5', en: 'PM2.5 heat map', on: false },

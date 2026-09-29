@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.43'
-import { escapeHtml } from '../fmt.js?v=2.4.43'
+import { store, on } from '../state.js?v=2.4.44'
+import { escapeHtml } from '../fmt.js?v=2.4.44'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -86,6 +86,11 @@ function GROUPS() {
           en: 'The Window — the camera on the worst air, plus credited reports, approved LINE notes, and headlines for that same province.',
           note_th: 'วันที่ฝุ่นไม่เกิน 25 จะแสดงกล้องใกล้สถานีที่ค่าสูงสุด และบอกตรงๆ ว่าอากาศโดยรวมดี · ภาพและค่าฝุ่นไม่ใช่ประกาศราชการ · รายงานไลน์ไม่เปิดเผยภาพหรือตัวผู้ส่ง',
           note_en: 'On a day nothing exceeds 25 µg/m³ it shows cameras near the highest readings and says the air is broadly fine. Pictures are not an official announcement. LINE notes do not include the photo or the sender.' },
+        { path: '/api/visibility', th: 'ระยะมองจากสนามบิน 23 แห่ง (METAR ของ NOAA) — วัดการลดทอดแสงโดยตรงทุก 30 นาที ตามทฤษฎี Koschmieder β = 3.912/กม. เป็นสัญญาณฝุ่นที่เร็วที่สุดในระบบ',
+          en: 'Visibility from 23 Thai aerodromes (NOAA METAR) — a direct measurement of light extinction every 30 min, via Koschmieder β = 3.912/km. The fastest dust signal in the system.',
+          params: [],
+          note_th: 'จุดเต็ม = สาเหตุเป็นฝุ่น/ควันจริง · วงกลมโปร่ง = ระยะมองลดลงแต่สาเหตุคือฝน/หมอก ไม่ใช่ฝุ่น · จุดเล็ก = ทัศนวิสัยดี (10 กม. ขึ้นไป) · ฟิลด์ aerosol_vis_km จะมีค่าเฉพาะเมื่อ METAR ระบุสาเหตุเป็นฝุ่นเท่านั้น ถ้าไม่ระบุจะเป็น null ไม่ใช่ 0',
+          note_en: 'Filled dot = an aerosol cause · hollow dot = reduced, but by rain or fog, not dust · small dot = 10 km or more · aerosol_vis_km is populated only when the METAR itself names an aerosol cause; otherwise it is null, never 0.' },
         { path: '/api/citizen-reports', th: 'รายงานหมอกควันจากผู้ใช้และสื่อ ผูกพิกัดอัตโนมัติจากชื่อสถานที่ในพาดหัว ทุกรายการระบุแหล่งที่มาและลิงก์ต้นฉบับเสมอ',
           en: 'Citizen and press haze reports, auto-pinned by place name in the headline. Every row carries its publisher and a link to the original.',
           params: [['limit', false, tr('จำนวน (สูงสุด 400)', 'count (max 400)')], ['province', false, tr('รหัสจังหวัด 2 หลัก เช่น 50', '2-digit province code, e.g. 50')], ['claims', false, tr('smoke|dust|fog|washout — กรองตามสิ่งที่พาดหัวอ้าง', 'smoke|dust|fog|washout — filter by what the text claims')], ['min_confidence', false, tr('1..4 ต่ำสุด', '1..4 minimum')]],

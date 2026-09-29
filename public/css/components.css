@@ -3872,3 +3872,39 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .citizen-noise-delta.noise-delta-flat, .citizen-noise-delta.noise-delta-zero { background: var(--well-dim); color: var(--ink-mid); }
 .citizen-noise-svg { display: block; width: 100%; height: 60px; }
 .citizen-noise-foot { font-size: 10.5px; color: var(--ink-mid); }
+
+/* ── Airport visibility (METAR) pins ─────────────────────────────────────────
+ * The shape carries the attribution; the colour carries the severity. That
+ * split is deliberate and is the reason this is not a coloured dot like every
+ * other layer: a hollow dot means "visibility really is low and the cause was
+ * NOT dust", and it must be impossible to mistake for a dust event at a glance
+ * during a burning season.
+ *
+ * Contrast is held at 3:1 against both papers (WCAG 1.4.11) by taking the
+ * band colour from the shared theme-aware table in i18n.js rather than
+ * hardcoding a hex here — see scripts/test-band-contrast.mjs.
+ */
+.vis-pin {
+  /* the divIcon carries no html, so the shape is drawn on the container */
+  width: 14px; height: 14px; border-radius: 50%;
+  background: transparent;
+  border: 2px solid var(--ink-low);
+  box-sizing: border-box;
+}
+.vis-pin.vis-aerosol { background: var(--vis-band, #A51931); border-color: transparent; }
+.vis-pin.vis-b-normal   { --vis-band: #00933C; }
+.vis-pin.vis-b-watch    { --vis-band: #B58800; }
+.vis-pin.vis-b-elevated { --vis-band: #E86A10; }
+.vis-pin.vis-b-high     { --vis-band: #A51931; }
+/* At the 10 km reporting ceiling there is no event; a 1.5 px dot says
+   "present and fine" without claiming a measurement. */
+.vis-pin.vis-ceiling {
+  width: 6px; height: 6px; border: 0; background: var(--ink-low);
+  opacity: 0.55;
+}
+.vis-tip { font-size: 12px; line-height: 1.45; }
+.vis-tip-en { display: block; color: var(--ink-low); font-size: 11px; }
+.vis-tip-vis { display: flex; justify-content: space-between; gap: 12px; margin-top: 4px; font-size: 15px; font-weight: 600; }
+.vis-tip-cause { margin-top: 4px; max-width: 30ch; }
+.vis-tip-cause-en { color: var(--ink-low); font-size: 11px; }
+.vis-tip-time { margin-top: 4px; color: var(--ink-low); font-size: 11px; }

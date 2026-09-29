@@ -1,16 +1,16 @@
 // Pure data-paint functions — accept a target layers object + snapshot slice.
 // Imported by map.js so the map renders risk/air/rain widgets straight from
 // the /api/snapshot stream with its own layer groups. No module-level state.
-import { emit, store } from './state.js?v=2.4.43'
-import { tr, pick, BAND, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.43'
-import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.4.43'
+import { emit, store } from './state.js?v=2.4.44'
+import { tr, pick, BAND, LEVEL_NAME, pm25Level, bandColor, pmColorFor, PM_COLORS } from './i18n.js?v=2.4.44'
+import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.4.44'
 
-const BAND_COLOR = { normal: '#00933C', watch: '#F0B400', elevated: '#E86A10', high: '#A51931' }
+const BAND_COLOR = bandColor // theme-aware; single source of truth in i18n.js
 
 // Thai AQI 2023 PM2.5 palette, level 1–5 (≤15 · ≤25 · ≤37.5 · ≤75 · >75 µg/m³).
 // Levels 3–5 reuse the band tokens (--band-watch/elevated/high); 1–2 are the
 // two green steps below them. Thai-flag red stays reserved for genuine >75.
-const PM_COLOR = { 1: '#1A7A4A', 2: '#7FA334', 3: '#F0B400', 4: '#E86A10', 5: '#A51931' }
+const PM_COLOR = pmColorFor // theme-aware; single source of truth in i18n.js
 const PM_NONE = '#B7AFA3'
 
 /** Marker colour for a PM2.5 reading (µg/m³) — Thai AQI 2023 steps. */
