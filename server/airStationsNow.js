@@ -12,7 +12,7 @@ let cache = null
 export function airStationsNow(db) {
   if (cache && Date.now() - cache.at < 60_000) return cache.rows
   const rows = db.all(
-    `SELECT s.station_key, s.name_th, s.name_en, s.province_th, s.lat, s.lng,
+    `SELECT s.station_key, s.name_th, s.name_en, s.province_code, s.province_th, s.province_en, s.lat, s.lng,
             pm.value AS pm25, pm.obs_time AS obs_time
      FROM stations s
      JOIN latest pm ON pm.source = s.source AND pm.station_key = s.station_key AND pm.metric = 'pm25'

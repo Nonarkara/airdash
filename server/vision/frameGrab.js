@@ -73,6 +73,20 @@ export function grabFrame(hlsUrl, { seekSeconds = 2, timeoutMs = GRAB_TIMEOUT_MS
 }
 
 /**
+ * The URL to hand ffmpeg for a camera.
+ *
+ * Historically this was `hls_url`, which meant only HLS cameras could ever be
+ * sampled. iTIC's `mjpeg2.php?camid=…` is an endless multipart/x-mixed-replace
+ * HTTP body — ffmpeg opens it exactly as happily as a playlist, verified on
+ * 2026-09-29 — but it lives in `viewer_url`, so 27 cameras were invisible to
+ * the collector. The registry now tags every camera with `grab_url`; fall back
+ * to `hls_url` so a bare `{hls_url}` object still works.
+ */
+export function grabUrlOf(cam) {
+  return cam.grab_url || cam.hls_url || cam.viewer_url || null
+}
+
+/**
  * Frames from several cameras at once, with a per-host concurrency cap.
  *
  * The cap is not decoration. These are municipal and government servers
@@ -82,10 +96,10 @@ export function grabFrame(hlsUrl, { seekSeconds = 2, timeoutMs = GRAB_TIMEOUT_MS
  * overall, the same numbers cctvHealth.js uses.
  */
 export async function grabMany(cameras, { concurrency = 12, perHost = 3, ...opts } = {}) {
-  const queue = [...cameras]
+  const queue = cameras.filter((c) => grabUrlOf(c))
   const busy = new Map()
   const out = new Map()
-  const hostOf = (c) => { try { return new URL(c.hls_url).host } catch { return 'invalid' } }
+  const hostOf = (c) => { try { return new URL(grabUrlOf(c)).host } catch { return 'invalid' } }
 
   await new Promise((resolve) => {
     let active = 0
@@ -97,7 +111,7 @@ export async function grabMany(cameras, { concurrency = 12, perHost = 3, ...opts
         const host = hostOf(cam)
         busy.set(host, (busy.get(host) ?? 0) + 1)
         active++
-        grabFrame(cam.hls_url, opts)
+        grabFrame(grabUrlOf(cam), opts)
           .then((buf) => out.set(cam, buf))
           .catch(() => out.set(cam, null))
           .finally(() => { busy.set(host, busy.get(host) - 1); active--; pump() })

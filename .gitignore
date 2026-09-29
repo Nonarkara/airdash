@@ -27,3 +27,6 @@ logs/plist-backup-*/
 # Archive receipt (written by ops/archive-longterm.mjs; runtime state)
 data/.archive-receipt.json*
 .deploy-state.json
+
+# Stray empty git repo created in the project root by an editor, 2026-09-29
+Untitled/

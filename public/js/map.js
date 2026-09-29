@@ -1,19 +1,19 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.40'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.40'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.40'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.40'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.40'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.40'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.40'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.40'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.40'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.40'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.40'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.40'
-import { openHazeEyes } from './layers/cctvWall.js?v=2.4.40'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.40'
+import { on, store } from './state.js?v=2.4.43'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.43'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.43'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.43'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.43'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.43'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.43'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.43'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.43'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.43'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.43'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.43'
+import { openWindow } from './witness.js?v=2.4.43'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.43'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
@@ -93,6 +93,13 @@ export function initMap() {
   } catch (e) {
     console.error('cctv layer init failed — continuing without it:', e)
   }
+  window.addEventListener('airdash:locate-camera', (e) => {
+    const { id, source } = e.detail ?? {}
+    if (!id) return
+    const t = allLayerToggles().find((x) => x.id === 'cctv')
+    if (t && !t.on) { toggleLayer(t); addLayerControl() }
+    cctvApi?.refresh().then(() => cctvApi?.locate(id, source))
+  })
   try {
     aeronetApi = createAeronetLayer()
     layers.aeronet = aeronetApi.group
@@ -274,15 +281,8 @@ function addLayerControl() {
 
     const eyes = L.DomUtil.create('button', 'row', body)
     eyes.type = 'button'
-    eyes.innerHTML = `<span class="sw" style="background:var(--th-red)"></span><span class="lbl">👁 ${tr('ตาดูฝุ่น — กล้องที่มองพื้นที่ฝุ่นหนักสุด', 'Haze eyes — cameras on the worst air')}</span>`
-    eyes.onclick = () => openHazeEyes({
-      onLocate: (id, source) => {
-        const t = allLayerToggles().find((x) => x.id === 'cctv')
-        if (t && !t.on) { toggleLayer(t); addLayerControl() }
-        // The pins load on first add; give them a moment before opening the popup.
-        cctvApi?.refresh().then(() => cctvApi?.locate(id, source))
-      },
-    })
+    eyes.innerHTML = `<span class="sw" style="background:var(--th-amber)"></span><span class="lbl">${tr('หน้าต่างฟ้า — กล้อง รายงาน และข่าว', 'The Window — camera, report, headline')}</span>`
+    eyes.onclick = () => openWindow()
 
     return div
   }

@@ -1,0 +1,181 @@
+/* The Window — a viewfinder, not a command rail.
+   One place fills the glass. The number sits on the picture the way a
+   broadcast lower-third does. Reports and headlines are a ledger beside
+   it, not another tab. The rest of Mission Control stays the light
+   instrument; this surface is the dusk you look through. */
+
+.win-overlay {
+  position: fixed; inset: 0; z-index: 6400;
+  background:
+    radial-gradient(1200px 700px at 18% 0%, rgba(216, 137, 58, 0.16), transparent 55%),
+    radial-gradient(900px 600px at 100% 100%, rgba(14, 74, 94, 0.55), transparent 50%),
+    #07141C;
+  color: #E7F0F4;
+  display: flex; flex-direction: column;
+  font-family: 'Sarabun', var(--font-ui), sans-serif;
+}
+
+.win-bar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid rgba(231, 240, 244, 0.12);
+}
+.win-brand { min-width: 0; }
+.win-brand h2 {
+  margin: 0; font-family: Manrope, 'Sarabun', sans-serif;
+  font-weight: 800; font-size: 22px; letter-spacing: -0.02em; line-height: 1.05;
+}
+.win-brand h2 span { color: #E2A15A; }
+.win-kicker {
+  margin: 2px 0 0; font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(231, 240, 244, 0.55);
+}
+.win-note {
+  flex: 1; min-width: 0; margin: 0;
+  font-size: 13px; line-height: 1.35; color: rgba(231, 240, 244, 0.72);
+}
+.win-close {
+  flex: none; height: 36px; padding: 0 14px;
+  border: 1px solid rgba(231, 240, 244, 0.35); background: transparent; color: #E7F0F4;
+  font-family: inherit; font-size: 14px; cursor: pointer;
+}
+.win-close:hover { background: #E7F0F4; color: #07141C; }
+
+.win-body {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+}
+.win-stage { min-width: 0; min-height: 0; padding: 16px 16px 8px; display: flex; flex-direction: column; }
+.win-finder {
+  position: relative; flex: 1; min-height: 220px;
+  background: #040B10;
+  border: 1px solid rgba(231, 240, 244, 0.16);
+  display: flex; flex-direction: column;
+}
+.win-corner {
+  position: absolute; width: 22px; height: 22px; z-index: 3; pointer-events: none;
+  border: 2px solid var(--air, #E2A15A);
+}
+.win-corner.tl { top: 8px; left: 8px; border-right: 0; border-bottom: 0; }
+.win-corner.tr { top: 8px; right: 8px; border-left: 0; border-bottom: 0; }
+.win-corner.bl { bottom: 72px; left: 8px; border-right: 0; border-top: 0; }
+.win-corner.br { bottom: 72px; right: 8px; border-left: 0; border-top: 0; }
+
+.win-picture { flex: 1; min-height: 0; display: flex; align-items: stretch; }
+.win-picture .cctv-video-wrap {
+  flex: 1; position: relative; background: #000; min-height: 0;
+  aspect-ratio: auto; border-radius: 0;
+}
+.win-picture .cctv-video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
+.win-picture .cctv-live {
+  position: absolute; top: 14px; left: 36px; z-index: 2;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.12em;
+  color: #fff; background: rgba(200, 69, 58, 0.92); padding: 2px 6px;
+}
+.win-picture .cctv-linkout, .win-picture .cctv-air-none {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  margin: 28px; padding: 18px; text-align: center;
+  border: 1px dashed rgba(231, 240, 244, 0.35); color: #E7F0F4; text-decoration: none;
+}
+.win-picture .cctv-vision { display: none; }
+
+.win-lower {
+  display: flex; align-items: flex-end; gap: 14px;
+  padding: 10px 14px 12px;
+  background: linear-gradient(180deg, rgba(7, 20, 28, 0.2), #07141C 28%);
+  border-top: 3px solid var(--air, #E2A15A);
+}
+.win-num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 700; font-size: 64px; line-height: 0.85; letter-spacing: -0.04em;
+  color: var(--air, #E7F0F4);
+}
+.win-num small {
+  display: block; margin-top: 4px;
+  font-size: 11px; letter-spacing: 0.08em; font-weight: 500; color: rgba(231, 240, 244, 0.7);
+}
+.win-place {
+  font-family: Manrope, 'Sarabun', sans-serif;
+  font-weight: 800; font-size: 26px; line-height: 1.05; letter-spacing: -0.02em;
+}
+.win-meta { margin-top: 3px; font-size: 13px; color: rgba(231, 240, 244, 0.72); }
+.win-cam {
+  margin-left: auto; text-align: right; max-width: 42%;
+  font-size: 12px; line-height: 1.3; color: rgba(231, 240, 244, 0.62);
+}
+.win-look { margin-top: 6px; font-size: 12px; color: #E2A15A; }
+.win-actions { display: flex; gap: 8px; margin-top: 10px; }
+.win-actions button {
+  height: 32px; padding: 0 12px; cursor: pointer;
+  border: 1px solid rgba(231, 240, 244, 0.35); background: transparent; color: #E7F0F4;
+  font-family: inherit; font-size: 13px;
+}
+.win-actions button:hover { background: #E7F0F4; color: #07141C; }
+
+.win-ledger {
+  min-height: 0; overflow: auto;
+  border-left: 1px solid rgba(231, 240, 244, 0.12);
+  padding: 8px 0 16px;
+}
+.win-sec { padding: 12px 16px 4px; }
+.win-sec h3 {
+  margin: 0; font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
+  color: #E2A15A;
+}
+.win-sec h3 b {
+  display: block; margin-top: 2px;
+  font-family: Manrope, 'Sarabun', sans-serif;
+  font-size: 16px; font-weight: 750; letter-spacing: 0; text-transform: none; color: #E7F0F4;
+}
+.win-card {
+  margin-top: 8px; padding-top: 8px;
+  border-top: 1px solid rgba(231, 240, 244, 0.1);
+  font-size: 14px; line-height: 1.4;
+}
+.win-card a { color: #F3D7B0; text-decoration: none; }
+.win-card a:hover { text-decoration: underline; }
+.win-credit {
+  display: block; margin-top: 3px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 0.04em; color: rgba(231, 240, 244, 0.5);
+}
+.win-chip {
+  display: inline-block; margin-right: 6px; padding: 0 6px;
+  border: 1px solid currentColor; font-size: 11px; line-height: 1.6;
+}
+.win-chip.smoke { color: #E07A6A; }
+.win-chip.washout { color: #7DCEA0; }
+.win-chip.dust { color: #E2A15A; }
+.win-chip.fog { color: #B7C6CE; }
+.win-empty { margin: 8px 0 0; font-size: 13px; color: rgba(231, 240, 244, 0.45); }
+
+.win-strip {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 10px 16px 14px;
+  border-top: 1px solid rgba(231, 240, 244, 0.12);
+}
+.win-cell {
+  flex: none; width: 148px; text-align: left; cursor: pointer;
+  padding: 8px 10px; background: transparent; color: #E7F0F4;
+  border: 1px solid rgba(231, 240, 244, 0.16);
+  border-left: 3px solid var(--air, rgba(231, 240, 244, 0.3));
+  font-family: inherit;
+}
+.win-cell.on { background: rgba(231, 240, 244, 0.06); border-color: var(--air, #E2A15A); }
+.win-cell .n {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 20px; font-weight: 700; line-height: 1; color: var(--air, #E7F0F4);
+}
+.win-cell .p { display: block; margin-top: 3px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win-msg { padding: 48px 24px; font-size: 16px; color: rgba(231, 240, 244, 0.7); }
+
+@media (max-width: 860px) {
+  .win-body { grid-template-columns: 1fr; overflow: auto; }
+  .win-ledger { border-left: 0; border-top: 1px solid rgba(231, 240, 244, 0.12); overflow: visible; }
+  .win-num { font-size: 48px; }
+  .win-note { display: none; }
+  .win-cam { display: none; }
+  .win-corner.bl, .win-corner.br { bottom: 64px; }
+}

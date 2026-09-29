@@ -2,7 +2,7 @@
 // feed filtered to dust keywords. Tiny regex RSS parser — feeds are simple RSS 2.0.
 import { CONFIG } from '../config.js'
 import { fetchText, str } from '../util.js'
-import { matchProvinceInText } from '../provinces.js'
+import { geotagHeadline } from '../newsPlaces.js'
 
 const FEEDS = [
   {
@@ -60,8 +60,13 @@ export default {
   label_en: 'Air quality news',
   intervalMs: CONFIG.intervals.news,
   enabled: true,
+  // 2: headlines are geotagged with newsPlaces (every place named, ambiguous
+  // Thai words refused) instead of a single substring match. Bumping this
+  // runs the source on the next boot so stored rows get retagged.
+  version: 2,
 
   async run({ db, bus }) {
+    retagStored(db)
     const fetched_at = new Date().toISOString()
     let seen = 0, added = 0
     const fresh = []
@@ -84,11 +89,11 @@ export default {
         // href verbatim. Only http(s) links are stored.
         const rawLink = str(item.link)
         const safeLink = rawLink && /^https?:\/\//i.test(rawLink) ? rawLink : null
-        // Best-effort geotag (see matchProvinceInText) so a fire/pollution
-        // headline can be pinned on the map next to the live PM2.5 reading
-        // for that same place — most Thai headlines lead with the province.
+        // Every place the headline names (server/newsPlaces.js). The first
+        // place is the row's pin; places_json keeps the rest so a story
+        // about three provinces is not drawn as one.
         const titleLower = item.title.toLowerCase()
-        const province = matchProvinceInText(item.title)
+        const geo = geotagHeadline(item.title)
         const isFire = FIRE_KEYWORDS.some((k) => titleLower.includes(k))
         const isNew = db.insertNews({
           feed: feed.id,
@@ -97,12 +102,13 @@ export default {
           link: safeLink,
           published_at: published && !Number.isNaN(+published) ? published.toISOString() : null,
           fetched_at,
-          province_code: province?.province_code ?? null,
-          province_th: province?.province_th ?? null,
-          province_en: province?.province_en ?? null,
-          lat: province?.lat ?? null,
-          lng: province?.lng ?? null,
+          province_code: geo.province_code,
+          province_th: geo.province_th,
+          province_en: geo.province_en,
+          lat: geo.lat,
+          lng: geo.lng,
           is_fire: isFire,
+          places_json: JSON.stringify(geo.places),
         })
         if (isNew) { added += 1; fresh.push(item.title) }
       }
@@ -120,4 +126,32 @@ export default {
 
     return { seen, added }
   },
+}
+
+// Rows ingested before newsPlaces stored a single substring hit, and short
+// Thai words (เลย, ตาก, พล) could pin the wrong province. A null places_json
+// means "not yet read by this matcher". Empty array means "read, no place".
+// The archive is a few hundred headlines. One pass on the boot that picks
+// up version 2 retags them; after that the query matches nothing.
+function retagStored(db) {
+  let rows
+  try {
+    rows = db.all(
+      `SELECT id, title FROM news_items
+       WHERE places_json IS NULL AND title IS NOT NULL
+       ORDER BY id DESC LIMIT 1000`)
+  } catch { return 0 }
+  if (!rows?.length) return 0
+  db.tx(() => {
+    for (const row of rows) {
+      const g = geotagHeadline(row.title)
+      db.run(
+        `UPDATE news_items
+         SET province_code=?, province_th=?, province_en=?, lat=?, lng=?, places_json=?
+         WHERE id=?`,
+        g.province_code, g.province_th, g.province_en, g.lat, g.lng,
+        JSON.stringify(g.places), row.id)
+    }
+  })
+  return rows.length
 }

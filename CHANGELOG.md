@@ -10,6 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] — **Vision coverage: which cameras we can actually see**
+
+The ask was to run computer vision over *all* the cameras. Measured against the live catalogue of 1,369, that turns out to mean 362 — and the difference is worth writing down rather than hiding behind the word "embed".
+
+**Two URL bugs were marking live cameras dead.** `resolveHls` prefixed an already-absolute iTIC URL a second time (`…/hls/https://camerai1…/ccs22.m3u8`), which 404s — 115 cameras. Repaired and re-probed with ffmpeg, **57 came back genuinely live**. Separately, relative HLS paths resolved against `camera1.iticfoundation.org`, but the feed actually serves `camerai1` (with the "i"); the host recogniser asked for `camera\d`, which `camerai1` does not match, so every relative path fell through to a 404 default. Verified: `camera1/…/ccs30.m3u8` → 404, `camerai1/…/ccs30.m3u8` → 200. A 404 is indistinguishable from dead hardware to the health probe, so this read as a catalogue of broken cameras.
+
+**`stream_kind` replaces the single `embed` bucket** with five measured classes. 572 BMA cameras serve a real image endpoint, but it measures mean 255 / stddev 0.000 — a pure white placeholder, no scene. 208 NST embeds are MediaMTX WHEP (WebRTC): RTSP 8554 refused, SRT absent, no HLS on the web port, so a browser plays them but ffmpeg cannot. iTIC's 27 `mjpeg2.php` streams *are* readable by ffmpeg, and 6 answered. `grab_url` now points the sampler at whichever URL actually works.
+
+**The collector samples everything reachable**, not a 40-camera prefix: all live HLS plus a rotating MJPEG probe (for MJPEG the grab *is* the probe — an endless multipart body has no HEAD to check). `server/vision/coverage.js` publishes the per-class accounting with a bilingual reason per class, and `/api/haze-vision` returns it. A blank frame still yields a *withheld* score, never 0 — the corridor detector refuses a frame with no line-of-sight structure, which is what stops 572 white rectangles from being reported as "clear air".
+
+## [Unreleased] — **The Window**
+
+Cameras, credited reports, and headlines already existed as three separate FloodDash-shaped layers. They now answer one question together. **หน้าต่างฟ้า / The Window** (header, and the map’s layer menu) shows the camera facing the worst air, the credited reports for that province, approved LINE notes, and the headlines that name the place. One picture plays. On a clean day it says the air is broadly fine and shows the cameras nearest the highest readings.
+
+News geotagging is FloodDash’s matcher: every place in a headline, with the Thai words that only look like provinces (เลย, ตาก, พล) refused unless the headline says จังหวัด. District dots use real centroids. A story about three provinces pins three places. The citizen layer also draws approved LINE notes that carry a location; the photo and the sender stay private.
+
 ## [3.3.2] — 2026-09-27 · backend only · **AirDash on the external disk: a real page cache, and the archive off the evening peak**
 
 **What was wrong.** The live DB moved to the external USB disk on 26 Sep (it is a spinning drive, a Seagate One Touch). With SQLite's default ~2 MB page cache every request went back to the disk head, and the shared archive job (`com.dash.archive`) ran at 20:00 — Thai evening peak — copying into its 11 GB archive on the same disk. On 27 Sep the server sat in uninterruptible I/O from ~20:00 for over an hour; `api-air` answered nothing. The archive was also still reading the old `~/AirDash/data/airdash.db` path ("live DB missing — skipped").

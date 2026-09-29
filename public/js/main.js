@@ -1,34 +1,35 @@
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.4.40'
-import { paintChrome } from './i18n.js?v=2.4.40'
-import { startTap } from './sse.js?v=2.4.40'
-import { initMap, invalidateMap } from './map.js?v=2.4.40'
-import { initHeader } from './panels/header.js?v=2.4.40'
-import { initRanking } from './panels/ranking.js?v=2.4.40'
-import { initForecast } from './panels/forecast.js?v=2.4.40'
-import { initWhatIf } from './panels/whatif.js?v=2.4.40'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.4.40'
-import { initTap } from './panels/tap.js?v=2.4.40'
-import { initSources } from './panels/sources.js?v=2.4.40'
-import { initHistory } from './panels/history.js?v=2.4.40'
-import { initInsights } from './panels/insights.js?v=2.4.40'
-import { initAnalytics } from './panels/analytics.js?v=2.4.40'
-import { initFeeds } from './panels/feeds.js?v=2.4.40'
-import { initChat } from './panels/chat.js?v=2.4.40'
-import { initCitizen } from './panels/citizen.js?v=2.4.40'
-import { initWaterways } from './panels/waterways.js?v=2.4.40'
-import { initFocus } from './panels/focus.js?v=2.4.40'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.40'
-import { initSplit } from './panels/split.js?v=2.4.40'
-import { initLibrary } from './panels/library.js?v=2.4.40'
-import { initResearch } from './panels/research.js?v=2.4.40'
-import { initManual } from './panels/manual.js?v=2.4.40'
-import { initBurning } from './panels/burning.js?v=2.4.40'
-import { initApiDocs } from './panels/apidocs.js?v=2.4.40'
-import { initSearch } from './panels/search.js?v=2.4.40'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.40'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.4.40'
+import { on, emit, store, setLang } from './state.js?v=2.4.43'
+import { paintChrome } from './i18n.js?v=2.4.43'
+import { startTap } from './sse.js?v=2.4.43'
+import { initMap, invalidateMap } from './map.js?v=2.4.43'
+import { initHeader } from './panels/header.js?v=2.4.43'
+import { initRanking } from './panels/ranking.js?v=2.4.43'
+import { initForecast } from './panels/forecast.js?v=2.4.43'
+import { initWhatIf } from './panels/whatif.js?v=2.4.43'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.4.43'
+import { initTap } from './panels/tap.js?v=2.4.43'
+import { initSources } from './panels/sources.js?v=2.4.43'
+import { initHistory } from './panels/history.js?v=2.4.43'
+import { initInsights } from './panels/insights.js?v=2.4.43'
+import { initAnalytics } from './panels/analytics.js?v=2.4.43'
+import { initFeeds } from './panels/feeds.js?v=2.4.43'
+import { initChat } from './panels/chat.js?v=2.4.43'
+import { initCitizen } from './panels/citizen.js?v=2.4.43'
+import { initWaterways } from './panels/waterways.js?v=2.4.43'
+import { initFocus } from './panels/focus.js?v=2.4.43'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.43'
+import { initSplit } from './panels/split.js?v=2.4.43'
+import { initLibrary } from './panels/library.js?v=2.4.43'
+import { initResearch } from './panels/research.js?v=2.4.43'
+import { initManual } from './panels/manual.js?v=2.4.43'
+import { initBurning } from './panels/burning.js?v=2.4.43'
+import { initApiDocs } from './panels/apidocs.js?v=2.4.43'
+import { initSearch } from './panels/search.js?v=2.4.43'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.43'
+import { initWitness } from './witness.js?v=2.4.43'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.4.43'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -497,6 +498,7 @@ async function boot() {
   safeInit('search', initSearch)
   safeInit('tabs', initTabs)
   safeInit('dataFreshness', initDataFreshness)
+  safeInit('witness', initWitness)
   safeInit('sheet', initSheet)
   safeInit('about', initAbout)
   // Wire the stuck-on-boot escape hatch. Runs even if every safeInit

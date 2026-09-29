@@ -139,6 +139,18 @@ function resolveHls(hls, imgHost) {
   if (/^https?:\/\/camerai?\d?\.iticfoundation\.org\/pass\//i.test(hls)) {
     return hls
   }
+  // Already an ABSOLUTE URL on an iTIC camera host — e.g.
+  //   https://camerai1.iticfoundation.org/hls/ccs22.m3u8
+  // The relative-path branch further down matches on `.endsWith('.m3u8')`
+  // alone, so it used to prefix this a second time and emit
+  //   https://camera1.iticfoundation.org/hls/https://camerai1.../ccs22.m3u8
+  // which 404s. That silently marked 115 catalogue cameras dead. Repairing
+  // them and re-probing with ffmpeg on 2026-09-29 brought 57 of the 115 back
+  // as genuinely live, and gave the rest an honest 404 instead of a nonsense
+  // URL. Absolute means absolute.
+  if (/^https?:\/\/camerai?\d?\.iticfoundation\.org\//i.test(hls)) {
+    return hls
+  }
   // Raw CDN URL from the upstream feed (e.g.
   // http://180.180.242.207:1935/Phase3/PER_3_008_IN.stream/chunklist_XXXX.m3u8)
   // — these hit the RTMP-to-HLS bridge directly and 404 in browsers because
@@ -154,14 +166,26 @@ function resolveHls(hls, imgHost) {
     return `https://camera1.iticfoundation.org/pass/${ip}:${port}${path}`
   }
   // Relative path (no scheme). The Longdo convention is to put the
-  // path under the host of the <imgurl>. Empirically the relative
-  // paths in this feed work through the camera1.iticfoundation.org/hls/
-  // endpoint; we use that as a safe default when the img host isn't a
-  // recognized camera host.
+  // path under the host of the <imgurl>.
+  //
+  // The host is `camerai1`, with an "i" before the digit — and that detail
+  // cost every relative-path camera in the feed. Two things got it wrong at
+  // once: the recogniser below asked for `camera\d`, which `camerai1` does not
+  // match, so every relative path fell through to the hard-coded default; and
+  // the default itself was `camera1`, which 404s. Verified 2026-09-29:
+  //
+  //   https://camera1.iticfoundation.org/hls/ccs30.m3u8   → 404
+  //   https://camerai1.iticfoundation.org/hls/ccs30.m3u8  → 200
+  //   https://camera1.iticfoundation.org/hls/kk26.m3u8    → 404
+  //   https://camerai1.iticfoundation.org/hls/kk26.m3u8   → 200
+  //
+  // A 404 from the health probe is indistinguishable from a dead camera, so
+  // this looked exactly like a catalogue full of broken hardware. It was a
+  // one-character hostname.
   if (hls.endsWith('.m3u8')) {
-    const base = imgHost && /^(camera\d|cameras|cctv\.|bma-itic)/.test(imgHost)
+    const base = imgHost && /^(camera|cameras|cctv\.|bma-itic)/.test(imgHost)
       ? imgHost
-      : 'camera1.iticfoundation.org'
+      : 'camerai1.iticfoundation.org'
     return `https://${base}/hls/${hls}`
   }
   // Plain https URL that isn't on the iTIC proxy and doesn't match the

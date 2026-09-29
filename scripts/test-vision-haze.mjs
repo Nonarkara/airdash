@@ -16,6 +16,7 @@
 // Pure: no network, no ffmpeg, no clock.
 
 import { readFrame, calibrateAgainstPm25, varianceSplit, solidFrame, FRAME_W, FRAME_H, FRAME_BYTES } from '../server/vision/hazeRead.js'
+import { describeVision, indexLatestFrames, withVision, pictureFlags, summarizeLooks } from '../server/vision/visionLook.js'
 
 let pass = 0, fail = 0
 const check = (name, cond, detail = '') => {
@@ -288,6 +289,56 @@ function applyAirlightTinted(scene, beta, A) {
     varianceSplit([{ camera: 'a', hazeIndex: 1, pm25: 1 }]).ok === false)
   check('varianceSplit refuses one camera with no within-camera info',
     varianceSplit(Array.from({ length: 10 }, () => ({ camera: 'a', hazeIndex: 1, pm25: 1 }))).ok === false)
+}
+
+// ── what a stored frame is allowed to say in public ──────────────────────
+{
+  const clear = describeVision({ haze_index: 2, tint_hint: null, pm25: 8, obs_time: 't' })
+  check('a low score beside a low station is "clear" and they agree',
+    clear.look === 'clear' && clear.agreement === 'agree-clear' && clear.calibrated === false)
+  const smoke = describeVision({ haze_index: 40, tint_hint: 'smoke-like', pm25: 90, obs_time: 't' })
+  check('smoke tint beside a high station is flagged, and still not a concentration',
+    smoke.look === 'smoke-like' && smoke.agreement === 'agree-hazy' && smoke.calibrated === false)
+  // The live failure this function exists for: a frame scored 29 / smoke-like
+  // next to a station reading 6.9 µg/m³. That must not be published as pollution.
+  const lie = describeVision({ haze_index: 29, tint_hint: 'smoke-like', pm25: 6.9, obs_time: 't' })
+  check('smoke tint beside clean air is picture-only, not a pollution reading',
+    lie.look === 'smoke-like' && lie.agreement === 'picture-only', JSON.stringify(lie))
+  const fog = describeVision({ haze_index: 38, tint_hint: 'fog-like', pm25: 11, obs_time: 't' })
+  check('fog tint beside clean air is picture-only', fog.agreement === 'picture-only' && fog.look === 'fog-like')
+  const washed = describeVision({ haze_index: 49, tint_hint: null, pm25: 5.9, obs_time: 't' })
+  check('a high score with no tint is washed-out, not smoke', washed.look === 'washed' && washed.agreement === 'picture-only')
+  const hidden = describeVision({ haze_index: null, tint_hint: null, pm25: 40, obs_time: 't' })
+  check('a withheld score stays unclear', hidden.look === 'unclear' && hidden.agreement === 'unknown')
+  const miss = describeVision({ haze_index: 3, tint_hint: null, pm25: 80, obs_time: 't' })
+  check('a clear frame beside a high station says the picture does not show it',
+    miss.look === 'clear' && miss.agreement === 'station-only')
+  check('no frame is not a clear reading', describeVision(null) === null)
+  check('a row cannot flip calibrated by setting the column',
+    describeVision({ haze_index: 10, pm25: 10, calibrated: 1 }).calibrated === false)
+
+  const rows = [
+    { camera_key: 'gistda:a', obs_time: '2026-09-28T10:00:00Z', haze_index: 2, pm25: 8 },
+    { camera_key: 'gistda:a', obs_time: '2026-09-28T12:00:00Z', haze_index: 29, tint_hint: 'smoke-like', pm25: 7 },
+    { camera_key: 'gistda:b', obs_time: '2026-09-28T12:00:00Z', haze_index: 4, pm25: 9 },
+  ]
+  const idx = indexLatestFrames(rows)
+  check('latest frame per camera wins', idx.get('gistda:a').haze_index === 29 && idx.size === 2)
+  const cams = [
+    { id: 'a', source: 'gistda', stream_status: 'live', lat: 1, lng: 2 },
+    { id: 'b', source: 'gistda', stream_status: 'live' },
+    { id: 'c', source: 'gistda', stream_status: 'down' },
+  ]
+  const flags = pictureFlags(cams, idx)
+  check('only the smoke-tinted live camera is a picture flag',
+    flags.length === 1 && flags[0].id === 'a' && flags[0].vision.agreement === 'picture-only',
+    JSON.stringify(flags.map((f) => f.id)))
+  check('a down camera is not flagged even if we passed one', !flags.some((f) => f.id === 'c'))
+  check('cameras without a frame get vision: null', withVision(cams, idx)[2].vision === null)
+  const sum = summarizeLooks(idx)
+  check('the summary counts looks and refuses calibration',
+    sum.calibrated === false && sum.cameras_read === 2 && sum.smoke_like === 1 && sum.clear === 1,
+    JSON.stringify(sum))
 }
 
 console.log(`\n${pass} passed, ${fail} failed`)

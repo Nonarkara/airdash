@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.40'
-import { escapeHtml } from '../fmt.js?v=2.4.40'
+import { store, on } from '../state.js?v=2.4.43'
+import { escapeHtml } from '../fmt.js?v=2.4.43'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -77,11 +77,15 @@ function GROUPS() {
         { path: '/api/cctv/all', th: 'กล้อง CCTV ทั่วประเทศ (GISTDA · iTIC · NST) ที่ตรวจแล้วว่าภาพสดจริง พร้อมค่า PM2.5 ที่ใกล้กล้องที่สุดในฟิลด์ air',
           en: 'Nationwide CCTV catalog (GISTDA · iTIC · NST), health-checked every 30 min; each camera carries `air`, the nearest fresh PM2.5 reading.',
           params: [['live', false, tr('1 = เฉพาะสตรีมที่พิสูจน์แล้วว่าสด', '1 = only streams proven alive')], ['near', false, tr('lat,lng — เรียงตามระยะ', 'lat,lng — sort by distance')], ['radius_km', false, tr('รัศมี (ค่าเริ่มต้น 50)', 'radius (default 50)')], ['limit', false, tr('จำนวนสูงสุดเมื่อใช้ near (ค่าเริ่มต้น 8)', 'max with near (default 8)')]],
-          note_th: 'stream_status: live / flaky / down / unknown / embed · กล้องที่สตรีมตายจะถูกซ่อน · ภาพและค่าฝุ่นเป็นข้อมูลอ้างอิง ไม่ใช่ประกาศราชการ', note_en: 'stream_status: live / flaky / down / unknown / embed · dead streams are hidden · pictures and readings are for reference, not an official announcement' },
+          note_th: 'stream_status: live / flaky / down / unknown / embed · กล้องที่สตรีมตายจะถูกซ่อน · ฟิลด์ vision คือลักษณะที่เห็นจากภาพ (calibrated=false เสมอ) ไม่ใช่ค่าฝุ่น · ภาพและค่าฝุ่นเป็นข้อมูลอ้างอิง ไม่ใช่ประกาศราชการ', note_en: 'stream_status: live / flaky / down / unknown / embed · dead streams are hidden · `vision` is what the frame looks like (calibrated is always false), not a concentration · pictures and readings are for reference, not an official announcement' },
         { path: '/api/cctv/haze-eyes', th: 'กล้องที่กำลังมองพื้นที่ฝุ่นหนักที่สุดตอนนี้ — เรียงตาม PM2.5 จากมากไปน้อย เลือกเฉพาะกล้องที่ใช้งานได้จริง',
           en: 'The cameras looking at the worst air right now — highest PM2.5 first, only cameras that actually work.',
           params: [['limit', false, tr('จำนวน 1–24 (ค่าเริ่มต้น 12)', 'count 1–24 (default 12)')], ['min_pm25', false, tr('เกณฑ์ PM2.5 ขั้นต่ำ (ค่าเริ่มต้น 25)', 'minimum PM2.5 (default 25)')], ['include_down', false, tr('1 = รวมกล้องที่สตรีมออฟไลน์แต่มี viewer_url (iTIC/DOH) ใช้ในฤดูฝุ่น', '1 = include streams marked down but with an iTIC/DOH viewer_url (haze season)')]],
           note_th: 'กล้องที่ stream_status = down จะถูกซ่อนเป็นค่าเริ่มต้น — ส่ง include_down=1 เพื่อแสดงเฉพาะกล้องที่มีลิงก์ต้นทางสาธารณะ (iTIC/DOH) เปิดเองได้', note_en: 'Cameras with stream_status=down are hidden by default — pass include_down=1 to surface those that have a public viewer page on iTIC/DOH instead, ranked after working streams.' },
+        { path: '/api/witness', th: 'หน้าต่างฟ้า — กล้องที่มองอากาศแย่สุด พร้อมรายงานที่ระบุแหล่งที่มา รายงานไลน์ที่ตรวจแล้ว และข่าวของจังหวัดเดียวกัน',
+          en: 'The Window — the camera on the worst air, plus credited reports, approved LINE notes, and headlines for that same province.',
+          note_th: 'วันที่ฝุ่นไม่เกิน 25 จะแสดงกล้องใกล้สถานีที่ค่าสูงสุด และบอกตรงๆ ว่าอากาศโดยรวมดี · ภาพและค่าฝุ่นไม่ใช่ประกาศราชการ · รายงานไลน์ไม่เปิดเผยภาพหรือตัวผู้ส่ง',
+          note_en: 'On a day nothing exceeds 25 µg/m³ it shows cameras near the highest readings and says the air is broadly fine. Pictures are not an official announcement. LINE notes do not include the photo or the sender.' },
         { path: '/api/citizen-reports', th: 'รายงานหมอกควันจากผู้ใช้และสื่อ ผูกพิกัดอัตโนมัติจากชื่อสถานที่ในพาดหัว ทุกรายการระบุแหล่งที่มาและลิงก์ต้นฉบับเสมอ',
           en: 'Citizen and press haze reports, auto-pinned by place name in the headline. Every row carries its publisher and a link to the original.',
           params: [['limit', false, tr('จำนวน (สูงสุด 400)', 'count (max 400)')], ['province', false, tr('รหัสจังหวัด 2 หลัก เช่น 50', '2-digit province code, e.g. 50')], ['claims', false, tr('smoke|dust|fog|washout — กรองตามสิ่งที่พาดหัวอ้าง', 'smoke|dust|fog|washout — filter by what the text claims')], ['min_confidence', false, tr('1..4 ต่ำสุด', '1..4 minimum')]],

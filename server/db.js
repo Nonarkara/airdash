@@ -132,7 +132,8 @@ CREATE TABLE IF NOT EXISTS news_items (
   province_en   TEXT,
   lat           REAL,
   lng           REAL,
-  is_fire       INTEGER DEFAULT 0
+  is_fire       INTEGER DEFAULT 0,
+  places_json   TEXT
 );
 -- idx_news_province is created in migrate() below, not here: on a pre-
 -- existing DB this CREATE TABLE is a no-op (the table already exists
@@ -500,6 +501,7 @@ function migrate(db) {
   addCol('news_items', 'lat', 'REAL')
   addCol('news_items', 'lng', 'REAL')
   addCol('news_items', 'is_fire', 'INTEGER DEFAULT 0')
+  addCol('news_items', 'places_json', 'TEXT')
   // Safe to run every boot regardless of whether the columns above were
   // just added or already existed — the columns are guaranteed present now.
   db.exec('CREATE INDEX IF NOT EXISTS idx_news_province ON news_items(province_code, fetched_at DESC)')
@@ -626,11 +628,11 @@ function wrap(db) {
     insertNews(n) {
       const res = prep(`INSERT OR IGNORE INTO news_items
                           (feed, guid, title, link, published_at, fetched_at,
-                           province_code, province_th, province_en, lat, lng, is_fire)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
+                           province_code, province_th, province_en, lat, lng, is_fire, places_json)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
         .run(n.feed, n.guid, n.title, n.link, n.published_at, n.fetched_at,
              n.province_code ?? null, n.province_th ?? null, n.province_en ?? null,
-             n.lat ?? null, n.lng ?? null, n.is_fire ? 1 : 0)
+             n.lat ?? null, n.lng ?? null, n.is_fire ? 1 : 0, n.places_json ?? null)
       return res.changes > 0
     },
 

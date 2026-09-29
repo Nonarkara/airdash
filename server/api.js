@@ -34,8 +34,11 @@ import { buildInsights } from './insights.js'
 import { log } from './util.js'
 import { composeAll as composeAllCctv, listSources as listCctvSources } from './sources/cctvRegistry.js'
 import { hydrateOnce as hydrateCctvHealth, getHealth as getCctvHealth } from './sources/cctvHealthStore.js'
+import { coverageReport } from './vision/coverage.js'
 import { pairAir, hazeEyes, northHazeCams } from './airCctv.js'
 import { airStationsNow } from './airStationsNow.js'
+import { composeWitness } from './witness.js'
+import { indexLatestFrames, withVision, pictureFlags, summarizeLooks, describeVision, VISION_WINDOW_H } from './vision/visionLook.js'
 import { sensorHealth } from './sensors.js'
 import { harmPayload, HARM_METHOD } from './harm.js'
 import { watchdogStatus, dbOnExternalVolume, archiveStatus } from './opsSentinel.js'
@@ -103,6 +106,76 @@ const INSIGHTS_TTL_MS = 60_000
 // haze-vision scheduler source can pair frames to stations without importing
 // the whole route table. See that file for why.
 let hazeEyesCache = null
+
+// Shared by /api/cctv/haze-eyes and /api/witness. The catalog fetch is the
+// expensive part; a 2-minute cache means the Window and the map ask once.
+async function loadHazeEyes(db, { limit = 12, minPm25 = 25, includeDown = false } = {}) {
+  const ck = `${limit}|${minPm25}|${includeDown ? 'd' : ''}`
+  if (hazeEyesCache?.ck === ck && Date.now() - hazeEyesCache.at <= 120_000) return hazeEyesCache.body
+  hydrateCctvHealth(db)
+  const cat = await composeAllCctv({ timeoutMs: 30_000 })
+  const stations = airStationsNow(db)
+  const visionIdx = loadVisionIndex(db)
+  const paired = pairAir(cat.cameras, stations)
+  let eyes = hazeEyes(cat.cameras, stations, { limit, minPm25, includeDown })
+  const byId = new Map(paired.map((c) => [`${c.source}:${c.id}`, c]))
+  eyes = eyes.map((e) => {
+    const full = byId.get(`${e.camera.source}:${e.camera.id}`) ?? e.camera
+    return { ...e, camera: { ...full, vision: describeVision(visionIdx.get(`${full.source}:${full.id}`)) } }
+  })
+  const flags = pictureFlags(paired, visionIdx, { limit: 8 })
+  const body = {
+    generated_at: new Date().toISOString(), min_pm25: minPm25, include_down: includeDown,
+    count: eyes.length, health: cat.health, eyes,
+    picture_flags: flags,
+    vision_summary: summarizeLooks(visionIdx),
+    vision_note_th: 'คะแนนจากภาพเป็นลักษณะที่เห็น ไม่ใช่ค่าฝุ่น — ตัวเลข µg/m³ คือสถานีวัด',
+    vision_note_en: 'A picture score is what the frame looks like, not a concentration — the µg/m³ number is the station',
+  }
+  hazeEyesCache = { ck, at: Date.now(), body }
+  return body
+}
+
+// Attach places[] (every province/district the headline names) and drop the
+// raw JSON column. A row not yet retagged falls back to its single stored pin.
+function withNewsPlaces(rows) {
+  return rows.map((n) => {
+    let places = null
+    if (n.places_json) {
+      try {
+        const parsed = JSON.parse(n.places_json)
+        if (Array.isArray(parsed)) places = parsed
+      } catch { /* keep the single stored pin */ }
+    }
+    if (!places && n.province_code) {
+      places = [{
+        kind: 'province', province_code: n.province_code,
+        province_th: n.province_th, province_en: n.province_en,
+        name_th: n.province_th, name_en: n.province_en,
+        lat: n.lat, lng: n.lng, coord: 'province',
+      }]
+    }
+    const { places_json, ...rest } = n
+    return { ...rest, places: places ?? [] }
+  })
+}
+
+// Latest camera-frame look, shared by the CCTV routes. The table is small
+// (one row per sample) and the window is a few hours, so this is a single
+// indexed read. A missing table must not 500 the catalog — db.all throws
+// synchronously, so this is try/catch, not a promise .catch.
+function loadVisionIndex(db) {
+  try {
+    const since = new Date(Date.now() - VISION_WINDOW_H * 3600_000).toISOString()
+    const rows = db.all(
+      `SELECT camera_key, obs_time, haze_index, tint_hint, pm25
+       FROM cctv_haze_frames WHERE obs_time >= ?`, since)
+    return indexLatestFrames(rows)
+  } catch (e) {
+    log('warn', 'vision index unavailable', { error: String(e) })
+    return new Map()
+  }
+}
 const clamp = (n, lo, hi, dflt) => {
   // Number(null) === 0, so an absent query param must fall back explicitly.
   if (n === null || n === undefined || n === '') return dflt
@@ -413,9 +486,9 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       // LIMIT 40 (not 15): the map's news/fire layer only plots the subset
       // that got geotagged (province named in the headline), so it needs a
       // wider recent window to have enough pinnable items to show.
-      const news = db.all(
-        `SELECT feed, title, link, published_at, province_code, province_th, province_en, lat, lng, is_fire
-         FROM news_items ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT 40`)
+      const news = withNewsPlaces(db.all(
+        `SELECT feed, title, link, published_at, province_code, province_th, province_en, lat, lng, is_fire, places_json
+         FROM news_items ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT 40`))
       const built = prebuild({
         now: new Date().toISOString(),
         risk, air, rain, weather, aqForecast,
@@ -1498,11 +1571,11 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     'GET /api/news': (req, res, url) => {
       const limit = clamp(url.searchParams.get('limit'), 1, 100, 30)
       json(res, 200, {
-        news: db.all(
+        news: withNewsPlaces(db.all(
           `SELECT feed, title, link, published_at, fetched_at,
-                  province_code, province_th, province_en, lat, lng, is_fire
+                  province_code, province_th, province_en, lat, lng, is_fire, places_json
            FROM news_items ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT ?`,
-          limit),
+          limit)),
       })
     },
 
@@ -1792,8 +1865,17 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
             .map((c) => ({ ...c, km: Math.round(Math.hypot((c.lat - lat) * 111, (c.lng - lng) * 104) * 10) / 10 }))
             .filter((c) => c.km <= radius).sort((a, b) => a.km - b.km).slice(0, limit)
         }
-        cameras = pairAir(cameras, airStationsNow(db))
-        json(res, 200, { ...out, cameras, total: cameras.length })
+        const stations = airStationsNow(db)
+        const visionIdx = loadVisionIndex(db)
+        cameras = withVision(pairAir(cameras, stations), visionIdx)
+        json(res, 200, {
+          ...out,
+          cameras,
+          total: cameras.length,
+          // What the frames we could actually read look like. calibrated is
+          // false: the station in `air` is the measurement, `vision` is a look.
+          vision_summary: summarizeLooks(visionIdx),
+        })
       } catch (e) {
         log('warn', 'cctv catalog failed', { error: String(e) })
         json(res, 502, { error: 'cctv aggregate failed', sources: listCctvSources() })
@@ -1813,17 +1895,74 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         const limit = clamp(url.searchParams.get('limit'), 1, 24, 12)
         const minPm25 = clamp(url.searchParams.get('min_pm25'), 0, 500, 25)
         const includeDown = url.searchParams.get('include_down') === '1' || url.searchParams.get('include_down') === 'true'
-        const ck = `${limit}|${minPm25}|${includeDown ? 'd' : ''}`
-        if (!hazeEyesCache || hazeEyesCache.ck !== ck || Date.now() - hazeEyesCache.at > 120_000) {
-          hydrateCctvHealth(db)
-          const cat = await composeAllCctv({ timeoutMs: 30_000 })
-          const eyes = hazeEyes(cat.cameras, airStationsNow(db), { limit, minPm25, includeDown })
-          hazeEyesCache = { ck, at: Date.now(), body: { generated_at: new Date().toISOString(), min_pm25: minPm25, include_down: includeDown, count: eyes.length, health: cat.health, eyes } }
-        }
-        json(res, 200, hazeEyesCache.body)
+        json(res, 200, await loadHazeEyes(db, { limit, minPm25, includeDown }))
       } catch (e) {
         log('warn', 'haze-eyes failed', { error: String(e) })
         json(res, 502, { error: 'haze-eyes failed' })
+      }
+    },
+
+    // One place, three witnesses: the camera facing that air, credited
+    // press/citizen reports for the province, approved LINE notes, and the
+    // headlines that name it. Wet-season days have nothing over 25 µg/m³;
+    // the route then shows the cameras nearest the highest readings and
+    // says so, rather than opening an empty window.
+    'GET /api/witness': async (req, res) => {
+      if (!allow(req, { key: 'witness', limit: 30, windowMs: 60_000 })) return json(res, 429, { error: 'too many requests — wait a minute' })
+      try {
+        let eyesBody = await loadHazeEyes(db, { limit: 8, minPm25: 25, includeDown: false })
+        let relaxed = false
+        let includedDown = false
+        if (eyesBody.count < 4) {
+          const softer = await loadHazeEyes(db, { limit: 8, minPm25: 0, includeDown: false })
+          if (softer.count > eyesBody.count) { eyesBody = softer; relaxed = true }
+        }
+        if (eyesBody.count < 3) {
+          const withDown = await loadHazeEyes(db, { limit: 8, minPm25: 0, includeDown: true })
+          if (withDown.count > eyesBody.count) { eyesBody = withDown; relaxed = true; includedDown = true }
+        }
+        let press = []
+        try {
+          press = db.all(
+            `SELECT id, source_url, title_raw, credit_line, place_name, place_kind,
+                    province_code, pin_precision, claims_json, created_at
+             FROM citizen_haze_reports WHERE status = 'live'
+             ORDER BY created_at DESC LIMIT 80`)
+            .map((r) => ({ ...r, claims: safeMeta(r.claims_json) }))
+        } catch { press = [] }
+        let street = []
+        try {
+          street = db.all(
+            `SELECT id, kind, message, lat, lng, province_code, province_th, province_en, created_at,
+                    CASE WHEN image_path IS NOT NULL AND length(image_path) > 0 THEN 1 ELSE 0 END AS has_image
+             FROM line_reports WHERE status = 'approved'
+             ORDER BY id DESC LIMIT 40`)
+        } catch { street = [] }
+        const news = withNewsPlaces(db.all(
+          `SELECT title, link, published_at, fetched_at, province_code, province_th, is_fire, places_json
+           FROM news_items ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT 60`))
+        const composed = composeWitness({ eyes: eyesBody.eyes, press, street, news })
+        json(res, 200, {
+          generated_at: new Date().toISOString(),
+          relaxed,
+          included_down: includedDown,
+          vision_note_th: eyesBody.vision_note_th,
+          vision_note_en: eyesBody.vision_note_en,
+          note_th: relaxed
+            ? (includedDown
+              ? 'สตรีมสดส่วนใหญ่ออฟไลน์ — แสดงกล้องบนเส้นทางที่ค่าฝุ่นสูง เปิดภาพที่ต้นทางได้'
+              : 'ตอนนี้ไม่มีพื้นที่ที่ PM2.5 เกิน 25 — แสดงกล้องใกล้สถานีที่ค่าสูงสุด อากาศโดยรวมอยู่ในเกณฑ์ดี')
+            : 'เรียงจากค่า PM2.5 ของสถานี สูงไปต่ำ ข่าวและรายงานเป็นของจังหวัดเดียวกับสถานีนั้น',
+          note_en: relaxed
+            ? (includedDown
+              ? 'Most live streams are offline — showing cameras near the highest readings. Open the picture at its source.'
+              : 'Nothing is above 25 µg/m³ — showing cameras near the highest readings. The air is broadly fine.')
+            : 'Highest station PM2.5 first. Reports and headlines are for that station’s province.',
+          ...composed,
+        })
+      } catch (e) {
+        log('warn', 'witness failed', { error: String(e) })
+        json(res, 502, { error: 'witness failed' })
       }
     },
 
@@ -1848,7 +1987,8 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         const liveOnly = url.searchParams.get('live') === '1'
         hydrateCctvHealth(db)
         const cat = await composeAllCctv({ timeoutMs: 30_000 })
-        let cams = northHazeCams(cat.cameras, airStationsNow(db), { limit, minLat, maxKm })
+        const visionIdx = loadVisionIndex(db)
+        let cams = withVision(northHazeCams(cat.cameras, airStationsNow(db), { limit, minLat, maxKm }), visionIdx)
         if (liveOnly) cams = cams.filter((c) => c.stream_status === 'live')
         json(res, 200, {
           generated_at: new Date().toISOString(),
@@ -1856,6 +1996,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
           max_km: maxKm,
           count: cams.length,
           health: cat.health,
+          vision_summary: summarizeLooks(visionIdx),
           cameras: cams,
         })
       } catch (e) {
@@ -1955,6 +2096,21 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
           byStatus[st] = (byStatus[st] ?? 0) + 1
         }
         const live = Object.entries(byStatus).map(([stream_status, n]) => ({ stream_status, n }))
+
+        // ── coverage: which cameras vision can actually reach, and why not ──
+        // The single most important block in this response. Without it a
+        // reader sees "42 samples" against a map of 1,369 cameras and has no
+        // way to know that 572 of them serve a blank white frame and 208 are
+        // WebRTC-only. `classes[]` carries a bilingual reason per class.
+        hydrateCctvHealth(db)
+        const cctvCat = await composeAllCctv({ useCache: true, skipHealth: false })
+        // A camera counts as "proven" if this process has stored a frame from
+        // it at all — the table is the evidence, not an in-memory guess.
+        const provenSince = new Set(db.all(
+          `SELECT DISTINCT camera_key FROM cctv_haze_frames
+            WHERE obs_time >= ?`, since).map((r) => r.camera_key))
+        const coverage = coverageReport(cctvCat.cameras, { grabbedKeys: provenSince })
+
         json(res, 200, {
           generated_at: new Date().toISOString(),
           hours,
@@ -1970,6 +2126,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
           note_th: 'ค่านี้เป็นคะแนนคัดกรองเบื้องต้น ยังไม่ได้เทียบเทียบกับเครื่องวัดมาตรฐาน และค่าฝุ่นวันนี้แทบไม่มีความผันแปร — เลยยังสรุปเป็นค่าความเข้มข้นไม่ได้',
           note_en: 'Provisional triage score, not calibrated against a reference instrument, and today’s PM2.5 has too little spread to fit anything. Do not quote as a concentration.',
           stream_status: live,
+          coverage,
           samples_rows: rows,
         })
       } catch (e) {

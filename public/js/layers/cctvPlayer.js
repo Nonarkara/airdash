@@ -5,9 +5,9 @@
 // Upstream URLs come from third-party feeds, so nothing is dropped into
 // markup unchecked: embeds are HTTPS only (an http stream is blocked as mixed
 // content anyway), links may be http(s), everything else is refused.
-import { tr } from '../i18n.js?v=2.4.40'
-import { escapeHtml } from '../fmt.js?v=2.4.40'
-import { pm25Color } from '../paint.js?v=2.4.40'
+import { tr } from '../i18n.js?v=2.4.43'
+import { escapeHtml } from '../fmt.js?v=2.4.43'
+import { pm25Color } from '../paint.js?v=2.4.43'
 
 const HLS_CDN = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js'
 
@@ -134,3 +134,42 @@ export function stopVideos(root) {
 }
 
 export const NOT_OFFICIAL = () => tr('ภาพและค่าฝุ่นเป็นข้อมูลอ้างอิง ไม่ใช่ประกาศทางราชการ', 'Pictures and readings are for reference — not an official announcement')
+
+// What the frame looks like. The station chip above this is the measurement.
+// These sentences exist so a washed-out motorway shot on a clean day is not
+// read as "pollution = 49".
+const LOOK_LABEL = {
+  clear: { th: 'ภาพดูใส', en: 'picture looks clear' },
+  'smoke-like': { th: 'ภาพออกโทนควัน', en: 'picture looks smoke-tinted' },
+  'fog-like': { th: 'ภาพดูขาวหมอก', en: 'picture looks fog-white' },
+  washed: { th: 'ภาพดูหมอง', en: 'picture looks washed out' },
+  unclear: { th: 'อ่านภาพนี้ไม่ได้', en: 'this frame could not be read' },
+}
+const AGREE_LABEL = {
+  'agree-clear': { th: 'สถานีใกล้เคียงก็อ่านค่าต่ำ', en: 'the nearby station is low too' },
+  'agree-hazy': { th: 'สถานีใกล้เคียงก็สูง — นี่ไม่ใช่ค่าฝุ่นจากภาพ', en: 'the nearby station is high too — this is not a concentration from the picture' },
+  'picture-only': { th: 'แต่สถานีใกล้เคียงอ่านค่าต่ำ — ดูภาพเอง อย่าอ่านเป็นค่าฝุ่น', en: 'but the nearby station is low — look at the frame; this is not a pollution reading' },
+  'station-only': { th: 'สถานีอ่านค่าสูง แต่ภาพนี้ไม่เห็นฝุ่น', en: 'the station is high and this frame does not show it' },
+  mixed: { th: 'ตัวเลขคือสถานี — คะแนนภาพยังไม่ได้เทียบเครื่องวัด', en: 'the station is the number — the picture score is not calibrated' },
+  unknown: { th: 'ยังสรุปจากภาพนี้ไม่ได้', en: 'this frame does not support a conclusion' },
+}
+
+/** The picture's look, beside the station number. Empty when this camera has no recent frame. */
+export function visionChipHtml(vision) {
+  if (!vision?.look) return ''
+  const look = LOOK_LABEL[vision.look] ?? LOOK_LABEL.unclear
+  const agree = AGREE_LABEL[vision.agreement] ?? AGREE_LABEL.unknown
+  const cls = vision.look === 'smoke-like' ? 'is-smoke'
+    : vision.look === 'fog-like' ? 'is-fog'
+      : vision.look === 'washed' ? 'is-washed'
+        : vision.look === 'clear' ? 'is-clear' : 'is-unclear'
+  return `<div class="cctv-vision ${cls}"><b>${escapeHtml(tr(look.th, look.en))}</b> <span>${escapeHtml(tr(agree.th, agree.en))}</span></div>`
+}
+
+/** A corner dot on the pin, only when the frame itself looks smoke-tinted or fog-white. */
+export function visionMarkHtml(vision) {
+  if (vision?.look !== 'smoke-like' && vision?.look !== 'fog-like') return ''
+  const cls = vision.look === 'fog-like' ? 'is-fog' : 'is-smoke'
+  const label = vision.look === 'fog-like' ? tr('ภาพดูขาวหมอก', 'picture looks fog-white') : tr('ภาพออกโทนควัน', 'picture looks smoke-tinted')
+  return `<i class="cctv-pin-mark ${cls}" title="${escapeHtml(label)}"></i>`
+}

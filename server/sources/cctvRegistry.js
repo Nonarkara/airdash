@@ -41,6 +41,54 @@ const num = (v) => {
 }
 
 /**
+ * What KIND of stream does this camera actually have, and can a server-side
+ * computer-vision sampler reach it?
+ *
+ * The registry used to answer one question — "is there an hls_url?" — and
+ * everything without one was labelled 'embed', which quietly merged four very
+ * different situations into one bucket. Measured against the live catalogue on
+ * 2026-09-29, 'embed' was 807 cameras and only 6 of them could hand a frame to
+ * ffmpeg:
+ *
+ *   hls       335  — a real .m3u8 playlist; ffmpeg reads it.   REACHABLE
+ *   mjpeg      27  — an MJPEG-over-HTTP stream (iTIC mjpeg2.php). ffmpeg
+ *                    reads it directly; 6 of 27 responded.        REACHABLE
+ *   snapshot  572  — BMA PlayVideo.aspx is an ASP.NET page that polls
+ *                    show.aspx?image=<ID>. That endpoint does answer, with a
+ *                    real 400×266 image per camera — but measured at mean
+ *                    255, stddev 0.000, i.e. a pure white placeholder with no
+ *                    scene in it.                                NOT REACHABLE
+ *   page      208  — NST embeds are MediaMTX WHEP (WebRTC). RTSP 8554 is
+ *                    closed, SRT absent, no HLS on the web port. A browser
+ *                    can play these; ffmpeg has no WebRTC.        NOT REACHABLE
+ *   none        1  — no URL of any kind.                        NOT REACHABLE
+ *
+ * So `stream_kind` is not cosmetic: it is what lets the vision collector spend
+ * its ffmpeg spawns on the 362 cameras that can actually produce a frame, and
+ * lets the API say out loud why the other 801 cannot. Exported for tests.
+ */
+export function classifyStream(hlsUrl, viewerUrl) {
+  const hls = hlsUrl ? String(hlsUrl) : ''
+  const view = viewerUrl ? String(viewerUrl) : ''
+  if (/\.m3u8(\?|$)/i.test(hls)) return 'hls'
+  if (hls) return 'other-stream'
+  // iTIC serves MJPEG as an endless multipart/x-mixed-replace HTTP body. The
+  // page URL IS the stream URL — there is nothing to unwrap.
+  if (/mjpeg/i.test(view)) return 'mjpeg'
+  if (/bmatraffic\.com/i.test(view)) return 'snapshot'
+  if (view) return 'page'
+  return 'none'
+}
+
+/** Can ffmpeg pull a frame from this camera without a human in the loop?
+ *  Only these two kinds qualify; see classifyStream for the measurements. */
+export function grabUrlFor(cam) {
+  if (cam.stream_kind === 'hls' || cam.stream_kind === 'other-stream') return cam.hls_url ?? null
+  if (cam.stream_kind === 'mjpeg') return cam.viewer_url ?? null
+  return null
+}
+
+/**
  * Normalized CCTV camera shape. Server-side canonical fields; the
  * frontend renders directly from this. Adapters below must produce it.
  *
@@ -67,6 +115,9 @@ function normalize(raw, source) {
   const lng = num(raw.lng ?? raw.longitude ?? raw.lon)
   if (lat === null || lng === null) return null
   if (lat < 4 || lat > 21.5 || lng < 96 || lng > 106.5) return null
+  const hls_url = raw.hls_url ?? raw.streamData ?? null
+  const viewer_url = raw.viewer_url ?? null
+  const stream_kind = classifyStream(hls_url, viewer_url)
   return {
     id: String(raw.id ?? raw.cameraId ?? `${source.id}:${lat},${lng}`),
     source: source.id,
@@ -79,8 +130,15 @@ function normalize(raw, source) {
     lat, lng,
     online: raw.online !== false,
     flooded: Boolean(raw.flooded ?? raw.is_flooded),
-    hls_url: raw.hls_url ?? raw.streamData ?? null,
-    viewer_url: raw.viewer_url ?? null,
+    hls_url,
+    viewer_url,
+    // What the stream actually is, and the one URL a server-side frame grab
+    // should use. `stream_status` (live/down/embed) is about REACHABILITY and
+    // is maintained by the health probe; `stream_kind` is about PROTOCOL and is
+    // decided here, at parse time. Conflating them is what let 572 white
+    // placeholder frames and 208 WebRTC-only embeds hide behind one word.
+    stream_kind,
+    grab_url: grabUrlFor({ stream_kind, hls_url, viewer_url }),
     // Preserve the raw id under a separate namespace so the popup can
     // link to it on the source's own page.
     source_native_id: raw.source_native_id ?? raw.cameraId ?? null,

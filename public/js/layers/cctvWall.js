@@ -3,26 +3,47 @@
 // highest reading down and, for each, picks the nearest camera that a health
 // probe has shown to be alive. So this wall answers "what does that look
 // like, over there?" for the places the numbers say are worst.
-import { tr } from '../i18n.js?v=2.4.40'
-import { escapeHtml } from '../fmt.js?v=2.4.40'
-import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL } from './cctvPlayer.js?v=2.4.40'
+import { tr } from '../i18n.js?v=2.4.43'
+import { escapeHtml } from '../fmt.js?v=2.4.43'
+import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml } from './cctvPlayer.js?v=2.4.43'
 
 const MAX_AUTOPLAY = 4
 let overlay = null
 let observer = null
 
-function cardHtml(e) {
+function cardHtml(e, badge) {
   const c = e.camera
   const name = escapeHtml(tr(c.name_th || c.name_en, c.name_en || c.name_th) || c.id)
-  const prov = escapeHtml(tr(e.air.province_th || '', e.air.province_th || ''))
+  const prov = escapeHtml(tr(e.air?.province_th || '', e.air?.province_th || ''))
   const down = c.stream_status === 'down' || c.stream_status === 'unknown' ? ' cctv-eye-down' : ''
+  const rank = badge ?? `#${e.rank}`
   return `<div class="cctv-eye${down}" data-cam="${escapeHtml(c.id)}" data-src="${escapeHtml(c.source)}">
-    <div class="cctv-eye-head"><span class="cctv-eye-rank">#${e.rank}</span><span class="cctv-eye-prov">${prov}</span></div>
+    <div class="cctv-eye-head"><span class="cctv-eye-rank">${escapeHtml(rank)}</span><span class="cctv-eye-prov">${prov}</span></div>
     ${airChipHtml(e.air)}
+    ${visionChipHtml(c.vision)}
     ${playerHtml(c)}
     <div class="cctv-eye-name">${name}</div>
     <button type="button" class="cctv-eye-locate">${tr('ดูบนแผนที่', 'show on map')} ↗</button>
   </div>`
+}
+
+function visionBanner(data) {
+  const s = data.vision_summary
+  const flags = data.picture_flags ?? []
+  if (!s?.cameras_read) return ''
+  const head = flags.length
+    ? tr(
+      `${flags.length} กล้องที่ภาพออกโทนควันหรือหมอก — เปิดดูเอง ตัวเลข µg/m³ คือสถานี ไม่ใช่คะแนนภาพ`,
+      `${flags.length} camera${flags.length === 1 ? '' : 's'} whose picture looks smoke-tinted or fog-white — open the frame. The µg/m³ number is the station, not the picture score`,
+    )
+    : tr(
+      `ภาพที่อ่านได้ ${s.cameras_read} กล้องในช่วง ${s.window_h} ชม. ไม่มีโทนควันหรือหมอก ค่าฝุ่นอยู่ที่สถานี`,
+      `None of the ${s.cameras_read} frames read in the last ${s.window_h} h look smoke-tinted or fog-white. The number is the station's`,
+    )
+  const grid = flags.length
+    ? `<div class="cctv-wall-grid">${flags.map((c) => cardHtml({ rank: 0, air: c.air, camera: c }, tr('ภาพ', 'picture'))).join('')}</div>`
+    : ''
+  return `<p class="cctv-wall-relaxed cctv-wall-vision">${escapeHtml(head)}</p>${grid}`
 }
 
 export function closeHazeEyes() {
@@ -47,7 +68,7 @@ export async function openHazeEyes({ onLocate } = {}) {
         <div class="cctv-wall-title">👁 ${tr('ตาดูฝุ่น — กล้องที่มองพื้นที่ฝุ่นหนักที่สุดตอนนี้', 'Haze eyes — cameras facing the worst air right now')}</div>
         <button type="button" class="cctv-wall-close" aria-label="${tr('ปิด', 'Close')}">✕</button>
       </div>
-      <div class="cctv-wall-sub">${tr('เรียงตามค่า PM2.5 สูงสุด · เลือกเฉพาะกล้องที่ระบบตรวจแล้วว่ามีภาพสด', 'Ranked by PM2.5 · only cameras a health probe found alive')}</div>
+      <div class="cctv-wall-sub">${tr('เรียงตามค่า PM2.5 ของสถานี · แถบบนภาพบอกว่าภาพดูเป็นอย่างไร (ยังไม่ได้เทียบเป็นค่าฝุ่น)', 'Ranked by the station’s PM2.5 · the line on each picture says what the frame looks like (not a concentration)')}</div>
       <div class="cctv-wall-body" aria-live="polite"><p class="cctv-wall-msg">${tr('กำลังโหลด…', 'loading…')}</p></div>
       <div class="cctv-wall-foot">${NOT_OFFICIAL()} · ${tr('วิดีโอสตรีมตรงจากผู้ให้บริการต้นทาง AirDash ไม่ได้เก็บภาพ', 'video streams straight from each provider — AirDash stores no footage')}</div>
     </div>`
@@ -90,7 +111,7 @@ export async function openHazeEyes({ onLocate } = {}) {
     return
   }
   if (!overlay) return // closed while loading
-  if (!data.eyes?.length) {
+  if (!data.eyes?.length && !data.picture_flags?.length) {
     body.innerHTML = `<p class="cctv-wall-msg">${tr('ยังไม่มีกล้องที่ใช้งานได้ใกล้สถานีวัดฝุ่น', 'no working camera near a PM2.5 station yet')}</p>`
     return
   }
@@ -101,7 +122,10 @@ export async function openHazeEyes({ onLocate } = {}) {
   if (relaxed && !includedDown) {
     note += `<p class="cctv-wall-relaxed">${tr('ตอนนี้ไม่มีพื้นที่ฝุ่นหนัก (PM2.5 เกิน 25) — แสดงกล้องที่ใกล้สถานีค่าสูงที่สุดแทน อากาศโดยรวมอยู่ในเกณฑ์ดี', 'No heavy haze right now (nothing above 25 µg/m³) — showing cameras near the highest readings instead. The air is broadly fine.')}</p>`
   }
-  body.innerHTML = `${note}<div class="cctv-wall-grid">${data.eyes.map(cardHtml).join('')}</div>`
+  const eyesGrid = data.eyes?.length
+    ? `<div class="cctv-wall-grid">${data.eyes.map((e) => cardHtml(e)).join('')}</div>`
+    : ''
+  body.innerHTML = `${visionBanner(data)}${note}${eyesGrid}`
   body.querySelectorAll('.cctv-eye-locate').forEach((b) => {
     b.onclick = () => { const a = b.closest('.cctv-eye'); closeHazeEyes(); onLocate?.(a.dataset.cam, a.dataset.src) }
   })

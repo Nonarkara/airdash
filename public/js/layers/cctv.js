@@ -3,10 +3,10 @@
 // health-checked server-side every 30 min (server/sources/cctvHealth.js), so a
 // pin means "this picture worked recently", not "someone listed a camera".
 // Each camera carries `air`: the nearest fresh PM2.5 reading and its distance.
-import { tr } from '../i18n.js?v=2.4.40'
-import { escapeHtml } from '../fmt.js?v=2.4.40'
-import { pm25Color } from '../paint.js?v=2.4.40'
-import { airChipHtml, playerHtml, startVideos, stopVideos, linkUrl, NOT_OFFICIAL } from './cctvPlayer.js?v=2.4.40'
+import { tr } from '../i18n.js?v=2.4.43'
+import { escapeHtml } from '../fmt.js?v=2.4.43'
+import { pm25Color } from '../paint.js?v=2.4.43'
+import { airChipHtml, playerHtml, startVideos, stopVideos, linkUrl, NOT_OFFICIAL, visionChipHtml, visionMarkHtml } from './cctvPlayer.js?v=2.4.43'
 
 const REFRESH_MS = 10 * 60_000
 const NO_AIR = '#7E8E9A'
@@ -22,12 +22,12 @@ export function createCctvLayer(map) {
   let cams = []
   let health = null
   let timer = null
-  let fetching = false
+  let inflight = null
 
   function pinHtml(c) {
     const color = c.air ? pm25Color(c.air.pm25) : NO_AIR
     const hot = c.air && c.air.pm25 > 75 ? ' cctv-pin-hot' : ''
-    return `<span class="cctv-pin-dot${hot}" style="--air:${color}"><i aria-hidden="true">📹</i></span>`
+    return `<span class="cctv-pin-dot${hot}" style="--air:${color}"><i aria-hidden="true">📹</i>${visionMarkHtml(c.vision)}</span>`
   }
 
   function popupHtml(c) {
@@ -38,6 +38,7 @@ export function createCctvLayer(map) {
     return `<div class="cctv-pop">
       <div class="cctv-name">${name}</div>${where}
       ${airChipHtml(c.air)}
+      ${visionChipHtml(c.vision)}
       ${playerHtml(c)}
       <div class="cctv-attrib">${tr('ภาพจาก', 'via')} <strong>${label}</strong>${link}</div>
       <div class="cctv-note">${NOT_OFFICIAL()}</div>
@@ -60,18 +61,24 @@ export function createCctvLayer(map) {
     }
   }
 
-  async function refresh() {
-    if (fetching) return
-    fetching = true
-    try {
-      const res = await fetch('/api/cctv/all')
-      if (!res.ok) return
-      const data = await res.json()
-      cams = data.cameras ?? []
-      health = data.health ?? null
-      paint()
-    } catch { /* an optional layer must never cost the user the map */ }
-    finally { fetching = false }
+  // One in-flight fetch. "Show on map" from the haze-eyes wall calls refresh
+  // and then locate; if the layer was just turned on, that second call used
+  // to return immediately while the first fetch was still running, and locate
+  // ran against an empty catalog. Callers must get the same promise.
+  function refresh() {
+    if (inflight) return inflight
+    inflight = (async () => {
+      try {
+        const res = await fetch('/api/cctv/all')
+        if (!res.ok) return
+        const data = await res.json()
+        cams = data.cameras ?? []
+        health = data.health ?? null
+        paint()
+      } catch { /* an optional layer must never cost the user the map */ }
+      finally { inflight = null }
+    })()
+    return inflight
   }
 
   return {

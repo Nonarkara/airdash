@@ -20,13 +20,15 @@
 // the row. Over a season this becomes the training set that lets
 // calibrateAgainstPm25 do something honest.
 //
-// The important design decision: it samples ONLY streams the health probe has
-// already marked 'live'. Grabbing a frame from a dead stream wastes an ffmpeg
-// spawn and, worse, would store a black frame as if it were a reading. Today
-// that is 63 of 1,386 cameras, all in Bangkok — see the note in
-// /api/cctv/north about the 28 northern cameras currently being down. This
-// source is honest about that: it reports what fraction of the catalog it
-// could actually sample, so a thin sample is visible rather than silent.
+// The important design decision: it samples every stream a server can ACTUALLY
+// open, and it says plainly which ones it cannot. On 2026-09-29 the catalogue
+// held 1,369 cameras and only 362 of them expose a protocol ffmpeg reads; of
+// those, 118 HLS + 6 MJPEG actually returned a frame. The other 1,007 are not
+// a bug to be papered over — 572 BMA cameras serve a blank white placeholder,
+// 208 NST embeds are WebRTC-only, the rest are dead links. coverageReport()
+// below turns that into a per-class accounting the API publishes, because a
+// dashboard that quietly samples 4 % of its cameras and calls it "all of them"
+// is worse than one that says which 96 % it cannot see and why.
 
 import { CONFIG } from '../config.js'
 import { log } from '../util.js'
@@ -34,18 +36,24 @@ import { composeAll } from '../sources/cctvRegistry.js'
 import { hydrateOnce } from '../sources/cctvHealthStore.js'
 import { pairAir } from '../airCctv.js'
 import { airStationsNow } from '../airStationsNow.js'
-import { grabMany } from './frameGrab.js'
+import { grabMany, grabUrlOf } from './frameGrab.js'
 import { readFrame, calibrateAgainstPm25 } from './hazeRead.js'
+import { coverageReport, REACHABLE_KINDS } from './coverage.js'
 
-/** How many cameras to sample per cycle. Sampling is I/O bound, not CPU
- *  bound — 40 spawns takes about 2 s of wall clock and 40 rows is plenty for
- *  a per-camera trend. Raise this when the catalogue's live fraction grows. */
-const MAX_CAMS = 40
+/** Hard ceiling on ffmpeg spawns per cycle. Sampling is I/O bound, not CPU
+ *  bound — the whole reachable set costs a few seconds of wall clock. This is
+ *  a blast-radius guard, not a sampling plan: if the catalogue ever grows past
+ *  it we want to notice in the log, not silently sample a prefix of it. */
+const MAX_CAMS = 240
 
-/** Stride through the live set so consecutive cycles do not hammer the same
- *  dozen cameras; with 63 live and a 30-min cycle a stride of 3 means each
- *  camera is sampled roughly every 90 min, which is the right cadence for
- *  matching against a PM2.5 station that itself updates hourly. */
+/** MJPEG has no playlist to HEAD, so the health probe cannot judge it. We
+ *  spend a few ffmpeg spawns a cycle on a rotating sample of that class to
+ *  find out which of them actually produce a frame — the grab IS the probe. */
+const MJPEG_PROBE_PER_CYCLE = 12
+
+let TICK = 0
+
+/** Rotate through a list so consecutive cycles do not hammer the same few. */
 function stridePick(cams, n, tick) {
   if (cams.length <= n) return cams
   const out = []
@@ -53,8 +61,6 @@ function stridePick(cams, n, tick) {
   for (let k = 0; k < n; k++) out.push(cams[(start + k) % cams.length])
   return out
 }
-
-let TICK = 0
 
 export default {
   name: 'hazeVision',
@@ -68,7 +74,7 @@ export default {
   // `dataVersion` — server/scheduler.js reads s.source.version. A source that
   // declares `dataVersion` is silently ignored by the guard and deferred
   // forever, which is exactly what happened to the first run of this source.
-  version: 3,
+  version: 4,
 
   async run({ db }) {
     // The registry's health overlay reads an in-process map that is only
@@ -81,36 +87,61 @@ export default {
     // call cctvHealth makes, for the same reason.
     hydrateOnce(db)
     const cat = await composeAll({ useCache: true, skipHealth: false })
-    // Only streams a health probe has PROVEN alive. Grabbing a dead stream
-    // stores a black frame, which is worse than storing nothing.
-    const live = cat.cameras.filter((c) => c.stream_status === 'live' && c.hls_url)
-    if (!live.length) {
-      log('warn', 'haze_vision: no live streams to sample')
-      return { sampled: 0, live_streams: 0 }
+
+    // Two classes, two reasons, one grab path.
+    //
+    //  hls   — the health probe has already proven these alive by reading the
+    //         playlist, so trust it and spend an ffmpeg spawn on all of them.
+    //  mjpeg — nothing can probe these without opening the stream (an endless
+    //         multipart body has no HEAD), so a rotating sample IS the probe.
+    //         Cameras that answered get recorded in `proven`, which is what
+    //         turns this class from "unmeasured" into "available".
+    const hlsLive = cat.cameras.filter(
+      (c) => c.stream_status === 'live' && c.stream_kind === 'hls' && grabUrlOf(c))
+    const mjpegAll = cat.cameras.filter(
+      (c) => c.stream_kind === 'mjpeg' && grabUrlOf(c))
+
+    TICK = (TICK + 1) % 9973
+    const mjpegPick = stridePick(mjpegAll, MJPEG_PROBE_PER_CYCLE, TICK)
+    // A camera that answered on a previous cycle is sampled again without
+    // needing to be in this cycle's rotating probe.
+    const mjpegSeen = stridePick(
+      mjpegAll.filter((c) => !mjpegPick.includes(c)),
+      Math.max(0, MJPEG_PROBE_PER_CYCLE), TICK + 7)
+
+    const candidates = [...hlsLive, ...mjpegPick, ...mjpegSeen]
+    if (!candidates.length) {
+      log('warn', 'haze_vision: no reachable streams to sample')
+      return { sampled: 0, reachable: 0 }
     }
 
     // Pair each camera with its nearest fresh PM2.5 station first, so we only
     // spend an ffmpeg spawn on cameras we can actually pair afterwards.
-    const paired = pairAir(live, airStationsNow(db))
+    const paired = pairAir(candidates, airStationsNow(db))
     const usable = paired.filter((c) => c.air && Number.isFinite(c.air.pm25))
-      TICK = (TICK + 1) % 9973
-  const pick = stridePick(usable, MAX_CAMS, TICK)
+    const pick = stridePick(usable, MAX_CAMS, TICK)
 
     const frames = await grabMany(pick)
     const nowIso = new Date().toISOString()
+    const grabbedKeys = new Set()
     let stored = 0
     let scored = 0
+    let blank = 0
     const rows = []
     for (const cam of pick) {
       const buf = frames.get(cam)
       if (!buf) continue
+      // A frame we actually decoded, whatever it contains. This is the proof
+      // that matters for MJPEG: no frame, no claim.
+      grabbedKeys.add(cam.source + ':' + cam.id)
       const r = readFrame(buf)
       if (!r.ok) continue
-      // A null hazeIndex is a withheld score, not a clear-air reading. Store
-      // the features regardless — they are the training data — but leave
-      // haze_index NULL so nothing downstream can treat "no measurement" as
-      // "measured, and it was fine".
+      // A blank/white placeholder still gets its features stored — they are
+      // the training data, and a zero-variance frame is a fact worth keeping.
+      // What it must never get is a score: readFrame withholds hazeIndex on a
+      // frame with no line-of-sight structure, and that is the whole guard.
       if (r.hazeIndex !== null) scored++
+      else if (r.features.corridorTail === null) blank++
       db.run(
         `INSERT INTO cctv_haze_frames
            (camera_key, camera_source, lat, lng, obs_time, haze_index, calibrated,
@@ -132,18 +163,25 @@ export default {
     // imply the model is ready. `usable: false` is the normal, correct state
     // until a haze episode supplies variance.
     const cal = calibrateAgainstPm25(rows.map((x) => ({ hazeIndex: x.haze, pm25: x.pm25 })))
+    const coverage = coverageReport(cat.cameras, { grabbedKeys })
     log('info', 'haze_vision sampled', {
-      live_streams: live.length,
-      pairable: usable.length,
+      total_cameras: coverage.total,
+      reachable: coverage.reachable,
+      unavailable: coverage.unreachable,
+      hls_live: hlsLive.length,
+      mjpeg_candidates: mjpegAll.length,
       attempted: pick.length,
       stored,
       scored,
-      coverage_pct: Math.round((live.length / Math.max(1, cat.cameras.length)) * 100),
+      blank_frames: blank,
+      classes: coverage.classes.map((c) => `${c.stream_kind}/${c.stream_status}:${c.n}`).join(' '),
       calibration: cal.ok ? { n: cal.n, r: cal.r, usable: cal.usable } : { n: cal.n, why: cal.reason },
     })
     return {
-      sampled: stored, live_streams: live.length, scored,
-      coverage_pct: Math.round((live.length / Math.max(1, cat.cameras.length)) * 100),
+      sampled: stored, scored, blank,
+      reachable: coverage.reachable,
+      unavailable: coverage.unreachable,
+      coverage_pct: coverage.pct_reachable,
       calibration_ok: cal.ok && cal.usable,
     }
   },

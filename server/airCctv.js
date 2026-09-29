@@ -33,7 +33,8 @@ function isFresh(obs, now) {
 
 const airOf = (s, d) => ({
   station_key: s.station_key, name_th: s.name_th ?? null, name_en: s.name_en ?? null,
-  province_th: s.province_th ?? null, pm25: s.pm25, band: pm25Band(s.pm25), km: Math.round(d * 10) / 10, obs_time: s.obs_time,
+  province_code: s.province_code ?? null, province_th: s.province_th ?? null, province_en: s.province_en ?? null,
+  pm25: s.pm25, band: pm25Band(s.pm25), km: Math.round(d * 10) / 10, obs_time: s.obs_time,
 })
 
 function usableStations(stations, now) {

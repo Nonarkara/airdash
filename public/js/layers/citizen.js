@@ -35,9 +35,9 @@
 // the popup links the publisher's own URL. A report you cannot trace to its
 // source does not belong on a public-health map.
 
-import { tr } from '../i18n.js?v=2.4.40'
-import { escapeHtml } from '../fmt.js?v=2.4.40'
-import { pm25Color } from '../paint.js?v=2.4.40'
+import { tr } from '../i18n.js?v=2.4.43'
+import { escapeHtml } from '../fmt.js?v=2.4.43'
+import { pm25Color } from '../paint.js?v=2.4.43'
 
 const REFRESH_MS = 10 * 60_000
 const NO_PM25 = '#8C9AA5'
@@ -114,16 +114,36 @@ export function createCitizenLayer(map) {
     </span>`
   }
 
+  function linePopup(r) {
+    const kind = r.kind === 'smoke' ? tr('ควัน', 'smoke')
+      : r.kind === 'burning' ? tr('การเผา', 'burning')
+        : r.kind === 'haze' ? tr('ฝุ่น', 'haze') : tr('รายงาน', 'report')
+    const msg = (r.message || '').trim() || tr('ส่งตำแหน่งมา โดยไม่มีข้อความ', 'sent a location, no message')
+    return `<div class="citizen-pop">
+      <div class="citizen-pop-head"><span class="citizen-pop-place">${escapeHtml(tr(r.province_th || '', r.province_en || r.province_th || ''))}</span>
+        <span class="citizen-pop-claim">${escapeHtml(kind)}</span></div>
+      <p class="citizen-pop-title">${escapeHtml(msg)}</p>
+      <div class="citizen-pop-prec is-exact">${escapeHtml(tr('รายงานไลน์ที่ตรวจแล้ว — ไม่แสดงภาพหรือชื่อผู้ส่ง', 'Reviewed LINE note — the photo and the sender are not shown'))}</div>
+    </div>`
+  }
+
   async function load() {
     if (fetching) return
     fetching = true
     try {
-      const res = await fetch('/api/citizen-reports?limit=200')
-      if (!res.ok) throw new Error(String(res.status))
-      const body = await res.json()
+      const [pressRes, lineRes] = await Promise.allSettled([
+        fetch('/api/citizen-reports?limit=200'),
+        fetch('/api/reports?limit=40'),
+      ])
+      if (pressRes.status !== 'fulfilled' || !pressRes.value.ok) throw new Error('citizen-reports')
+      const body = await pressRes.value.json()
       reports = body.reports ?? []
       sources = body.sources ?? []
       note = body.note_en ?? ''
+      let line = []
+      if (lineRes.status === 'fulfilled' && lineRes.value.ok) {
+        line = (await lineRes.value.json()).reports ?? []
+      }
       group.clearLayers()
       for (const r of reports) {
         if (!Number.isFinite(r.lat) || !Number.isFinite(r.lng)) continue
@@ -136,9 +156,23 @@ export function createCitizenLayer(map) {
         m.bindPopup(() => popupHtml(r), { className: 'citizen-popup-shell', maxWidth: 320, minWidth: 240 })
         m.addTo(group)
       }
-      dispatchEvent(new CustomEvent('citizen-layer', { detail: { count: reports.length, sources } }))
+      for (const r of line) {
+        if (!Number.isFinite(r.lat) || !Number.isFinite(r.lng)) continue
+        const m = L.marker([r.lat, r.lng], {
+          icon: L.divIcon({
+            className: 'citizen-pin-shell',
+            html: `<span class="citizen-pin is-exact" style="--air:${NO_PM25}"><i aria-hidden="true">✉</i></span>`,
+            iconSize: [24, 24], iconAnchor: [12, 12],
+          }),
+          keyboard: false,
+          zIndexOffset: 450,
+          alt: tr('รายงานไลน์', 'LINE report'),
+        })
+        m.bindPopup(() => linePopup(r), { className: 'citizen-popup-shell', maxWidth: 320, minWidth: 220 })
+        m.addTo(group)
+      }
+      dispatchEvent(new CustomEvent('citizen-layer', { detail: { count: reports.length + line.length, sources } }))
     } catch (e) {
-      // A layer that fails to load says so rather than silently showing nothing.
       console.warn('citizen layer failed', e)
     } finally {
       fetching = false
