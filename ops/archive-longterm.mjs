@@ -66,7 +66,8 @@ const LOCK = `${ARCHIVE_DIR}/.archive.lock`
 // them — the external drive holds the permanent copy, the SSD a bounded one.
 const SYSTEMS = [
   { name: 'airdash', db: env.DASH_ARCHIVE_AIRDASH_DB ?? '/Users/axiom/AirDash/data/airdash.db', receipt: true },
-  { name: 'flooddash', db: env.DASH_ARCHIVE_FLOODDASH_DB ?? '/Users/axiom/Projects/FloodDash/data/flooddash.db' },
+  // receipt (29 Sep 2026): FloodDash retention now deletes raw rows only up to this id.
+  { name: 'flooddash', db: env.DASH_ARCHIVE_FLOODDASH_DB ?? '/Users/axiom/Projects/FloodDash/data/flooddash.db', receipt: true },
 ]
 
 // Append-only streams, copied incrementally by integer id watermark.
