@@ -1,20 +1,20 @@
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.45'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.45'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.45'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.45'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.45'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.45'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.45'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.45'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.45'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.45'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.45'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.45'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.45'
-import { openWindow } from './witness.js?v=2.4.45'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.45'
+import { on, store } from './state.js?v=2.4.46'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.46'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.46'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.46'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.46'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.46'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.46'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.46'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.46'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.46'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.46'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.46'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.46'
+import { openWindow } from './witness.js?v=2.4.46'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.46'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
@@ -47,27 +47,24 @@ export function initMap() {
   basemaps[currentBasemap].addTo(map)
 
   satLayers = createSatelliteLayers(map, 'satellite')
-  layers.gsmap = satLayers.gsmap
-  layers.himawari = satLayers.himawari
-  layers.modis = satLayers.modis
-  layers.aod = satLayers.aod
-  // MODIS_Aqua_Aerosol_Optical_Depth_3km — 3 km resolution AOD, sharper
-  // than the combined AOD above. Was labelled "near-JAXA-class" as a
-  // stand-in for genuine JAXA data; see jaxaAerosol below for the real
-  // thing, now that one exists.
-  layers.aodAqua3km = satLayers.aodAqua3km
-  // OMPS PyroCb index + VIIRS aerosol type — see satellite.js for the
-  // reasoning behind each. These are the smoke attribution layers (was
-  // it a fire? is it above us? is it heading this way?) that the rest
-  // of the dashboard combines with the ground stations.
-  layers.ompsPyroCb = satLayers.ompsPyroCb
-  layers.viirsAerosolType = satLayers.viirsAerosolType
-  layers.nightlights = satLayers.nightlights
-  layers.aerosolIndex = satLayers.aerosolIndex
-  layers.co = satLayers.co
-  // Real JAXA aerosol data (Himawari-9 AOT, P-Tree) — supersedes the old
-  // "JAXA-class" MODIS stand-in above; see satellite.js for the story.
-  layers.jaxaAerosol = satLayers.jaxaAerosol
+  // WIRE EVERY SATELLITE TOGGLE IN ONE PASS — and the reason is a bug this
+  // replaced. These were eleven hand-written lines (`layers.omiAod =
+  // satLayers.omiAod`, …) and eight of the nineteen layers the factory
+  // builds were never written down, so their toggles appeared in the menu,
+  // took a click, and did absolutely nothing: toggleLayer() resolves
+  // `layers[t.id]` and returns early when it is undefined. Eight dead
+  // controls, including the TROPOMI NO₂ layer added the day before, all
+  // reported as "some layers don't appear".
+  //
+  // A missing line is invisible in review and impossible to notice in use, so
+  // the wiring is now derived from the same LAYER_GROUPS list the menu is
+  // rendered from. A satellite layer can no longer be built and forgotten:
+  // if it is in the factory and in the menu, it is on the map.
+  for (const t of allLayerToggles()) {
+    if (t.kind !== 'sat') continue
+    if (satLayers[t.id]) layers[t.id] = satLayers[t.id]
+  }
+
   // Burn scars sit in the satellite pane: a ground-truth basemap overlay,
   // under the station markers and risk shading that must stay readable.
   layers.burnscar = createBurnScarLayer('satellite')
@@ -277,12 +274,46 @@ function addLayerControl() {
       const gh = L.DomUtil.create('div', 'mapctl-group', body)
       gh.textContent = tr(group.th, group.en)
       for (const t of group.layers) {
-        const row = L.DomUtil.create('button', `row${t.on ? ' on' : ''}`, body)
+        // A row is a toggle AND a source of explanation, so it is a container:
+        // the switch and the "what is this?" disclosure are separate buttons.
+        // Nesting one <button> inside another is invalid HTML and breaks
+        // keyboard activation, which is why this is not just an extra span.
+        const wrap = L.DomUtil.create('div', 'row-wrap', body)
+        const row = L.DomUtil.create('button', `row${t.on ? ' on' : ''}`, wrap)
         row.type = 'button'
         row.innerHTML = `<span class="sw"></span><span class="lbl">${tr(t.th, t.en)}</span>`
         row.onclick = () => {
           toggleLayer(t)
           row.classList.toggle('on', t.on)
+        }
+
+        // Every toggle carries a note saying what it measures, what that lets
+        // you conclude, and what it CANNOT tell you. The third clause is the
+        // point: a legend that only sells the layer teaches people to over-read
+        // it, and this dashboard's premise is that a number without its limits
+        // is a lie. Clicking the switch must not be the only way to find out.
+        const note = L.DomUtil.create('div', 'row-note', wrap)
+        note.hidden = true
+        const hasNote = Boolean(t.note_th || t.what_th)
+        if (hasNote) {
+          note.innerHTML =
+            `<p class="row-note-lead">${tr(t.note_th || '', t.note_en || '')}</p>` +
+            `<p class="row-note-what">${tr(t.what_th || '', t.what_en || '')}</p>`
+        }
+        const info = L.DomUtil.create('button', 'row-info', wrap)
+        info.type = 'button'
+        info.setAttribute('aria-expanded', 'false')
+        if (!hasNote) {
+          info.hidden = true
+        } else {
+          info.textContent = '?'
+          info.setAttribute('aria-label', tr(
+            `อธิบายชั้นข้อมูลนี้: ${t.th}`, `what this layer shows: ${t.en}`))
+          info.onclick = (e) => {
+            e.stopPropagation()
+            note.hidden = !note.hidden
+            info.setAttribute('aria-expanded', note.hidden ? 'false' : 'true')
+          }
         }
       }
     }

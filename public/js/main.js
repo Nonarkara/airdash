@@ -1,35 +1,36 @@
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.4.45'
-import { paintChrome } from './i18n.js?v=2.4.45'
-import { startTap } from './sse.js?v=2.4.45'
-import { initMap, invalidateMap } from './map.js?v=2.4.45'
-import { initHeader } from './panels/header.js?v=2.4.45'
-import { initRanking } from './panels/ranking.js?v=2.4.45'
-import { initForecast } from './panels/forecast.js?v=2.4.45'
-import { initWhatIf } from './panels/whatif.js?v=2.4.45'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.4.45'
-import { initTap } from './panels/tap.js?v=2.4.45'
-import { initSources } from './panels/sources.js?v=2.4.45'
-import { initHistory } from './panels/history.js?v=2.4.45'
-import { initInsights } from './panels/insights.js?v=2.4.45'
-import { initAnalytics } from './panels/analytics.js?v=2.4.45'
-import { initFeeds } from './panels/feeds.js?v=2.4.45'
-import { initChat } from './panels/chat.js?v=2.4.45'
-import { initCitizen } from './panels/citizen.js?v=2.4.45'
-import { initWaterways } from './panels/waterways.js?v=2.4.45'
-import { initFocus } from './panels/focus.js?v=2.4.45'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.45'
-import { initSplit } from './panels/split.js?v=2.4.45'
-import { initLibrary } from './panels/library.js?v=2.4.45'
-import { initResearch } from './panels/research.js?v=2.4.45'
-import { initManual } from './panels/manual.js?v=2.4.45'
-import { initBurning } from './panels/burning.js?v=2.4.45'
-import { initApiDocs } from './panels/apidocs.js?v=2.4.45'
-import { initSearch } from './panels/search.js?v=2.4.45'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.45'
-import { initWitness } from './witness.js?v=2.4.45'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.4.45'
+import { on, emit, store, setLang } from './state.js?v=2.4.46'
+import { paintChrome } from './i18n.js?v=2.4.46'
+import { startTap } from './sse.js?v=2.4.46'
+import { initMap, invalidateMap } from './map.js?v=2.4.46'
+import { initHeader } from './panels/header.js?v=2.4.46'
+import { initRanking } from './panels/ranking.js?v=2.4.46'
+import { initForecast } from './panels/forecast.js?v=2.4.46'
+import { initWhatIf } from './panels/whatif.js?v=2.4.46'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.4.46'
+import { initTap } from './panels/tap.js?v=2.4.46'
+import { initSources } from './panels/sources.js?v=2.4.46'
+import { initHistory } from './panels/history.js?v=2.4.46'
+import { initInsights } from './panels/insights.js?v=2.4.46'
+import { initAnalytics } from './panels/analytics.js?v=2.4.46'
+import { initFeeds } from './panels/feeds.js?v=2.4.46'
+import { initChat } from './panels/chat.js?v=2.4.46'
+import { initCitizen } from './panels/citizen.js?v=2.4.46'
+import { initWaterways } from './panels/waterways.js?v=2.4.46'
+import { initFocus } from './panels/focus.js?v=2.4.46'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.46'
+import { initSplit } from './panels/split.js?v=2.4.46'
+import { initLibrary } from './panels/library.js?v=2.4.46'
+import { initResearch } from './panels/research.js?v=2.4.46'
+import { initManual } from './panels/manual.js?v=2.4.46'
+import { initBurning } from './panels/burning.js?v=2.4.46'
+import { initApiDocs } from './panels/apidocs.js?v=2.4.46'
+import { initSearch } from './panels/search.js?v=2.4.46'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.46'
+import { initWitness } from './witness.js?v=2.4.46'
+import { initCctvWall } from './cctvEntry.js?v=2.4.46'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.4.46'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -499,6 +500,10 @@ async function boot() {
   safeInit('tabs', initTabs)
   safeInit('dataFreshness', initDataFreshness)
   safeInit('witness', initWitness)
+  // The camera wall + its computer-vision readout. Was unreachable from the
+  // UI entirely until this line existed — cctvWall.js was complete and
+  // imported by nothing.
+  safeInit('cctvWall', initCctvWall)
   safeInit('sheet', initSheet)
   safeInit('about', initAbout)
   // Wire the stuck-on-boot escape hatch. Runs even if every safeInit

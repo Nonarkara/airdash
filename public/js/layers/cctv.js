@@ -3,10 +3,10 @@
 // health-checked server-side every 30 min (server/sources/cctvHealth.js), so a
 // pin means "this picture worked recently", not "someone listed a camera".
 // Each camera carries `air`: the nearest fresh PM2.5 reading and its distance.
-import { tr } from '../i18n.js?v=2.4.45'
-import { escapeHtml } from '../fmt.js?v=2.4.45'
-import { pm25Color } from '../paint.js?v=2.4.45'
-import { airChipHtml, playerHtml, startVideos, stopVideos, linkUrl, NOT_OFFICIAL, visionChipHtml, visionMarkHtml } from './cctvPlayer.js?v=2.4.45'
+import { tr } from '../i18n.js?v=2.4.46'
+import { escapeHtml } from '../fmt.js?v=2.4.46'
+import { pm25Color } from '../paint.js?v=2.4.46'
+import { airChipHtml, playerHtml, startVideos, stopVideos, linkUrl, NOT_OFFICIAL, visionChipHtml, visionMarkHtml } from './cctvPlayer.js?v=2.4.46'
 
 const REFRESH_MS = 10 * 60_000
 const NO_AIR = '#7E8E9A'
@@ -35,11 +35,16 @@ export function createCctvLayer(map) {
     const where = c.location_th ? `<div class="cctv-where">${escapeHtml(c.location_th)}</div>` : ''
     const label = escapeHtml(tr(c.source_label_th ?? '', c.source_label_en ?? c.source_label_th ?? c.source ?? ''))
     const link = linkUrl(c.source_url) ? ` <a href="${escapeHtml(c.source_url)}" target="_blank" rel="noopener noreferrer">↗</a>` : ''
+    // The single camera is one stop on a tour. The wall is the route to
+    // every other camera the vision pass can read, so the popup carries it
+    // rather than making the reader close the popup and go find the header.
+    const wall = `<button type="button" class="cctv-pop-wall">👁 ${escapeHtml(tr('ดูตาดูฝุ่นทั้งผนัง', 'open the haze-eyes wall'))}</button>`
     return `<div class="cctv-pop">
       <div class="cctv-name">${name}</div>${where}
       ${airChipHtml(c.air)}
       ${visionChipHtml(c.vision)}
       ${playerHtml(c)}
+      ${wall}
       <div class="cctv-attrib">${tr('ภาพจาก', 'via')} <strong>${label}</strong>${link}</div>
       <div class="cctv-note">${NOT_OFFICIAL()}</div>
     </div>`
@@ -55,7 +60,16 @@ export function createCctvLayer(map) {
       })
       // Content is built when the pin is clicked, not for every camera up front.
       m.bindPopup(() => popupHtml(c), { className: 'cctv-popup-shell', maxWidth: 340, minWidth: 260 })
-      m.on('popupopen', (e) => startVideos(e.popup.getElement()))
+      m.on('popupopen', (e) => {
+        const el = e.popup.getElement()
+        startVideos(el)
+        // The wall opens OVER the map, so close this popup first — otherwise
+        // closing the wall drops the reader back onto a popup they were done with.
+        el?.querySelector('.cctv-pop-wall')?.addEventListener('click', () => {
+          map.closePopup()
+          window.dispatchEvent(new CustomEvent('airdash:open-haze-eyes'))
+        })
+      })
       m.on('popupclose', (e) => { const el = e.popup.getElement(); if (el) stopVideos(el) })
       m.addTo(group)
     }

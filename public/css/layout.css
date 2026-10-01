@@ -1930,3 +1930,292 @@ header #place-search-container #search-clear {
    having no partner row at any width. */
 .header-partners { display: none !important; }
 
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TOP BAR v3 — THREE ZONES, ONE CONTROL TREATMENT (2026-10-02)
+
+   The complaint this replaces: the bar was "odd" — twelve controls of
+   five different accent colours, sitting on a row that gave them no
+   grouping, next to three data blocks that were fighting the controls
+   for the same attention. Every control had been coloured individually
+   as it was added over months:
+
+     #window-btn    amber        #home-btn   sage
+     #flooddash-btn flood-blue   #ask-btn    deep teal
+     the rest      plain grey
+
+   Five accents in one 68px band. None of them carried information — they
+   were decoration that had accumulated — and they competed directly with
+   the AQI stripe, which is the ONE thing in the design core allowed to be
+   saturated ("AQI gradient as the only colored stripe"). A reader could
+   no longer tell, at a glance, whether a coloured thing on this bar was a
+   measurement or a button.
+
+   The fix is one rule, applied without exception:
+
+     COLOUR BELONGS TO THE DATA. THE CHROME IS ACHROMATIC.
+
+   Three zones, left to right, in that order of importance:
+
+     .brand     identity        — no plate, no border, just the wordmark
+     .hd-data   the measurement — national verdict, Danger Score, freshness
+     .hd-tools  the controls    — one treatment, hierarchy by icon only
+
+   The data zone keeps every colour it had. The tools zone loses all of
+   its own, so the bar now reads: if it is coloured, it is a number.
+
+   This is also the "no new geometry" rule the header design system
+   (above) already asked for, finally kept: every control below inherits
+   --ctl-h / --ctl-h-touch / --r-ctl and centres itself. Adding a control
+   to this bar now requires no CSS at all — only markup.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+header { align-items: center; }
+
+/* ── ZONE: DATA ─────────────────────────────────────────────────────────
+   The only place in the header allowed to be coloured. Flexes to take
+   the slack, so the controls are pushed to the right edge instead of
+   fighting the verdict for the middle. */
+header .hd-data {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+header .hd-data .data-freshness { margin-top: 0; align-self: center; }
+header .hd-data .national { padding-top: 0; padding-bottom: 0; }
+
+/* ── ZONE: TOOLS ────────────────────────────────────────────────────────
+   Right-aligned group, separated from the data by a single hairline so
+   the eye reads "measurements | instruments" rather than one undifferentiated
+   row of twenty things. */
+header .hd-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  align-self: center;
+  min-width: 0;
+  padding: 0 12px 0 14px;
+  margin-left: auto;
+  border-left: 1px solid var(--rule);
+}
+
+/* ONE treatment for every control in the zone. Written as a group rule so
+   a control added later inherits it for free — that is the whole point.
+   The five old per-button accent rules are neutralised below. */
+header .hd-tools > button,
+header .hd-tools > a,
+header .hd-tools .langtoggle,
+header .hd-tools .modetoggle,
+header .hd-tools .searchbox,
+header .hd-tools .focusbox {
+  height: var(--ctl-h);
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 0 9px;
+  background: var(--well);
+  color: var(--ink-mid);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-ctl);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: none;
+}
+header .hd-tools > button:hover,
+header .hd-tools > a:hover,
+header .hd-tools .searchbox:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+header .hd-tools > button:focus-visible,
+header .hd-tools > a:focus-visible { outline: 2px solid var(--th-deep); outline-offset: 2px; }
+
+/* The accent purge. These five ids previously each owned a colour; they
+   now inherit the group plate above. Same specificity as the rules they
+   replace, declared later, so they win without !important. */
+header .hd-tools #window-btn,
+header .hd-tools #home-btn,
+header .hd-tools #flooddash-btn,
+header .hd-tools #ask-btn,
+header .hd-tools #about-btn,
+header .hd-tools #split-btn {
+  background: var(--well);
+  color: var(--ink-mid);
+  border-color: var(--rule);
+}
+header .hd-tools #window-btn:hover,
+header .hd-tools #home-btn:hover,
+header .hd-tools #flooddash-btn:hover,
+header .hd-tools #ask-btn:hover,
+header .hd-tools #about-btn:hover,
+header .hd-tools #split-btn:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+header .hd-tools #window-btn .win-mark { box-shadow: inset 3px 3px 0 -2px currentColor, inset -3px -3px 0 -2px currentColor; }
+
+/* The segmented toggles keep their segmented geometry (they are a pair of
+   states, not two independent controls) but join the same palette. */
+header .hd-tools #langtoggle,
+header .hd-tools #modetoggle { padding: 0; gap: 0; height: var(--ctl-h); }
+header .hd-tools #langtoggle button,
+header .hd-tools #modetoggle button {
+  height: calc(var(--ctl-h) - 2px);
+  min-height: calc(var(--ctl-h) - 2px);
+  align-self: center;
+  border: 1px solid var(--rule);
+  background: var(--well);
+  color: var(--ink-mid);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 0 9px;
+  border-radius: 0;
+  line-height: 1;
+  cursor: pointer;
+}
+header .hd-tools #langtoggle button:first-child,
+header .hd-tools #modetoggle button:first-child { border-radius: var(--r-ctl) 0 0 var(--r-ctl); }
+header .hd-tools #langtoggle button:last-child,
+header .hd-tools #modetoggle button:last-child { border-radius: 0 var(--r-ctl) var(--r-ctl) 0; border-left: 0; }
+header .hd-tools #langtoggle button:hover,
+header .hd-tools #modetoggle button:hover { background: var(--well-dim); color: var(--ink); }
+header .hd-tools #langtoggle button.active,
+header .hd-tools #modetoggle button.active { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+
+/* Search keeps its own inner input geometry — it is a field, not a button,
+   and the field is the one place in this zone with a focus ring of its own. */
+header .hd-tools .searchbox { padding: 0 0 0 9px; }
+header .hd-tools .searchbox #place-search {
+  height: calc(var(--ctl-h) - 2px);
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+header .hd-tools .searchbox #search-clear {
+  height: calc(var(--ctl-h) - 2px);
+  width: calc(var(--ctl-h) - 2px);
+  border-radius: 0 var(--r-ctl) var(--r-ctl) 0;
+  color: var(--ink-low);
+}
+header .hd-tools .focusbox { padding: 0; gap: 0; background: var(--well); }
+header .hd-tools .focusbox #focus-select {
+  height: calc(var(--ctl-h) - 2px);
+  border: 0;
+  border-radius: var(--r-ctl) 0 0 var(--r-ctl);
+  background: transparent;
+  color: var(--ink-mid);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 0 6px;
+}
+header .hd-tools .focusbox #back-to-thailand {
+  height: calc(var(--ctl-h) - 2px);
+  border: 0;
+  border-left: 1px solid var(--rule);
+  border-radius: 0 var(--r-ctl) var(--r-ctl) 0;
+  color: var(--ink-mid);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+/* ── THE HAZE EYES BUTTON ───────────────────────────────────────────────
+   The only control carrying a live readout, because it is the only one
+   that opens a COMPUTER VISION surface. The number is the honest
+   fraction — cameras we can actually read a frame out of, over cameras
+   in the catalogue — not the flattering total. */
+#cctv-wall-btn { gap: 6px; }
+#cctv-wall-btn .cctv-wall-mark { font-size: 13px; line-height: 1; }
+#cctv-wall-btn .cv-readout {
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink-low);
+  padding-left: 6px;
+  margin-left: 1px;
+  border-left: 1px solid var(--rule);
+  line-height: 1;
+}
+#cctv-wall-btn:hover .cv-readout { color: rgba(255,255,255,0.82); border-left-color: rgba(255,255,255,0.35); }
+#cctv-wall-btn[aria-expanded='true'] { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+#cctv-wall-btn[aria-expanded='true'] .cv-readout { color: rgba(255,255,255,0.82); border-left-color: rgba(255,255,255,0.35); }
+
+/* ── SHED LADDER ─────────────────────────────────────────────────────────
+   Twelve controls do not fit a 1280px bar. Rather than wrap onto a
+   second line (which pushes the map down and makes the bar 2 rows tall on
+   exactly the laptop widths operators use), labels drop first and the
+   icons carry the meaning. Each step is a separate breakpoint so the bar
+   degrades one control at a time instead of all at once. */
+@media (max-width: 1560px) {
+  header .hd-tools #split-btn .lbl,
+  header .hd-tools #window-btn .lbl { display: none; }
+  header .hd-tools #split-btn,
+  header .hd-tools #window-btn { padding: 0 8px; }
+}
+@media (max-width: 1400px) {
+  header .hd-tools #home-btn .lbl,
+  header .hd-tools #flooddash-btn .lbl { display: none; }
+  header .hd-tools #home-btn,
+  header .hd-tools #flooddash-btn { padding: 0 8px; }
+}
+@media (max-width: 1280px) {
+  header .hd-tools #cctv-wall-btn .lbl { display: none; }
+  header .hd-tools #cctv-wall-btn .cv-readout { display: none; }
+  header .hd-tools #ask-btn .ask-lbl { display: none; }
+  header .hd-tools #ask-btn { padding: 0 8px; }
+  header .hd-tools .searchbox { max-width: 168px; }
+}
+@media (max-width: 1100px) {
+  /* Touch: --ctl-h-touch (WCAG 2.5.5) and every target at least 44px. */
+  header .hd-tools { gap: 4px; padding: 0 8px; }
+  header .hd-tools > button,
+  header .hd-tools > a,
+  header .hd-tools .searchbox,
+  header .hd-tools .focusbox { height: var(--ctl-h-touch); min-height: var(--ctl-h-touch); min-width: var(--ctl-h-touch); }
+  header .hd-tools #langtoggle,
+  header .hd-tools #modetoggle { height: var(--ctl-h-touch); }
+  header .hd-tools #langtoggle button,
+  header .hd-tools #modetoggle button { height: calc(var(--ctl-h-touch) - 2px); min-height: calc(var(--ctl-h-touch) - 2px); }
+  header .hd-tools .searchbox #place-search { height: calc(var(--ctl-h-touch) - 2px); }
+  header .hd-tools .focusbox #focus-select { height: calc(var(--ctl-h-touch) - 2px); }
+  header .hd-tools .focusbox #back-to-thailand { height: calc(var(--ctl-h-touch) - 2px); }
+  header .hd-tools .searchbox { display: none; }  /* the mobile sheet owns search */
+}
+
+/* The bar must never wrap to two rows now that the data zone flexes:
+   the zones are fixed-height and the tools zone shrinks instead. */
+@media (min-width: 1101px) {
+  header { flex-wrap: nowrap; }
+  header .hd-tools { flex-wrap: nowrap; overflow: hidden; }
+}
+
+/* Placeholder legibility. --ink-low is the token for de-emphasised UI, and
+   a placeholder that cannot be read is not de-emphasised, it is broken —
+   at 4.56:1 on the light paper it is legal, but inside the header plate it
+   sits against --well and measured unreadable in the dark render. Promote
+   it to --ink-mid and let the input's own border carry the "this is empty". */
+header .hd-tools .searchbox #place-search::placeholder {
+  color: var(--ink-mid);
+  opacity: 1;
+}
+
+/* The Danger chip must never be the thing that gives way. In the v3 render
+   at 1600px it was crushed to ~70px and clipped its own label mid-word
+   ("ดัชนีอันตรา") — a headline number with a truncated name is worse than
+   no headline. .national is the element designed to ellipsize (it already
+   carries min-width:170px and overflow:hidden for exactly this), so the
+   squeeze is routed to it and the chip keeps a floor. */
+header .hd-data #danger-hero { flex: 0 0 auto; min-width: 108px; }
+header .hd-data .national { flex: 1 1 auto; min-width: 150px; }
+header .hd-data .data-freshness { flex: 0 0 auto; }

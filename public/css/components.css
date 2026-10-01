@@ -3947,3 +3947,190 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
    must not be dimmed as heavily as a "may be offline" consolation. */
 .cctv-nosignal .cctv-linkout { font-size: 12px; }
 .cctv-nosignal .cctv-linkout-down { opacity: 0.85; }
+
+/* ── Layer row: toggle + "what is this?" disclosure ─────────────────────────
+ * The layer menu had 33 switches and, before this, no way to ask what any of
+ * them meant without leaving the map. Every row now carries a note saying what
+ * it measures, what that lets you conclude, and — the part that earns the
+ * space — what it cannot tell you.
+ */
+.mapctl .row-wrap { display: flex; flex-direction: column; }
+.mapctl .row-wrap > .row { width: 100%; }
+.mapctl .row-info {
+  position: absolute;
+  /* Sit it inside the row's right edge rather than on a new line: the menu is
+     already tall, and a third line per layer would make it unusable. */
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0;
+  border-radius: var(--r-sm, 4px);
+  border: 1px solid var(--rule);
+  background: var(--well);
+  color: var(--ink-mid);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-top: -18px;
+  z-index: 1;
+}
+.mapctl .row-info:hover,
+.mapctl .row-info:focus-visible { border-color: var(--rule-strong); color: var(--ink); }
+.mapctl .row-info[aria-expanded="true"] { background: var(--ink); color: var(--ink-inv); border-color: var(--ink); }
+.mapctl .row-note {
+  margin: 0 0 4px;
+  padding: 8px 10px;
+  background: var(--well-dim);
+  border-left: 2px solid var(--th-amber);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-mid);
+}
+.mapctl .row-note p { margin: 0; }
+.mapctl .row-note-what { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--rule); color: var(--ink-low); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CCTV MAP PINS — the tap target, and the way out (2026-10-02)
+
+   Two defects behind "make CCTV clickable from where the camera is":
+
+   1. The pin was 28x28 — a 28px target on a map full of 28px targets, and
+      under the 44px minimum (WCAG 2.5.5) on the phones most viewers use.
+      The dot stays 28px, because 28px is what keeps 379 of them legible
+      at once in the north. The HIT AREA expands to 44 via an invisible
+      pseudo-element, so the map doesn't get more crowded while the
+      target gets bigger. Overlapping halos are fine here because Leaflet
+      routes pointer events top-down to the nearest marker.
+
+   2. Clicking a pin gave you that one camera and nothing else — a dead
+      end with 378 more cameras on the map. The popup now carries the way
+      to the wall, so the pin is an entry point and not a terminus.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Invisible 44px halo around the 28px dot. No fill, no shadow — it exists
+   only to catch the pointer. */
+.cctv-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 44px; height: 44px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+.cctv-pin { cursor: pointer; }
+.cctv-pin-dot { transition: transform .12s ease-out; }
+.cctv-pin:hover .cctv-pin-dot { transform: scale(1.14); }
+.cctv-pin:focus-visible { outline: 2px solid var(--th-deep); outline-offset: 2px; border-radius: 50%; }
+
+/* The route from one camera to all of them. Placed below the player so it
+   never competes with the picture, which is what the reader clicked for. */
+.cctv-pop-wall {
+  display: block; width: 100%;
+  margin: 8px 0 2px;
+  padding: 7px 10px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 700;
+  color: var(--ink-mid);
+  background: var(--well); border: 1px solid var(--rule);
+  border-radius: var(--r-ctl);
+  cursor: pointer; text-align: center;
+}
+.cctv-pop-wall:hover { background: var(--th-deep); color: #fff; border-color: var(--th-deep); }
+.cctv-pop-wall:focus-visible { outline: 2px solid var(--th-deep); outline-offset: 2px; }
+
+/* Touch: give the halo the full 44px minimum on its own rather than
+   relying on the desktop halo, and stop the hover scale from firing on
+   a tap-driven interaction. */
+@media (hover: none) {
+  .cctv-pin:hover .cctv-pin-dot { transform: none; }
+  .cctv-pin::after { width: 48px; height: 48px; }
+}
+
+/* Reduced motion: the hover scale and the hot-pin pulse are both optional
+   decoration, and neither is load-bearing for reading a number. */
+@media (prefers-reduced-motion: reduce) {
+  .cctv-pin-dot { transition: none; }
+  .cctv-pin:hover .cctv-pin-dot { transform: none; }
+  .cctv-pin-hot { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COMPUTER-VISION STRIP — the wall's own readout (2026-10-02)
+
+   Sits at the top of the haze-eyes sheet. The point is that a vision
+   feature must look like it is doing something, and must also be obvious
+   about what it CANNOT do. So the strip carries, in order:
+
+     1. the headline — how many real frames were read, over what window
+     2. the breakdown — what they looked like, as counts not a verdict
+     3. coverage — readable video from X of Y cameras (the unflattering one)
+     4. the uncalibrated warning, whenever it is not calibrated
+
+   (4) is the load-bearing part. A "haze score" that reads like a
+   concentration is how a triage aid becomes a fake measurement, so the
+   strip says it in words every single time rather than trusting the reader
+   to remember.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cv-strip {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  background: var(--well);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--th-deep);
+  border-radius: var(--r-card);
+}
+.cv-strip--off { border-left-color: var(--ink-low); }
+
+.cv-strip-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+  font-size: 12px; color: var(--ink-mid); line-height: 1.4;
+}
+.cv-strip-head b {
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--th-deep);
+}
+.cv-read-n, .cv-cov { font-family: var(--font-num); font-size: 11px; color: var(--ink); }
+/* Coverage is the honest, unflattering number — it must not look like the
+   other two, or it reads as reassurance. */
+.cv-cov { color: var(--ink-low); }
+
+/* The looks. Ordered clear → washed → smoke → fog → unreadable, matching the
+   LOOK_ORDER array, and coloured with the SAME classes the per-card chips
+   use so a chip here and a chip on a card are visibly the same thing. */
+.cv-looks { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.cv-look {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px;
+  font-size: 11px; font-weight: 600; line-height: 1.6;
+  color: var(--ink-mid);
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.cv-look b { font-family: var(--font-num); font-weight: 700; color: var(--ink); }
+.cv-look--clear { border-color: var(--aqi-good, #2f8f5b); }
+.cv-look--smoke_like { border-color: #c46a2b; color: #8A4E12; }
+.cv-look--fog_like { border-color: #7f93a6; }
+.cv-look--washed { border-color: var(--aqi-sensitive, #c98b15); }
+.cv-look--unclear { border-color: var(--rule); color: var(--ink-low); }
+
+.cv-uncalibrated {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-mid);
+  border-left: 2px solid var(--rule);
+  padding-left: 8px;
+}
+.cctv-wall-relaxed.cv-uncalibrated { margin-top: 8px; }
+
+@media (max-width: 560px) {
+  .cv-strip { padding: 9px 10px; }
+  .cv-strip-head { gap: 3px 10px; }
+  .cv-looks { gap: 4px; }
+  .cv-look { font-size: 10.5px; padding: 2px 6px; }
+}

@@ -5,9 +5,9 @@
 // Upstream URLs come from third-party feeds, so nothing is dropped into
 // markup unchecked: embeds are HTTPS only (an http stream is blocked as mixed
 // content anyway), links may be http(s), everything else is refused.
-import { tr } from '../i18n.js?v=2.4.45'
-import { escapeHtml } from '../fmt.js?v=2.4.45'
-import { pm25Color } from '../paint.js?v=2.4.45'
+import { tr } from '../i18n.js?v=2.4.46'
+import { escapeHtml } from '../fmt.js?v=2.4.46'
+import { pm25Color } from '../paint.js?v=2.4.46'
 
 const HLS_CDN = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js'
 
@@ -211,7 +211,7 @@ export const NOT_OFFICIAL = () => tr('ภาพและค่าฝุ่นเ
 // What the frame looks like. The station chip above this is the measurement.
 // These sentences exist so a washed-out motorway shot on a clean day is not
 // read as "pollution = 49".
-const LOOK_LABEL = {
+export const LOOK_LABEL = {
   clear: { th: 'ภาพดูใส', en: 'picture looks clear' },
   'smoke-like': { th: 'ภาพออกโทนควัน', en: 'picture looks smoke-tinted' },
   'fog-like': { th: 'ภาพดูขาวหมอก', en: 'picture looks fog-white' },

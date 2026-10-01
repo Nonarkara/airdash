@@ -3,9 +3,9 @@
 // highest reading down and, for each, picks the nearest camera that a health
 // probe has shown to be alive. So this wall answers "what does that look
 // like, over there?" for the places the numbers say are worst.
-import { tr } from '../i18n.js?v=2.4.45'
-import { escapeHtml } from '../fmt.js?v=2.4.45'
-import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml } from './cctvPlayer.js?v=2.4.45'
+import { tr } from '../i18n.js?v=2.4.46'
+import { escapeHtml } from '../fmt.js?v=2.4.46'
+import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.46'
 
 const MAX_AUTOPLAY = 4
 let overlay = null
@@ -27,10 +27,51 @@ function cardHtml(e, badge) {
   </div>`
 }
 
-function visionBanner(data) {
+// LOOK_ORDER is the reading order of a picture, not alphabetical: a clear
+// frame first, an unreadable one last, with the two "hazy" looks in the
+// middle. The summary keys arrive from the server snake_cased
+// (smoke_like) while the label table is kebab-cased (smoke-like), so they
+// are normalised here — a lookup that silently misses renders the fallback
+// label, which is indistinguishable from a real measurement.
+const LOOK_ORDER = [
+  { key: 'clear', look: 'clear' },
+  { key: 'washed', look: 'washed' },
+  { key: 'smoke_like', look: 'smoke-like' },
+  { key: 'fog_like', look: 'fog-like' },
+  { key: 'unclear', look: 'unclear' },
+]
+
+function lookChip(key, look, n) {
+  if (!n) return ''
+  const l = LOOK_LABEL[look]
+  return `<span class="cv-look cv-look--${key}">${escapeHtml(tr(l.th, l.en))} <b>${n}</b></span>`
+}
+
+// The computer-vision readout, stated at the top of the wall so nobody has
+// to infer that anything is being analysed.
+//
+// Three numbers, each answering a question the reader actually has:
+//   · how many frames did it read, and over what window
+//   · what those frames looked like, as a breakdown rather than a verdict
+//   · how much of the camera estate it could read at all — the honest one,
+//     because 1,349 cameras sounds like coverage and 588 is the truth
+function cvStrip(data) {
   const s = data.vision_summary
   const flags = data.picture_flags ?? []
-  if (!s?.cameras_read) return ''
+  const h = data.health
+  if (!s?.cameras_read) {
+    return `<div class="cv-strip cv-strip--off">
+      <span class="cv-strip-head">${escapeHtml(tr('คอมพิวเตอร์ไวชันยังไม่มีผล — ไม่มีภาพไหนอ่านได้ในหน้าต่างเวลานี้', 'Computer vision has nothing yet — no frame could be read in this window'))}</span>
+    </div>`
+  }
+  const chips = LOOK_ORDER.map(({ key, look }) => lookChip(key, look, s[key] || 0)).join('')
+  const pct = h?.total ? Math.round(((h.live || 0) + (h.embed || 0)) / h.total * 100) : null
+  const cov = h
+    ? `<span class="cv-cov">${escapeHtml(tr(
+        `อ่านวิดีโอได้จาก ${(h.live || 0) + (h.embed || 0)} กล้อง จาก ${h.total} ตัว${pct === null ? '' : ` (${pct}%)`}`,
+        `Readable video from ${(h.live || 0) + (h.embed || 0)} of ${h.total} cameras${pct === null ? '' : ` (${pct}%)`}`,
+      ))}</span>`
+    : ''
   const head = flags.length
     ? tr(
       `${flags.length} กล้องที่ภาพออกโทนควันหรือหมอก — เปิดดูเอง ตัวเลข µg/m³ คือสถานี ไม่ใช่คะแนนภาพ`,
@@ -43,7 +84,19 @@ function visionBanner(data) {
   const grid = flags.length
     ? `<div class="cctv-wall-grid">${flags.map((c) => cardHtml({ rank: 0, air: c.air, camera: c }, tr('ภาพ', 'picture'))).join('')}</div>`
     : ''
-  return `<p class="cctv-wall-relaxed cctv-wall-vision">${escapeHtml(head)}</p>${grid}`
+  return `<div class="cv-strip">
+    <div class="cv-strip-head">
+      <b>${escapeHtml(tr('คอมพิวเตอร์ไวชัน', 'Computer vision'))}</b>
+      <span class="cv-read-n">${escapeHtml(tr(`อ่านภาพจริง ${s.cameras_read} ภาพ ใน ${s.window_h} ชม.`, `read ${s.cameras_read} real frames in ${s.window_h} h`))}</span>
+      ${cov}
+    </div>
+    <div class="cv-looks">${chips}</div>
+    <p class="cctv-wall-relaxed cctv-wall-vision">${escapeHtml(head)}</p>
+    ${s.calibrated ? '' : `<p class="cctv-wall-relaxed cv-uncalibrated">${escapeHtml(tr(
+      'คะแนนจากภาพยังไม่ได้เทียบเป็นค่า µg/m³ — ใช้คัดกรองว่าภาพไหนน่าสงสัยเท่านั้น ค่าฝุ่นจริงอ่านจากสถานี',
+      'The picture score is NOT calibrated to µg/m³ — it only triages which frames look suspicious. Real concentrations come from the stations.',
+    ))}</p>`}
+  </div>${grid}`
 }
 
 export function closeHazeEyes() {
@@ -125,7 +178,7 @@ export async function openHazeEyes({ onLocate } = {}) {
   const eyesGrid = data.eyes?.length
     ? `<div class="cctv-wall-grid">${data.eyes.map((e) => cardHtml(e)).join('')}</div>`
     : ''
-  body.innerHTML = `${visionBanner(data)}${note}${eyesGrid}`
+  body.innerHTML = `${cvStrip(data)}${note}${eyesGrid}`
   body.querySelectorAll('.cctv-eye-locate').forEach((b) => {
     b.onclick = () => { const a = b.closest('.cctv-eye'); closeHazeEyes(); onLocate?.(a.dataset.cam, a.dataset.src) }
   })
