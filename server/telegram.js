@@ -7,15 +7,23 @@
 // Setup (operator, once):
 //   1. Create a bot via @BotFather, save the token.
 //   2. node scripts/set-telegram-token.mjs <token>
-//      (also sets the bot's command list and webhook URL)
+//      (also sets the bot's command list, registers the webhook URL, and
+//      generates the webhook secret_token — stored in kv, never printed)
 //   3. Citizen flow is fully on the bot:
 //      - User taps t.me/AirDash_bot?start=<binding_code>
 //      - Bot receives /start <code> via webhook, stores chat_id + code
 //      - Citizen picks province/language in the dashboard
 //      - The binding_code ties their chat to their AirDash session
 //
+// The webhook route REJECTS deliveries that don't carry the registered
+// secret (X-Telegram-Bot-Api-Secret-Token), and rejects everything while
+// no secret is provisioned — fail closed, not fail open. If the webhook
+// suddenly starts 503ing, re-run set-telegram-token.mjs (or the admin
+// config POST) to provision the secret.
+//
 // Without a token this module is a silent no-op. The dashboard never
 // depends on Telegram — the LINE OA + per-token paths still work.
+import { randomBytes } from 'node:crypto'
 import { log } from './util.js'
 
 const TELEGRAM_API = 'https://api.telegram.org'
@@ -124,6 +132,13 @@ export function createTelegram(db) {
   // Register the webhook URL with Telegram. Idempotent — re-running with
   // the same URL is a no-op. We always re-call setMyCommands too because
   // the operator might rotate the bot and lose the custom command list.
+  // secret_token: Telegram signs nothing — it ECHOES back the secret we
+  // registered, in the X-Telegram-Bot-Api-Secret-Token header of every
+  // webhook delivery. Without it the webhook endpoint authenticates nobody:
+  // anyone who can reach the tunnel can POST a forged update and subscribe
+  // arbitrary chat_ids to alert pushes. Generated once here, stored in kv,
+  // reused forever — so the operator never handles it and a re-registration
+  // never rotates it out from under a working webhook.
   async function registerWebhook(webhookUrl) {
     const t = token()
     if (!t) throw new Error('telegram bot token not configured')
@@ -132,11 +147,18 @@ export function createTelegram(db) {
     await fetch(`${TELEGRAM_API}/bot${t}/deleteWebhook?drop_pending_updates=true`, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     }).catch(() => {})
+    let secret = db.kvGet('telegram_webhook_secret')
+    if (!secret) {
+      secret = randomBytes(32).toString('base64url') // 43 chars, Telegram's allowed A-Za-z0-9_-
+      db.kvSet('telegram_webhook_secret', secret)
+      log('info', 'telegram webhook secret generated and stored in kv')
+    }
     const res = await fetch(`${TELEGRAM_API}/bot${t}/setWebhook`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         url: webhookUrl,
+        secret_token: secret,
         allowed_updates: ['message', 'callback_query'],
         drop_pending_updates: true,
       }),

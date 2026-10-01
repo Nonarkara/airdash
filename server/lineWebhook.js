@@ -18,11 +18,11 @@
 // The webhook endpoint URL itself is registered with LINE via
 // `PUT /v2/bot/channel/webhook/endpoint` (done once, out of band), pointing
 // at POST /api/line/webhook.
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, randomBytes } from 'node:crypto'
 import { readFileSync, writeFileSync, unlinkSync, mkdirSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { CONFIG } from './config.js'
-import { log } from './util.js'
+import { log, timingSafeStrEqual } from './util.js'
 import { allow } from './ratelimit.js'
 
 export const REPORTS_DIR = join(CONFIG.root, 'data/reports')
@@ -74,12 +74,8 @@ function hashLineUserId(db, userId) {
   return createHash('sha256').update(getLineSalt(db) + userId).digest('hex').slice(0, 16)
 }
 
-function timingSafeStrEqual(a, b) {
-  const bufA = Buffer.from(String(a ?? ''))
-  const bufB = Buffer.from(String(b ?? ''))
-  if (bufA.length !== bufB.length) return false
-  return timingSafeEqual(bufA, bufB)
-}
+// timingSafeStrEqual now lives in server/util.js — the same primitive the
+// Telegram webhook compares its secret with.
 
 // HMAC signature verification — LINE signs every webhook body with the
 // channel secret; a mismatched body is either a misconfiguration or a
@@ -212,9 +208,21 @@ function updateReport(db, id, patch) {
 // work (image download, province lookup) in a non-blocking chain so the
 // 200 goes out immediately.
 export async function processLineWebhook(db, rawBody, signatureHeader) {
-  ensureReportsTable(db)
+  // AUTH FIRST — before ensureReportsTable or any DB write, so an
+  // unauthenticated body never touches storage.
   const secret = db.kvGet('line_channel_secret')
-  if (secret && !verifySignature(rawBody, signatureHeader, secret)) {
+  if (!secret) {
+    // Fail CLOSED. The old `if (secret && !verifySignature(...))` processed
+    // the body whenever no secret was configured — an unauthenticated
+    // webhook on a public endpoint, accepting whatever arrived. LINE signs
+    // every delivery; if we have no secret to check against we cannot tell
+    // a real delivery from a forged one, so we accept neither. 503 (not
+    // 200) so a webhook that IS registered with LINE is retried, not
+    // silently dropped, once the operator stores the secret.
+    log('warn', 'LINE webhook has no line_channel_secret configured — rejecting unauthenticated body')
+    return { ok: false, status: 503 }
+  }
+  if (!verifySignature(rawBody, signatureHeader, secret)) {
     log('warn', 'LINE webhook signature mismatch — dropping')
     return { ok: false, status: 401 }
   }
@@ -226,6 +234,7 @@ export async function processLineWebhook(db, rawBody, signatureHeader) {
   if (!Array.isArray(events) || events.length === 0) {
     return { ok: true, status: 200, processed: 0 }
   }
+  ensureReportsTable(db)
   const token = db.kvGet('line_channel_token')
 
   // Fire-and-forget per event — the HTTP 200 has to leave before the

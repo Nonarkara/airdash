@@ -15,6 +15,7 @@
 // first_name are captured at /start time for the welcome message and
 // admin display, but they're never sent to a third party.
 import { log } from './util.js'
+import { timingSafeStrEqual } from './util.js'
 import { createTelegram } from './telegram.js'
 
 // Bot commands — the /start welcome is intentionally brief (Telegram
@@ -115,7 +116,34 @@ export function resolveProvinceExact(list, q) {
 // Process a single Telegram Update. Returns true if the update was
 // handled (or an async response was scheduled). Telegram sends one
 // update per message; we respond with the answer text immediately.
-export async function processTelegramUpdate(db, update) {
+export async function processTelegramUpdate(db, update, secretHeader) {
+  // AUTH FIRST — before any parse, probe or DB write. The endpoint is
+  // public (tunnel → route), and an unauthenticated webhook accepts
+  // whatever body arrives: a forged /start or plain province message
+  // subscribes an arbitrary chat_id to alert pushes (telegram_subs insert
+  // below), which during burning season is a third-party spam channel.
+  // Telegram documents the defense: register the webhook with secret_token,
+  // then every delivery carries X-Telegram-Bot-Api-Secret-Token.
+  const secret = db.kvGet('telegram_webhook_secret')
+  if (!secret) {
+    // Fail CLOSED. If the secret is not provisioned we cannot tell a real
+    // Telegram delivery from a forged one, so we accept neither. Telegram
+    // retries; the operator fixes it by re-running scripts/set-telegram-token.mjs
+    // (which generates + registers the secret in one step).
+    log('warn', 'telegram webhook secret not provisioned — rejecting unauthenticated body (run scripts/set-telegram-token.mjs)')
+    return { ok: false, status: 503 }
+  }
+  if (!secretHeader || !timingSafeStrEqual(secretHeader, secret)) {
+    log('warn', 'telegram webhook secret mismatch — dropping')
+    return { ok: false, status: 401 }
+  }
+  const handled = await handleTrustedUpdate(db, update)
+  // handleTrustedUpdate returns false for a benign no-op (no message, no
+  // chat id, unresolvable text) — that is still a 200 for Telegram.
+  return handled === false ? { ok: true, status: 200, processed: 0 } : { ok: true, status: 200, processed: 1 }
+}
+
+async function handleTrustedUpdate(db, update) {
   if (!update || update.update_id === undefined) return false
   const tg = createTelegram(db)
   if (!tg.configured()) return false // no token yet — silent no-op

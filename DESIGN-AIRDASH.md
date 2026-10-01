@@ -138,7 +138,12 @@ The FloodDash palette is gone. Current tokens:
 - Severity: the Thai-AQI 5-band palette
 - Type: Sarabun (Thai / UI) · Manrope (display) · JetBrains Mono (every
   number that changes)
-- Shape: sharp corners, no shadows
+- Shape: two radii only — controls `--r-ctl`, cards `--r-card` — plus the
+  two elevation tokens (`--elev-1` / `--elev-2`). The 3.0 facelift
+  (tokens.css, "3.0 facelift") removed the old universal hard-flat reset
+  (`border-radius: 0 !important; box-shadow: none !important`) that
+  silently killed every authored radius and shadow; surfaces now round
+  and elevate via the tokens
 - Full automatic dark mode; `prefers-reduced-motion` stills the
   breathing hero and count-ups
 

@@ -31,6 +31,20 @@ export function readAppVersion(publicDir = CONFIG.publicDir) {
   }
 }
 
+// The version /api/health and /api/twin report must be the one the
+// frontend ACTUALLY ships, not the one that was on disk at boot: a
+// frontend-only deploy (the common case — no server restart needed) would
+// otherwise leave the health endpoint reporting a stale number forever.
+// TTL 60s: the watchdog polls /api/health every minute and one file read
+// per minute is nothing.
+let _verCache = { at: 0, v: null }
+export function currentAppVersion(publicDir = CONFIG.publicDir) {
+  if (Date.now() - _verCache.at > 60_000) {
+    _verCache = { at: Date.now(), v: readAppVersion(publicDir) }
+  }
+  return _verCache.v
+}
+
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 const str = (v) => (v == null ? null : String(v))
 

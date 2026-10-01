@@ -12,7 +12,7 @@ import { listExportDays, buildDailyExport, dailyToCsv, buildFullExport, fullToCs
 import { listWeeklyExports, getExportPath, buildWeeklyExport as buildWeeklyExportJob, startWeeklyBuild, getBuildState } from './weeklyExport.js'
 import { libraryToc, searchLibrary, libraryDoc } from './library.js'
 import { searchGazetteer, placeDetail, searchTambons, searchDistricts, lookupPostal, lookupPlace, resolvePlaceSlug } from './gazetteer.js'
-import { buildTwin, readAppVersion } from './twin.js'
+import { buildTwin, readAppVersion, currentAppVersion } from './twin.js'
 import { weatherAtDb, haversineKm } from './weather.js'
 import { buildSkill } from './skill.js'
 import { readTmdWeather } from './sources/tmd-relay.js'
@@ -91,8 +91,11 @@ let skillCache = null // GET /api/skill — a 60-day replay, cached an hour
 const SKILL_TTL_MS = 3_600_000
 const WEATHER_TTL_MS = 60_000
 const TWIN_TTL_MS = 30_000
-// The ops.html asset token is the release version (scripts/bump-version.mjs).
-const APP_VERSION = readAppVersion()
+// The release version comes from ops.html ON DISK via currentAppVersion()
+// (twin.js) with a 60s TTL — NOT a boot-time const: a frontend-only deploy
+// must be visible in /api/health without a server restart (the old
+// readAppVersion-at-boot left /api/health reporting a stale version
+// forever after frontend deploys).
 
 // Cache for /api/insights — buildInsights + sensorHealth scan readings and cost
 // ~0.7s; without a cache, N concurrent loads each recompute serially on the one
@@ -398,7 +401,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       json(res, 200, {
         ok: true,
         service: 'airdash',
-        version: APP_VERSION,
+        version: currentAppVersion(),
         now: new Date().toISOString(),
         uptime_s: Math.round((Date.now() - startedAt) / 1000),
         db: { ...dbStats, size_mb: Math.round(dbSize / 1048576 * 10) / 10, on_external_volume: dbOnExternalVolume(CONFIG.dbPath), future_obs_rejected: Object.fromEntries(futureRejects) },
@@ -518,7 +521,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       const built = prebuild(buildTwin({
         risk: riskEngine.get(),
         dangerRows: danger ? danger.get() : [],
-        version: APP_VERSION,
+        version: currentAppVersion(),
       }))
       twinCache = { at: Date.now(), built }
       res.setHeader('x-airdash-stale-seconds', '0')
@@ -2371,6 +2374,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         // retries on non-2xx, and a 401 just means more load for the same
         // discarded body.
         if (out?.status === 401) return json(res, 401, { error: 'signature mismatch' })
+        if (out?.status === 503) return json(res, 503, { error: 'line channel secret not configured' })
         json(res, 200, { ok: true, processed: out?.processed ?? 0 })
       } catch (err) {
         log('warn', 'webhook handler failed', { error: String(err?.message ?? err) })
@@ -2685,10 +2689,13 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       let mod
       try { mod = await import('./telegramWebhook.js') } catch { return json(res, 503, { error: 'webhook not available' }) }
       try {
-        // The module handles everything async-internally. We always
-        // return 200 even on internal errors so Telegram doesn't
-        // hammer us with retries.
-        await mod.processTelegramUpdate(db, parsed)
+        const out = await mod.processTelegramUpdate(db, parsed, req.headers['x-telegram-bot-api-secret-token'])
+        // 401 = a forged body (secret mismatch) — tell the forger, not a 200.
+        if (out?.status === 401) return json(res, 401, { error: 'secret mismatch' })
+        // 503 = the secret is not provisioned yet — the operator must re-run
+        // scripts/set-telegram-token.mjs. Telegram retries until then; that
+        // is honest load, not a silent drop.
+        if (out?.status === 503) return json(res, 503, { error: 'webhook secret not provisioned' })
         json(res, 200, { ok: true })
       } catch (err) {
         log('warn', 'telegram webhook handler failed', { error: String(err?.message ?? err) })
@@ -2726,6 +2733,10 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       json(res, 200, {
         token_masked: masked(token),
         webhook_url: db.kvGet('telegram_webhook_url'),
+        // The secret itself is NEVER returned — only whether it exists.
+        // Missing = the webhook currently authenticates nobody: the route
+        // rejects everything with 503 until this is provisioned.
+        has_webhook_secret: Boolean(db.kvGet('telegram_webhook_secret')),
         ...status,
       })
     },

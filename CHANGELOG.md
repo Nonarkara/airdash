@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] — webhook authenticity: the two inbound endpoints now prove who is speaking
+
+Both webhooks take commands from the internet and neither proved who was speaking. Fixed fail-closed:
+
+- **`POST /api/telegram/webhook` authenticated NOBODY** — the route parsed the body and called `processTelegramUpdate` directly: no secret token, no HMAC. A forged `/start` (or plain province message) inserted an arbitrary `chat_id` into `telegram_subs` — a third party subscribed to alert pushes. The webhook is now registered with Telegram's `secret_token` (`server/telegram.js` `registerWebhook` generates + stores `telegram_webhook_secret` in kv, never printed), and the route validates `X-Telegram-Bot-Api-Secret-Token` timing-safe: 503 while unprovisioned, 401 on mismatch, 200 only with the registered secret. **After deploying, run `node scripts/set-telegram-token.mjs --reregister` once** (reads the token from the DB; generates + registers the secret) or a webhook that works will start 503ing.
+- **`POST /api/line/webhook` failed open when unconfigured** — `if (secret && !verifySignature(...))` processed unauthenticated bodies whenever `line_channel_secret` was unset. Now 503 (fail closed), and auth runs BEFORE any DB write. Admin GET `/api/admin/telegram-config` exposes `has_webhook_secret` (boolean only, never the secret).
+- **`/api/health` no longer reports a stale version** — the version was read from ops.html once at boot into a const, so frontend-only deploys left the health endpoint reporting the old number forever; `currentAppVersion()` (twin.js) re-reads with a 60s TTL.
+
+Pin: `scripts/test-webhook-auth.mjs` (23 assertions, in-memory DB, no network).
+
+---
+
 ## [Unreleased] — **Vision coverage: which cameras we can actually see**
 
 The ask was to run computer vision over *all* the cameras. Measured against the live catalogue of 1,369, that turns out to mean 362 — and the difference is worth writing down rather than hiding behind the word "embed".

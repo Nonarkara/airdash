@@ -22,13 +22,21 @@ const argv = process.argv.slice(2)
 if (!argv.length || argv[0] === '-h' || argv[0] === '--help') {
   console.log('usage:')
   console.log(`  node scripts/set-telegram-token.mjs <bot_token> [webhook_url]`)
+  console.log(`  node scripts/set-telegram-token.mjs --reregister`)
   console.log(`  default webhook: ${DEFAULT_WEBHOOK}`)
   process.exit(2)
 }
-
-const token = argv[0].trim()
+// --reregister: the token is ALREADY in the DB kv — read it from there
+// instead of asking for it on the command line (operator secrets never go
+// on a command line). Re-registers the webhook (generating the webhook
+// secret_token if missing) and refreshes the command list. This is the
+// fix-up command after enabling webhook-secret validation on the server:
+// a webhook that 503s until the secret is provisioned heals with this
+// one run.
+const reregister = argv[0] === '--reregister' || argv[0] === '-r'
+const token = reregister ? null : argv[0].trim()
 const webhookUrl = (argv[1] ?? DEFAULT_WEBHOOK).trim()
-if (token.length < 20 || !token.includes(':')) {
+if (!reregister && (token.length < 20 || !token.includes(':'))) {
   console.error('bot_token looks wrong (expected "<digits>:<alnum>", ≥20 chars).')
   process.exit(2)
 }
@@ -37,6 +45,36 @@ const { openDb } = await import('../server/db.js')
 const { createTelegram } = await import('../server/telegram.js')
 const db = openDb()
 const tg = createTelegram(db)
+
+if (reregister) {
+  const stored = db.kvGet('telegram_bot_token')
+  if (!stored) {
+    console.error('✗ no telegram_bot_token in the DB kv — run set-telegram-token.mjs <token> first.')
+    process.exit(1)
+  }
+  const whUrl2 = db.kvGet('telegram_webhook_url') || webhookUrl
+  console.log(`1) Re-registering webhook → ${whUrl2}`)
+  try {
+    const wh = await tg.registerWebhook(whUrl2)
+    console.log(`✓ Webhook set: ok=${wh?.ok ?? '?'} (description: ${wh?.description ?? '—'})`)
+  } catch (err) {
+    console.error(`✗ setWebhook failed: ${err?.message ?? err}`)
+    process.exit(1)
+  }
+  if (db.kvGet('telegram_webhook_secret')) {
+    console.log('✓ webhook secret_token provisioned (stored in kv, never printed)')
+  }
+  await tg.setCommands([
+    { command: 'start', description: 'Start receiving dust alerts for my province' },
+    { command: 'stop', description: 'Unsubscribe from dust alerts' },
+    { command: 'status', description: 'Check my current subscription' },
+    { command: 'language', description: 'Switch message language (ไทย/EN)' },
+    { command: 'province', description: 'Change the province I follow' },
+    { command: 'help', description: 'Show what Air can do' },
+  ])
+  console.log('✓ Commands refreshed')
+  process.exit(0)
+}
 
 // 1. Store the token FIRST so the probe + register + setCommands
 //    helpers can read it via db.kvGet('telegram_bot_token').

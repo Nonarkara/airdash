@@ -1,9 +1,20 @@
 // Shared primitives: logging, guarded fetch, boundary validation.
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { timingSafeEqual } from 'node:crypto'
 import { CONFIG } from './config.js'
 
 const execFileP = promisify(execFile)
+
+/** Timing-safe string comparison for webhook secrets / signatures. Equal
+ * length is checked first (a length difference leaks nothing about the
+ * secret — the length is public), then the bytes are compared constant-time. */
+export function timingSafeStrEqual(a, b) {
+  const bufA = Buffer.from(String(a ?? ''))
+  const bufB = Buffer.from(String(b ?? ''))
+  if (bufA.length !== bufB.length) return false
+  return timingSafeEqual(bufA, bufB)
+}
 
 export function log(level, msg, extra = {}) {
   const line = JSON.stringify({ ts: new Date().toISOString(), level, msg, ...extra })
