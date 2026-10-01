@@ -5,9 +5,9 @@
 // Upstream URLs come from third-party feeds, so nothing is dropped into
 // markup unchecked: embeds are HTTPS only (an http stream is blocked as mixed
 // content anyway), links may be http(s), everything else is refused.
-import { tr } from '../i18n.js?v=2.4.44'
-import { escapeHtml } from '../fmt.js?v=2.4.44'
-import { pm25Color } from '../paint.js?v=2.4.44'
+import { tr } from '../i18n.js?v=2.4.45'
+import { escapeHtml } from '../fmt.js?v=2.4.45'
+import { pm25Color } from '../paint.js?v=2.4.45'
 
 const HLS_CDN = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js'
 
@@ -92,6 +92,55 @@ export function detachHls(video) {
  *  stream + a viewer_url → still show the source-page link so the user has
  *  somewhere to go (haze season: many DOH motorway streams rotate offline for
  *  hours at a time but the camera's page on iTIC/DOH still shows it). */
+// WHY A NO-PICTURE CARD NAMES THE REASON INSTEAD OF SAYING "MAY BE OFFLINE"
+// FloodDash's wall has one fallback string for every camera it cannot play,
+// which is honest but useless: "camera may be offline" sends a reader to the
+// source site to find out, and on this catalogue the answer is usually NOT
+// that the hardware is broken. Probing every class with the production ffmpeg
+// grab on 2026-09-29 measured why, and the four answers are completely
+// different situations with different fixes:
+//
+//   snapshot — BMA's show.aspx answers HTTP 200 with a 400x266 image that
+//              measures mean 255 / stddev 0.000: a pure white rectangle. The
+//              camera is fine; there is simply no picture in the response.
+//   page     — NST embeds are MediaMTX WHEP over WebRTC. RTSP is closed and
+//              there is no HLS, so a BROWSER can play it and a server cannot.
+//              Telling such a user the camera is offline is simply false.
+//   none     — the source publishes no stream URL at all.
+//   other    — a stream of an unrecognised kind; say nothing was readable.
+//
+// The general rule this encodes: "no picture" and "broken camera" are
+// different claims, and a public dashboard should not conflate them. Someone
+// deciding whether a street is clear needs to know the first, not be sent to
+// re-verify the second.
+const NO_PICTURE = {
+  snapshot: {
+    th: 'กล้องนี้ส่งภาพสีขาวเปล่า (ยังไม่มีภาพจริงให้ระบบอ่าน)',
+    en: 'this camera returns a blank white image — no picture to read',
+  },
+  page: {
+    th: 'ภาพถ่ายทอดผ่าน WebRTC — เปิดดูได้ในเบราว์เซอร์ แต่ระบบอ่านภาพไม่ได้',
+    en: 'streamed over WebRTC — playable in a browser, not readable by this system',
+  },
+  none: {
+    th: 'แหล่งข้อมูลนี้ไม่ได้ประกาศลิงก์ภาพของกล้อง',
+    en: 'this source publishes no picture link for the camera',
+  },
+}
+
+// Deliberately OUTSIDE the taxonomy above: a catch-all for a stream_kind this
+// build has never seen. It is a default, not a reason — the server does not
+// emit it, and keeping it in the table would imply it does. Split out so the
+// taxonomy stays exactly "the reasons we can actually measure".
+const NO_PICTURE_FALLBACK = {
+  th: 'ยังไม่พบรูปแบบสตรีมที่ระบบอ่านได้',
+  en: 'stream type not readable by this system',
+}
+
+export function noPictureLabel(streamKind) {
+  return NO_PICTURE[streamKind] ?? NO_PICTURE_FALLBACK
+}
+
 export function playerHtml(c) {
   const hls = httpsUrl(c.hls_url)
   const viewer = linkUrl(c.viewer_url)
@@ -106,6 +155,30 @@ export function playerHtml(c) {
     return `<div class="cctv-video-wrap">
       <iframe class="cctv-video" src="${escapeHtml(c.viewer_url)}" loading="lazy" allow="autoplay; fullscreen" allowfullscreen frameborder="0" title="NST CCTV"></iframe>
       <span class="cctv-live">● ${tr('ภาพสด', 'LIVE')}</span>
+    </div>`
+  }
+  // A stream we could not play. Say which kind it is, because "may be
+  // offline" is the wrong claim for 564 of the 807 cameras that have no
+  // readable stream — most of them are answering perfectly well.
+  //
+  // The guard is `kind`, NOT `NO_PICTURE[kind]`: a camera with a stream of a
+  // kind this build does not recognise still HAS a stream, so falling through
+  // to the "no picture link" text below would assert something false. The
+  // fallback wording covers exactly that case.
+  const kind = c.stream_kind
+  if (kind) {
+    const reason = noPictureLabel(kind)
+    // Where a viewer URL exists it is still the best the reader can do, and
+    // for `page` (WebRTC) opening it in a browser is the ONLY way to see
+    // anything — so the link stays, now framed as the route rather than a
+    // consolation prize.
+    const action = viewer
+      ? `<a class="cctv-linkout${kind === 'page' ? '' : ' cctv-linkout-down'}" href="${escapeHtml(viewer)}" target="_blank" rel="noopener noreferrer">▶ ${escapeHtml(tr('เปิดภาพกล้องที่ต้นทาง', 'open the camera at its source'))} ↗</a>`
+      : ''
+    return `<div class="cctv-nosignal">
+      <div class="cctv-nosignal-icon" aria-hidden="true">▨</div>
+      <div class="cctv-nosignal-text">${escapeHtml(tr(reason.th, reason.en))}</div>
+      ${action}
     </div>`
   }
   if (viewer) {

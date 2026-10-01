@@ -186,5 +186,33 @@ console.log('\n── coverageReport: the honest accounting ──')
     coverageReport([]).pct_reachable === 0)
 }
 
+
+console.log('\n── the UI can say every reason the API can give ──')
+{
+  // The server measures WHY a camera has no readable stream (coverage.js
+  // UNREACHABLE) and the wall displays it (cctvPlayer.js NO_PICTURE). These
+  // are two lists in two files, and nothing in the type system ties them
+  // together: a key added to one and not the other renders as the generic
+  // "not readable" fallback, which is a silent regression that looks fine.
+  const { readFileSync } = await import('node:fs')
+  const { UNREACHABLE } = await import('../server/vision/coverage.js')
+  const player = readFileSync(new URL('../public/js/layers/cctvPlayer.js', import.meta.url), 'utf8')
+  const block = player.match(/const NO_PICTURE = \{([\s\S]*?)\n\}/)?.[1] ?? ''
+  const uiKeys = [...block.matchAll(/^\s{2}(\w+):\s*\{/gm)].map((m) => m[1])
+
+  check('the UI taxonomy is not empty', uiKeys.length > 0)
+  // 'down' is a reachability state, not a stream kind, so the server explains
+  // it elsewhere (the link-out branch). The kinds must line up.
+  const serverKinds = Object.keys(UNREACHABLE).filter((k) => k !== 'down').sort()
+  const missing = serverKinds.filter((k) => !uiKeys.includes(k))
+  check('every unreachable stream_kind has a message the UI can show',
+    missing.length === 0, `UI is missing: ${missing.join(', ')}`)
+  check('the UI does not invent reasons the server never emits',
+    uiKeys.every((k) => serverKinds.includes(k)),
+    `UI has extra: ${uiKeys.filter((k) => !serverKinds.includes(k)).join(', ')}`)
+  check('each UI reason is bilingual', [...block.matchAll(/th: '([^']+)'[\s\S]{0,80}?en: '([^']+)'/g)]
+    .every((m) => m[1].length > 0 && m[2].length > 0))
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

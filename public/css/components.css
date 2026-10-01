@@ -3908,3 +3908,42 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .vis-tip-cause { margin-top: 4px; max-width: 30ch; }
 .vis-tip-cause-en { color: var(--ink-low); font-size: 11px; }
 .vis-tip-time { margin-top: 4px; color: var(--ink-low); font-size: 11px; }
+
+/* ── No-picture card ─────────────────────────────────────────────────────────
+ * Ported from FloodDash's camera wall (cctv-nosignal / cctv-wall-nosignal) and
+ * improved: FloodDash shows one generic "may be offline" treatment, because it
+ * cannot say WHY. This project measured why (server/sources/cctvRegistry.js
+ * classifyStream + server/vision/coverage.js), so each card names the specific
+ * reason — blank white image, WebRTC-only, no published link.
+ *
+ * The distinction that matters: a reader deciding whether a street is clear
+ * needs to know "there is no picture", not to be sent to re-check whether the
+ * hardware works. Most of these cameras are answering perfectly well.
+ */
+.cctv-nosignal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  min-height: 92px;
+  border: 1px solid var(--line);
+  /* Flat, low-contrast fill: this is a "nothing here" surface and should not
+     compete with a card that has a picture on it. */
+  background: var(--surface-2, var(--paper-2, #EDF2F6));
+}
+.cctv-nosignal-icon {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink-low);
+}
+.cctv-nosignal-text {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-low);
+  max-width: 26ch;
+}
+/* The viewer link is the route to something real for a WebRTC camera, so it
+   must not be dimmed as heavily as a "may be offline" consolation. */
+.cctv-nosignal .cctv-linkout { font-size: 12px; }
+.cctv-nosignal .cctv-linkout-down { opacity: 0.85; }
