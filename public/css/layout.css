@@ -1796,20 +1796,6 @@ body.mode-citizen #pane-citizen:not([hidden]) { display: flex !important; }
   #home-btn, #flooddash-btn, #about-btn, #window-btn { padding-left: 8px; padding-right: 8px; }
 }
 
-/* ── Shed ladder, act 2 (2026-10-02, after the top-bar v3 render with live
-   data) ──────────────────────────────────────────────────────────────────
-   The 3.0 group rule above (`header .hd-tools .focusbox`, specificity
-   0-2-1) forced display:inline-flex on the focus dropdown — which outranked
-   every `.focusbox { display: none }` shed rule in this file (0-1-0; media
-   queries add no specificity). Rendered with live data at 1400px the
-   dropdown was STILL on the bar: the ladder's promise had quietly gone
-   dead, and the 133px it was meant to release to the verdict never
-   released. These re-state the shed at the group rule's own specificity,
-   at the END of the file (after every rule they must beat). */
-@media (max-width: 1440px) {
-  header .hd-tools .focusbox { display: none; }
-}
-
 /* The old "re-tap the active tab to collapse the sheet" gesture is gone
    with the layout that needed it: it existed only to reclaim the screen
    from a permanently-docked map. Tapping MAP now does that directly, and a
@@ -2239,3 +2225,19 @@ header .hd-tools .searchbox #place-search::placeholder {
 header .hd-data #danger-hero { flex: 0 0 auto; min-width: 108px; }
 header .hd-data .national { flex: 1 1 auto; }
 header .hd-data .data-freshness { flex: 0 0 auto; }
+
+/* ── Shed ladder, act 2 (2026-10-02, after the top-bar v3 render with live
+   data) ──────────────────────────────────────────────────────────────────
+   The 3.0 group rule above (`header .hd-tools .focusbox`, specificity
+   0-2-1) forced display:inline-flex on the focus dropdown — which outranked
+   every `.focusbox { display: none }` shed rule in this file (0-1-0; media
+   queries add no specificity). Rendered with live data at 1400px the
+   dropdown was STILL on the bar: the ladder's promise had quietly gone
+   dead, and the 133px it was meant to release to the verdict never
+   released. This re-states the shed at the group rule's own specificity,
+   at the END of the file — the first attempt at this fix put it BEFORE the
+   group rule it must beat and lost on order (equal specificity, later
+   rule wins): the ladder's own warning, made by the fixer. */
+@media (max-width: 1440px) {
+  header .hd-tools .focusbox { display: none; }
+}
