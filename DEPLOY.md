@@ -143,7 +143,7 @@ live failover.
 `/api/health` exposes `archive.storage.available`, `reason`, and `checked_at`.
 The sentinel probes at boot and every five minutes; a recent archive receipt
 does not suppress a missing-drive alarm. Availability means the archive file
-is present on a device distinct from the live DB, not that its contents have
+is present on a filesystem device distinct from the live DB, not that its contents have
 passed an integrity check. An unmounted directory on the internal disk is
 rejected, and nightly backup selection also checks device identity. The
 external archive and nightly snapshots are separate from offsite recovery.

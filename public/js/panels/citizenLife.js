@@ -40,10 +40,10 @@
 // 7-year-old the panel is meant to help has an even shorter attention
 // span. The English side uses a registered-nurse register: warm,
 // direct, never preachy. "Don't" is reserved for emergencies.
-import { on, store } from '../state.js?v=2.4.62'
-import { tr } from '../i18n.js?v=2.4.62'
-import { el } from '../fmt.js?v=2.4.62'
-import { getJson } from '../cache.js?v=2.4.62'
+import { on, store } from '../state.js?v=2.4.63'
+import { tr } from '../i18n.js?v=2.4.63'
+import { el } from '../fmt.js?v=2.4.63'
+import { getJson } from '../cache.js?v=2.4.63'
 
 // ── 1. PERSONA SELECTOR + SPECIFIC ADVICE ─────────────────────────────────
 

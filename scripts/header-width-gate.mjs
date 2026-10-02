@@ -26,6 +26,7 @@
 // USAGE
 //   node scripts/header-width-gate.mjs                      # localhost
 //   QA_URL=https://air.nonarkara.org/ops.html node scripts/header-width-gate.mjs
+//   QA_LANG=en QA_URL=https://air.nonarkara.org/ops node scripts/header-width-gate.mjs
 //   QA_SHOT=1 node scripts/header-width-gate.mjs            # also save PNGs
 //
 // Exits 0 only after measuring rendered data, 1 for geometry problems,
@@ -49,11 +50,15 @@ try {
   process.exit(2)
 }
 
-const browser = await chromium.launch({ channel: 'chrome' })
-const page = await browser.newPage({ viewport: { width: 1920, height: 900 } })
-try { await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 }) } catch (error) {
-  console.log(`FATAL: page navigation failed: ${error.message}`)
-  await browser.close(); process.exit(2)
+let browser, page
+try {
+  browser = await chromium.launch({ channel: 'chrome' })
+  page = await browser.newPage({ viewport: { width: 1920, height: 900 } })
+  await page.addInitScript(lang => localStorage.setItem('ad_lang', lang), process.env.QA_LANG === 'en' ? 'en' : 'th')
+  await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
+} catch (error) {
+  console.log(`FATAL: browser/page setup failed: ${error.message}`)
+  await browser?.close(); process.exit(2)
 }
 // Wait for real data. This is not a nicety: with the placeholders in place
 // the verdict is an em-dash, the data zone is narrower than it will ever be

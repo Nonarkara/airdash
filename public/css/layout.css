@@ -2687,3 +2687,21 @@ header .hd-tools #place-search { width: 100%; min-width: 0; max-width: none; }
 
 /* Visible even on touch devices: this model is not a clinical index. */
 .danger-kind { display: block; letter-spacing: 0; font-size: 7px; line-height: 1.1; color: var(--ink-mid); white-space: nowrap; }
+
+/* Keep the visible model caveat beside a two-line score on small phones. */
+@media (max-width: 620px) {
+  header .hd-data #danger-hero, header #danger-hero {
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: 18px 11px;
+    column-gap: 5px; row-gap: 0;
+  }
+  #danger-hero .danger-label { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
+  #danger-hero .danger-num { grid-column: 2; grid-row: 1; font-size: 18px; }
+  #danger-hero .danger-band { grid-column: 2; grid-row: 2; font-size: 9px; }
+}
+
+/* Bound the data zone's intrinsic English text width at narrow desktops. */
+@media (min-width: 1101px) and (max-width: 1200px) {
+  header .hd-data { max-width: 440px; }
+}
