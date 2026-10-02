@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.66] — 2026-10-02 — honest outages and archive-gated pruning
+
+- Air Story no longer substitutes sample pollution, health, mortality, population or economic figures when `/api/science` fails. It shows unknown readings with a neutral band and retries automatically. Personal estimates wait for measured science data; an unavailable selected province cannot inherit national PM. Missing stagnation observations are excluded rather than counted as zero wind risk.
+- Hot-tier raw-data pruning now checks that the archive exists on the external device before deleting archived rows. A fresh receipt cannot authorize deletion while the drive is unavailable. Existing hourly aggregation and ordinary retention remain unchanged.
+- Regression checks cover the outage shell, missing provincial PM and preservation of all hot-tier rows when archive storage is unavailable. An optional browser gate exercises science failure and automatic recovery using live data.
+
+Offsite recovery and a second live backend remain unresolved infrastructure gaps.
+
 ## [2.4.65] — 2026-10-02 — fail-closed verification and visible score meaning
 
 - Audited MiniMax's `6bbd98a` gate fix. Missing Playwright and navigation failures now exit 2 as unmeasurable, and the data wait uses Playwright's actual timeout argument. Both numeric danger and a rendered verdict are required. An optional real-browser regression script verifies that placeholders and a missing dependency cannot print success.

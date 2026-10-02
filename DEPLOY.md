@@ -142,7 +142,9 @@ live failover.
 
 `/api/health` exposes `archive.storage.available`, `reason`, and `checked_at`.
 The sentinel probes at boot and every five minutes; a recent archive receipt
-does not suppress a missing-drive alarm. Availability means the archive file
+does not suppress a missing-drive alarm. Hot-tier raw-data pruning repeats this
+check before deleting rows and skips deletion when storage is unavailable; a
+receipt alone is insufficient. Availability means the archive file
 is present on a filesystem device distinct from the live DB, not that its contents have
 passed an integrity check. An unmounted directory on the internal disk is
 rejected, and nightly backup selection also checks device identity. The

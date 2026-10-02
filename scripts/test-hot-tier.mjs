@@ -36,7 +36,7 @@ const count = (db, where, ...a) => db.get(`SELECT COUNT(*) AS n FROM readings WH
 {
   const db = seed()
   const before = count(db, '1')
-  const r = await trimArchivedHot(db, { nowMs: NOW, receipt: null, hotDays: HOT, pauseMs: 0 })
+  const r = await trimArchivedHot(db, { archiveProbe: async()=>({available:true}), nowMs: NOW, receipt: null, hotDays: HOT, pauseMs: 0 })
   check('no receipt: nothing deleted', r.deleted === 0 && count(db, '1') === before)
 }
 
@@ -47,7 +47,7 @@ const count = (db, where, ...a) => db.get(`SELECT COUNT(*) AS n FROM readings WH
   const oldRain = count(db, "source='thaiwater_rain' AND obs_time < ?", hotCut)
   const air = count(db, "source='air4thai'")
   const recentRain = count(db, "source='thaiwater_rain' AND obs_time >= ?", hotCut)
-  const r = await trimArchivedHot(db, { nowMs: NOW, receipt: { readings_src_id: maxId }, hotDays: HOT, batch: 17, pauseMs: 0 })
+  const r = await trimArchivedHot(db, { archiveProbe: async()=>({available:true}), nowMs: NOW, receipt: { readings_src_id: maxId }, hotDays: HOT, batch: 17, pauseMs: 0 })
   check('archived old rain deleted', r.deleted === oldRain && count(db, "source='thaiwater_rain' AND obs_time < ?", hotCut) === 0, `${r.deleted} vs ${oldRain}`)
   check('recent rain kept', count(db, "source='thaiwater_rain' AND obs_time >= ?", hotCut) === recentRain)
   check('other sources untouched', count(db, "source='air4thai'") === air)
@@ -58,7 +58,7 @@ const count = (db, where, ...a) => db.get(`SELECT COUNT(*) AS n FROM readings WH
 {
   const db = seed()
   const half = Math.floor(db.get('SELECT MAX(id) AS m FROM readings').m / 4)
-  await trimArchivedHot(db, { nowMs: NOW, receipt: { readings_src_id: half }, hotDays: HOT, batch: 13, pauseMs: 0 })
+  await trimArchivedHot(db, { archiveProbe: async()=>({available:true}), nowMs: NOW, receipt: { readings_src_id: half }, hotDays: HOT, batch: 13, pauseMs: 0 })
   check('no row above the receipt was deleted', count(db, "source='thaiwater_rain' AND id > ? AND obs_time < ?", half, hotCut) > 0
     && count(db, "source='thaiwater_rain' AND id <= ? AND obs_time < ?", half, hotCut) === 0)
 }
@@ -66,7 +66,7 @@ const count = (db, where, ...a) => db.get(`SELECT COUNT(*) AS n FROM readings WH
 // 4. Receipt ahead of the live DB (restored DB) → refuse.
 {
   const db = seed()
-  const r = await trimArchivedHot(db, { nowMs: NOW, receipt: { readings_src_id: 10 ** 9 }, hotDays: HOT, pauseMs: 0 })
+  const r = await trimArchivedHot(db, { archiveProbe: async()=>({available:true}), nowMs: NOW, receipt: { readings_src_id: 10 ** 9 }, hotDays: HOT, pauseMs: 0 })
   check('receipt ahead of live ids: refused', r.deleted === 0 && r.skipped === 'receipt-ahead')
 }
 
@@ -82,10 +82,19 @@ const count = (db, where, ...a) => db.get(`SELECT COUNT(*) AS n FROM readings WH
 {
   const db = seed() // rain goes back 30 days; window 14 → 16 days of backlog
   const maxId = db.get('SELECT MAX(id) AS m FROM readings').m
-  const r = await trimArchivedHot(db, { nowMs: NOW, receipt: { readings_src_id: maxId }, hotDays: HOT, pauseMs: 0, maxBacklogDays: 2 })
+  const r = await trimArchivedHot(db, { archiveProbe: async()=>({available:true}), nowMs: NOW, receipt: { readings_src_id: maxId }, hotDays: HOT, pauseMs: 0, maxBacklogDays: 2 })
   check('live: deep backlog is refused (offline job)', r.deleted === 0)
-  const r2 = await trimArchivedHot(db, { nowMs: NOW, receipt: { readings_src_id: maxId }, hotDays: HOT, pauseMs: 0, maxBacklogDays: 20 })
+  const r2 = await trimArchivedHot(db, { archiveProbe: async()=>({available:true}), nowMs: NOW, receipt: { readings_src_id: maxId }, hotDays: HOT, pauseMs: 0, maxBacklogDays: 20 })
   check('live: shallow backlog is trimmed', r2.deleted > 0)
+}
+
+// A recent receipt cannot authorize pruning while its archive is unavailable.
+{
+  const db = seed(), before = db.get('SELECT COUNT(*) AS n FROM readings').n
+  const receipt = {readings_src_id:db.get('SELECT MAX(id) AS m FROM readings').m, written_at:new Date(NOW).toISOString()}
+  const r = await trimArchivedHot(db, {nowMs:NOW,receipt,hotDays:HOT,pauseMs:0,archiveProbe:async()=>({available:false,reason:'ENOENT'})})
+  check('missing archive refuses deletion despite a recent valid receipt', r.skipped === 'archive-unavailable' && r.deleted === 0)
+  check('missing archive leaves every source row intact', db.get('SELECT COUNT(*) AS n FROM readings').n === before)
 }
 
 // 6. Receipt file parsing.

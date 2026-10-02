@@ -16,6 +16,7 @@
 // Now: 5k-row batches through a TEMP id table (static SQL, nothing new
 // cached), a pause between batches so requests and ingest run, PASSIVE
 // checkpoints per batch and one TRUNCATE at the end.
+import { stat as fsStat } from 'node:fs/promises'
 import { CONFIG } from './config.js'
 import { log } from './util.js'
 import { statSync, readFileSync } from 'node:fs'
@@ -54,11 +55,31 @@ export function readArchiveReceipt(path = receiptPath()) {
   } catch { return null }
 }
 
+// Probe asynchronously: a stalled external drive must not block the API thread.
+export async function probeArchiveStorage({
+  volumePath = process.env.AIRDASH_ARCHIVE_VOLUME ?? '/Volumes/Data',
+  archivePath = readArchiveReceipt()?.archive_db ?? `${volumePath}/dash-archive/dash-archive.db`,
+  internalPath = CONFIG.dbPath, stat = fsStat, timeoutMs = 3000,
+} = {}) {
+  let timer
+  try {
+    const [volume, archive, internal] = await Promise.race([
+      Promise.all([stat(volumePath), stat(archivePath), stat(internalPath)]),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('probe-timeout')), timeoutMs) }),
+    ])
+    if (!volume.isDirectory() || volume.dev === internal.dev) return { available: false, reason: 'external-volume-not-mounted' }
+    if (!archive.isFile() || archive.dev !== volume.dev) return { available: false, reason: 'archive-not-on-external-volume' }
+    return { available: true, reason: 'external-archive-present' }
+  } catch (error) {
+    return { available: false, reason: error.code ?? error.message }
+  } finally { clearTimeout(timer) }
+}
+
 /** Delete archived rows of the hot-tier sources older than their window.
  *  Keyset-paginated over idx_readings_time so each old row is visited once. */
 export async function trimArchivedHot(db, {
   nowMs = Date.now(), receipt = readArchiveReceipt(), hotDays = CONFIG.retention.hotDays,
-  batch = HOT_BATCH, pauseMs = PAUSE_MS, maxBacklogDays = null,
+  batch = HOT_BATCH, pauseMs = PAUSE_MS, maxBacklogDays = null, archiveProbe = probeArchiveStorage,
 } = {}) {
   const sources = Object.entries(hotDays ?? {})
   if (!sources.length) return { deleted: 0, batches: 0, slowestBatchMs: 0 }
@@ -71,6 +92,11 @@ export async function trimArchivedHot(db, {
     // The live DB was replaced/restored: its ids no longer match the archive's.
     log('warn', 'hot-tier trim skipped: receipt is ahead of the live DB (ids do not line up)', { receipt: receipt.readings_src_id, liveMax })
     return { deleted: 0, batches: 0, slowestBatchMs: 0, skipped: 'receipt-ahead' }
+  }
+  const storage = await archiveProbe({ archivePath: receipt.archive_db })
+  if (!storage.available) {
+    log('warn', 'hot-tier trim skipped: archive unavailable — receipt alone cannot authorize deletion', storage)
+    return { deleted: 0, batches: 0, slowestBatchMs: 0, skipped: 'archive-unavailable' }
   }
   let deleted = 0, batches = 0, slowestBatchMs = 0
   db.exec('CREATE TEMP TABLE IF NOT EXISTS retention_ids (id INTEGER PRIMARY KEY)')

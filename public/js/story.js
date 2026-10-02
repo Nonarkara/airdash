@@ -2,14 +2,14 @@
 // AIR STORY — the new front door. A scroll narrative about TODAY's air for
 // smart kids and curious adults. Not a dashboard: one question per chapter,
 // every big number earns a "why should I care" line, and every figure traces
-// back to /api/science (with an honestly-labelled fallback so the page never
-// renders empty while the science API is still deploying).
+// back to /api/science. Unavailable readings stay unknown while the page
+// retries; reference formulas remain available for explanation.
 // ────────────────────────────────────────────────────────────────────────────
-import { store, on, setLang, emit } from './state.js?v=2.4.65'
-import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.65'
-import { getJson } from './cache.js?v=2.4.65'
-import { fmtNum, escapeHtml } from './fmt.js?v=2.4.65'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.65'
+import { store, on, setLang, emit } from './state.js?v=2.4.66'
+import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.66'
+import { getJson } from './cache.js?v=2.4.66'
+import { fmtNum, escapeHtml } from './fmt.js?v=2.4.66'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.66'
 
 const $ = (sel) => document.querySelector(sel)
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -17,29 +17,20 @@ const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 // Breathing-circle tint per Thai AQI 2023 level — CSS vars so dark mode inverts.
 const BREATH_VAR = { 1: 'var(--aqi-good)', 2: 'var(--aqi-moderate)', 3: 'var(--aqi-watch)', 4: 'var(--aqi-unhealthy)', 5: 'var(--aqi-hazardous)' }
 
-// ── Embedded fallback sample ─────────────────────────────────────────────────
-// Used ONLY when /api/science cannot be fetched (still deploying / offline).
-// Clearly flagged: the page shows an "offline sample" banner whenever this
-// object is what's on screen. Numbers follow the same formulas the server
-// uses (Berkeley Earth 22 µg/m³·day ≈ 1 cigarette, ~11 min of life per
-// cigarette, Koschmieder-style visibility estimate).
+// Offline shell: keep reference formulas/profiles, never invent observations.
 const FALLBACK_SCIENCE = {
   __fallback: true,
   generated_at: null,
   national: {
-    pm25: 24, population: 71_800_000, band: 'watch',
-    cigs_per_day: 24 / 22, life_minutes_per_day: (24 / 22) * 11,
-    excess_mortality_pct: 4.8, aqli_years_lost: 1.8,
-    attributable_deaths_per_day: 88, daily_cost_million_thb: 350,
-    haze_tax_thb_per_person: 4.9, visibility_km: 250 / 24,
-    air_breathed_m3_per_day: 11,
-    o3_crop_stress: null, // honest null — ozone stations are sparse
+    pm25: null, population: null, band: 'unknown',
+    cigs_per_day: null, life_minutes_per_day: null,
+    excess_mortality_pct: null, aqli_years_lost: null,
+    attributable_deaths_per_day: null, daily_cost_million_thb: null,
+    haze_tax_thb_per_person: null, visibility_km: null,
+    air_breathed_m3_per_day: 11, // reference ventilation assumption, not a reading
+    o3_crop_stress: null,
   },
-  provinces: [
-    { code: '10', name_th: 'กรุงเทพมหานคร', name_en: 'Bangkok', population: 10_500_000, pm25: 24, band: 'watch', cigs_per_day: 24 / 22, life_minutes_per_day: (24 / 22) * 11, excess_mortality_pct: 4.8, aqli_years_lost: 1.8, visibility_km: 250 / 24, play_budget_min: 120, o3_aot40_week: null },
-    { code: '50', name_th: 'เชียงใหม่', name_en: 'Chiang Mai', population: 1_800_000, pm25: 31, band: 'watch', cigs_per_day: 31 / 22, life_minutes_per_day: (31 / 22) * 11, excess_mortality_pct: 6.5, aqli_years_lost: 2.2, visibility_km: 250 / 31, play_budget_min: 60, o3_aot40_week: null },
-    { code: '90', name_th: 'สงขลา', name_en: 'Songkhla', population: 1_700_000, pm25: 16, band: 'normal', cigs_per_day: 16 / 22, life_minutes_per_day: (16 / 22) * 11, excess_mortality_pct: 2.4, aqli_years_lost: 0.9, visibility_km: 250 / 16, play_budget_min: 240, o3_aot40_week: null },
-  ],
+  provinces: [],
   profiles: {
     kid:      { id: 'kid', label_th: 'เด็ก', label_en: 'Kid', blurb_th: 'ปอดยังโตไม่เต็มที่ และหายใจเร็วกว่าผู้ใหญ่ — ได้ฝุ่นมากกว่าต่อน้ำหนักตัว', blurb_en: 'Growing lungs breathe faster than adults — more dust per kilo of body.', ventilation: { rest: 0.35, moderate: 1.1, heavy: 1.9 }, guidance: [ { maxPm25: 15, th: 'ออกไปวิ่งเล่นได้เต็มที่เลย!', en: 'Go run around outside — full speed!' }, { maxPm25: 25, th: 'เล่นกลางแจ้งได้ แต่ถ้าไอก็กลับเข้าบ้านนะ', en: 'Outdoor play is fine — head inside if you start coughing.' }, { maxPm25: 37.5, th: 'เล่นในบ้านหรือในห้างดีกว่า เก็บตัวไว้ข้างใน', en: 'Better to play indoors today.' }, { maxPm25: 1e9, th: 'อยู่ในบ้าน ปิดหน้าต่าง ถ้าต้องออกไปให้ใส่หน้ากาก N95', en: 'Stay indoors, windows closed — N95 if you must go out.' } ] },
     teen:     { id: 'teen', label_th: 'วัยรุ่น', label_en: 'Teen', blurb_th: 'ร่างกายแข็งแรง แต่การเล่นกีฬาหนัก ๆ กลางฝุ่นดูดฝุ่นเข้าลึกกว่าที่คิด', blurb_en: 'Strong body — but hard sport in haze pulls dust deep into the lungs.', ventilation: { rest: 0.5, moderate: 1.6, heavy: 2.8 }, guidance: [ { maxPm25: 25, th: 'ออกกำลังกายกลางแจ้งได้ปกติ', en: 'Outdoor exercise is fine.' }, { maxPm25: 37.5, th: 'ลดความหนักลงหน่อย อย่าวิ่งมาราธอนกลางฝุ่น', en: 'Ease off — no hard runs in the haze.' }, { maxPm25: 1e9, th: 'ย้ายการออกกำลังกายเข้าบ้าน', en: 'Move your workout indoors.' } ] },
@@ -62,7 +53,7 @@ const FALLBACK_SCIENCE = {
 
 // ── Page state ───────────────────────────────────────────────────────────────
 let science = null       // /api/science payload (or FALLBACK_SCIENCE)
-let offline = false      // true when the fallback sample is on screen
+let offline = false      // true when no science observations are available
 let snapshot = null      // /api/snapshot payload (may stay null)
 let province = localStorage.getItem('ad_story_province') ?? ''   // '' = national
 let persona = localStorage.getItem('ad_story_persona') ?? 'kid'  // kid first — parents look for their kids
@@ -76,8 +67,8 @@ const PERSONA_FALLBACK_LABEL = {
 
 // ── Data helpers ─────────────────────────────────────────────────────────────
 function row() {
-  if (province && science?.provinces?.length) {
-    return science.provinces.find((p) => p.code === province) ?? null
+  if (province) {
+    return science?.provinces?.find((p) => p.code === province) ?? null
   }
   return science?.national
 }
@@ -88,11 +79,12 @@ function currentPm25() {
 }
 
 function currentLevel() {
-  return pm25Level(currentPm25()) ?? 3
+  return pm25Level(currentPm25())
 }
 
 /** Thai AQI level → the bilingual band name from i18n.js (single source). */
 function bandLabel(level) {
+  if (level == null) return tr('ยังไม่มีค่าฝุ่นสด', 'No current PM reading')
   const b = LEVEL_NAME[level] ?? LEVEL_NAME[3]
   return tr(b.th, b.en)
 }
@@ -120,7 +112,7 @@ function renderHero() {
   const lifeMin = r.life_minutes_per_day ?? (cigs != null ? cigs * 11 : null)
 
   // Breathing tint follows the live band.
-  const tint = BREATH_VAR[level] ?? BREATH_VAR[3]
+  const tint = BREATH_VAR[level] ?? 'var(--ink-mid)'
   document.documentElement.style.setProperty('--breath-now', tint)
   const breath = $('#breath')
   if (breath) breath.style.setProperty('--breath', tint)
@@ -233,11 +225,15 @@ async function renderPersonal() {
 
   let d = null
   try {
-    const q = new URLSearchParams({ profile: persona, outdoorMin: '60', activity: 'moderate' })
-    if (province) q.set('province', province)
-    const pm = currentPm25()
-    if (pm != null) q.set('pm25', String(pm))
-    d = await getJson(`/api/science/personal?${q.toString()}`, 30_000)
+    if (offline) {
+      d = fallbackPersonal()
+    } else {
+      const q = new URLSearchParams({ profile: persona, outdoorMin: '60', activity: 'moderate' })
+      if (province) q.set('province', province)
+      const pm = currentPm25()
+      if (pm != null) q.set('pm25', String(pm))
+      d = await getJson(`/api/science/personal?${q.toString()}`, 30_000)
+    }
   } catch {
     d = fallbackPersonal()
   }
@@ -362,8 +358,9 @@ function renderSky() {
   const sp = matchSnapshotProvince()
   const nat = snapshot?.risk?.national ?? {}
   const provs = snapshot?.risk?.provinces ?? []
-  const avgStag = provs.length
-    ? Math.round(provs.reduce((s, p) => s + (p.stagnation_comp ?? 0), 0) / provs.length)
+  const stagnation = provs.map(p => p.stagnation_comp).filter(Number.isFinite)
+  const avgStag = stagnation.length
+    ? Math.round(stagnation.reduce((sum, value) => sum + value, 0) / stagnation.length)
     : null
 
   const trap = $('#sky-trap')
@@ -507,7 +504,7 @@ function renderReceipts() {
   }
   host.innerHTML = formulas.map((f) => {
     // constants arrives as a { key: value } object from the live API, but
-    // the fallback sample uses plain strings — render either honestly.
+    // the offline reference formulas use plain strings — render either honestly.
     const consts = f.constants == null ? ''
       : typeof f.constants === 'string' ? f.constants
       // A constant's value can itself be an object — the AOT40 receipt
@@ -632,8 +629,8 @@ function renderOfflineBanner() {
   host.hidden = !offline
   if (offline) {
     host.textContent = tr(
-      '⚠ เซิร์ฟเวอร์วิทยาศาสตร์กำลังติดตั้ง — ตัวเลขด้านล่างเป็น “ข้อมูลตัวอย่าง” ที่คำนวณด้วยสูตรจริง ไม่ใช่ค่าสด',
-      '⚠ The science server is still deploying — the numbers below are a clearly-marked SAMPLE computed with the real formulas, not live readings.')
+      '⚠ ข้อมูลวิทยาศาสตร์ยังไม่พร้อม — แสดงขีดแทนค่าฝุ่นและค่าประมาณที่ยังไม่มีข้อมูล ระบบจะลองเชื่อมต่ออีกครั้ง',
+      '⚠ Science data is unavailable — pollution readings and dependent estimates are shown as dashes. The page will retry automatically.')
   }
 }
 

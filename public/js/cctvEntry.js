@@ -23,9 +23,9 @@
 // "nothing found" is indistinguishable from one that is not running.
 // If the fetch fails the readout stays EMPTY: a missing measurement is
 // missing, not zero.
-import { openHazeEyes } from './layers/cctvWall.js?v=2.4.65'
-import { tr } from './i18n.js?v=2.4.65'
-import { on } from './state.js?v=2.4.65'
+import { openHazeEyes } from './layers/cctvWall.js?v=2.4.66'
+import { tr } from './i18n.js?v=2.4.66'
+import { on } from './state.js?v=2.4.66'
 
 const READOUT_MS = 5 * 60_000
 

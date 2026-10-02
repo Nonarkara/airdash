@@ -19,10 +19,10 @@
 // once per 6 h per problem. Neither restarts or kills anything.
 import { execFile } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { stat as fsStat } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { CONFIG } from './config.js'
-import { readArchiveReceipt } from './retention.js'
+import { readArchiveReceipt, probeArchiveStorage } from './retention.js'
+export { probeArchiveStorage } from './retention.js'
 import { log } from './util.js'
 
 const HEARTBEAT = process.env.AIRDASH_WATCHDOG_HEARTBEAT
@@ -68,26 +68,6 @@ export function receiptAgeH(receipt, nowMs = Date.now()) {
 }
 
 let storageStatus = { available: null, checked_at: null, reason: 'not-checked' }
-
-// Probe asynchronously: a stalled external drive must not block the API thread.
-export async function probeArchiveStorage({
-  volumePath = process.env.AIRDASH_ARCHIVE_VOLUME ?? '/Volumes/Data',
-  archivePath = readArchiveReceipt()?.archive_db ?? `${volumePath}/dash-archive/dash-archive.db`,
-  internalPath = CONFIG.dbPath, stat = fsStat, timeoutMs = 3000,
-} = {}) {
-  let timer
-  try {
-    const [volume, archive, internal] = await Promise.race([
-      Promise.all([stat(volumePath), stat(archivePath), stat(internalPath)]),
-      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('probe-timeout')), timeoutMs) }),
-    ])
-    if (!volume.isDirectory() || volume.dev === internal.dev) return { available: false, reason: 'external-volume-not-mounted' }
-    if (!archive.isFile() || archive.dev !== volume.dev) return { available: false, reason: 'archive-not-on-external-volume' }
-    return { available: true, reason: 'external-archive-present' }
-  } catch (error) {
-    return { available: false, reason: error.code ?? error.message }
-  } finally { clearTimeout(timer) }
-}
 
 export function archiveStatus() {
   const r = readArchiveReceipt()
