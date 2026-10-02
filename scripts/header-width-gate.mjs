@@ -51,18 +51,33 @@ try {
 const browser = await chromium.launch({ channel: 'chrome' })
 const page = await browser.newPage({ viewport: { width: 1920, height: 900 } })
 await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
-// Wait for real data: with the placeholders in place the verdict is an
-// em-dash and the bar is narrower than it will ever be in use, so a sweep
-// run against a skeleton proves nothing about the real layout.
-await page.waitForFunction(() => {
+// Wait for real data. This is not a nicety: with the placeholders in place
+// the verdict is an em-dash, the data zone is narrower than it will ever be
+// in use, and every width below is measured against a bar that does not
+// exist in production. A sweep on a skeleton is a green light on nothing.
+//
+// And if the wait times out this gate FAILS rather than continuing. An
+// earlier version logged a warning and carried on to print "ALL WIDTHS
+// OK" — which is the worst possible outcome, because the reassuring
+// sentence is exactly what a reader would quote. It happened: a run
+// reported `danger-num=–` and still passed all 19 widths, and only the
+// value printed on the summary line revealed it.
+const RENDERED = await page.waitForFunction(() => {
   const el = document.getElementById('danger-num')
   return el && /^\d/.test(el.textContent)
-}, { timeout: 45000 }).catch(() => console.log('WARN: danger-num never rendered — widths are provisional'))
+}, { timeout: 45000 }).then(() => true).catch(() => false)
 const danger = await page.evaluate(() => document.getElementById('danger-num')?.textContent)
+if (!RENDERED) {
+  console.log(`FATAL: danger-num never rendered (got ${JSON.stringify(danger)}).`)
+  console.log('       The bar is narrower than production, so every width below')
+  console.log('       would be measured against a skeleton. Refusing to certify it.')
+  await browser.close()
+  process.exit(2)
+}
+console.log(`url=${URL}  danger-num=${danger}  (real data)\n`)
 // Production fonts can finish after the data. Measure the final typography,
 // since a fallback font can hide a wrap at the narrowest desktop width.
 await page.evaluate(() => document.fonts.ready)
-console.log(`url=${URL}  danger-num=${danger}\n`)
 
 let problems = 0
 for (const w of WIDTHS) {
