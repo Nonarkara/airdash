@@ -2703,5 +2703,5 @@ header .hd-tools #place-search { width: 100%; min-width: 0; max-width: none; }
 
 /* Bound the data zone's intrinsic English text width at narrow desktops. */
 @media (min-width: 1101px) and (max-width: 1200px) {
-  header .hd-data { max-width: 440px; }
+  header .hd-data { max-width: 475px; }
 }
