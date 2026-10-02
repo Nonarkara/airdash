@@ -3,11 +3,11 @@
 // observed ground PM2.5, discounted by expected rain washout per day.
 // Pollutants/ventilation held constant. Honest framing: heuristic
 // indicator, not a model.
-import { on, store } from '../state.js?v=2.4.56'
-import { tr, BAND } from '../i18n.js?v=2.4.56'
-import { fmtNum, el } from '../fmt.js?v=2.4.56'
-import { getJson } from '../cache.js?v=2.4.56'
-import { flyToProvince } from '../map.js?v=2.4.56'
+import { on, store } from '../state.js?v=2.4.57'
+import { tr, BAND } from '../i18n.js?v=2.4.57'
+import { fmtNum, el } from '../fmt.js?v=2.4.57'
+import { getJson } from '../cache.js?v=2.4.57'
+import { flyToProvince } from '../map.js?v=2.4.57'
 
 const BAND_LABEL = {
   normal:   { th: 'ปกติ',     en: 'Normal'   },
@@ -26,7 +26,12 @@ export function initForecast() {
 }
 
 async function refresh(box) {
-  const data = await getJson('/api/forecast', 90_000)
+  let data
+  try { data = await getJson('/api/forecast', 90_000) } catch {
+    box.replaceChildren(el('div', { class: 'forecast-empty' },
+      tr('ยังโหลดพยากรณ์ไม่ได้ — ตรวจสอบการเชื่อมต่อ', 'Forecast unavailable — check your connection')))
+    return
+  }
   if (!data) {
     box.replaceChildren(el('div', { class: 'forecast-empty' },
       tr('กำลังโหลดพยากรณ์…', 'Loading forecast…')))

@@ -8,15 +8,16 @@
 // /api/whatif payload already contains every province's re-projected
 // score; the search just filters the existing list client-side, so no
 // extra round trip and no server change.
-import { on, store } from '../state.js?v=2.4.56'
-import { tr, BAND } from '../i18n.js?v=2.4.56'
-import { fmtNum, el } from '../fmt.js?v=2.4.56'
-import { getJson } from '../cache.js?v=2.4.56'
+import { on, store } from '../state.js?v=2.4.57'
+import { tr, BAND } from '../i18n.js?v=2.4.57'
+import { fmtNum, el } from '../fmt.js?v=2.4.57'
+import { getJson } from '../cache.js?v=2.4.57'
 
 let currentRain = 20
 let currentData = null
 let currentQuery = ''
 let lastDataRain = null
+let requestFailed = false
 
 export function initWhatIf() {
   const box = document.getElementById('whatif')
@@ -24,17 +25,24 @@ export function initWhatIf() {
   let debounce = null
 
   function repaint() {
-    box.replaceChildren(...render(currentRain, currentData, currentQuery))
+    box.replaceChildren(...render(currentRain, lastDataRain === currentRain ? currentData : null, currentQuery))
   }
   function refetch() {
     if (debounce) clearTimeout(debounce)
     debounce = setTimeout(async () => {
-      const data = await getJson(`/api/whatif?rain=${currentRain}`, 15_000)
-      if (data) {
-        currentData = data
-        lastDataRain = currentRain
-        repaint()
+      const rain = currentRain
+      try {
+        const data = await getJson(`/api/whatif?rain=${rain}`, 15_000)
+        if (rain !== currentRain) return // A newer slider value owns the view.
+        requestFailed = false
+        if (data) { currentData = data; lastDataRain = rain }
+      } catch {
+        if (rain !== currentRain) return
+        currentData = null
+        lastDataRain = null
+        requestFailed = true
       }
+      repaint()
     }, 150)
   }
   // Slider input drives both repaint (instant) and refetch (debounced).
@@ -145,7 +153,7 @@ function render(rain, data, query) {
     foot = whatifFoot()
   } else {
     summary = el('div', { class: 'whatif-summary' })
-    relievers = [el('div', { class: 'whatif-empty' }, tr('กำลังคำนวณ…', 'computing…'))]
+    relievers = [el('div', { class: 'whatif-empty' }, requestFailed ? tr('ยังคำนวณไม่ได้ — ตรวจสอบการเชื่อมต่อ', 'Calculation unavailable — check your connection') : tr('กำลังคำนวณ…', 'computing…'))]
     foot = null
   }
   return [head, slider, search, summary, ...relievers, foot].filter(Boolean)

@@ -3,12 +3,12 @@
 // forecasts, sensor gaps. Each card has a severity colour, a
 // single-sentence title in both languages, and a body with the supporting
 // numbers. Clicking flies the map to the relevant province.
-import { on, store } from '../state.js?v=2.4.56'
-import { tr, BAND } from '../i18n.js?v=2.4.56'
-import { el, fmtNum } from '../fmt.js?v=2.4.56'
-import { getJson } from '../cache.js?v=2.4.56'
-import { flyToProvince } from '../map.js?v=2.4.56'
-import { refreshSensorHealth } from '../sensorHealth.js?v=2.4.56'
+import { on, store } from '../state.js?v=2.4.57'
+import { tr, BAND } from '../i18n.js?v=2.4.57'
+import { el, fmtNum } from '../fmt.js?v=2.4.57'
+import { getJson } from '../cache.js?v=2.4.57'
+import { flyToProvince } from '../map.js?v=2.4.57'
+import { refreshSensorHealth } from '../sensorHealth.js?v=2.4.57'
 
 const TYPE_LABEL = {
   compound:            { th: 'เหตุการณ์ซ้อน',        en: 'COMPOUND EVENT'      },
@@ -49,7 +49,12 @@ export function initInsights() {
 }
 
 async function refresh(box) {
-  const data = await getJson('/api/insights', 30_000)
+  let data
+  try { data = await getJson('/api/insights', 30_000) } catch {
+    box.replaceChildren(el('div', { class: 'ins-empty' },
+      tr('ยังโหลดสัญญาณไม่ได้ — ตรวจสอบการเชื่อมต่อ', 'Insights unavailable — check your connection')))
+    return
+  }
   if (!data) {
     box.replaceChildren(el('div', { class: 'ins-empty' },
       tr('กำลังโหลดสัญญาณ…', 'Loading insights…')))

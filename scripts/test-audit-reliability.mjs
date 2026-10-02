@@ -249,4 +249,23 @@ await test('a timed-out ingestion cannot clear its replacement timer or overwrit
   assert.equal(runs[1].rows_seen, 1)
 })
 
+await test('forecast, insights, and what-if render unavailable when their initial network request fails', async () => {
+  for (const name of ['forecast', 'insights', 'whatif']) {
+    let timer
+    const box = { children: [], replaceChildren(...nodes) { this.children = nodes }, addEventListener() {} }
+    const context = vm.createContext({
+      document: { getElementById: () => box }, on() {}, store: {}, BAND: {},
+      tr: (_, en) => en, fmtNum: String,
+      el: (tag, attrs, ...children) => ({ tag, attrs, children }),
+      getJson: async () => { throw Error('offline') },
+      refreshSensorHealth: async () => {},
+      setTimeout: (fn) => { timer = fn; return 1 }, clearTimeout() {},
+    })
+    const source = readFileSync(`public/js/panels/${name}.js`, 'utf8').replace(/^import .*$/gm, '').replace(/export /g, '')
+    vm.runInContext(source + (name === 'whatif' ? '\nthis.init = initWhatIf' : '\nthis.refreshPanel = refresh'), context)
+    if (name === 'whatif') { context.init(); await timer() } else await context.refreshPanel(box)
+    assert.match(JSON.stringify(box.children), /unavailable/, name)
+  }
+})
+
 console.log(`\n${passed} passed, 0 failed`)
