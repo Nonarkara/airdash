@@ -268,4 +268,28 @@ await test('forecast, insights, and what-if render unavailable when their initia
   }
 })
 
+await test('an older what-if response cannot overwrite a newer slider request', async () => {
+  let input, timer
+  const requests = []
+  const box = { replaceChildren() {}, addEventListener(_, fn) { input = fn } }
+  const context = vm.createContext({
+    document: { getElementById: () => box }, on() {}, store: {}, BAND: {},
+    tr: (_, en) => en, fmtNum: String, el: (tag, attrs, ...children) => ({ tag, attrs, children }),
+    getJson: (url) => new Promise((resolve) => requests.push({ url, resolve })),
+    setTimeout: (fn) => { timer = fn; return 1 }, clearTimeout() {},
+  })
+  vm.runInContext(readFileSync('public/js/panels/whatif.js', 'utf8')
+    .replace(/^import .*$/gm, '').replace(/export /g, '') + '\nthis.init = initWhatIf', context)
+  context.init()
+  const older = timer()
+  input({ target: { id: 'whatif-rain', value: '50' } })
+  const newer = timer()
+  const result = { summary: { high: 0, elevated: 0, watch: 0, normal: 0 }, relievers: [] }
+  requests[1].resolve(result)
+  await newer
+  requests[0].resolve(result)
+  await older
+  assert.equal(vm.runInContext('lastDataRain', context), 50)
+})
+
 console.log(`\n${passed} passed, 0 failed`)
