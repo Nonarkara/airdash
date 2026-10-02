@@ -143,6 +143,7 @@ export async function onRequest(context) {
     return mirrorReport(context.cache ?? globalThis.caches?.default ?? null, url, request)
   }
   const streaming = isStreaming(url.pathname, request.method)
+  const download = request.method === 'GET' && /^\/api\/(?:exports\/airdash-.*\.tar\.gz|export\/(?:full|daily)|sensors\/dead\.csv)$/.test(url.pathname)
   const snapshot = request.method === 'GET' && url.pathname === '/api/snapshot'
   const cache = context.cache ?? globalThis.caches?.default ?? null
   const mirrorable = Boolean(cache && request.method === 'GET' && MIRROR_PATHS.has(url.pathname))
@@ -194,9 +195,18 @@ export async function onRequest(context) {
     for (const backend of backends) {
       const target = backend + url.pathname + url.search
       try {
-        const res = await fetch(new Request(target, {
-          method: request.method, headers, body, redirect: 'manual',
-        }), { signal: AbortSignal.timeout(timeoutMs) })
+        // Downloads have a bounded wait for headers, then stream without a
+        // JSON deadline aborting a large archive halfway through the body.
+        const controller = download ? new AbortController() : null
+        const timer = download ? setTimeout(() => controller.abort(), timeoutMs) : null
+        let res
+        try {
+          res = await fetch(new Request(target, {
+            method: request.method, headers, body, redirect: 'manual',
+          }), { signal: controller?.signal ?? AbortSignal.timeout(timeoutMs) })
+        } finally {
+          if (timer !== null) clearTimeout(timer)
+        }
         upstream = res
         if (!isBackendDown(res)) break
         lastErr = new Error(`HTTP ${res.status} from ${backend}`)

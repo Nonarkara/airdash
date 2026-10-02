@@ -26,7 +26,7 @@
 
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { mkdirSync, rmSync, existsSync, readdirSync, statSync, createWriteStream, writeFileSync, readFileSync } from 'node:fs'
+import { mkdirSync, rmSync, existsSync, readdirSync, statSync, createWriteStream, writeFileSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import { log } from './util.js'
 import { CONFIG } from './config.js'
@@ -102,45 +102,24 @@ export const EXPORT_TABLES = TABLES
  *  in via stdin rather than passing them on the command line, which
  *  is the canonical way. */
 async function dumpTableToCSVShell(tableName, filePath) {
-  // Use stdin to feed the dot commands + the SELECT. Newline-separated.
-  const stdin = `.headers on\n.mode csv\nSELECT * FROM ${tableName};\n`
-  try {
-    const { spawn } = await import('node:child_process')
-    await new Promise((resolve, reject) => {
-      const proc = spawn('sqlite3', [CONFIG.dbPath], { stdio: ['pipe', 'pipe', 'pipe'] })
-      const outChunks = []
-      let stderr = ''
-      proc.stdout.on('data', (b) => outChunks.push(b))
-      proc.stderr.on('data', (b) => { stderr += b.toString() })
-      proc.on('error', reject)
-      proc.on('close', (code) => {
-        if (code !== 0) {
-          reject(new Error(`sqlite3 exited ${code}: ${stderr.trim()}`))
-          return
-        }
-        // Concatenate chunks and write to file. For 4.6M rows this is
-        // ~370MB — bounded by maxBuffer at the OS level (default 200MB
-        // on some systems, but Node uses 1MB by default for spawn
-        // stdout buffering which is fine since we accumulate in
-        // outChunks and write once at the end).
-        writeFileSync(filePath, Buffer.concat(outChunks))
-        resolve()
-      })
-      proc.stdin.write(stdin)
-      proc.stdin.end()
+  // sqlite3 writes CSV directly to disk. Count inside the same read transaction,
+  // so quoted newlines and concurrent ingest cannot distort row counts.
+  const stdin = `.bail on\nBEGIN;\n.headers on\n.mode csv\n.once ${JSON.stringify(filePath)}\nSELECT * FROM ${tableName};\n.headers off\n.mode list\nSELECT COUNT(*) FROM ${tableName};\nCOMMIT;\n`
+  const { spawn } = await import('node:child_process')
+  return new Promise((resolve, reject) => {
+    const proc = spawn('sqlite3', [CONFIG.dbPath], { stdio: ['pipe', 'pipe', 'pipe'] })
+    let count = '', stderr = ''
+    proc.stdout.on('data', (b) => { count += b.toString() })
+    proc.stderr.on('data', (b) => { stderr += b.toString() })
+    proc.on('error', reject)
+    proc.stdin.on('error', reject)
+    proc.on('close', (code) => {
+      if (code !== 0 || !/^\d+$/.test(count.trim())) {
+        reject(new Error(`sqlite3 export ${tableName} failed: ${stderr.trim() || count.trim()}`))
+      } else resolve(Number(count.trim()))
     })
-    // Count lines (subtract 1 for the header) so the meta is accurate.
-    const buf = readFileSync(filePath, 'utf8')
-    const lines = buf.split('\n').filter(Boolean).length - 1
-    return Math.max(0, lines)
-  } catch (e) {
-    // Missing sqlite3 binary or table doesn't exist yet — fall back
-    // to an empty file so the archive still has the entry, and return
-    // 0 rows. The error is logged but doesn't abort the whole build.
-    log('warn', 'shell dump failed, falling back to empty file', { table: tableName, error: String(e?.message ?? e) })
-    if (!existsSync(filePath)) writeFileSync(filePath, '')
-    return 0
-  }
+    proc.stdin.end(stdin)
+  })
 }
 
 /** CSV escape: wrap in quotes if the field contains comma, quote, or
@@ -159,8 +138,9 @@ function csvField(v) {
  *  process. Streaming with keyset pagination, same logic as the
  *  shell path. */
 function dumpTableToCSVNode(db, tableName, filePath) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const out = createWriteStream(filePath, { encoding: 'utf8' })
+    out.on('error', reject)
     const CHUNK = 10_000
     let columns = null
     let rowCount = 0
@@ -217,8 +197,8 @@ function dumpTableToCSVNode(db, tableName, filePath) {
         if (rows.length < CHUNK) out.end(() => resolve(rowCount))
         else setImmediate(pump)
       } catch (e) {
-        if (!existsSync(filePath)) writeFileSync(filePath, '')
-        out.end(() => resolve(0))
+        out.destroy()
+        reject(e)
       }
     }
     pump()
@@ -251,7 +231,7 @@ function buildMeta({ rowCounts, startedAt, riskSummary }) {
 
 const README = `# AirDash weekly data export
 
-This archive is a full snapshot of the AirDash SQLite database generated
+This archive contains the public observational tables from AirDash generated
 on the date in the filename. One CSV per table, plus a sidecar JSON of
 the in-memory risk snapshot and a meta.json with row counts and freshness.
 
@@ -327,11 +307,13 @@ export async function buildWeeklyExport({ db, riskEngine, startedAt }) {
   }
   buildState = { running: true, started_at: new Date().toISOString(), finished_at: null, result: null, error: null }
 
+  let tmpDir, pendingFile
   try {
     mkdirSync(EXPORT_DIR, { recursive: true })
     const date = new Date().toISOString().slice(0, 10)
-    const tmpDir = join(EXPORT_DIR, `tmp-${date}-${process.pid}`)
+    tmpDir = join(EXPORT_DIR, `tmp-${date}-${process.pid}`)
     const outFile = join(EXPORT_DIR, `airdash-${date}.tar.gz`)
+    pendingFile = `${outFile}.pending`
 
     rmSync(tmpDir, { recursive: true, force: true })
     mkdirSync(tmpDir, { recursive: true })
@@ -359,12 +341,16 @@ export async function buildWeeklyExport({ db, riskEngine, startedAt }) {
 
     // Tar + gzip (single command, system tar; no npm dep)
     try {
-      await execFileAsync('tar', ['-czf', outFile, '-C', tmpDir, '.'])
+      await execFileAsync('tar', ['-czf', pendingFile, '-C', tmpDir, '.'])
     } catch (e) {
+      rmSync(pendingFile, { force: true })
       log('error', 'weekly export tar failed', { error: String(e?.message ?? e) })
       rmSync(tmpDir, { recursive: true, force: true })
       throw e
     }
+
+    // Publish only after compression completes; readers keep the previous archive.
+    renameSync(pendingFile, outFile)
 
     // Clean up temp
     rmSync(tmpDir, { recursive: true, force: true })
@@ -378,6 +364,8 @@ export async function buildWeeklyExport({ db, riskEngine, startedAt }) {
     log('info', 'weekly export built', { file: outFile, size_mb: +(stat.size / 1024 / 1024).toFixed(1), rowCounts })
     return result
   } catch (e) {
+    if (tmpDir) rmSync(tmpDir, { recursive: true, force: true })
+    if (pendingFile) rmSync(pendingFile, { force: true })
     buildState = { running: false, started_at: buildState.started_at, finished_at: new Date().toISOString(), result: null, error: String(e?.message ?? e) }
     throw e
   }

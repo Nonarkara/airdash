@@ -203,6 +203,20 @@ try {
     assert.ok(cancelled)
     assert.ok(pulls <= 4, 'upload must stop near the limit')
   })
+  await test('archive download clears its header deadline before streaming the body', async () => {
+    const realSetTimeout = globalThis.setTimeout, realClearTimeout = globalThis.clearTimeout
+    let timer, cleared = false, signal
+    try {
+      globalThis.setTimeout = (fn) => { timer = fn; return 42 }
+      globalThis.clearTimeout = (id) => { assert.equal(id, 42); cleared = true }
+      globalThis.fetch = async (_req, options) => { signal = options.signal; return new Response('archive', {headers:{'x-service':'airdash'}}) }
+      const response = await onRequest({request:new Request('https://air.test/api/exports/airdash-2026-10-02.tar.gz'), env:{}})
+      assert.equal(cleared, true)
+      assert.equal(signal.aborted, false)
+      assert.equal(await response.text(), 'archive')
+      assert.equal(typeof timer, 'function')
+    } finally { globalThis.setTimeout = realSetTimeout; globalThis.clearTimeout = realClearTimeout }
+  })
   await test('proxy write failure is never replayed on the backup; read failover still works', async () => {
     let calls = 0
     globalThis.fetch = async () => { calls++; return new Response('failed', { status: 500, headers: { 'x-service': 'airdash' } }) }

@@ -1,10 +1,10 @@
 // The Air Library — bilingual reference reader: the air-bible sections and
 // the knowledge/ research notes, all searchable from one tab. TOC by default,
 // full-text search on 3+ chars, and a full-screen reader overlay for the docs.
-import { getJson } from '../cache.js?v=2.4.58'
-import { store, on, emit } from '../state.js?v=2.4.58'
-import { tr, pick } from '../i18n.js?v=2.4.58'
-import { el } from '../fmt.js?v=2.4.58'
+import { getJson } from '../cache.js?v=2.4.59'
+import { store, on, emit } from '../state.js?v=2.4.59'
+import { tr, pick } from '../i18n.js?v=2.4.59'
+import { el } from '../fmt.js?v=2.4.59'
 
 let toc = null
 let query = ''
@@ -17,6 +17,7 @@ export function initLibrary() {
 
   const input = el('input', {
     type: 'search', id: 'library-search',
+    'aria-label': tr('ค้นห้องสมุด', 'Search the library'),
     'data-i18n-ph': 'ค้นห้องสมุด…|Search the library…',
     placeholder: tr('ค้นห้องสมุด…', 'Search the library…'),
   })
@@ -32,6 +33,7 @@ export function initLibrary() {
   renderToc(results)
 
   on('lang', () => {
+    input.setAttribute('aria-label', tr('ค้นห้องสมุด', 'Search the library'))
     if (query.length >= 3) runSearch(results)
     else { toc = null; renderToc(results) }
   })
@@ -40,15 +42,19 @@ export function initLibrary() {
 }
 
 async function renderToc(container) {
+  const token = ++searchToken
   container.replaceChildren(el('div', { class: 'wx-method' }, tr('กำลังโหลด…', 'loading…')))
   try {
-    if (!toc) toc = await getJson(`/api/library/toc?lang=${store.lang}`, 5 * 60_000)
+    const next = toc ?? await getJson(`/api/library/toc?lang=${store.lang}`, 5 * 60_000)
+    if (token !== searchToken) return
+    toc = next
   } catch {
+    if (token !== searchToken) return
     // The honest failure path — the library TOC didn't load. A plain
     // "Failed to load" line leaves the reader with no clear next step.
     // Adding a retry button turns the dead end into a recoverable one.
     const retry = el('button', { class: 'lib-retry', type: 'button' }, tr('ลองอีกครั้ง', 'Try again'))
-    retry.addEventListener('click', () => loadToc())
+    retry.addEventListener('click', () => renderToc(container))
     container.replaceChildren(
       el('div', { class: 'wx-method' }, tr('โหลดคลังความรู้ไม่สำเร็จ', "Couldn't load the knowledge library")),
       retry,
@@ -69,7 +75,7 @@ async function renderToc(container) {
         group === 'bible' ? tr('คู่มือฝุ่น (BIBLE)', 'AIR BIBLE') : tr('บันทึกความรู้ (NOTES)', 'KNOWLEDGE NOTES')))
       lastGroup = group
     }
-    rows.push(el('div', { class: 'lib-toc-row', onclick: () => openLibraryDoc(s.section) },
+    rows.push(el('button', { type: 'button', class: 'lib-toc-row', onclick: () => openLibraryDoc(s.section) },
       el('div', { class: 'lib-toc-title' },
         el('div', { class: 'th' }, s.title_th || s.title_en || s.section),
         el('div', { class: 'en' }, s.title_en || s.title_th || '')),
@@ -91,7 +97,7 @@ async function runSearch(container) {
   } catch {
     if (myToken !== searchToken) return
     const retry = el('button', { class: 'lib-retry', type: 'button' }, tr('ลองอีกครั้ง', 'Try again'))
-    retry.addEventListener('click', () => search(query))
+    retry.addEventListener('click', () => runSearch(container))
     container.replaceChildren(
       el('div', { class: 'wx-method' }, tr('ค้นหาไม่สำเร็จ', 'Search failed')),
       retry,
@@ -112,7 +118,7 @@ async function runSearch(container) {
   const rows = results.map((r) => {
     const snippet = el('div', { class: 'lib-snippet' })
     snippet.innerHTML = r.snippet ?? ''
-    return el('div', { class: 'lib-result-row', onclick: () => openLibraryDoc(r.section) },
+    return el('button', { type: 'button', class: 'lib-result-row', onclick: () => openLibraryDoc(r.section) },
       el('div', { class: 'lib-result-ctx' }, r.section_title ?? ''),
       el('div', { class: 'lib-result-title' }, r.title ?? ''),
       snippet)
@@ -122,11 +128,14 @@ async function runSearch(container) {
 
 // ── Reader overlay ──────────────────────────────────────────────────────────
 let currentDoc = null // { key, lang, title, html, prev, next }
+let docToken = 0
+let readerReturnFocus = null
 
 function initReader() {
   const overlay = document.getElementById('library-overlay')
   if (!overlay) return
   document.getElementById('library-close')?.addEventListener('click', closeLibraryDoc)
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) closeLibraryDoc() })
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeLibraryDoc() })
   document.getElementById('library-prev')?.addEventListener('click', () => {
     if (currentDoc?.prev) openLibraryDoc(currentDoc.prev)
@@ -180,9 +189,9 @@ async function getGeoTargets() {
   return geoTargets
 }
 
-async function linkifyGeo(article) {
+async function linkifyGeo(article, isCurrent = () => true) {
   const targets = await getGeoTargets()
-  if (!targets.length) return 0
+  if (!isCurrent() || !targets.length) return 0
   const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT, {
     acceptNode: (n) => n.parentElement?.closest('a, code, pre, .lib-geo')
       ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
@@ -216,18 +225,23 @@ async function linkifyGeo(article) {
 
 export async function openLibraryDoc(key) {
   if (!key) return
+  const token = ++docToken
   const overlay = document.getElementById('library-overlay')
   const article = document.querySelector('.lib-article')
   if (!overlay || !article) return
+  if (overlay.hidden) readerReturnFocus = document.activeElement
   overlay.hidden = false
+  document.getElementById('library-close')?.focus()
   article.innerHTML = `<div class="wx-method">${tr('กำลังโหลด…', 'loading…')}</div>`
   try {
     const doc = await getJson(`/api/library/doc?key=${encodeURIComponent(key)}&lang=${store.lang}`, 5 * 60_000)
+    if (token !== docToken) return
     currentDoc = doc
     const titleEl = document.querySelector('#library-overlay .sign .doc-title')
     if (titleEl) titleEl.textContent = doc.title ?? ''
     article.innerHTML = doc.html ?? ''
-    const geoCount = await linkifyGeo(article)
+    const geoCount = await linkifyGeo(article, () => token === docToken)
+    if (token !== docToken) return
     if (geoCount > 0) {
       const hint = document.createElement('div')
       hint.className = 'lib-geo-hint'
@@ -242,13 +256,16 @@ export async function openLibraryDoc(key) {
     if (prevBtn) prevBtn.hidden = !doc.prev
     if (nextBtn) nextBtn.hidden = !doc.next
   } catch {
+    if (token !== docToken) return
     article.innerHTML = `<div class="wx-method">${tr('โหลดไม่สำเร็จ', 'Failed to load')}</div>`
   }
 }
 
 export function closeLibraryDoc() {
+  docToken++
   const overlay = document.getElementById('library-overlay')
   if (overlay) overlay.hidden = true
+  if (readerReturnFocus?.isConnected) readerReturnFocus.focus()
 }
 
 window.openLibraryDoc = openLibraryDoc

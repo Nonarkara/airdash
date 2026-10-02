@@ -11,13 +11,13 @@
 //
 // All coloring follows the AQI palette so the only saturated color band
 // on the page tells one consistent story.
-import { on, store, setLang } from '../state.js?v=2.4.58'
-import { tr } from '../i18n.js?v=2.4.58'
-import { openInsightsPane } from '../sensorHealth.js?v=2.4.58'
-import { riskCi } from '../confidence.js?v=2.4.58'
-import { getJson } from '../cache.js?v=2.4.58'
-import { flyToProvince } from '../map.js?v=2.4.58'
-import { showProvinceDetail } from './detail.js?v=2.4.58'
+import { on, store, setLang } from '../state.js?v=2.4.59'
+import { tr } from '../i18n.js?v=2.4.59'
+import { openInsightsPane } from '../sensorHealth.js?v=2.4.59'
+import { riskCi } from '../confidence.js?v=2.4.59'
+import { getJson } from '../cache.js?v=2.4.59'
+import { flyToProvince } from '../map.js?v=2.4.59'
+import { showProvinceDetail } from './detail.js?v=2.4.59'
 
 // AQI-derived 5-level palette — the same gradient the top stripe uses.
 // Watch (yellow) keeps dark text for contrast.
@@ -181,7 +181,7 @@ function renderStatus(snap) {
     let worstP = null
     for (const p of snap.risk.provinces) {
       const d = p.danger
-      if (!d) continue
+      if (!d || !Number.isFinite(d.score)) continue
       if (!worstP || d.score > worstP.danger.score) worstP = p
     }
     const showP = (scoped?.danger ? scoped : null) ?? worstP
@@ -190,9 +190,9 @@ function renderStatus(snap) {
     if (show) {
       const isCityScoped = !!scoped?.danger
       // Smooth transition between bands via a class, not an inline color
-      dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high')
+      dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high', 'band-unknown')
       dangerEl.classList.add(`band-${show.band}`)
-      dangerNum.textContent = show.score
+      dangerNum.textContent = show.score ?? '–'
       const label = tr(show.label_th, show.label_en)
       dangerBand.textContent = label
       // Add a small "scoped" badge so readers can tell whether the number
@@ -221,11 +221,12 @@ function renderStatus(snap) {
         parts.push(`noise ${show.noise_leq_db.toFixed(0)} dB${nStations} (amp ${(show.noise_amp * 100).toFixed(0)}%)`)
       }
       if (show.rain_relief > 0) parts.push(`rain relief ${(show.rain_relief * 100).toFixed(0)}% (${show.rain_source ?? 'forecast'})`)
+      parts.push(tr('คะแนนไม่ต่ำกว่าค่า PM ที่วัดได้ตอนนี้', 'score never below the measured PM baseline'))
       const provinceName = tr(showP.province_th, showP.province_en)
       dangerEl.title = `${label} · ${provinceName} (${show.score}/100)${cityBadge}\n${parts.join(' · ')}\n${tr('แตะเพื่อดูสูตรคำนวณ', 'tap for the formula breakdown')}`
     } else {
-      dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high')
-      dangerEl.classList.add('band-normal')
+      dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high', 'band-unknown')
+      dangerEl.classList.add('band-unknown')
       dangerNum.textContent = '–'
       // Subtle "waiting on data" state — just a short loading hint, not a
       // full sentence that takes two rows in the chip. The national plate

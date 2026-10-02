@@ -70,7 +70,7 @@ const check = (name, cond) => {
     get: () => ({
       updated: 'sparse-test',
       provinces: [
-        { province_code: '10', province_th: 'กทม', province_en: 'Bangkok', score: 40 },
+        { province_code: '10', province_th: 'กทม', province_en: 'Bangkok', score: 40, pm25: 30 },
       ],
     }),
   }
@@ -79,7 +79,8 @@ const check = (name, cond) => {
   const mhs = list.find((p) => p.province_code === '58')
   check('Mae Hong Son present without live risk row', !!mhs)
   check('missing risk row → watch_live false', mhs?.watch_live === false)
-  check('missing risk row → watch_score 0', mhs?.watch_score === 0)
+  check('missing risk row → watch_score null', mhs?.watch_score === null)
+  check('missing risk row → harm unknown, not zero', mhs?.score === null && mhs?.band === 'unknown')
   const bkk = list.find((p) => p.province_code === '10')
   check('live risk row → watch_live true', bkk?.watch_live === true)
   check('live risk row keeps watch score', bkk?.watch_score === 40)

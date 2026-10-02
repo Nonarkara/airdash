@@ -456,7 +456,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
             pm25_live: d.pm25_live, temp_c: d.temp_c, rh_pct: d.rh_pct,
             noise_leq_db: d.noise_leq_db, noise_stations: d.noise_stations,
             pm_base: d.pm_base, heat_amp: d.heat_amp, hum_amp: d.hum_amp, noise_amp: d.noise_amp,
-            rain_relief: d.rain_relief,
+            rain_relief: d.rain_relief, rain_source: d.rain_source, measured_pm_floor: d.measured_pm_floor,
             label_th: d.label_th, label_en: d.label_en, band_color: d.band_color,
           }
         }
@@ -599,7 +599,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
             pm25_live: d.pm25_live, temp_c: d.temp_c, rh_pct: d.rh_pct,
             noise_leq_db: d.noise_leq_db, noise_stations: d.noise_stations,
             pm_base: d.pm_base, heat_amp: d.heat_amp, hum_amp: d.hum_amp, noise_amp: d.noise_amp,
-            rain_relief: d.rain_relief,
+            rain_relief: d.rain_relief, rain_source: d.rain_source, measured_pm_floor: d.measured_pm_floor,
             label_th: d.label_th, label_en: d.label_en, band_color: d.band_color,
           }
         }
@@ -1455,7 +1455,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
 
     // Historical daily exports compiled from our SQLite collection.
     'GET /api/export/days': (req, res, url) => {
-      const limit = clamp(url.searchParams.get('limit'), 1, 730, 365)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 730, 365))
       json(res, 200, { days: listExportDays(db, limit), export: EXPORT_INFO })
     },
 
@@ -1578,7 +1578,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     },
 
     'GET /api/alerts': (req, res, url) => {
-      const limit = clamp(url.searchParams.get('limit'), 1, 500, 100)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 500, 100))
       // min_severity: rain notices (sev 1) outnumber everything else, so
       // "any serious alert lately?" must filter, not scan the newest N.
       const minSev = clamp(url.searchParams.get('min_severity'), 0, 3, 0)
@@ -1588,7 +1588,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     },
 
     'GET /api/news': (req, res, url) => {
-      const limit = clamp(url.searchParams.get('limit'), 1, 100, 30)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 100, 30))
       json(res, 200, {
         news: withNewsPlaces(db.all(
           `SELECT feed, title, link, published_at, fetched_at,
@@ -1599,7 +1599,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     },
 
     'GET /api/tap/recent': (req, res, url) => {
-      const limit = clamp(url.searchParams.get('limit'), 1, 500, 200)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 500, 200))
       const rows = db.all('SELECT * FROM events ORDER BY id DESC LIMIT ?', limit)
       json(res, 200, { events: rows.reverse().map((e) => bus.publicShape(e)) })
     },
@@ -1624,7 +1624,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     'GET /api/library/search': (req, res, url) => {
       const q = (url.searchParams.get('q') ?? '').trim()
       const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'th'
-      const limit = clamp(url.searchParams.get('limit'), 1, 50, 20)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 50, 20))
       json(res, 200, searchLibrary(db, { q, lang, limit }))
     },
 
@@ -1640,7 +1640,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     // Universal place search — provinces, stations, focus areas in one index.
     'GET /api/search': (req, res, url) => {
       const q = url.searchParams.get('q') ?? ''
-      const limit = clamp(url.searchParams.get('limit'), 1, 50, 20)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 50, 20))
       json(res, 200, searchGazetteer(db, { q, limit }))
     },
 
@@ -1700,14 +1700,14 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     'GET /api/search/tambons': (req, res, url) => {
       const q = url.searchParams.get('q') ?? ''
       const lang = url.searchParams.get('lang') === 'th' ? 'th' : 'en'
-      const limit = clamp(url.searchParams.get('limit'), 1, 50, 12)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 50, 12))
       if (q.length < 2) return json(res, 200, { q, results: [] })
       json(res, 200, { q, results: searchTambons(q, lang, limit) })
     },
     'GET /api/search/districts': (req, res, url) => {
       const q = url.searchParams.get('q') ?? ''
       const lang = url.searchParams.get('lang') === 'th' ? 'th' : 'en'
-      const limit = clamp(url.searchParams.get('limit'), 1, 50, 12)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 50, 12))
       if (q.length < 2) return json(res, 200, { q, results: [] })
       json(res, 200, { q, results: searchDistricts(q, lang, limit) })
     },
@@ -1767,12 +1767,12 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
       const lang = url.searchParams.get('lang')
       const onlyApproved = url.searchParams.get('approved') === '1'
-      const limit = clamp(url.searchParams.get('limit'), 1, 200, 50)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 200, 50))
       json(res, 200, { faqs: faq.listFaqs({ lang, onlyApproved, limit }) })
     },
     'GET /api/chat/logs': (req, res, url) => {
       if (!faq.isAdmin(req)) return json(res, 401, { error: 'admin token required' })
-      const limit = clamp(url.searchParams.get('limit'), 1, 500, 50)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 500, 50))
       const servedFrom = url.searchParams.get('served_from')
       json(res, 200, { logs: faq.recentLogs({ limit, servedFrom }) })
     },
@@ -1875,7 +1875,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
           const [lat, lng] = near.split(',').map(Number)
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) return json(res, 400, { error: 'near=lat,lng' })
           const radius = clamp(url.searchParams.get('radius_km'), 0, 200, 50)
-          const limit = clamp(url.searchParams.get('limit'), 1, 50, 8)
+          const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 50, 8))
           cameras = cameras
             .map((c) => ({ ...c, km: Math.round(Math.hypot((c.lat - lat) * 111, (c.lng - lng) * 104) * 10) / 10 }))
             .filter((c) => c.km <= radius).sort((a, b) => a.km - b.km).slice(0, limit)
@@ -1907,7 +1907,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     'GET /api/cctv/haze-eyes': async (req, res, url) => {
       if (!allow(req, { key: 'cctv-eyes', limit: 30, windowMs: 60_000 })) return json(res, 429, { error: 'too many requests — wait a minute' })
       try {
-        const limit = clamp(url.searchParams.get('limit'), 1, 24, 12)
+        const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 24, 12))
         const minPm25 = clamp(url.searchParams.get('min_pm25'), 0, 500, 25)
         const includeDown = url.searchParams.get('include_down') === '1' || url.searchParams.get('include_down') === 'true'
         json(res, 200, await loadHazeEyes(db, { limit, minPm25, includeDown }))
@@ -1996,7 +1996,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     'GET /api/cctv/north': async (req, res, url) => {
       if (!allow(req, { key: 'cctv-eyes', limit: 30, windowMs: 60_000 })) return json(res, 429, { error: 'too many requests — wait a minute' })
       try {
-        const limit = clamp(url.searchParams.get('limit'), 1, 200, 60)
+        const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 200, 60))
         const minLat = clamp(url.searchParams.get('min_lat'), 13, 21, 17)
         const maxKm = clamp(url.searchParams.get('max_km'), 1, 100, 30)
         const liveOnly = url.searchParams.get('live') === '1'
@@ -2030,7 +2030,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         return json(res, 429, { error: 'too many requests — wait a minute' })
       }
       try {
-        const limit = clamp(url.searchParams.get('limit'), 1, 400, 120)
+        const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 400, 120))
         const province = url.searchParams.get('province')
         const claim = url.searchParams.get('claims')
         const minConf = clamp(url.searchParams.get('min_confidence'), 0, 4, 1)
@@ -2098,7 +2098,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       }
       try {
         const hours = clamp(url.searchParams.get('hours'), 1, 720, 48)
-        const limit = clamp(url.searchParams.get('limit'), 1, 500, 200)
+        const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 500, 200))
         const since = new Date(Date.now() - hours * 3600_000).toISOString()
         const rows = db.all(
           `SELECT camera_key, camera_source, lat, lng, obs_time, haze_index,
@@ -2533,7 +2533,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       let mod
       try { mod = await import('./lineWebhook.js') } catch { return json(res, 503, { error: 'webhook not available' }) }
       const status = url.searchParams.get('status') || 'pending'
-      const limit = clamp(url.searchParams.get('limit'), 1, 200, 50)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 200, 50))
       const offset = clamp(url.searchParams.get('offset'), 0, 10_000, 0)
       const reports = mod.listReports(db, { status, limit, offset })
       // Re-write image_path to a public /api/reports/image/<id> URL so the
@@ -2578,7 +2578,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     // neighborhoods other users have flagged today. No PII; user_hash is
     // stripped at the SQL layer.
     'GET /api/reports': (req, res, url) => {
-      const limit = clamp(url.searchParams.get('limit'), 1, 50, 20)
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 50, 20))
       const since = url.searchParams.get('since') // ISO timestamp filter
       let rows
       try {

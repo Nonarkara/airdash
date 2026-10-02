@@ -205,8 +205,8 @@ export const CONFIG = {
   // `node scripts/set-llm-key.mjs <key>`).
   llm: {
     base: process.env.NIM_BASE || 'https://integrate.api.nvidia.com/v1',
-    chatModel: process.env.NIM_CHAT_MODEL || 'qwen/qwen3-next-80b-a3b-instruct',
-    embedModel: process.env.NIM_EMBED_MODEL || 'nvidia/llama-nemotron-embed-1b-v2',
+    chatModel: process.env.NIM_CHAT_MODEL || 'nvidia/nemotron-3-super-120b-a12b',
+    embedModel: process.env.NIM_EMBED_MODEL || 'nvidia/nemotron-3-embed-1b',
     probeTtlMs: 5 * MINUTE,
     temperature: 0.2,
     maxTokens: 400,

@@ -1,11 +1,11 @@
 // Left rail: live province ranking — worst air first.
 // Sort mode: Worst air (default, by PM2.5) | Effective Harm (Watch × Social Load).
-import { on, store } from '../state.js?v=2.4.58'
-import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.58'
-import { fmtNum, el } from '../fmt.js?v=2.4.58'
-import { flyToProvince } from '../map.js?v=2.4.58'
-import { showProvinceDetail } from './detail.js?v=2.4.58'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.58'
+import { on, store } from '../state.js?v=2.4.59'
+import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.59'
+import { fmtNum, el } from '../fmt.js?v=2.4.59'
+import { flyToProvince } from '../map.js?v=2.4.59'
+import { showProvinceDetail } from './detail.js?v=2.4.59'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.59'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }
@@ -292,7 +292,7 @@ function render(snap) {
         `Danger: PM2.5 ${danger.pm25_live != null ? danger.pm25_live.toFixed(0) : '–'} · T ${danger.temp_c != null ? danger.temp_c.toFixed(0) : '–'}°C · RH ${danger.rh_pct != null ? danger.rh_pct.toFixed(0) : '–'}%${danger.noise_leq_db != null ? ` · noise ${danger.noise_leq_db.toFixed(0)} dB` : ''} · rain −${(danger.rain_relief * 100).toFixed(0)}%`,
       ),
     },
-      el('span', { class: 'dc-num' }, String(danger.score)),
+      el('span', { class: 'dc-num' }, String(danger.score ?? '–')),
       el('span', { class: 'dc-band' }, tr(danger.label_th, danger.label_en)),
     ) : null
 

@@ -8,10 +8,10 @@
 // /api/whatif payload already contains every province's re-projected
 // score; the search just filters the existing list client-side, so no
 // extra round trip and no server change.
-import { on, store } from '../state.js?v=2.4.58'
-import { tr, BAND } from '../i18n.js?v=2.4.58'
-import { fmtNum, el } from '../fmt.js?v=2.4.58'
-import { getJson } from '../cache.js?v=2.4.58'
+import { on, store } from '../state.js?v=2.4.59'
+import { tr, BAND } from '../i18n.js?v=2.4.59'
+import { fmtNum, el } from '../fmt.js?v=2.4.59'
+import { getJson } from '../cache.js?v=2.4.59'
 
 let currentRain = 20
 let currentData = null
@@ -76,6 +76,7 @@ function render(rain, data, query) {
   const slider = el('div', { class: 'whatif-slider' },
     el('input', {
       type: 'range', id: 'whatif-rain',
+      'aria-label': tr('ฝนสมมติ มม. ใน 24 ชั่วโมง', 'Hypothetical rain in mm over 24 hours'),
       min: '0', max: '200', step: '5', value: String(rain),
     }),
     el('div', { class: 'whatif-ticks' },
@@ -95,6 +96,7 @@ function render(rain, data, query) {
   const search = el('div', { class: 'whatif-search' },
     el('input', {
       type: 'search', id: 'whatif-search',
+      'aria-label': tr('ค้นหาจังหวัดสำหรับฝนสมมติ', 'Search a province for the rain scenario'),
       placeholder: tr('ค้นหาจังหวัดของคุณ… เช่น เชียงใหม่ ขอนแก่น',
                        'Look up your province… e.g. Chiang Mai, Khon Kaen'),
       value: query ?? '',

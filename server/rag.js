@@ -4,7 +4,7 @@
 // similarity. Degrades to a structured non-LLM summary when the API key is
 // missing or the service is unreachable.
 import { CONFIG } from './config.js'
-import { log } from './util.js'
+import { log, num } from './util.js'
 import { BAND_LABELS } from './risk.js'
 import { WASHOUT_LABELS } from './washout.js'
 import { classifyOni } from './sources/enso.js'
@@ -31,12 +31,28 @@ export function createRag({ db, riskEngine, washout, faq }) {
       return shape()
     }
     try {
-      // Cheapest authenticated round-trip on the OpenAI-compatible surface.
+      // A model catalog can stay green after inference endpoints retire.
       const res = await fetch(`${o.base}/models`, {
         headers: { authorization: `Bearer ${key}` },
         signal: AbortSignal.timeout(5000),
       })
-      probe = { reachable: res.ok, hasChat: res.ok, hasEmbed: res.ok, checkedAt: Date.now() }
+      const check = async (path, body) => {
+        try {
+          const response = await fetch(`${o.base}/${path}`, {
+            method: 'POST', headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+            body: JSON.stringify(body), signal: AbortSignal.timeout(10_000),
+          })
+          const data = response.ok ? await response.json() : null
+          if (!response.ok) await response.body?.cancel()
+          return path === 'embeddings' ? Array.isArray(data?.data?.[0]?.embedding) : Array.isArray(data?.choices)
+        } catch { return false }
+      }
+      const [hasChat, hasEmbed] = res.ok ? await Promise.all([
+        check('chat/completions', { model: o.chatModel, messages: [{ role: 'user', content: 'Reply OK.' }], max_tokens: 1, stream: false, chat_template_kwargs: { enable_thinking: false } }),
+        check('embeddings', { model: o.embedModel, input: ['AirDash capability check'], input_type: 'query', encoding_format: 'float', truncate: 'END' }),
+      ]) : [false, false]
+      await res.body?.cancel()
+      probe = { reachable: hasChat || hasEmbed, hasChat, hasEmbed, checkedAt: Date.now() }
       if (!res.ok) log('warn', 'NIM probe failed', { status: res.status })
     } catch (err) {
       probe = { reachable: false, checkedAt: Date.now() }
@@ -47,7 +63,8 @@ export function createRag({ db, riskEngine, washout, faq }) {
   function shape() {
     return { reachable: probe.reachable ?? false, hasChat: probe.hasChat ?? false,
              hasEmbed: probe.hasEmbed ?? false, chatModel: o.chatModel, embedModel: o.embedModel,
-             configured: Boolean(apiKey()) }
+             configured: Boolean(apiKey()), checked_at: probe.checkedAt ? new Date(probe.checkedAt).toISOString() : null,
+             capability_basis: 'inference-endpoints' }
   }
 
   // Callers pass nomic-style prefixed strings ("search_query: …" /
@@ -72,13 +89,19 @@ export function createRag({ db, riskEngine, washout, faq }) {
       }),
       signal: AbortSignal.timeout(30_000),
     })
-    if (!res.ok) throw new Error(`NIM embed HTTP ${res.status}`)
+    if (!res.ok) { probe.hasEmbed = false; await res.body?.cancel(); throw new Error(`NIM embed HTTP ${res.status}`) }
     const out = await res.json()
     if (!Array.isArray(out.data)) throw new Error('NIM embed: no embeddings')
-    return out.data.map((d) => d.embedding)
+    const ordered = [...out.data].sort((a,b) => a.index-b.index)
+    if (ordered.length !== texts.length || ordered.some((d,i) => d.index !== i || !Array.isArray(d.embedding) || !d.embedding.length || !d.embedding.every(Number.isFinite))) {
+      throw new Error('NIM embed: invalid vector batch')
+    }
+    probe.hasEmbed = true
+    return ordered.map((d) => d.embedding)
   }
 
   function cosine(a, b) {
+    if (a.length !== b.length) return -1
     let dot = 0, na = 0, nb = 0
     for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i] }
     return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1)
@@ -193,18 +216,18 @@ export function createRag({ db, riskEngine, washout, faq }) {
   }
 
   function provinceFacts(p, lang) {
-    const L = BAND_LABELS[p.band]
+    const L = p.pm25 == null ? { th: 'ยังไม่มีข้อมูลฝุ่น', en: 'No current PM data' } : BAND_LABELS[p.band] ?? { th: 'ยังไม่มีข้อมูล', en: 'Unknown' }
     const lines = [
       `${p.province_th} (${p.province_en ?? '-'}): score ${p.score}/100 = ${L.th} / ${L.en}`,
       `  AQ stations: ${p.aq_stations} (PM2.5 ≥75 affecting-health: ${p.stations_very_unhealthy}, ≥37.5 starting-to-affect: ${p.stations_unhealthy})`,
     ]
-    if (p.pm25 !== null) lines.push(`  worst PM2.5 now: ${p.pm25} µg/m³ at ${p.pm25_station_th ?? '-'}`)
+    if (p.pm25 != null) lines.push(`  worst PM2.5 now: ${p.pm25} µg/m³ at ${p.pm25_station_th ?? '-'}`)
     if (p.top_stations?.length) lines.push(`  worst stations: ${p.top_stations.map((s) => `${s.th}/${s.en ?? '-'} ${s.pm25} µg/m³`).join(' · ')}`)
-    if (p.rise_6h_ug !== null) lines.push(`  6h PM2.5 trend: ${p.rise_6h_ug > 0 ? '+' : ''}${p.rise_6h_ug} µg/m³`)
-    if (p.pm25_fc_24h !== null) lines.push(`  PM2.5 forecast (CAMS, corrected to local sensors), today's mean: ${Math.round(p.pm25_fc_24h)} µg/m³${p.pm25_fc_48h !== null ? `, tomorrow: ${Math.round(p.pm25_fc_48h)}` : ''}${p.pm25_fc_72h != null ? `, day after: ${Math.round(p.pm25_fc_72h)}` : ''}`)
-    if (p.precip_prob_24h !== null) lines.push(`  rain chance 24h: ${Math.round(p.precip_prob_24h)}% (${Math.round(p.precip_fc_24h ?? 0)} mm forecast)` +
+    if (p.rise_6h_ug != null) lines.push(`  6h PM2.5 trend: ${p.rise_6h_ug > 0 ? '+' : ''}${p.rise_6h_ug} µg/m³`)
+    if (p.pm25_fc_24h != null) lines.push(`  PM2.5 forecast (CAMS, corrected to local sensors), today's mean: ${Math.round(p.pm25_fc_24h)} µg/m³${p.pm25_fc_48h != null ? `, tomorrow: ${Math.round(p.pm25_fc_48h)}` : ''}${p.pm25_fc_72h != null ? `, day after: ${Math.round(p.pm25_fc_72h)}` : ''}`)
+    if (p.precip_prob_24h != null) lines.push(`  rain chance 24h: ${Math.round(p.precip_prob_24h)}% (${p.precip_fc_24h == null ? 'unknown' : Math.round(p.precip_fc_24h)} mm forecast)` +
       (p.washout_relief_pct ? ` — if it rains, PM2.5 washes out ~${p.washout_relief_pct}% → ~${p.projected_pm25} µg/m³` : ''))
-    if (p.rain_obs_24h !== null && p.rain_obs_24h >= 5) lines.push(`  observed rain 24h: ${Math.round(p.rain_obs_24h)} mm (washout underway)`)
+    if (p.rain_obs_24h != null && p.rain_obs_24h >= 5) lines.push(`  observed rain in the past 24h: ${Math.round(p.rain_obs_24h)} mm (does not establish that it is raining now)`)
     return lines.join('\n')
   }
 
@@ -212,9 +235,9 @@ export function createRag({ db, riskEngine, washout, faq }) {
     const lines = []
     for (const m of matches) {
       const vals = db.all(
-        'SELECT metric, value, obs_time FROM latest WHERE source = ? AND station_key = ?',
-        m.source, m.station_key)
-      if (vals.length === 0) continue
+        'SELECT metric, value, obs_time FROM latest WHERE source = ? AND station_key = ? AND obs_time >= ?',
+        m.source, m.station_key, new Date(Date.now() + 7*3600_000 - 6*3600_000).toISOString().slice(0,16))
+      if (vals.length === 0) { lines.push(`${m.name_th}: no fresh station reading in the past six hours`); continue }
       const vs = vals.map((v) => `${v.metric}=${v.value} (${v.obs_time})`).join(', ')
       lines.push(`station ${m.name_th}/${m.name_en ?? '-'} (${m.province_th ?? '-'}): ${vs}`)
     }
@@ -231,7 +254,8 @@ export function createRag({ db, riskEngine, washout, faq }) {
     const stations = matchStations(message)
 
     const parts = []
-    parts.push(`Data time: ${risk.updated} (UTC). National status: ${BAND_LABELS[n.band].th} / ${BAND_LABELS[n.band].en}.` +
+    const label = n.data_available === false ? { th: 'ยังไม่มีข้อมูลฝุ่น', en: 'No current PM data' } : BAND_LABELS[n.band] ?? { th: 'ยังไม่มีข้อมูล', en: 'Unknown' }
+    parts.push(`Data time: ${risk.updated} (UTC). National status: ${label.th} / ${label.en}.` +
       (n.dustSeason ? ' Dust season is ACTIVE (burning window + widespread moderate PM2.5).' : ''))
     parts.push(`Provinces by band: normal=${n.bandCounts.normal} watch=${n.bandCounts.watch} elevated=${n.bandCounts.elevated} critical=${n.bandCounts.high}. ` +
       `Provinces past the Thai moderate line (PM2.5 ≥ 25 µg/m³): ${n.dustyProvinceCount}/${n.dustSampledCount} (${n.dustLoadPct}%).`)
@@ -244,8 +268,8 @@ export function createRag({ db, riskEngine, washout, faq }) {
     if (news.length) parts.push(`Latest air-quality news headlines:\n${news.map((x) => `- ${x.title}`).join('\n')}`)
 
     // Ocean state (ENSO) — seasonal modulator.
-    const anom = Number(db.kvGet('enso_anom'))
-    if (Number.isFinite(anom)) {
+    const anom = num(db.kvGet('enso_anom'))
+    if (anom !== null) {
       const cls = classifyOni(anom)
       parts.push(`Ocean state (ENSO): ${cls.en} / ${cls.th}, ONI ${anom > 0 ? '+' : ''}${anom.toFixed(1)} (${db.kvGet('enso_season')}). ` +
         `El Niño = drier/hotter = worse burning seasons (less washout rain); a modulator, not a predictor.`)
@@ -259,7 +283,7 @@ export function createRag({ db, riskEngine, washout, faq }) {
         .slice(0, 6)
       if (w.length) {
         parts.push(`Rain-washout outlook (wet deposition — rain scavenges PM2.5; ≥5mm cuts ~20%, ≥15mm ~30%, ≥35mm ~40%):\n` +
-          w.map((x) => `- ${x.province_th}: PM2.5 ${x.pm25} µg/m³, rain chance 24h ${Math.round(x.prob24 ?? 0)}% (${Math.round(x.rain_fc_24 ?? 0)} mm) → ${WASHOUT_LABELS[x.band].en}` +
+          w.map((x) => `- ${x.province_th}: PM2.5 ${x.pm25} µg/m³, rain chance 24h ${x.prob24 == null ? 'unknown' : Math.round(x.prob24)}% (${x.rain_fc_24 == null ? 'unknown' : Math.round(x.rain_fc_24)} mm) → ${WASHOUT_LABELS[x.band]?.en ?? 'unknown'}` +
             (x.relief_if_rain_pct ? `, if it rains PM2.5 → ~${x.projected_pm25} µg/m³ (−${x.relief_if_rain_pct}%)` : '')).join('\n'))
       }
     }
@@ -343,11 +367,13 @@ Hard rules:
     const kBlock = knowledge.length
       ? `\n\nKNOWLEDGE:\n${knowledge.map((k) => `[${k.title}]\n${k.content}`).join('\n---\n')}` : ''
 
-    const upstream = await fetch(`${o.base}/chat/completions`, {
+    let upstream
+    try { upstream = await fetch(`${o.base}/chat/completions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey()}` },
       body: JSON.stringify({
         model: o.chatModel,
+        chat_template_kwargs: { enable_thinking: false },
         stream: true,
         temperature: o.temperature,
         max_tokens: o.maxTokens,
@@ -358,9 +384,12 @@ Hard rules:
       }),
       signal: AbortSignal.timeout(120_000),
     })
-    if (!upstream.ok || !upstream.body) {
-      log('error', 'NIM chat failed', { status: upstream.status })
-      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+    } catch (err) { log('warn', 'NIM chat unreachable', { error: String(err?.message ?? err) }) }
+    if (!upstream?.ok || !upstream.body) {
+      probe.hasChat = false
+      await upstream?.body?.cancel()
+      log('error', 'NIM chat failed', { status: upstream?.status ?? null })
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
       res.end(JSON.stringify({ offline: true, note_th: 'บริการ AI ตอบไม่สำเร็จ', note_en: 'AI service failed to respond', facts }))
       if (faq) faq.recordOutcome({
         logId, message, servedFrom: 'error',
@@ -370,6 +399,7 @@ Hard rules:
       return
     }
 
+    probe.hasChat = true
     res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' })
     const decoder = new TextDecoder()
     let buffer = ''

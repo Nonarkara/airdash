@@ -509,10 +509,11 @@ export function createScience({ db, CONFIG }) {
       pm25 = provRow.pm25
       source = 'province'
     }
-    if (pm25 === null) {
+    if (pm25 === null && !code) {
       pm25 = snap.national.pm25
       source = 'national'
     }
+    if (pm25 === null) source = code ? 'province-unavailable' : 'unavailable'
 
     const ve = profile.ventilation[act]
     const doseUg = pm25 !== null ? pm25 * ve * (minutes / 60) : null
@@ -539,6 +540,8 @@ export function createScience({ db, CONFIG }) {
       life_minutes: r1(cigs !== null ? cigs * S.minutesPerCig : null),
       play_budget_min: budget.min,
       play_unlimited: budget.unlimited,
+      play_budget_basis: 'dose-equivalence: 60 minutes at 15 ug/m3',
+      play_budget_is_safety_limit: false,
       band,
       guidance: guidance && { th: guidance.th, en: guidance.en },
     }

@@ -1,29 +1,13 @@
-// Confidence intervals — calibrated uncertainty for every number on the
-// dashboard. A citizen seeing "76/100 ACT NOW" who finds out later it was
-// 71 should not conclude "the dashboard lies." A ±5 next to the number
-// costs nothing and earns
-// decades of credibility.
-//
-// Calibration: from empirical data we have available.
-//   - risk score: ±5 (heuristic — bands are 30/40 wide; ±5 is the
-//     practical noise floor from sensor drift + rounding)
-//   - rain forecast 48h: ±35% of value (Open-Meteo typical 24-48h
-//     forecast RMSE for Thailand is in this range)
-//   - PM2.5 (µg/m³): BAM/optical monitor accuracy is ~±8% at ambient
-//     concentrations; show ±8% of value
-//   - PM2.5 rise (µg/6h): ±30% (computed from 2 readings, propagates
-//     the sensor noise)
-//
-// Format: every helper returns { value, lo, hi, label } so the caller
-// can render either a tight `76 (±5)` or a wide `47 mm (±16)` depending
-// on the relative uncertainty.
+// Assumed display ranges, not statistically calibrated confidence intervals.
+// These fixed allowances are UI heuristics; their constants do not establish
+// a source-specific measurement accuracy or a probability of coverage.
 
 const RISK_SIGMA = 5                // 0-100 score, ±5 = ±1 band width
 const FORECAST_REL_SIGMA = 0.35     // 35% of rain forecast
 const PM25_REL_SIGMA = 0.08         // 8% monitor noise at ambient PM2.5
 const RISE_SIGMA_REL = 0.30         // 30% of 6h PM2.5 rise
 
-/** Wrap a number with a 1-sigma confidence interval. Returns a shape
+/** Wrap a number with an assumed display range. Returns a shape
  *  the UI can render: "value (lo–hi)" in the right language. */
 export function ci(value, sigma, { unit = '', precision = null } = {}) {
   if (value == null || !Number.isFinite(value)) return { value: null, lo: null, hi: null, unit }
@@ -32,6 +16,7 @@ export function ci(value, sigma, { unit = '', precision = null } = {}) {
   const hi = value + sig
   const prec = precision ?? autoPrecision(sig, value)
   return {
+    calibrated: false, kind: 'assumed-range',
     value: round(value, prec),
     lo: round(lo, prec),
     hi: round(hi, prec),

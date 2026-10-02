@@ -8,12 +8,12 @@
 // The panel is injected into the left rail (#rail-left) below the place card,
 // and auto-refreshes every 5 minutes. It degrades gracefully — if the city
 // detail fetch fails, it shows the blurb from the manifest and nothing else.
-import { store, on, emit } from '../state.js?v=2.4.58'
-import { tr } from '../i18n.js?v=2.4.58'
-import { getJson } from '../cache.js?v=2.4.58'
-import { fmtNum } from '../fmt.js?v=2.4.58'
-import { riskCi } from '../confidence.js?v=2.4.58'
-import { focusById } from './focus.js?v=2.4.58'
+import { store, on, emit } from '../state.js?v=2.4.59'
+import { tr } from '../i18n.js?v=2.4.59'
+import { getJson } from '../cache.js?v=2.4.59'
+import { fmtNum } from '../fmt.js?v=2.4.59'
+import { riskCi } from '../confidence.js?v=2.4.59'
+import { focusById } from './focus.js?v=2.4.59'
 
 const REFRESH_MS = 5 * 60_000
 const FETCH_TTL = 60_000 // city detail cache — 1 min (data moves on ingest cadence)
@@ -256,7 +256,7 @@ function cityScoreRow(data, L) {
     r.band === 'elevated' ? 'lv3' :
     r.band === 'high' ? 'lv4' : 'lv1'
 
-  // Confidence interval for the watch score — same riskCi() the top bar
+  // Assumed display range for the watch score — same riskCi() the top bar
   // uses so a reader gets the same trust signal in both places. Falls
   // back to nothing when the score is missing.
   const ci = r.score != null ? riskCi(r.score) : null
@@ -268,7 +268,7 @@ function cityScoreRow(data, L) {
       el('div', { class: 'cd-score-value mono', style: `color:${bandColor(watchBand)}` },
         r.score != null ? `${r.score}/100` : '—'),
       el('div', { class: 'cd-score-sub' },
-        ci ? `±${ci.sigma}` : '',
+        ci ? L(`ช่วงสมมติ ±${ci.sigma}`, `assumed range ±${ci.sigma}`) : '',
         r.pm25 != null ? ` · PM2.5 ${fmtNum(r.pm25, 0)} µg` : ''),
     ),
     // Danger score
@@ -276,7 +276,7 @@ function cityScoreRow(data, L) {
       ? el('div', { class: 'cd-score-card' },
           el('div', { class: 'cd-score-label' }, L('ดัชนีอันตราย', 'DANGER SCORE')),
           el('div', { class: 'cd-score-value mono', style: `color:${d.band_color}` },
-            `${d.score}/100`),
+            d.score == null ? '—' : `${d.score}/100`),
           el('div', { class: 'cd-score-sub' }, L(d.label_th, d.label_en)),
         )
       : null,

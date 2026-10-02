@@ -14,9 +14,9 @@ A **one-Mac civic system**: bilingual Thai/English, honest about where every num
 > AQI band, your day in cigarette-equivalents, the national haze bill,
 > and every formula with its receipt. **Mission Control** (`/ops.html`)
 > is the preserved operator dashboard for mayors, district officials,
-> researchers, journalists, and air detectives. Every figure is real-time
-> from Thai government and open scientific sources, every number carries a
-> confidence interval, and the first thing on screen is always the action
+> researchers, journalists, and air detectives. Figures follow each upstream publication cadence
+> from Thai government and open scientific sources, with provenance and
+> explicit model limitations, and the first thing on screen is always the action
 > the user should take.
 
 <p align="center">
@@ -97,8 +97,8 @@ exist in both. See [README.th.md](README.th.md) and
 [SYSTEM.th.md](SYSTEM.th.md).
 
 **Honest data sources.** Every figure on screen traces to a named agency
-or open feed. Stale readings are dropped, not reused. Scores carry
-confidence intervals. Heuristics (watch score, washout, cigarette
+or open feed. Stale readings are dropped, not reused. Some score cards carry
+assumed display ranges. Heuristics (watch score, washout, cigarette
 equivalents) are labelled as heuristics. Mock data is a bug.
 
 **Useful, not theatrical.** The banner is civic illustration. Brick red
@@ -326,7 +326,7 @@ the year.
 > exists to close the gap between 'we know the air is bad' and 'we know
 > what to do about it.'"*
 
-This is what every JMA-style action verb, every confidence interval, every
+This is what every JMA-style action verb, every uncertainty note, every
 hotline button, every nearest-station card, and every washout figure serves.
 
 ---
@@ -432,7 +432,7 @@ finds the 3 nearest AQ stations, shares the status with family on LINE,
 and taps 1650 to reach PCD. Total time: under a minute.
 
 **For the Bangkok commuter:** checks the 48-hour PM2.5 forecast strip for
-the week's worst mornings, sees the confidence interval, and decides
+the week's worst mornings, sees the assumed range, and decides
 whether tomorrow is a mask day or a work-from-home day.
 
 **For the district official:** opens the dashboard on the wall TV, sees
@@ -558,16 +558,13 @@ ventilation proxy.
 > official AQI.** The UI and the AI assistant both say so, repeatedly.
 > Always follow official PCD / TMD / DOH advisories.
 
-### Confidence intervals
+### Assumed display ranges
 
-Every number that changes ships with a confidence interval — the hero shows
-"60/100 ±5" instead of just "60". The CI is derived from:
-* data freshness (how stale is the latest reading?)
-* sensor coverage (how many stations back the score?)
-* score stability (how much has the score moved in the last 6 hours?)
-
-A number without a confidence interval is a guess. A number with a
-confidence interval is a measurement.
+Some score cards show fixed display allowances such as ±5 watch-score points.
+These are heuristic ranges, not statistically calibrated confidence intervals.
+They do not establish monitor accuracy or a probability of coverage. Source
+labels, observation times, missing-data states, and model limitations remain
+necessary to interpret a number.
 
 ---
 
@@ -658,7 +655,8 @@ Example questions a citizen can ask:
 ## 📲 Alerts — LINE & Telegram
 
 Citizens can subscribe to AirDash alerts through three channels: the
-**LINE Official Account**, **LINE Notify**, and the **Telegram bot**.
+**LINE Official Account** and the **Telegram bot**. The legacy LINE Notify
+path is unavailable; Notify ended in March 2025.
 Severe system alerts can be broadcast through the LINE Messaging API
 when the operator configures the channel token; Telegram broadcasts use
 the bot token. AirDash never asks a citizen to paste a messaging token
@@ -675,7 +673,7 @@ of **70k+ places** (provinces, districts, tambons, stations) by Thai
 name, English name, or 5-digit postal code.
 
 The data bar on the left shows a compact card per selected place: its JMA
-verb, score with confidence interval, worst PM2.5 + station count, washout
+verb, score with assumed display range, worst PM2.5 + station count, washout
 band, forecast 48 h, and 6 h trend. Color-coded by band so a glance tells
 you who is dustiest.
 
@@ -719,7 +717,7 @@ permanent hourly aggregate as CSV.
 * **Frontend:** Vanilla ES modules, vendored Leaflet, no build step
 * **AI Chat:** Cloud-routed; gracefully degrades to structured live-data
   summary when offline
-* **Push:** LINE Official Account + LINE Notify + Telegram bot broadcasts
+* **Push:** LINE Official Account + Telegram bot broadcasts (Notify is discontinued)
 * **Deployment:** Cloudflare Pages (frontend) + Cloudflare Tunnel (backend)
 
 ---

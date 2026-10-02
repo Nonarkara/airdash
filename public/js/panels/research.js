@@ -1,9 +1,9 @@
 // Research Paper panel — renders the full bilingual academic paper inside
 // the About overlay's "Research Paper" tab, with custom SVG infographics,
 // the complete source catalog, citations, and CSV dataset download.
-import { on, store } from '../state.js?v=2.4.58'
-import { getJson } from '../cache.js?v=2.4.58'
-import { escapeHtml } from '../fmt.js?v=2.4.58'
+import { on, store } from '../state.js?v=2.4.59'
+import { getJson } from '../cache.js?v=2.4.59'
+import { escapeHtml } from '../fmt.js?v=2.4.59'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -507,9 +507,9 @@ function svgDangerFormula() {
   // Main formula box
   svg += `<rect x="20" y="20" width="720" height="50" fill="var(--aqi-unhealthy)" opacity="0.08" stroke="var(--aqi-unhealthy)" stroke-width="1.5"/>`
   svg += `<text x="380" y="46" text-anchor="middle" font-family="var(--font-num)" font-size="13" font-weight="700" fill="var(--ink)">`
-  svg += `danger = pm_base × (1 + heat_amp) × (1 + hum_amp) × (1 + noise_amp) × (1 − rain_relief)`
+  svg += `raw = pm_base × (1 + heat_amp) × (1 + hum_amp) × (1 + noise_amp) × (1 − rain_relief)`
   svg += `</text>`
-  svg += `<text x="380" y="62" text-anchor="middle" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">clamped 0–100 · 4 modifiers, each peer-reviewed, each capped so no single dimension can dominate</text>`
+  svg += `<text x="380" y="62" text-anchor="middle" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">danger = max(pm_base, min(100, raw)) · rain cannot discount PM measured now</text>`
   svg += `</svg>`
   return svg
 }

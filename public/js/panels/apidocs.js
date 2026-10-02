@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.58'
-import { escapeHtml } from '../fmt.js?v=2.4.58'
+import { store, on } from '../state.js?v=2.4.59'
+import { escapeHtml } from '../fmt.js?v=2.4.59'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -161,7 +161,7 @@ function GROUPS() {
         { path: '/api/insights', th: 'ข้อค้นพบที่ระบบสรุปให้แล้ว พร้อมหลักฐาน', en: 'Findings the system has already summarised, with evidence.' },
         { path: '/api/science', th: 'เครื่องยนต์วิทยาศาสตร์: การเปิดรับสัมผัสและปริมาณสะสม', en: 'The science engine: exposure and cumulative dose.' },
         { path: '/api/science/personal', th: 'ปริมาณสัมผัสส่วนบุคคล จากค่าฝุ่นและเวลากลางแจ้ง', en: 'Personal exposure dose from a PM2.5 value and outdoor minutes.',
-          params: [['pm25', true, tr('µg/m³', 'µg/m³')], ['outdoorMin', true, tr('นาทีกลางแจ้ง', 'minutes outdoors')], ['province', false, tr('รหัส DOPA', 'DOPA code')], ['profile', false, tr('adult / child / elderly', 'adult / child / elderly')], ['activity', false, tr('rest / walk / run', 'rest / walk / run')]] },
+          params: [['pm25', false, tr('µg/m³ แทนค่าพื้นที่', 'µg/m³ overrides area lookup')], ['outdoorMin', false, tr('นาทีกลางแจ้ง ค่าเริ่มต้น 60', 'minutes outdoors, default 60')], ['province', false, tr('รหัส DOPA', 'DOPA code')], ['profile', false, tr('kid / teen / adult / athlete / senior / pregnant / asthma', 'kid / teen / adult / athlete / senior / pregnant / asthma')], ['activity', false, tr('rest / moderate / heavy', 'rest / moderate / heavy')]] },
       ],
     },
     {

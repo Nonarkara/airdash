@@ -5,11 +5,11 @@
 // back to /api/science (with an honestly-labelled fallback so the page never
 // renders empty while the science API is still deploying).
 // ────────────────────────────────────────────────────────────────────────────
-import { store, on, setLang, emit } from './state.js?v=2.4.58'
-import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.58'
-import { getJson } from './cache.js?v=2.4.58'
-import { fmtNum, escapeHtml } from './fmt.js?v=2.4.58'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.58'
+import { store, on, setLang, emit } from './state.js?v=2.4.59'
+import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.59'
+import { getJson } from './cache.js?v=2.4.59'
+import { fmtNum, escapeHtml } from './fmt.js?v=2.4.59'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.59'
 
 const $ = (sel) => document.querySelector(sel)
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -77,13 +77,13 @@ const PERSONA_FALLBACK_LABEL = {
 // ── Data helpers ─────────────────────────────────────────────────────────────
 function row() {
   if (province && science?.provinces?.length) {
-    return science.provinces.find((p) => p.code === province) ?? science.national
+    return science.provinces.find((p) => p.code === province) ?? null
   }
   return science?.national
 }
 
 function currentPm25() {
-  const v = row()?.pm25 ?? science?.national?.pm25
+  const v = row()?.pm25
   return Number.isFinite(v) ? v : null
 }
 
@@ -202,28 +202,27 @@ function renderPersonaChips() {
 
 /** Client-side estimate used only when /api/science/personal is unreachable. */
 function fallbackPersonal() {
-  const pm = currentPm25() ?? science?.national?.pm25 ?? 24
+  const pm = currentPm25()
   const prof = science?.profiles?.[persona] ?? FALLBACK_SCIENCE.profiles[persona] ?? FALLBACK_SCIENCE.profiles.kid
   const vent = prof?.ventilation ?? { rest: 0.5, moderate: 1.5, heavy: 2.5 }
-  // A day ≈ 20 h at rest + 2 h moderate + outdoor minutes at moderate.
-  const doseUg = pm * (vent.rest * 20 + vent.moderate * 2)
-  const cigs = pm / 22
-  const g = (prof?.guidance ?? []).find((x) => pm <= x.maxPm25)
-  const level = pm25Level(pm) ?? 3
-  const budgetTable = { 1: 300, 2: 240, 3: 90, 4: 30, 5: 0 }
-  const personaFactor = { kid: 0.8, teen: 1, adult: 1, athlete: 1.2, senior: 0.7, pregnant: 0.7, asthma: 0.6 }
+  // Match the API's 60-minute moderate-activity card, not a whole day.
+  const doseUg = pm == null ? null : pm * vent.moderate
+  const cigs = pm == null ? null : pm / 22 / 24
+  const g = pm == null ? null : (prof?.guidance ?? []).find((x) => pm <= x.maxPm25)
   return {
     pm25: pm, band: science?.national?.band ?? 'watch',
-    dose_ug: Math.round(doseUg),
-    cigs_per_day: cigs, life_minutes_per_day: cigs * 11,
-    play_budget_min: Math.round((budgetTable[level] ?? 60) * (personaFactor[persona] ?? 1)),
+    dose_ug: doseUg, cigs_equiv: cigs, life_minutes: cigs == null ? null : cigs * 11,
+    play_budget_min: pm == null ? null : pm <= 15 ? 480 : Math.round(Math.max(5, Math.min(480, 60 * 15 / pm))),
+    play_unlimited: pm != null && pm <= 15,
     guidance_th: g?.th ?? 'ติดตามค่าฝุ่นก่อนออกจากบ้าน',
     guidance_en: g?.en ?? 'Check the dust level before heading out',
     profile: persona, __estimate: true,
   }
 }
 
+let personalToken = 0
 async function renderPersonal() {
+  const token = ++personalToken
   const card = $('#persona-card')
   if (!card || !science) return
 
@@ -242,6 +241,7 @@ async function renderPersonal() {
   } catch {
     d = fallbackPersonal()
   }
+  if (token !== personalToken) return
 
   // Live payload: { dose_ug, cigs_equiv, life_minutes, play_budget_min,
   // play_unlimited, guidance: {th,en} }. Draft-contract/fallback shape used
@@ -251,7 +251,7 @@ async function renderPersonal() {
   const guideTh = d.guidance?.th ?? d.guidance_th ?? d.guidance_en ?? d.guidance?.en ?? ''
   const guideEn = d.guidance?.en ?? d.guidance_en ?? d.guidance_th ?? d.guidance?.th ?? ''
   const playTxt = d.play_unlimited
-    ? tr('ไม่จำกัด', 'unlimited')
+    ? tr('ต่ำกว่าระดับอ้างอิง', 'below reference')
     : (d.play_budget_min == null ? '—' : fmtNum(d.play_budget_min, 0))
 
   card.innerHTML = `
@@ -264,7 +264,7 @@ async function renderPersonal() {
       </div>
       <div class="numcell">
         <div class="n">${playTxt}</div>
-        <div class="l">${tr('นาที — งบเล่นกลางแจ้งที่เหลือวันนี้ ก่อนถึงเกณฑ์ที่ควรเข้าบ้าน', 'minutes — your remaining outdoor-play budget today before it\'s better to head inside')}</div>
+        <div class="l">${tr('นาทีที่เทียบปริมาณสัมผัสกับ 60 นาทีที่ 15 µg/m³ — ไม่ใช่เวลาปลอดภัยที่รับรอง', 'minutes equivalent to 60 minutes at 15 µg/m³ — not a validated safe-time limit')}</div>
       </div>
       <div class="numcell">
         <div class="n">${cigs == null ? '—' : fmtNum(cigs, 2)}</div>
@@ -682,6 +682,22 @@ async function boot() {
   try { initDataFreshness() } catch {}
 
   resolveLocation()
+  // Keep an open story current and recover from a failed first load. The
+  // cache coalesces requests when visibility and the timer fire together.
+  const refresh = async () => {
+    if (document.hidden) return
+    try {
+      const next = await getJson('/api/science', 60_000)
+      if (!next?.national) throw new Error('bad science payload')
+      science = next; offline = false; renderAll()
+    } catch { /* retain timestamped readings; freshness continues to age */ }
+    try {
+      const next = await getJson('/api/snapshot', 60_000)
+      snapshot = next; store.snapshot = next; renderSky(); emit('snapshot', next)
+    } catch { /* keep the last known snapshot */ }
+  }
+  setInterval(refresh, 60_000)
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh() })
 }
 
 on('lang', () => { paintChrome(); renderAll() })

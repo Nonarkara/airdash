@@ -151,6 +151,7 @@ import { statSync } from 'node:fs'
 export function sendFile(res, filePath, { contentType = 'application/octet-stream', filename = null, cacheControl = 'no-store' } = {}) {
   let stat
   try { stat = statSync(filePath) } catch { return false }
+  if (!stat.isFile()) return false
   const headers = { ...SECURITY_HEADERS, 'content-type': contentType, 'cache-control': cacheControl, 'accept-ranges': 'bytes' }
   if (filename) headers['content-disposition'] = `attachment; filename="${filename}"`
   headers['content-length'] = String(stat.size)
@@ -162,13 +163,27 @@ export function sendFile(res, filePath, { contentType = 'application/octet-strea
     const end = m[2] ? Number(m[2]) : stat.size - 1
     if (start <= end && end < stat.size) {
       res.writeHead(206, { ...headers, 'content-range': `bytes ${start}-${end}/${stat.size}`, 'content-length': String(end - start + 1) })
-      createReadStream(filePath, { start, end }).pipe(res)
+      pipeFile(filePath, res, { start, end })
       return true
     }
   }
   res.writeHead(200, headers)
-  createReadStream(filePath).pipe(res)
+  pipeFile(filePath, res)
   return true
+}
+
+// Retention/deploy can remove a file after stat but before open. An
+// unhandled stream error would otherwise terminate the entire server.
+function pipeFile(filePath, res, options, gzip = false) {
+  const stream = createReadStream(filePath, options)
+  stream.on('error', () => res.destroy())
+  res.on('close', () => stream.destroy())
+  if (gzip) {
+    const compressor = createGzip()
+    compressor.on('error', () => res.destroy())
+    res.on('close', () => compressor.destroy())
+    stream.pipe(compressor).pipe(res)
+  } else stream.pipe(res)
 }
 
 export async function readBody(req, limit = 64 * 1024) {
@@ -209,10 +224,10 @@ async function serveStatic(req, res, pathname) {
     const wantsGzip = COMPRESSIBLE.has(ext) && /\bgzip\b/.test(req.headers['accept-encoding'] ?? '') && info.size > 1400
     if (wantsGzip) {
       res.writeHead(200, { ...headers, 'content-encoding': 'gzip', vary: 'Accept-Encoding' })
-      createReadStream(filePath).pipe(createGzip()).pipe(res)
+      pipeFile(filePath, res, undefined, true)
     } else {
       res.writeHead(200, { ...headers, 'content-length': info.size })
-      createReadStream(filePath).pipe(res)
+      pipeFile(filePath, res)
     }
   } catch {
     res.writeHead(404, { ...SECURITY_HEADERS, 'content-type': 'text/plain; charset=utf-8' }).end('not found')
@@ -252,6 +267,7 @@ export function startHttp(routes) {
     // spreading SECURITY_HEADERS, and Node merges setHeader() values into
     // writeHead() — so this is the only spot that covers all of them.
     res.setHeader('x-service', 'airdash')
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(name, value)
     const url = requestUrl(req)
     if (!url) { res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end('bad request'); return }
     const key = `${req.method} ${url.pathname}`

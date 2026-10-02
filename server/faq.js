@@ -18,6 +18,7 @@
 //   approve via /api/chat/faq/:id/approve.
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { log } from './util.js'
+import { clientIp } from './ratelimit.js'
 
 const FAQ_HIT_THRESHOLD = 0.92  // very high — false positives here are user-facing
 
@@ -62,13 +63,12 @@ function timingSafeStrEqual(a, b) {
 }
 
 function ipHash(req, salt) {
-  const ip = req?.headers?.['x-forwarded-for']?.split(',')[0]?.trim()
-        || req?.socket?.remoteAddress
-        || 'unknown'
+  const ip = req ? clientIp(req) : 'unknown'
   return createHash('sha256').update(salt + ip).digest('hex').slice(0, 16)
 }
 
 function cosine(a, b) {
+  if (a.length !== b.length) return -1
   let dot = 0, na = 0, nb = 0
   for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i] }
   return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1)

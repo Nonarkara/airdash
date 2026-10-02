@@ -2108,19 +2108,21 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
   background: var(--well-dim); border-bottom: 1px solid var(--rule-strong);
 }
 .lib-toc-row {
+  width: 100%; text-align: left; color: var(--ink); font: inherit;
   display: flex; align-items: center; gap: 8px; padding: 8px 12px;
   border-bottom: 1px solid var(--rule); background: var(--well); cursor: pointer;
 }
-.lib-toc-row:hover { background: var(--well-dim); }
+.lib-toc-row:hover { background: var(--well-dim); color: var(--ink); }
 .lib-toc-title { flex: 1; min-width: 0; }
 .lib-toc-title .th { font-weight: 600; font-size: 13.5px; }
 .lib-toc-title .en { font-family: var(--font-num); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mid); }
 .lib-toc-n { font-family: var(--font-num); font-size: 10.5px; color: var(--ink-low); flex: none; }
 
 .lib-result-row {
+  display: block; width: 100%; text-align: left; color: var(--ink); font: inherit;
   padding: 8px 12px; border-bottom: 1px solid var(--rule); background: var(--well); cursor: pointer;
 }
-.lib-result-row:hover { background: var(--well-dim); }
+.lib-result-row:hover { background: var(--well-dim); color: var(--ink); }
 .lib-result-ctx {
   font-family: var(--font-num); font-size: 9.5px; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--ink-low);

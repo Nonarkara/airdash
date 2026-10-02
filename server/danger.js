@@ -305,7 +305,7 @@ export function createDanger(db, { riskEngine, washout }) {
       // the live PM. Honest framing: both are real, both can be higher.
       const pmLives = [p.pm25_pcd, p.pm25_gistda].filter((v) => v !== null && Number.isFinite(v))
       const pmLive = pmLives.length ? Math.max(...pmLives) : null
-      const pmBase = pmBaseScore(pmLive)
+      const pmBase = pmLive === null ? null : pmBaseScore(pmLive)
 
       const heat = heatAmp(p.temp_c)
       const hum = humAmp(p.rh_pct)
@@ -315,8 +315,10 @@ export function createDanger(db, { riskEngine, washout }) {
       // danger = pm × (1+heat) × (1+hum) × (1+noise) × (1 − rain_relief)
       const amplified = pmBase * (1 + heat) * (1 + hum) * (1 + noise)
       const raw = amplified * (1 - relief)
-      const danger = Math.max(0, Math.min(100, Math.round(raw)))
-      const bandName = band(danger)
+      // Rain in a 24-hour window cannot cancel the PM measured now. Keep
+      // the measured PM baseline as a floor; missing PM has no safe score.
+      const danger = pmBase === null ? null : Math.max(pmBase, Math.min(100, Math.round(raw)))
+      const bandName = danger === null ? 'unknown' : band(danger)
 
       // Forward-looking danger: the SAME composite formula with the CAMS
       // PM2.5 forecast as the PM input. Base-definition decision (documented
@@ -332,10 +334,11 @@ export function createDanger(db, { riskEngine, washout }) {
       // with the actual trajectory). A residual CAMS-vs-station bias can
       // still lean the trend — it is a heuristic arrow, not a prediction.
       const cams = riskByCode.get(p.province_code)
-      const camsWorst = Math.max(cams?.pm25_fc_24h ?? 0, cams?.pm25_fc_48h ?? 0)
-      const dangerFc = camsWorst > 0 ? Math.round(Math.min(100,
-        pmBaseScore(camsWorst) * (1 + heat) * (1 + hum) * (1 + noise) * (1 - relief))) : danger
-      const trend = dangerFc - danger
+      const camsValues = [cams?.pm25_fc_24h, cams?.pm25_fc_48h].filter(Number.isFinite)
+      const camsWorst = camsValues.length ? Math.max(...camsValues) : null
+      const dangerFc = camsWorst !== null ? Math.max(pmBaseScore(camsWorst), Math.round(Math.min(100,
+        pmBaseScore(camsWorst) * (1 + heat) * (1 + hum) * (1 + noise) * (1 - relief)))) : null
+      const trend = dangerFc === null || danger === null ? null : dangerFc - danger
 
       out.push({
         province_code: p.province_code,
@@ -349,15 +352,16 @@ export function createDanger(db, { riskEngine, washout }) {
         // Modifiers (named so the UI can show a breakdown)
         pm_base: pmBase, heat_amp: heat, hum_amp: hum, noise_amp: noise,
         rain_relief: relief, rain_source: rainSrc,
+        measured_pm_floor: pmBase,
         // Output
         score: danger, band: bandName, score_forecast: dangerFc, trend_24h: trend,
         // Bilingual labels for the UI to render directly
-        label_th: DANGER_LABELS[bandName].th,
-        label_en: DANGER_LABELS[bandName].en,
-        band_color: DANGER_BG[bandName],
+        label_th: DANGER_LABELS[bandName]?.th ?? 'ยังไม่มีข้อมูลฝุ่น',
+        label_en: DANGER_LABELS[bandName]?.en ?? 'No current PM data',
+        band_color: DANGER_BG[bandName] ?? '#6b7280',
       })
     }
-    out.sort((a, b) => b.score - a.score || (a.province_th || '').localeCompare(b.province_th || ''))
+    out.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || (a.province_th || '').localeCompare(b.province_th || ''))
     return out
   }
 

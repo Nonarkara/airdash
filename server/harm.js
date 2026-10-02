@@ -13,7 +13,7 @@
 // provinces; social load re-ranks when watch scores are similar.
 //
 // Always emits all 77 DOPA provinces (names from provinces.js). Watch score
-// is 0 when the risk engine has no live row yet — so a sparse post-outage
+// is null when the risk engine has no live row yet — so a sparse post-outage
 // risk snapshot cannot drop high-social provinces from /api/harm.
 //
 // This is a transparent heuristic for ranking and messaging, not an
@@ -130,8 +130,8 @@ export function harmPayload(entry) {
 function buildEntry(code, nameTh, nameEn, watch, watchLive, row) {
   const social = socialLoadScore(row)
   const score = effectiveHarm(watch, social)
-  if (score === null || social === null) return null
-  const band = harmBand(score)
+  if (social === null) return null
+  const band = score === null ? 'unknown' : harmBand(score)
   const copy = actionForSocial(social)
   return {
     province_code: code,
@@ -146,8 +146,8 @@ function buildEntry(code, nameTh, nameEn, watch, watchLive, row) {
     adaptive_deficit: row.adaptive_deficit,
     score,
     band,
-    label_th: BAND_LABELS[band].th,
-    label_en: BAND_LABELS[band].en,
+    label_th: BAND_LABELS[band]?.th ?? 'ยังไม่มีข้อมูล',
+    label_en: BAND_LABELS[band]?.en ?? 'No current data',
     action_th: copy.action_th,
     action_en: copy.action_en,
     social_label_th: copy.label_th,
@@ -174,8 +174,8 @@ export function createHarm({ riskEngine }) {
       const row = PROVINCE_SOCIAL[code]
       if (!row) continue
       const rp = riskByCode.get(code)
-      const watchLive = typeof rp?.score === 'number'
-      const watch = watchLive ? rp.score : 0
+      const watchLive = Number.isFinite(rp?.score) && Number.isFinite(rp?.pm25)
+      const watch = watchLive ? rp.score : null
       const entry = buildEntry(
         code,
         rp?.province_th ?? prov.province_th,
@@ -186,7 +186,7 @@ export function createHarm({ riskEngine }) {
       )
       if (entry) list.push(entry)
     }
-    list.sort((a, b) => b.score - a.score || b.social_load - a.social_load
+    list.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || b.social_load - a.social_load
       || a.province_code.localeCompare(b.province_code))
     return { list, riskUpdated: risk?.updated ?? null }
   }

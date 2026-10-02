@@ -1,11 +1,11 @@
 // Universal place search — search any place name (province, station, focus area)
 // and get autocomplete results. Select one → map flies there + place card opens
 // with live data: nearest AQ stations, watch score, rain-washout outlook.
-import { on, store, emit } from '../state.js?v=2.4.58'
-import { tr, pick, BAND, bandColor, pmColorFor } from '../i18n.js?v=2.4.58'
-import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.58'
-import { getJson } from '../cache.js?v=2.4.58'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.58'
+import { on, store, emit } from '../state.js?v=2.4.59'
+import { tr, pick, BAND, bandColor, pmColorFor } from '../i18n.js?v=2.4.59'
+import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.59'
+import { getJson } from '../cache.js?v=2.4.59'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.59'
 
 // Cached province centroids — fetched once, used to give postal results
 // a fly-to target. Same numbers the server's gazetteer uses (see
@@ -381,7 +381,7 @@ async function bootCityFromUrl() {
 // static file to index.html, so by the time this runs, a non-root
 // single-segment path is a candidate place slug. Resolved server-side by
 // gazetteer.js's slug index (unambiguous by construction).
-const RESERVED_TOP_SEGMENTS = new Set(['api', 'css', 'js', 'geo', 'vendor', 'img', 'fonts', 'photos', 'ops.html'])
+const RESERVED_TOP_SEGMENTS = new Set(['api', 'css', 'js', 'geo', 'vendor', 'img', 'fonts', 'photos', 'ops', 'install', 'ops.html'])
 async function bootCityFromSlug() {
   const seg = location.pathname.slice(1).split('/')[0]
   if (!seg || seg.includes('.') || RESERVED_TOP_SEGMENTS.has(seg)) return

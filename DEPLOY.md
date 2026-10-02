@@ -113,17 +113,17 @@ pushes are a no-op. Tokens live in the SQLite kv table — never in git.
 
 A nightly LaunchAgent (`com.airdash.backup`, installed from
 `ops/com.airdash.backup.plist`) runs `ops/backup-db.sh` every day at **03:17**.
-It uses SQLite's online backup API (`sqlite3 data/airdash.db ".backup …"`),
-which is safe against the live WAL-mode database — the server does **not**
-need to stop. Each run:
+It creates a consistent live WAL-mode snapshot with `VACUUM INTO`, then runs a
+bounded `PRAGMA quick_check` on the compacted snapshot. Production backups go
+to `/Volumes/Data/DBBackups/airdash`, on a separate physical drive. Each run:
 
-1. Writes a timestamped snapshot to `data/backups/airdash-YYYYMMDD-HHMM.db`.
-2. Verifies it with `PRAGMA integrity_check;` (a failed snapshot is kept
-   for forensics and the job exits non-zero, logged loudly).
-3. Keeps the **last 7** snapshots; older ones are deleted.
-4. Refreshes `data/backups/airdash-latest.db.gz` (gzip -9 of the newest
-   snapshot, swapped in atomically) — a single stable filename an offsite
-   sync can grab later.
+1. Stages on the internal SSD when space allows, verifies there, copies to the
+   external drive, compares bytes, and atomically publishes the verified copy.
+2. Keeps the last seven external snapshots. If the external drive is unavailable,
+   keeps two internal fallback snapshots and logs the degraded recovery mode.
+3. Refreshes `data/backups/airdash-latest.db.gz` atomically on the internal disk.
+4. Bounds snapshot, verification, copy and compression stages so a hung disk
+   cannot prevent the following night's job.
 
 Progress and errors go to `logs/backup.log` (stderr to
 `logs/backup.err.log`). To run one manually: `bash ops/backup-db.sh`.
@@ -133,6 +133,7 @@ copy the chosen snapshot back over `data/airdash.db` (remove any stale
 `data/airdash.db-wal`/`-shm` first), then start it again
 (`launchctl load ~/Library/LaunchAgents/com.airdash.server.plist`).
 
-**Known gap:** backups live on the same disk as the database — they protect
-against corruption and bad writes, not against disk/machine loss. Offsite
-sync of `data/backups/airdash-latest.db.gz` is a planned future step.
+**Known gap:** the external drive is separate from the boot disk but remains
+attached to the same machine/site. Offsite sync is not configured. A real second
+backend is also not configured; an edge mirror is stale read availability, not
+live failover.

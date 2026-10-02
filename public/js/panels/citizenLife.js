@@ -40,10 +40,10 @@
 // 7-year-old the panel is meant to help has an even shorter attention
 // span. The English side uses a registered-nurse register: warm,
 // direct, never preachy. "Don't" is reserved for emergencies.
-import { on, store } from '../state.js?v=2.4.58'
-import { tr } from '../i18n.js?v=2.4.58'
-import { el } from '../fmt.js?v=2.4.58'
-import { getJson } from '../cache.js?v=2.4.58'
+import { on, store } from '../state.js?v=2.4.59'
+import { tr } from '../i18n.js?v=2.4.59'
+import { el } from '../fmt.js?v=2.4.59'
+import { getJson } from '../cache.js?v=2.4.59'
 
 // ── 1. PERSONA SELECTOR + SPECIFIC ADVICE ─────────────────────────────────
 
@@ -135,26 +135,25 @@ async function fetchPlayBudget(province, personaId) {
   if (!province?.code) return null
   try {
     const j = await getJson(
-      `/api/science/personal?code=${province.code}&profile=${personaId}`,
+      `/api/science/personal?province=${encodeURIComponent(province.code)}&profile=${personaId === 'heart' ? 'adult' : personaId}`,
       5 * 60_000,
     )
-    const p = (j?.provinces ?? []).find((x) => String(x.code) === String(province.code))
-    if (!p) return null
+    if (!j?.resolved) return null
     return {
-      playBudgetMin: p.play_budget_min,
-      playUnlimited: p.play_unlimited,
-      pm25: p.pm25,
-      band: p.band,
+      playBudgetMin: j.play_budget_min,
+      playUnlimited: j.play_unlimited,
+      pm25: j.resolved.pm25,
+      band: j.band,
     }
   } catch { return null }
 }
 
 // "20 นาที" / "20 min" — short human form. Used in the persona card.
 function playBudgetText(min, unlimited, lang) {
-  if (unlimited) return tr('ไม่จำกัดเวลา · เล่นได้ตามสบาย', 'No time limit — play as long as you like')
-  if (min == null) return tr('กำลังคำนวณ…', 'calculating…')
-  if (lang === 'th') return `${min} นาทีกลางแจ้ง · หลังจากนั้นเข้าบ้าน`
-  return `${min} min outside · then head indoors`
+  if (unlimited) return tr('ค่าฝุ่นต่ำกว่าระดับอ้างอิง', 'PM is below the comparison level')
+  if (min == null) return tr('ยังไม่มีค่าฝุ่นสด', 'No current PM reading')
+  if (lang === 'th') return `${min} นาที เทียบกับ 60 นาทีที่ 15 µg/m³ — ไม่ใช่เวลาปลอดภัยที่รับรอง`
+  return `${min} min equals the dose of 60 min at 15 µg/m³ — not a validated safe-time limit`
 }
 
 // Renders the persona selector + the active persona's specific advice
@@ -214,7 +213,7 @@ export async function renderPersonaSection(province, band) {
       // kind of number that gets remembered and acted on.
       budgetText && el('div', { class: 'citizen-persona-budget' },
         el('div', { class: 'citizen-persona-budget-lbl' },
-          tr('เวลาเล่นกลางแจ้งที่แนะนำ', 'Recommended outdoor time')),
+          tr('เวลาเทียบปริมาณสัมผัส', 'Dose-equivalent time')),
         el('div', { class: 'citizen-persona-budget-num' }, budgetText),
       ),
       // Persona-specific action — different from the generic advice.
@@ -249,8 +248,10 @@ export async function renderPersonaSection(province, band) {
 }
 
 function renderPersonaInto(host, province, band) {
+  const request = {}
+  host._personaRequest = request
   renderPersonaSection(province, band).then((node) => {
-    host.append(node)
+    if (host.isConnected && host._personaRequest === request) host.replaceChildren(node)
   })
 }
 
