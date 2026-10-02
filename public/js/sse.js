@@ -1,18 +1,27 @@
 // SSE tap client with a liveness watchdog — built for weeks of uptime.
 // EventSource auto-reconnects, but a silently-dead socket doesn't error, so a
 // watchdog recreates the connection when heartbeats stop arriving.
-import { emit, store } from './state.js?v=2.4.53'
+import { emit, store } from './state.js?v=2.4.54'
 
 const WATCHDOG_MS = 60_000
 let es = null
 let lastSeen = 0
+let openedOnce = false
 
 function connect() {
   es?.close()
   es = new EventSource('/api/tap')
   lastSeen = Date.now()
 
-  es.onopen = () => { store.connected = true; emit('conn', true) }
+  es.onopen = () => {
+    lastSeen = Date.now()
+    store.connected = true
+    emit('conn', true)
+    // A watchdog reconnect creates a new EventSource and loses its replay
+    // cursor. Refresh state/history when it opens so missed events recover.
+    if (openedOnce) emit('resync')
+    openedOnce = true
+  }
   es.onerror = () => { store.connected = false; emit('conn', false) }
 
   es.addEventListener('tap', (msg) => {

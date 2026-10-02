@@ -191,6 +191,18 @@ function escapeLike(q) {
   return q.replace(/[%_\\]/g, (c) => `\\${c}`)
 }
 
+// Missing/blank coordinates must not become (0, 0) via Number(null).
+// These three lookups describe Thailand; reject points outside coverage.
+function coordinates(url) {
+  const rawLat = url.searchParams.get('lat')
+  const rawLng = url.searchParams.get('lng')
+  if (!rawLat?.trim() || !rawLng?.trim()) return null
+  const lat = Number(rawLat), lng = Number(rawLng)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  if (lat < 4 || lat > 22 || lng < 95 || lng > 108) return null
+  return { lat, lng }
+}
+
 function safeMeta(json) {
   if (!json) return null
   try { return JSON.parse(json) } catch { return null }
@@ -539,9 +551,9 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       sendPrebuilt(res, 200, built)
     },
     'GET /api/weather/at': (req, res, url) => {
-      const lat = Number(url.searchParams.get('lat')), lng = Number(url.searchParams.get('lng'))
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return json(res, 400, { error: 'lat and lng required' })
-      if (lat < 4 || lat > 22 || lng < 95 || lng > 108) return json(res, 400, { error: 'lat/lng outside Thailand coverage' })
+      const point = coordinates(url)
+      if (!point) return json(res, 400, { error: 'valid lat and lng within Thailand coverage required' })
+      const { lat, lng } = point
       if (!allow(req, { key: 'weather_at', limit: 60, windowMs: 60_000 })) return json(res, 429, { error: 'too many weather lookups, slow down' })
       let province_code = url.searchParams.get('province') || null
       if (!province_code) {
@@ -1630,12 +1642,10 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
 
     // Place detail — nearest stations, forecast, context for a lat/lng.
     'GET /api/place': (req, res, url) => {
-      const lat = Number(url.searchParams.get('lat'))
-      const lng = Number(url.searchParams.get('lng'))
+      const point = coordinates(url)
+      if (!point) return json(res, 400, { error: 'valid lat and lng within Thailand coverage required' })
+      const { lat, lng } = point
       const province_th = url.searchParams.get('province') ?? null
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        return json(res, 400, { error: 'lat and lng required' })
-      }
       const radius = clamp(url.searchParams.get('radius'), 5, 100, 30)
       const detail = placeDetail(db, { lat, lng, province_th, radius_km: radius })
       // The "so what" layer: plain-language verdict for this exact place.
@@ -1809,12 +1819,10 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     // citizen hero: the K nearest Air4Thai stations to a point with their
     // latest PM2.5 / AQI and how fresh the reading is.
     'GET /api/stations/nearest': (req, res, url) => {
-      const lat = Number(url.searchParams.get('lat'))
-      const lng = Number(url.searchParams.get('lng'))
-      const limit = Math.min(20, Number(url.searchParams.get('limit')) || 3)
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        return json(res, 400, { error: 'lat and lng required' })
-      }
+      const point = coordinates(url)
+      if (!point) return json(res, 400, { error: 'valid lat and lng within Thailand coverage required' })
+      const { lat, lng } = point
+      const limit = Math.floor(clamp(url.searchParams.get('limit'), 1, 20, 3))
       // Bbox prefilter (~1.5° ≈ 165 km) keeps this on the geo index, then
       // exact-ish distance sort in JS over the small candidate set.
       const D = 1.5

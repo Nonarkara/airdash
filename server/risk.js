@@ -396,7 +396,8 @@ export function createRisk(db, washout) {
     // Effective national band: if the raw band says "normal" but we're in
     // dust season, escalate to a "low" pseudo-band so the UI can render the
     // "STAY INFORMED" treatment. The flag lets the UI swap the label.
-    const effectiveBand = (nationalBand === 'normal' && dustSeason) ? 'low' : nationalBand
+    const effectiveBand = nationalBand === 'normal' && provincesWithPm.length === 0 ? 'watch'
+      : (nationalBand === 'normal' && dustSeason) ? 'low' : nationalBand
 
     const result = {
       updated: new Date().toISOString(),
@@ -412,6 +413,7 @@ export function createRisk(db, washout) {
         dustLoadPct,                     // 0–100, % provinces ≥ 25 µg/m³
         dustyProvinceCount,
         dustSampledCount: provincesWithPm.length,
+        data_available: provincesWithPm.length > 0,
         dustSeason,                      // true ⇒ "Normal" → "LOW" UI override
         // Worst-case province score — used by the hero to show
         // the national-scale confidence interval (±5 by default).

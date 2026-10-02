@@ -120,6 +120,10 @@ export function provinceVerdict(p, sat = null, near = null) {
     (!s.obs_time || Date.now() - new Date(s.obs_time).getTime() < NEAR_FRESH_MS))
   const nearestVeryBad = freshNear.find((s) => s.pm25 >= PM_VERY_UNHEALTHY)
   const nearestBad = freshNear.find((s) => s.pm25 >= PM_UNHEALTHY)
+  const hasCurrentAir = Number.isFinite(pm25) || freshNear.length > 0
+  if (!hasCurrentAir) R(
+    'ไม่มีค่าฝุ่นปัจจุบันที่ยืนยันได้ — ยังสรุปว่าอากาศดีไม่ได้',
+    'No current PM2.5 reading is available — good air cannot be confirmed')
   const provVeryBad = (p?.stations_very_unhealthy ?? 0) > 0
   const provBad = (p?.stations_unhealthy ?? 0) > 0
   // Only surface the cross-border reason when the province aggregate DIDN'T
@@ -212,6 +216,7 @@ export function provinceVerdict(p, sat = null, near = null) {
   // Air already at the "affecting health" line — in this province OR near this
   // city across a border — is danger regardless of the province aggregate.
   if (p?.band === 'high' || (pm25 ?? 0) >= PM_VERY_UNHEALTHY || nearestVeryBad) level = 'danger'
+  if (!hasCurrentAir && level === 'safe') level = 'watch'
 
   const HEAD = {
     safe:    { th: 'วันนี้อากาศดี', en: 'Good air today' },
@@ -219,10 +224,13 @@ export function provinceVerdict(p, sat = null, near = null) {
     prepare: { th: 'ควรป้องกันตัว', en: 'Protect yourself' },
     danger:  { th: 'ฝุ่นระดับวิกฤต', en: 'Critical dust level' },
   }[level]
+  const missingAir = !hasCurrentAir && level === 'watch'
 
   return {
     level,
-    head_th: HEAD.th, head_en: HEAD.en,
+    data_available: hasCurrentAir,
+    head_th: missingAir ? 'ยังไม่มีค่าฝุ่นปัจจุบัน' : HEAD.th,
+    head_en: missingAir ? 'Current air quality unavailable' : HEAD.en,
     // Was 3. Five mid-tier reasons now compete for the slots; with 3 a real
     // contributor lost the coin-flip on which survived (same fix as
     // FloodDash v4.22.0). risk.js and the citizen panel render this list
@@ -250,6 +258,18 @@ export function nationalVerdict(risk) {
   const topEn = hot.slice(0, 3).map((p) => p.province_en ?? p.province_th).join(' · ')
   const dustPct = n.dustLoadPct ?? 0
   const dustSeason = !!n.dustSeason
+
+  // A normal score with no observed PM2.5 is absence of evidence, not
+  // evidence of clean air. Keep the existing level vocabulary for clients.
+  if (!risk.provinces.some((p) => Number.isFinite(p.pm25)) && n.band === 'normal') return {
+    level: 'watch', data_available: false,
+    th: 'ยังไม่มีค่าฝุ่นปัจจุบัน — ตรวจสอบสถานีวัดในพื้นที่',
+    en: 'Current air quality unavailable — check local monitors',
+    reasons: [{ th: 'ไม่มีค่าฝุ่นปัจจุบันที่ยืนยันได้', en: 'No current PM2.5 reading is available' }],
+    action_th: ACTIONS.watch.th, action_en: ACTIONS.watch.en,
+    checklist: NATIONAL_CHECKLIST.watch, window: null,
+    disclaimer_th: DISCLAIMER.th, disclaimer_en: DISCLAIMER.en,
+  }
 
   // Dust-season "low" override: the raw band is normal but the season is on.
   if (n.band === 'normal' && dustSeason) {

@@ -35,6 +35,31 @@ const isBackendDown = (res) => res.status >= 500 || !isAirdash(res)
 
 const JSON_TIMEOUT_MS = 30_000
 const STREAM_TIMEOUT_MS = 300_000
+const MAX_PROXY_BODY = 256 * 1024
+
+async function readProxyBody(request) {
+  if (!request.body) return null
+  if (Number(request.headers.get('content-length')) > MAX_PROXY_BODY) return { tooLarge: true }
+  const reader = request.body.getReader()
+  const chunks = []
+  let length = 0
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      length += value.byteLength
+      if (length > MAX_PROXY_BODY) {
+        await reader.cancel().catch(() => {})
+        return { tooLarge: true }
+      }
+      chunks.push(value)
+    }
+  } finally { reader.releaseLock() }
+  const bytes = new Uint8Array(length)
+  let offset = 0
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength }
+  return bytes
+}
 const SNAPSHOT_TIMEOUT_MS = 8_000
 const EDGE_CACHEABLE_PATHS = new Set(['/api/risk', '/api/snapshot'])
 const MIRROR_PATHS = new Set([
@@ -131,10 +156,15 @@ export async function onRequest(context) {
   const clientIp = request.headers.get('cf-connecting-ip')
   if (clientIp) headers.set('x-forwarded-for', clientIp)
 
-  const MAX_PROXY_BODY = 256 * 1024
-  let body = request.method === 'GET' || request.method === 'HEAD'
-    ? null : await request.arrayBuffer()
-  if (body && body.byteLength > MAX_PROXY_BODY) {
+  let body
+  try {
+    body = request.method === 'GET' || request.method === 'HEAD' ? null : await readProxyBody(request)
+  } catch {
+    return new Response(JSON.stringify({ error: 'invalid request body' }), {
+      status: 400, headers: { 'content-type': 'application/json' },
+    })
+  }
+  if (body?.tooLarge) {
     return new Response(JSON.stringify({ error: 'payload too large' }), {
       status: 413,
       headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -144,7 +174,11 @@ export async function onRequest(context) {
   try {
     let upstream = null
     let lastErr = null
-    for (const backend of backendOrder(context.env)) {
+    // A timed-out write may already have committed on the primary. Retrying
+    // it could duplicate subscriptions, chat logs, exports, or alert pushes.
+    const backends = ['GET', 'HEAD', 'OPTIONS'].includes(request.method)
+      ? backendOrder(context.env) : backendOrder(context.env).slice(0, 1)
+    for (const backend of backends) {
       const target = backend + url.pathname + url.search
       try {
         const res = await fetch(new Request(target, {

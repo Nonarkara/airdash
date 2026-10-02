@@ -83,11 +83,15 @@ export function createScheduler({ db, bus, alerts, sources }) {
     s.running = true
     const startedAt = new Date().toISOString()
     const t0 = Date.now()
+    let expired = false
     // Hard ceiling: if the source somehow hangs past all its own timeouts,
     // force-reset running state and reschedule so the pipeline keeps breathing.
-    s.runTimer = setTimeout(() => {
+    const runTimer = s.runTimer = setTimeout(() => {
       if (!s.running) return
+      expired = true
       s.running = false
+      s.lastRun = startedAt
+      s.failures += 1
       s.lastError = `run exceeded ${MAX_RUN_MS}ms, forced reset`
       db.recordRun({ source: name, started_at: startedAt, dur_ms: MAX_RUN_MS, ok: false, error: s.lastError })
       log('error', 'ingest hung, forced reset', { source: name })
@@ -103,7 +107,8 @@ export function createScheduler({ db, bus, alerts, sources }) {
 
     try {
       const result = await s.source.run({ db, bus, alerts })
-      clearTimeout(s.runTimer)
+      if (expired) return // A replacement run owns the state now.
+      clearTimeout(runTimer)
       const durMs = Date.now() - t0
       s.failures = 0
       s.lastRun = startedAt
@@ -115,7 +120,8 @@ export function createScheduler({ db, bus, alerts, sources }) {
                      rows_seen: result?.seen ?? 0, rows_new: result?.added ?? 0 })
       log('info', 'ingest ok', { source: name, durMs, seen: result?.seen ?? 0, added: result?.added ?? 0 })
     } catch (err) {
-      clearTimeout(s.runTimer)
+      if (expired) return
+      clearTimeout(runTimer)
       const durMs = Date.now() - t0
       s.lastRun = startedAt
       s.lastError = String(err?.message ?? err)
@@ -151,8 +157,11 @@ export function createScheduler({ db, bus, alerts, sources }) {
       }
       db.recordRun({ source: name, started_at: startedAt, dur_ms: durMs, ok: false, error: s.lastError })
     } finally {
-      s.running = false
-      schedule(name)
+      clearTimeout(runTimer)
+      if (!expired) {
+        s.running = false
+        schedule(name)
+      }
     }
   }
 

@@ -17,36 +17,36 @@
  *     so a stale airdash-v3 / v4 / ... cache can never serve broken JS.
  */
 
-const CACHE = 'airdash-v71';
+const CACHE = 'airdash-v72';
 
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/ops.html',
   '/install.html',
-  '/css/brand.css?v=2.4.53',
+  '/css/brand.css?v=2.4.54',
   '/img/brand/airdash-signal-color.png',
   '/img/brand/airdash-signal-black.png',
   '/img/brand/airdash-signal-white.png',
-  '/css/tokens.css?v=2.4.53',
-  '/css/layout.css?v=2.4.53',
-  '/css/components.css?v=2.4.53',
-  '/css/city-dashboard.css?v=2.4.53',
-  '/css/story.css?v=2.4.53',
-  '/css/witness.css?v=2.4.53',
-  '/js/witness.js?v=2.4.53',
-  '/js/boot.js?v=2.4.53',
-  '/js/panels/burning.js?v=2.4.53',
-  '/js/main.js?v=2.4.53',
+  '/css/tokens.css?v=2.4.54',
+  '/css/layout.css?v=2.4.54',
+  '/css/components.css?v=2.4.54',
+  '/css/city-dashboard.css?v=2.4.54',
+  '/css/story.css?v=2.4.54',
+  '/css/witness.css?v=2.4.54',
+  '/js/witness.js?v=2.4.54',
+  '/js/boot.js?v=2.4.54',
+  '/js/panels/burning.js?v=2.4.54',
+  '/js/main.js?v=2.4.54',
 
-  '/js/feedAge.js?v=2.4.53',
-  '/js/story.js?v=2.4.53',
+  '/js/feedAge.js?v=2.4.54',
+  '/js/story.js?v=2.4.54',
   // The life-saving citizen panel additions (persona selector, action
   // timeline, mask guide, symptom checker, migrant phrases, time-of-day
   // forecast). Precache so the citizen panel works offline — the user
   // reading "ถ้าเจ็บหน้าอก โทร 1669" needs that line to work even
   // when the cellular drops.
-  '/js/panels/citizenLife.js?v=2.4.53',
+  '/js/panels/citizenLife.js?v=2.4.54',
   // New modules added in Phase 1. The SW does NOT precache every panel
   // (the install event is fragile if any 404s), but the runtime cache
   // picks them up on first load via stale-while-revalidate.
@@ -89,7 +89,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE)
+          .filter((name) => name !== CACHE && (name.startsWith('airdash-') || name.startsWith('flooddash-')))
           .map((name) => caches.delete(name))
       );
     }).then(() => {
@@ -110,129 +110,58 @@ self.addEventListener('activate', (event) => {
  *    `?forceReload=N` bypasses the cache for one navigation.
  * 4. Static assets: stale-while-revalidate (serve from cache, update in background).
  */
+// Clone before returning the response: the browser can consume its body
+// while caches.open is pending. Keep the write alive for the fetch event.
+function cacheResponse(event, request, response) {
+  if (!response.ok || response.type !== 'basic') return
+  const copy = response.clone()
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {}))
+}
+
+function offlineDocument(pathname) {
+  if (pathname === '/install' || pathname === '/install.html') return '/install.html'
+  if (pathname === '/' || pathname === '/index.html') return '/index.html'
+  return '/ops.html' // Mission Control and /<place> deep links
+}
+
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const { url, method, mode } = request;
+  const { request } = event
+  if (request.method !== 'GET') return
+  const url = new URL(request.url)
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return
+  const forceReload = url.searchParams.has('forceReload')
 
-  // Only handle same-origin GET requests
-  if (method !== 'GET' || !url.startsWith(self.location.origin)) {
-    return;
-  }
-
-  // Parse the URL
-  let urlObj;
-  try {
-    urlObj = new URL(url);
-  } catch {
-    return;
-  }
-
-  // CRITICAL: Never cache API endpoints or live streams
-  if (urlObj.pathname.startsWith('/api/')) {
-    return;
-  }
-
-  // Force-reload bypass: ?forceReload=N was added by the stuck-on-boot
-  // escape hatch. Strip the parameter from the cache lookup and serve
-  // straight from network so a broken cached HTML is never returned.
-  const forceReload = urlObj.searchParams.has('forceReload');
-
-  // Navigation requests (page loads, link clicks)
-  if (mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Only cache successful responses
-          if (response.ok && !forceReload) {
-            const cache = caches.open(CACHE).then((c) => {
-              c.put(request, response.clone());
-            });
-            return response;
-          }
-          return response;
-        })
-        .catch(() => {
-          if (forceReload) {
-            // Network really is down — return a clear offline hint.
-            return new Response(
-              '<!doctype html><meta charset="utf-8"><title>AirDash · offline</title>' +
-              '<body style="font-family:system-ui;padding:40px;text-align:center">' +
-              '<h1>AirDash is offline</h1>' +
-              '<p>No network, no cached page. Check your connection and try again.</p></body>',
-              { status: 503, headers: { 'content-type': 'text/html; charset=utf-8' } }
-            )
-          }
-          // Network failed; serve cached /index.html
-          return caches.match('/index.html')
-            .then((cachedResponse) => {
-              return cachedResponse || new Response('Offline', {
-                status: 503,
-                statusText: 'Service Unavailable'
-              });
-            });
-        })
-    );
-    return;
-  }
-
-  // Static assets: stale-while-revalidate
-  if (mode === '' || mode === 'no-cors') {
-    // Bypass cache entirely on forceReload so the new file wins.
-    if (forceReload) {
-      event.respondWith(
-        fetch(request).then((response) => {
-          if (response && response.ok && response.type === 'basic') {
-            const responseToCache = response.clone()
-            caches.open(CACHE).then((cache) => {
-              cache.put(request, responseToCache)
-            })
-          }
-          return response
-        }).catch(() => new Response('Offline', { status: 503 }))
+  if (request.mode === 'navigate') {
+    event.respondWith(fetch(request).then((response) => {
+      if (!forceReload) cacheResponse(event, request, response)
+      return response
+    }).catch(async () => {
+      if (!forceReload) {
+        const cached = await caches.match(request) || await caches.match(offlineDocument(url.pathname))
+        if (cached) return cached
+      }
+      return new Response(
+        '<!doctype html><meta charset="utf-8"><title>AirDash · offline</title>' +
+        '<body style="font-family:system-ui;padding:40px;text-align:center">' +
+        '<h1>AirDash is offline</h1><p>Check your connection and try again.</p></body>',
+        { status: 503, headers: { 'content-type': 'text/html; charset=utf-8' } },
       )
-      return
-    }
-    event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        // Return cached response immediately if available
-        if (cachedResponse) {
-          // Update the cache in the background
-          fetch(request)
-            .then((networkResponse) => {
-              // Only cache successful, non-opaque responses
-              if (networkResponse && networkResponse.ok && networkResponse.type === 'basic') {
-                caches.open(CACHE).then((cache) => {
-                  cache.put(request, networkResponse);
-                });
-              }
-            })
-            .catch(() => {
-              // Network failed; stick with cached version
-            });
-          return cachedResponse;
-        }
-
-        // Not in cache; fetch from network
-        return fetch(request)
-          .then((networkResponse) => {
-            // Only cache successful, basic-type responses
-            if (networkResponse && networkResponse.ok && networkResponse.type === 'basic') {
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE).then((cache) => {
-                cache.put(request, responseToCache);
-              });
-            }
-            return networkResponse;
-          })
-          .catch(() => {
-            // Network failed and not in cache; return a fallback
-            return new Response('Offline', {
-              status: 503,
-              statusText: 'Service Unavailable'
-            });
-          });
-      })
-    );
-    return;
+    }))
+    return
   }
-});
+
+  // ES modules use mode=cors, so checking only no-cors silently left the
+  // dashboard's entire import graph uncached. Handle all same-origin assets.
+  const update = () => fetch(request).then((response) => {
+    cacheResponse(event, request, response)
+    return response
+  })
+  event.respondWith((async () => {
+    const cached = forceReload ? null : await caches.match(request)
+    if (cached) {
+      event.waitUntil(update().catch(() => {}))
+      return cached
+    }
+    return update().catch(() => new Response('Offline', { status: 503 }))
+  })())
+})

@@ -23,9 +23,9 @@
 // (UTC+7), which is what the data sources stamp, so showing the local clock
 // is more honest than the browser's local clock — the source time and the
 // shown time share a timezone.
-import { on, store } from './state.js?v=2.4.53'
-import { tr } from './i18n.js?v=2.4.53'
-import { newestObservationAgeMinAll, feedBand, FEED_STALE_MIN, FEED_ALARM_MIN } from './feedAge.js?v=2.4.53'
+import { on, store } from './state.js?v=2.4.54'
+import { tr } from './i18n.js?v=2.4.54'
+import { newestObservationAgeMinAll, feedBand, FEED_STALE_MIN, FEED_ALARM_MIN } from './feedAge.js?v=2.4.54'
 
 const TICK_MS = 30_000  // re-evaluate freshness every 30s
 // Asia/Bangkok = UTC+7. We compute the local time string from the source
@@ -36,6 +36,8 @@ const BKK_OFFSET_MIN = 7 * 60
 let pillEl = null
 let lastSourceOk = null  // Date | null — newest OBSERVATION across feeds (name kept for the paint path)
 let lastAgeMin = null    // minutes, from feedAge.js — the one definition
+let transportOnly = false
+let initialized = false
 
 function pillNode() {
   return document.getElementById('data-freshness')
@@ -123,6 +125,13 @@ function paint() {
   // the data; built_at is when the server's event loop finished the
   // JSON serialize, which is unrelated to data freshness.
   const nowMs = Date.now()
+  if (transportOnly) {
+    pillEl.className = 'data-freshness data-freshness--loading'
+    paintTickerLive('unknown')
+    pillEl.textContent = tr('⏳ ยังไม่มีเวลาตรวจวัดที่ยืนยันได้', '⏳ observation time unavailable')
+    pillEl.title = tr('เชื่อมต่อแหล่งข้อมูลล่าสุด ', 'Last successful source connection: ') + bkkLocalTime(lastSourceOk) + ' BKK'
+    return
+  }
   const ageSec = (nowMs - lastSourceOk.getTime()) / 1000
   const band = ageBand(ageSec)
   paintTickerLive(band)
@@ -161,10 +170,13 @@ function captureFromSnapshot(snap, now = Date.now()) {
   // labelled as such in the title.
   const ageMin = newestObservationAgeMinAll(snap, now)
   if (ageMin != null) {
+    transportOnly = false
     lastAgeMin = ageMin
     lastSourceOk = new Date(now - ageMin * 60_000)
     return
   }
+  transportOnly = true
+  lastSourceOk = null
   const sources = snap?.sources
   if (!sources) return
   let best = null
@@ -179,7 +191,8 @@ function captureFromSnapshot(snap, now = Date.now()) {
 
 export function initDataFreshness() {
   pillEl = pillNode()
-  if (!pillEl) return
+  if (!pillEl || initialized) return
+  initialized = true
   on('snapshot', (snap) => { captureFromSnapshot(snap); paint() })
   on('lang', () => setTimeout(paint, 0))
   setInterval(paint, TICK_MS)

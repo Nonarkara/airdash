@@ -1,36 +1,36 @@
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.4.53'
-import { paintChrome } from './i18n.js?v=2.4.53'
-import { startTap } from './sse.js?v=2.4.53'
-import { initMap, invalidateMap } from './map.js?v=2.4.53'
-import { initHeader } from './panels/header.js?v=2.4.53'
-import { initRanking } from './panels/ranking.js?v=2.4.53'
-import { initForecast } from './panels/forecast.js?v=2.4.53'
-import { initWhatIf } from './panels/whatif.js?v=2.4.53'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.4.53'
-import { initTap } from './panels/tap.js?v=2.4.53'
-import { initSources } from './panels/sources.js?v=2.4.53'
-import { initHistory } from './panels/history.js?v=2.4.53'
-import { initInsights } from './panels/insights.js?v=2.4.53'
-import { initAnalytics } from './panels/analytics.js?v=2.4.53'
-import { initFeeds } from './panels/feeds.js?v=2.4.53'
-import { initChat } from './panels/chat.js?v=2.4.53'
-import { initCitizen } from './panels/citizen.js?v=2.4.53'
-import { initWaterways } from './panels/waterways.js?v=2.4.53'
-import { initFocus } from './panels/focus.js?v=2.4.53'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.53'
-import { initSplit } from './panels/split.js?v=2.4.53'
-import { initLibrary } from './panels/library.js?v=2.4.53'
-import { initResearch } from './panels/research.js?v=2.4.53'
-import { initManual } from './panels/manual.js?v=2.4.53'
-import { initBurning } from './panels/burning.js?v=2.4.53'
-import { initApiDocs } from './panels/apidocs.js?v=2.4.53'
-import { initSearch } from './panels/search.js?v=2.4.53'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.53'
-import { initWitness } from './witness.js?v=2.4.53'
-import { initCctvWall } from './cctvEntry.js?v=2.4.53'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.4.53'
+import { on, emit, store, setLang } from './state.js?v=2.4.54'
+import { paintChrome } from './i18n.js?v=2.4.54'
+import { startTap } from './sse.js?v=2.4.54'
+import { initMap, invalidateMap } from './map.js?v=2.4.54'
+import { initHeader } from './panels/header.js?v=2.4.54'
+import { initRanking } from './panels/ranking.js?v=2.4.54'
+import { initForecast } from './panels/forecast.js?v=2.4.54'
+import { initWhatIf } from './panels/whatif.js?v=2.4.54'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.4.54'
+import { initTap } from './panels/tap.js?v=2.4.54'
+import { initSources } from './panels/sources.js?v=2.4.54'
+import { initHistory } from './panels/history.js?v=2.4.54'
+import { initInsights } from './panels/insights.js?v=2.4.54'
+import { initAnalytics } from './panels/analytics.js?v=2.4.54'
+import { initFeeds } from './panels/feeds.js?v=2.4.54'
+import { initChat } from './panels/chat.js?v=2.4.54'
+import { initCitizen } from './panels/citizen.js?v=2.4.54'
+import { initWaterways } from './panels/waterways.js?v=2.4.54'
+import { initFocus } from './panels/focus.js?v=2.4.54'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.54'
+import { initSplit } from './panels/split.js?v=2.4.54'
+import { initLibrary } from './panels/library.js?v=2.4.54'
+import { initResearch } from './panels/research.js?v=2.4.54'
+import { initManual } from './panels/manual.js?v=2.4.54'
+import { initBurning } from './panels/burning.js?v=2.4.54'
+import { initApiDocs } from './panels/apidocs.js?v=2.4.54'
+import { initSearch } from './panels/search.js?v=2.4.54'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.54'
+import { initWitness } from './witness.js?v=2.4.54'
+import { initCctvWall } from './cctvEntry.js?v=2.4.54'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.4.54'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -524,7 +524,7 @@ async function boot() {
 
   on('snapshot', renderTicker)
   on('lang', () => { paintChrome(); renderTicker(store.snapshot) })
-  on('resync', () => { loadSnapshot(); loadTapHistory().catch(() => {}) })
+  on('resync', () => { loadSnapshot().catch((e) => console.warn('snapshot resync failed:', e)); loadTapHistory().catch(() => {}) })
   // The ask-ai button in the header fires this event; we listen here
   // (not in header.js) to keep the boot flow acyclic.
   // On compact screens the chat lives in the right rail, which is only
@@ -537,9 +537,9 @@ async function boot() {
     } catch (e) { console.error('ask-ai:', e) }
   })
   // Refresh aggregates periodically; the tap keeps the feel live in between.
-  setInterval(loadSnapshot, SNAPSHOT_MS)
+  setInterval(() => loadSnapshot().catch((e) => console.warn('snapshot refresh failed:', e)), SNAPSHOT_MS)
   // A critical alert refreshes aggregates immediately.
-  on('tap', (e) => { if (e.kind === 'alert' && e.severity >= 2) loadSnapshot() })
+  on('tap', (e) => { if (e.kind === 'alert' && e.severity >= 2) loadSnapshot().catch((err) => console.warn('alert snapshot refresh failed:', err)) })
 
   try {
     await loadSnapshotWithRetry()
