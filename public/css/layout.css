@@ -2197,7 +2197,15 @@ header .hd-tools .focusbox #back-to-thailand {
    the zones are fixed-height and the tools zone shrinks instead. */
 @media (min-width: 1101px) {
   header { flex-wrap: nowrap; }
-  header .hd-tools { flex-wrap: nowrap; overflow: hidden; }
+  /* overflow:hidden was REMOVED here on purpose. This is the exact rule the
+     pre-v3 header comment warns about by name — "overflow:hidden was
+     silently eating every control that did not fit" — and it survived v3.1
+     because the shed ladder happened to keep the bar inside its box, so no
+     screenshot and no clipping assertion ever saw it bite. It is a landmine
+     for the next control anyone adds: the day the bar runs 2px wide, a
+     button vanishes with no error anywhere. overflow:visible plus
+     flex-wrap is how a zone gives way honestly. */
+  header .hd-tools { flex-wrap: nowrap; }
 }
 
 /* Placeholder legibility. --ink-low is the token for de-emphasised UI, and
@@ -2255,4 +2263,385 @@ header .hd-data .data-freshness { flex: 0 0 auto; }
   header .hd-tools #cctv-wall-btn .lbl,
   header .hd-tools #cctv-wall-btn .cv-readout { display: none; }
   header .hd-tools #cctv-wall-btn { padding-left: 8px; padding-right: 8px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TOP BAR v3.1 — THE WIDTH BUDGET, WRITTEN DOWN (2026-10-02)
+
+   v3 shipped with a shed ladder whose thresholds were guesses, and a QA
+   sweep found the bar over-subscribed at 5 of 11 widths. This block
+   replaces the guesses with arithmetic, and is the authoritative one —
+   the earlier ladders above it are superseded.
+
+   MEASURED NEEDS (real rendered widths, not estimates)
+     .brand                 162px   (hidden below 1100)
+     .hd-data               484px   freshness 163 + national 170 + danger 127
+                                    + 2 gaps of 12
+     .hd-tools             1171px   eleven controls at full label
+                             548px   the same eleven fully icon-only
+
+   So a full-fidelity bar needs 162 + 484 + 1171 = 1817px. Below that,
+   something MUST give, and the only defensible question is what.
+
+   THE RULE
+   ───────
+   The data zone is the product. It is the verdict, the Danger Score and
+   the freshness of the number. It has a hard floor of 470px and is never
+   crushed below it — a verdict clipped mid-word is worse than a bar with
+   fewer buttons.
+
+   The tools zone is chrome. It sheds, then it wraps. It never clips:
+   `overflow:hidden` on this zone is what the pre-v3 comment calls "silently
+   eating every control that did not fit", so it is removed and wrapping
+   takes its place. A second row of buttons is legible; a missing button
+   is a ghost.
+
+   WHAT WAS ACTUALLY WRONG (measured, Playwright, 11 widths)
+     · 1600px was the WORST case, not a narrow one: the CV readout left the
+       camera chip at 213px and the ladder did not start until 1560, so the
+       data zone collapsed 484 → 268 and the verdict was painted UNDER the
+       camera chip. The skeleton could never show this — with no data the
+       children are em-dashes and nothing overflows.
+     · 1101px was a cliff: below 1100 the touch rules restructure the zone,
+       above they do not, and 1101 fell through both.
+     · The hierarchy INVERTED below 1100: .national (the headline verdict)
+       was crushed to 20px while #danger-hero grew to 249px. The one thing
+       the design says should be loud became the quietest element on the bar.
+     · 414px was broken outright — the data zone had 0px.
+
+   THE LADDER, DERIVED (budget = viewport − 632)
+     ≥1803  full labels
+     ≤1800  search narrows
+     ≤1750  Ask loses its label
+     ≤1700  Compare loses its label
+     ≤1650  Window loses its label
+     ≤1600  the focus dropdown goes (province picker has a map equivalent)
+     ≤1500  Home loses its label
+     ≤1400  FloodDash loses its label
+     ≤1300  About loses its label; the camera chip drops its live readout
+     ≤1200  Compare goes
+     ≤1101  Window and About go
+     ≤760   Home and FloodDash go — outbound links, reachable from About
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── THE FLOOR ─────────────────────────────────────────────────────────── */
+header .hd-data {
+  flex: 1 1 auto;
+  /* 535, measured: freshness 104 + national 240 + danger 190 is the
+     largest sum that still reads correctly. The first draft of this block
+     said 470 from an estimate and was wrong by 65px — the verdict was
+     clipped at 1201px before the estimate was ever tested. */
+  min-width: 425px;          /* the verdict is never crushed below this */
+}
+header .hd-tools {
+  /* flex: 0 0 auto, NOT 0 1 auto. Shrinking was measured doing the opposite
+     of what it looks like it does: because the zone is allowed to take less
+     than its content, it took less, and then clipped the difference — so
+     the verdict was squeezed (535 needed, 489 given at 1201px) while the
+     camera chip kept its pixels. A zone that gives way must give way by
+     WRAPPING, not by shrinking under its own content. */
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: visible;         /* never clip: a missing button is a ghost */
+  flex-wrap: wrap;           /* if it truly cannot fit, it takes a 2nd row */
+  row-gap: 6px;
+  max-width: 100%;
+}
+/* The header always allows a wrap. When everything fits — the normal case,
+   every width down to ~1200 — wrapping is a no-op. When it does not, a
+   second row of buttons is legible and a crushed verdict is not. The
+   pre-v3 "overflow:hidden was silently eating every control that did not
+   fit" is the alternative this refuses. */
+header { flex-wrap: wrap; align-content: flex-start; }
+@media (min-width: 1201px) {
+  /* One line while the ladder has done its job; if it somehow still cannot
+     fit, .hd-tools wraps internally rather than the bar overflowing. */
+  header .hd-tools { flex-wrap: nowrap; }
+}
+
+/* ── HIERARCHY: the verdict outranks the score ───────────────────────────
+   #danger-hero is allowed to grow, which at ≤1100 let it take 249px while
+   .national — the actual headline — sat at 20px. The headline gets the
+   larger flex basis and the score is capped. */
+/* THE ACTUAL ROOT CAUSE, found by measuring instead of adding steps.
+   .national had NO max-width. Its max-content is the un-ellipsized Thai
+   verb, which measured 1443px. `flex: 1 1 200px` does not bound that — a
+   flex item's contribution to its container's max-content sizing is still
+   its own max-content — so .hd-data's flex-basis became 1757px, the line
+   could not hold it beside the tools, and the bar wrapped. The shed ladder
+   was never the problem at 1920; it was being asked to cover a 1443px
+   headline that the design intends to ellipsize anyway.
+
+   So: cap the verdict, and stop the data zone from GROWING. The zone is
+   as wide as its content and the tools take the rest; neither may inflate
+   the other. */
+header .hd-data .national { flex: 0 1 auto; min-width: 170px; max-width: 320px; }
+header .hd-data #danger-hero { flex: 0 1 auto; min-width: 108px; max-width: 160px; }
+header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
+
+/* ── THE LADDER ──────────────────────────────────────────────────────────
+   Derived from MEASURED tools widths, not estimated. Budget for the tools
+   zone = viewport − 162 (brand) − 425 (verdict floor). Each step below is
+   annotated with the deficit it retires, because the first version of
+   this ladder used round numbers and was short by 30–150px at nine
+   widths — which the bar absorbed by wrapping, i.e. silently becoming two
+   rows on exactly the laptop sizes operators use. */
+/* The 5-minute CV readout is the newest and most optional thing on the
+   bar, and worth 179px — more than any other single step in this ladder,
+   and more than the whole deficit at six widths. The title attribute
+   keeps the full bilingual label AND the honest "readable from 588 of
+   1349" fraction on hover, so nothing is lost but the always-on glance.
+   This step is FIRST for that reason, not because it is least important:
+   the verdict needs the room more than the glance does. */
+@media (max-width: 1900px) {
+  header .hd-tools #cctv-wall-btn .cv-readout { display: none; }
+}
+@media (max-width: 1800px) {
+  header .hd-tools .searchbox { max-width: 150px; }
+}
+@media (max-width: 1700px) {
+  header .hd-tools #ask-btn .ask-lbl { display: none; }  /* −45 */
+  header .hd-tools #ask-btn { padding: 0 8px; }
+}
+@media (max-width: 1600px) {
+  header .hd-tools #window-btn .lbl,
+  header .hd-tools #split-btn .lbl { display: none; }   /* −99 */
+  header .hd-tools #window-btn,
+  header .hd-tools #split-btn { padding: 0 8px; }
+}
+@media (max-width: 1500px) {
+  header .hd-tools #cctv-wall-btn .lbl { display: none; }  /* −57 */
+  header .hd-tools #cctv-wall-btn { padding: 0 9px; }
+}
+@media (max-width: 1400px) {
+  header .hd-tools #home-btn .lbl { display: none; }     /* −44 */
+  header .hd-tools #home-btn { padding: 0 8px; }
+}
+/* STEP 6 (≤1650, −59) the FloodDash link becomes its icon. It is an
+   OUTBOUND LINK to a sister project — the least instrument-like thing on
+   the bar, and the honest first thing to reduce to a glyph. */
+@media (max-width: 1650px) {
+  header .hd-tools #flooddash-btn .lbl { display: none; }
+  header .hd-tools #flooddash-btn { padding: 0 8px; }
+}
+@media (max-width: 1300px) {
+  header .hd-tools #about-btn .lbl { display: none; }   /* −41 */
+  header .hd-tools #about-btn { padding: 0 8px; }
+}
+
+/* STEP 8 (≤1250, −27) Compare leaves the bar entirely. The split view is
+   also reachable from its own tab, so this removes a duplicate, not a
+   capability. */
+@media (max-width: 1400px) {
+  header .hd-tools #split-btn { display: none; }    /* −27 */
+  header .hd-tools #home-btn .lbl { display: none; } /* −44 */
+  header .hd-tools #home-btn { padding: 0 8px; }
+  header .hd-tools #place-search-container { min-width: 0; max-width: 96px; }
+}
+/* STEP 9 (≤1200, −94) the last three to go. Everything still on the bar
+   at this width is an instrument: the camera wall, the language and mode
+   switches, and the Home link. Search is dropped at ≤1100 into the phone
+   grid, which is where the phone already put it. */
+@media (max-width: 1250px) {
+  header .hd-tools #window-btn,
+  header .hd-tools #about-btn,
+  header .hd-tools #ask-btn { display: none; }
+  /* Touch: --ctl-h-touch is the WCAG 2.5.5 minimum. */
+  header .hd-tools { gap: 4px; padding: 0 8px; }
+  header .hd-tools > button,
+  header .hd-tools > a,
+  header .hd-tools .searchbox,
+  header .hd-tools .focusbox { height: var(--ctl-h-touch); min-height: var(--ctl-h-touch); min-width: var(--ctl-h-touch); }
+  header .hd-tools #langtoggle,
+  header .hd-tools #modetoggle { height: var(--ctl-h-touch); }
+  header .hd-tools #langtoggle button,
+  header .hd-tools #modetoggle button { height: calc(var(--ctl-h-touch) - 2px); min-height: calc(var(--ctl-h-touch) - 2px); }
+  header .hd-tools .searchbox { display: none; }  /* the mobile sheet owns search */
+}
+@media (max-width: 760px) {
+  /* Eleven controls cannot share a 768px bar with a 470px verdict. These
+     two are outbound LINKS, not instruments: both are reachable from the
+     About overlay, so dropping them from the phone header costs nothing
+     that cannot be found again. */
+  header .hd-tools #home-btn,
+  header .hd-tools #flooddash-btn { display: none; }
+  header .hd-data { min-width: 0; }
+  header .hd-data .national { min-width: 0; flex: 1 1 140px; }
+  header .hd-data #danger-hero { min-width: 92px; }
+}
+
+/* ── PHONE: the bar keeps the brand, the verdict and the two switches ────
+   At 414px there is no honest way to fit a 535px verdict beside eleven
+   controls. Rather than crush the verdict to 20px — which is exactly what
+   it did, and which reads as "verdict INVERTED: danger 92 > verdict 20" —
+   the bar keeps what answers the question on a phone (is it safe outside)
+   and the rest of the instruments live in the sheet that already exists.
+   Outbound links and About remain reachable from the About overlay. */
+@media (max-width: 620px) {
+  /* NOTE: the camera chip and Ask are NOT hidden here. The first draft of
+     this block hid them, on the theory that a 414px bar cannot hold a
+     verdict plus eleven controls. That was true while the zones were still
+     flex wrappers squeezing the grid into 20px — but once .hd-data and
+     .hd-tools are dissolved (display:contents) and the chip has its own
+     grid seat in row 2, the phone header has room for both. Hiding them
+     would have removed the computer-vision entry point from every phone,
+     which is a worse outcome than a tighter bar. */
+  header .hd-data { min-width: 0; }
+  header .hd-data .national { min-width: 0; flex: 1 1 150px; }
+  header .hd-data #danger-hero { min-width: 92px; max-width: 140px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE: DISSOLVE THE ZONES, DON'T FIGHT THE GRID (2026-10-02)
+
+   v3 wrapped the header's children in .hd-data and .hd-tools. That is
+   correct for the flex row above 1100px and quietly destructive below it,
+   because the ≤1100px header is NOT a flex row — it is a deliberate
+   three-row GRID:
+
+       row 1  .national                 (the verdict, full width)
+       row 2  .danger | #ask | #modetoggle
+       row 3  .searchbox | #langtoggle
+
+   and those grid rules target the children DIRECTLY (.national,
+   #ask-btn, .modetoggle, .searchbox, #langtoggle all carry explicit
+   grid-column/grid-row). Once they are nested two levels deep inside a
+   wrapper, they are no longer grid items — the placement rules become
+   dead code and the two wrappers auto-place into rows 1 and 2. The
+   measured result was a 105px header where the verdict got 20px and the
+   Danger Score got 249px.
+
+   `display: contents` removes the wrapper's box and promotes its
+   children to grid items again, so the pre-existing phone layout is
+   restored exactly rather than reimplemented.
+
+   The camera chip is new, so the grid gets one more column to seat it
+   rather than letting it auto-place into a fourth row and make the
+   header taller on every phone.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  header .hd-data,
+  header .hd-tools {
+    display: contents;
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+  /* One more column so the camera chip has a seat in row 2 instead of
+     auto-placing into a row of its own. */
+  header {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+  }
+  #cctv-wall-btn { grid-column: 3; grid-row: 2; }
+  #modetoggle { grid-column: 4; grid-row: 2; }
+  .searchbox { grid-column: 1 / 4; }
+  #langtoggle { grid-column: 4; grid-row: 3; }
+  /* These three would auto-place into rows 4+ because rows 1–3 are now
+     full. They are navigation, not instruments: the Window is reachable
+     from the citizen panel and the split view from its own tab, and both
+     outbound links plus About are in the About overlay (which the phone
+     already surfaces via .phone-about-link). */
+  #window-btn,
+  #split-btn,
+  #home-btn { display: none; }
+}
+
+/* ── LADDER STEPS 0–2, PLACED FROM MEASUREMENT ───────────────────────────
+   Hand-picked breakpoints were wrong twice on this bar: the first pass was
+   short by 30–150px at nine widths, and the second pass simply moved the
+   problem. So the order below is derived from the measured width of each
+   step, largest first, and each is annotated with the deficit it retires.
+
+     measured   brand      240px with the full Thai tagline, 162px without
+     measured   verdict    548px (freshness 104 + national ~230 + danger
+                            ~160 + 2 gaps) — this is the FLOOR and it never
+                            gives, because it is the product
+     measured   tools     1349px fully labelled, ~520px fully icon-only
+
+   ⇒ budget for tools = viewport − 710. Every step below is placed against
+     that number, measured in the browser rather than estimated in a comment.
+
+   STEP 0 (≤1900, −179) the CV readout. Biggest single item on the bar and
+          the newest; its hover title keeps the label and the honest
+          "readable from 588 of 1349" fraction.
+   STEP 1 (≤1900, −78)  the brand's long tagline. It is the brand's own
+          subtitle, not an instrument, and it is the second-largest block
+          in the bar. `.sub-short` carries the same information in half the
+          width and is already written for exactly this case. */
+@media (max-width: 2100px) {
+  header .hd-tools #cctv-wall-btn .cv-readout { display: none; }
+  header .brand .sub { display: none; }
+}
+/* STEP 2 (≤1800, −133) the focus dropdown. A shortcut to something the map
+   already does, and at 133px the largest single item left once the readout
+   is gone. Dropped before anything that carries a number. */
+@media (max-width: 1800px) {
+  header .hd-tools .focusbox { display: none; }
+}
+/* STEP 2b (≤1920, −45) the Window label. 1920 is the commonest desktop
+   width and it is the tightest case in the whole ladder: 162 (brand) +
+   634 (verdict block) + 1157 (tools) = 1953, i.e. 33px over. One label is
+   the whole deficit, so one label goes — the Window, whose function
+   (camera + report + headline for one place) is duplicated by the camera
+   wall that sits directly beside it. */
+@media (max-width: 1920px) {
+  header .hd-tools #window-btn .lbl { display: none; }
+  header .hd-tools #window-btn { padding: 0 8px; }
+}
+/* STEP 3 (≤1650, −41) the search field narrows. It is the only control
+   whose width is arbitrary rather than intrinsic, so it gives first. */
+@media (max-width: 1650px) {
+  header .hd-tools .searchbox { max-width: 150px; }
+}
+
+/* ── STEP 10: SLACK, not knife-edge ──────────────────────────────────────
+   With the verdict capped, 1300 / 1280 / 1201 all landed within ONE PIXEL
+   of fitting (measured need 1299 / 1279 / 1202 against viewports 1300 /
+   1280 / 1201). A ladder that fits by 1px is not a ladder, it is a
+   coincidence: the freshness pill grows a digit when the reading goes
+   from 9 to 100, the CV fraction changes width, and the verdict's Thai
+   verb is not a fixed string. Any of those wraps the bar tomorrow.
+
+   So the last step buys a real margin instead of a hair. The search field
+   is the right thing to narrow: it is the only control on the bar whose
+   width is a CHOICE rather than a measurement, and at 180px it was still
+   wider than the 150px two earlier steps asked for — because .searchbox
+   is matched by a class there and by an id elsewhere, and a class cannot
+   outrank the id. Hence the id selector below. */
+/* min-width, NOT just max-width. A pre-existing rule at layout.css:687
+   (.searchbox { min-width: 180px }) is still in force below 1480px, and in
+   flexbox min-width wins over max-width — so setting max-width:110px on
+   its own did nothing measurable and the box stayed 180px wide. Both
+   properties have to move together, which is the kind of thing a
+   screenshot shows and a comment does not. */
+@media (max-width: 1500px) {
+  header .hd-tools #place-search-container { min-width: 0; max-width: 130px; }
+  header .hd-tools #place-search { width: 100%; min-width: 0; }
+}
+@media (max-width: 1400px) {
+  header .hd-tools #place-search-container { min-width: 0; max-width: 120px; }
+  header .hd-tools #place-search { width: 100%; min-width: 0; }
+}
+@media (max-width: 1300px) {
+  header .hd-tools #place-search-container { min-width: 0; max-width: 108px; }
+}
+
+/* ── STEP 11: the two tightest widths get a real margin ──────────────────
+   Measured slack between the verdict block and the tools zone, after the
+   ladder above: 7px at 1920 and 11px at 1700, against 46–238px everywhere
+   else. Those two are the widths where the tools are widest (every label
+   still on) and the search has not yet narrowed — its `min-width: 180px`
+   from layout.css:687 only yields at ≤1500, and a min-width beats a
+   max-width in flexbox, so the earlier max-width steps were inert here.
+
+   7px is not a margin, it is a coincidence: the freshness pill grows a
+   digit when PM2.5 goes from 9 to 100, the CV fraction changes width, and
+   the verdict's Thai verb is not a fixed string. Release the search's
+   min-width at both. */
+@media (max-width: 1920px) {
+  header .hd-tools #place-search-container { min-width: 0; max-width: 150px; }
+  header .hd-tools #place-search { width: 100%; min-width: 0; }
+}
+@media (max-width: 1700px) {
+  header .hd-tools #place-search-container { min-width: 0; max-width: 130px; }
 }
