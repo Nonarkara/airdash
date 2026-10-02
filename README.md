@@ -225,9 +225,11 @@ core watch.
 
 ### Prerequisites
 
-* **Node.js ≥ 22.5** (`package.json` `engines` — the server uses the
+* **Node.js ≥ 22.13** (`package.json` `engines` — the server uses the
   built-in `node:sqlite`, `fetch`, and `node:http`. There are **zero
   npm runtime dependencies**.)
+* `.nvmrc` selects the current Node 22 release; 22.13 is the unflagged
+  SQLite minimum, not a recommendation to stay on an old patch release.
 * Git, curl, bash
 * macOS is the intended 24/7 host (`launchd` plists under `ops/`).
   Linux/WSL can run the Node process; the plist installers will not.
@@ -713,7 +715,7 @@ permanent hourly aggregate as CSV.
 
 ## 💻 Technical Stack
 
-* **Backend:** Single Node.js process, zero npm dependencies (Node ≥ 22.5
+* **Backend:** Single Node.js process, zero npm dependencies (Node ≥ 22.13
   built-ins only: `fetch`, `node:http`, `node:sqlite`)
 * **Database:** SQLite in WAL mode — a single file you can back up by copying
 * **Frontend:** Vanilla ES modules, vendored Leaflet, no build step
