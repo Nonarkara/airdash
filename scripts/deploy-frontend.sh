@@ -108,4 +108,18 @@ probe_asset "${CANONICAL}" "js/main.js"          || exit 4
 probe_asset "${CUSTOM}"    "js/main.js"          || exit 4
 probe_asset "${CUSTOM}"    "css/components.css"  || exit 4
 
+# Version tokens alone cannot distinguish the story from the dashboard.
+# Verify the page identity after Pages HTML canonicalization and SPA rewrites.
+require_markup() {
+  if ! curl -fsSL --max-time 20 "$1$2" | grep -F "$3" >/dev/null; then
+    echo "FAIL: $1$2 does not serve its expected page ($3)" >&2
+    return 1
+  fi
+}
+for host in "${CANONICAL}" "${CUSTOM}"; do
+  require_markup "$host" "/" 'id="persona-card"' || exit 5
+  require_markup "$host" "/ops" 'id="danger-num"' || exit 5
+  require_markup "$host" "/install" 'AirDash on Android' || exit 5
+done
+
 echo "── Deploy verified: ${EXPECTED} on both ${CANONICAL} and ${CUSTOM} (HTML + asset content)"

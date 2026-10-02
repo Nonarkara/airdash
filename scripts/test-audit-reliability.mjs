@@ -180,6 +180,12 @@ await test('source connection timestamps alone cannot paint observations LIVE', 
   assert.equal(ticker.dataset.band, 'unknown')
 })
 
+await test('Pages root stays an identity rewrite so HTML canonicalization cannot enter the dashboard fallback', () => {
+  const redirects = readFileSync('public/_redirects', 'utf8')
+  assert.match(redirects, /^\/\s+\/\s+200$/m)
+  assert.doesNotMatch(redirects, /^\/\s+\/index\.html\s+200$/m)
+})
+
 const realFetch = globalThis.fetch
 try {
   await test('Pages strips forged proxy identity and signs the Cloudflare-observed visitor', async () => {

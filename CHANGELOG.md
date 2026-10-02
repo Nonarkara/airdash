@@ -10,11 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.4.59] — 2026-10-02 — release audit and repairs
+## [2.4.60] — 2026-10-02 — release audit and repairs
 
 - Missing observations now remain unknown in Danger Score, harm ranking, personal guidance and AI facts. Current measured PM is the minimum Danger Score baseline; past or forecast rain cannot erase it. Missing CAMS stays unknown, while a genuine zero forecast remains valid.
 - Replaced two retired NVIDIA inference models and verify chat and embeddings independently with inference requests. Invalid/reordered vectors are checked, model changes invalidate old embeddings, and chat transport failure returns a factual fallback.
-- Repaired library retries, keyboard reading/focus, stale async results, mobile citizen-persona API wiring and reserved search routes. Story data refreshes on visibility and every minute; its fallback uses one-hour exposure. Outdoor time is explicitly dose equivalence, not a medically validated safe duration. Display ranges are explicitly assumed, not calibrated confidence intervals.
+- Corrected the Pages root rewrite: `/` must serve the Air Story, not silently fall through to the operator dashboard. Repaired library retries, keyboard reading/focus, stale async results, mobile citizen-persona API wiring and reserved search routes. Story data refreshes on visibility and every minute; its fallback uses one-hour exposure. Outdoor time is explicitly dose equivalence, not a medically validated safe duration. Display ranges are explicitly assumed, not calibrated confidence intervals.
 - Public exports write bulk CSV directly to disk, count rows within each table's read transaction, fail on dump errors, and publish the compressed archive atomically. Failed rebuilds preserve the previous archive. The edge proxy limits download header wait without aborting a large streamed body at the JSON deadline. File streaming handles client disconnects and file-removal races.
 - Validation: automated regression suite; live chat; 57 API read routes; browser retries, keyboard access, mobile persona and story refresh; production desktop/mobile rendering and header width checks; a read-only SQLite restore drill. A real public export produced 4.35 million raw observations in 22 seconds. See DEPLOY.md for backup and deployment procedures.
 

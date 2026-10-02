@@ -22,7 +22,9 @@
 /sitemap.xml            /sitemap.xml            200
 /icon.svg               /icon.svg               200
 /index.html             /index.html             200
-/                       /index.html             200
+# Keep the root rewrite an identity: /index.html canonicalizes back to /
+# on Pages, so rewriting / to /index.html can fall through to the SPA.
+/                       /                       200
 /ops.html               /ops.html               200
 /install.html           /install.html           200
 # Pages canonicalizes HTML URLs before serving; reserve the clean alias too.

@@ -152,10 +152,10 @@ const check = (name, cond, detail = '') => {
   check('_redirects pass-through for /sw.js', passThrough,
     'add `/sw.js  /sw.js  200` before the /* catch-all')
   const installRule = /^\/install\s+\/install\s+200\s*$/m.exec(redirects)
-  const storyRule = /^\/\s+\/index\.html\s+200\s*$/m.exec(redirects)
+  const storyRule = /^\/\s+\/\s+200\s*$/m.exec(redirects)
   check('home story is served before the place-slug fallback',
     storyRule !== null && storyRule.index < redirects.indexOf('/*  /ops  200'),
-    'reserve `/  /index.html  200` before the /* catch-all')
+    'reserve `/  /  200` before the /* catch-all (Pages canonicalizes index.html back to /)')
   check('install guide is served before the place-slug fallback',
     installRule !== null && installRule.index < redirects.indexOf('/*  /ops  200'),
     'reserve `/install  /install  200` before the /* catch-all (Pages canonicalizes .html URLs)')
