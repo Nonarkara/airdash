@@ -3,7 +3,10 @@
 .airdash-mark { display: inline-flex; flex: none; align-items: center; }
 .airdash-mark img { display: block; width: 36px; height: 22px; object-fit: contain; }
 .story-chrome .brand { display: inline-flex; align-items: center; gap: 7px; }
-header .brand .name { display: flex; align-items: center; gap: 5px; font-size: 16px; }
+/* Keep the compact identity inside the header's existing 134px content
+   budget (162px including padding), even after production fonts load. */
+header .brand .name { display: flex; align-items: center; gap: 4px; width: 134px; font-size: 14px; }
+header .brand .name .airdash-mark img { width: 28px; height: 18px; }
 header .brand .name .ver { margin-left: 0; padding: 1px 3px; font-size: 9px; }
 .airdash-boot-mark { display: flex; justify-content: center; margin-bottom: 12px; }
 .airdash-boot-mark img { width: 160px; height: 68px; }

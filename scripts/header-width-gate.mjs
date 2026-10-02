@@ -59,6 +59,9 @@ await page.waitForFunction(() => {
   return el && /^\d/.test(el.textContent)
 }, { timeout: 45000 }).catch(() => console.log('WARN: danger-num never rendered — widths are provisional'))
 const danger = await page.evaluate(() => document.getElementById('danger-num')?.textContent)
+// Production fonts can finish after the data. Measure the final typography,
+// since a fallback font can hide a wrap at the narrowest desktop width.
+await page.evaluate(() => document.fonts.ready)
 console.log(`url=${URL}  danger-num=${danger}\n`)
 
 let problems = 0
