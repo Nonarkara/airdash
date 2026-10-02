@@ -24,6 +24,8 @@
 /index.html             /index.html             200
 /ops.html               /ops.html               200
 /install.html           /install.html           200
+# Pages canonicalizes HTML URLs before serving; reserve the clean alias too.
+/install                /install                200
 # Catch-all: any other unmatched path is treated as a place slug and
 # served by the operator dashboard. bootCityFromSlug() in main.js
 # reads the path and pins the city via /api/place/slug/:splat.

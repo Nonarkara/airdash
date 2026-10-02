@@ -151,10 +151,10 @@ const check = (name, cond, detail = '') => {
   check('story.js registers bare /sw.js', okStory)
   check('_redirects pass-through for /sw.js', passThrough,
     'add `/sw.js  /sw.js  200` before the /* catch-all')
-  const installRule = /^\/install\.html\s+\/install\.html\s+200\s*$/m.exec(redirects)
+  const installRule = /^\/install\s+\/install\s+200\s*$/m.exec(redirects)
   check('install guide is served before the place-slug fallback',
     installRule !== null && installRule.index < redirects.indexOf('/*  /ops  200'),
-    'add `/install.html  /install.html  200` before the /* catch-all')
+    'reserve `/install  /install  200` before the /* catch-all (Pages canonicalizes .html URLs)')
 }
 
 console.log(`\n${pass} passed, ${fail} failed`)
