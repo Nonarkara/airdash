@@ -2241,3 +2241,18 @@ header .hd-data .data-freshness { flex: 0 0 auto; }
 @media (max-width: 1440px) {
   header .hd-tools .focusbox { display: none; }
 }
+
+/* The camera-wall chip sheds its live readout at ≤1560 — icon-only (👁),
+   title attribute carries the full bilingual label + the honest fraction
+   on hover. It is the newest and most optional tool in the zone, and the
+   first one to go when the data zone needs the room: at 1400px the
+   verdict chip was measured OVERLAPPING the CCTV chip (hd-data collapsed
+   to 287px and its children spilled 203px into the tools zone), which is
+   exactly what the shed ladder exists to prevent. The headline verdict,
+   Danger Score and freshness stay full-width; the 5-minute CV readout is
+   the sacrifice. */
+@media (max-width: 1560px) {
+  header .hd-tools #cctv-wall-btn .lbl,
+  header .hd-tools #cctv-wall-btn .cv-readout { display: none; }
+  header .hd-tools #cctv-wall-btn { padding-left: 8px; padding-right: 8px; }
+}
