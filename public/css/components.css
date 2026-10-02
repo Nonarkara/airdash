@@ -4139,3 +4139,5 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 
 .cctv-sampled-frame { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; background: #111; }
 .cctv-vision span { display: block; }
+
+.danger-chip .dc-kind { display: block; font-size: 7px; line-height: 1.2; color: var(--ink-mid); }

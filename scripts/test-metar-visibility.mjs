@@ -15,6 +15,8 @@
 //
 // Pure: no network, no clock, no database.
 
+import vm from 'node:vm'
+import {readFileSync} from 'node:fs'
 import {
   parseVisibilityMetres, classifyCause, normalizeMetar, normalizeMetars,
   THAI_STATIONS, KOSCHMIEDER_BETA, AEROSOL_CODES, NON_AEROSOL_CODES,
@@ -177,6 +179,15 @@ console.log('\n── the station list itself ──')
   check('the list is big enough to be a network, not a demo', THAI_STATIONS.length >= 25,
     `got ${THAI_STATIONS.length}`)
 }
+
+const layer = readFileSync('public/js/layers/visibility.js','utf8')
+const markerCode = layer.slice(layer.indexOf('export function visBand'), layer.indexOf('const CAUSE_TH')).replaceAll('export ', '')
+const markers = vm.runInNewContext(markerCode + '; ({visBand, markerKind})')
+check('negative visibility is unavailable, not a hazardous measurement', markers.visBand(-1) === null)
+check('infinite visibility is unavailable, not clear air', markers.visBand(Infinity) === null)
+check('a missing visibility value never becomes an aerosol marker', markers.markerKind({}) === 'none')
+check('a missing aerosol attribution cannot imply a dust signal', markers.markerKind({vis_km:2}) === 'other')
+check('a measured zero visibility remains a valid observation', markers.visBand(0) === 'high')
 
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

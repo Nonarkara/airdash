@@ -28,9 +28,10 @@
 //   QA_URL=https://air.nonarkara.org/ops.html node scripts/header-width-gate.mjs
 //   QA_SHOT=1 node scripts/header-width-gate.mjs            # also save PNGs
 //
-// Exits 0 when every width is clean, 1 otherwise. Skips (exit 0) when no
-// Playwright is available, so it never becomes a false failure on a machine
-// that has not run `npx playwright install`.
+// Exits 0 only after measuring rendered data, 1 for geometry problems,
+// and 2 when prerequisites fail. Fails closed when no
+// Playwright is available: no measurement is possible on a machine
+// that has not run `npx playwright install`; that run cannot certify layout.
 
 import { writeFileSync } from 'node:fs'
 
@@ -43,14 +44,17 @@ try {
   ;({ chromium } = await import(process.env.PLAYWRIGHT_PATH
     || '/Users/axiom/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs'))
 } catch {
-  console.log('SKIP: no Playwright at ' + (process.env.PLAYWRIGHT_PATH || 'the npx cache path'))
-  console.log('      run `npx playwright install chromium`, or set PLAYWRIGHT_PATH')
-  process.exit(0)
+  console.log('FATAL: no Playwright at ' + (process.env.PLAYWRIGHT_PATH || 'the npx cache path'))
+  console.log('      Install/configure Playwright, or set PLAYWRIGHT_PATH; no widths were measured.')
+  process.exit(2)
 }
 
 const browser = await chromium.launch({ channel: 'chrome' })
 const page = await browser.newPage({ viewport: { width: 1920, height: 900 } })
-await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
+try { await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 }) } catch (error) {
+  console.log(`FATAL: page navigation failed: ${error.message}`)
+  await browser.close(); process.exit(2)
+}
 // Wait for real data. This is not a nicety: with the placeholders in place
 // the verdict is an em-dash, the data zone is narrower than it will ever be
 // in use, and every width below is measured against a bar that does not
@@ -64,8 +68,13 @@ await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
 // value printed on the summary line revealed it.
 const RENDERED = await page.waitForFunction(() => {
   const el = document.getElementById('danger-num')
-  return el && /^\d/.test(el.textContent)
-}, { timeout: 45000 }).then(() => true).catch(() => false)
+  const verdict = document.querySelector('.national .verb-th') || document.getElementById('national-th')
+  const hero = document.getElementById('danger-hero')
+  const national = document.querySelector('header .national')
+  const painted = node => node && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0
+  return painted(hero) && painted(national) && el && /^\d{1,3}$/.test(el.textContent.trim()) && Number(el.textContent) <= 100
+    && verdict && verdict.textContent.trim() && !/LOADING|กำลังโหลด|^[–—]$/i.test(verdict.textContent.trim())
+}, null, { timeout: Number(process.env.QA_READY_TIMEOUT_MS) || 45000 }).then(() => true).catch(() => false)
 const danger = await page.evaluate(() => document.getElementById('danger-num')?.textContent)
 if (!RENDERED) {
   console.log(`FATAL: danger-num never rendered (got ${JSON.stringify(danger)}).`)

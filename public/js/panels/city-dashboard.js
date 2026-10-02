@@ -8,12 +8,12 @@
 // The panel is injected into the left rail (#rail-left) below the place card,
 // and auto-refreshes every 5 minutes. It degrades gracefully — if the city
 // detail fetch fails, it shows the blurb from the manifest and nothing else.
-import { store, on, emit } from '../state.js?v=2.4.60'
-import { tr } from '../i18n.js?v=2.4.60'
-import { getJson } from '../cache.js?v=2.4.60'
-import { fmtNum } from '../fmt.js?v=2.4.60'
-import { riskCi } from '../confidence.js?v=2.4.60'
-import { focusById } from './focus.js?v=2.4.60'
+import { store, on, emit } from '../state.js?v=2.4.61'
+import { tr } from '../i18n.js?v=2.4.61'
+import { getJson } from '../cache.js?v=2.4.61'
+import { fmtNum } from '../fmt.js?v=2.4.61'
+import { riskCi } from '../confidence.js?v=2.4.61'
+import { focusById } from './focus.js?v=2.4.61'
 
 const REFRESH_MS = 5 * 60_000
 const FETCH_TTL = 60_000 // city detail cache — 1 min (data moves on ingest cadence)
@@ -278,6 +278,7 @@ function cityScoreRow(data, L) {
           el('div', { class: 'cd-score-value mono', style: `color:${d.band_color}` },
             d.score == null ? '—' : `${d.score}/100`),
           el('div', { class: 'cd-score-sub' }, L(d.label_th, d.label_en)),
+          el('div', { class: 'cd-score-sub' }, L('ดัชนีผสมเพื่อคัดกรอง ไม่ใช่ดัชนีคลินิก', 'Screening composite · not a clinical index')),
         )
       : null,
     // Washout — show 0% when band is none, not '—'. The washout module

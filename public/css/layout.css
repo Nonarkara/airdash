@@ -2684,3 +2684,6 @@ header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
 @media (max-width: 1300px) { header .hd-tools #place-search-container { min-width: 0; max-width: 96px; } }
 @media (max-width: 1250px) { header .hd-tools #place-search-container { min-width: 0; max-width: 88px; } }
 header .hd-tools #place-search { width: 100%; min-width: 0; max-width: none; }
+
+/* Visible even on touch devices: this model is not a clinical index. */
+.danger-kind { display: block; letter-spacing: 0; font-size: 7px; line-height: 1.1; color: var(--ink-mid); white-space: nowrap; }

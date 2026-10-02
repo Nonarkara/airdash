@@ -3,9 +3,9 @@
 // highest reading down and, for each, picks the nearest camera that a health
 // probe has shown to be alive. So this wall answers "what does that look
 // like, over there?" for the places the numbers say are worst.
-import { tr } from '../i18n.js?v=2.4.60'
-import { escapeHtml } from '../fmt.js?v=2.4.60'
-import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.60'
+import { tr } from '../i18n.js?v=2.4.61'
+import { escapeHtml } from '../fmt.js?v=2.4.61'
+import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.61'
 
 const MAX_AUTOPLAY = 4
 let overlay = null
@@ -91,8 +91,8 @@ function cvStrip(data) {
     <div class="cv-looks">${chips}</div>
     <p class="cctv-wall-relaxed cctv-wall-vision">${escapeHtml(head)}</p>
     ${s.calibrated ? '' : `<p class="cctv-wall-relaxed cv-uncalibrated">${escapeHtml(tr(
-      'ภาพบอกการเปลี่ยนแปลงของทัศนวิสัย ไม่ใช่ค่าฝุ่น µg/m³ ค่าฝุ่นอ่านจากสถานี',
-      'Camera checks show visual changes, not PM2.5 in µg/m³. Concentrations come from the stations.',
+      'คะแนนภาพกล้องใช้คัดกรองการเปลี่ยนแปลงเทียบภาพอ้างอิง ไม่ใช่ค่าฝุ่น µg/m³ ค่าฝุ่นอ่านจากสถานี',
+      'Camera scores are relative visual triage against a reference scene, not PM2.5 in µg/m³. Concentrations come from the stations.',
     ))}</p>`}
   </div>${grid}`
 }

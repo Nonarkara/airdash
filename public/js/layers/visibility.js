@@ -38,7 +38,7 @@ import { escapeHtml, fmtClock } from '../fmt.js'
  *  from 23 stations, and a 6-band ramp on that sample would imply a
  *  precision the data does not have. */
 export function visBand(km) {
-  if (km === null || km === undefined || Number.isNaN(km)) return null
+  if (!Number.isFinite(km) || km < 0) return null
   if (km >= 9.999) return 'ceiling'
   if (km >= 8) return 'normal'
   if (km >= 5) return 'watch'
@@ -48,10 +48,10 @@ export function visBand(km) {
 
 /** Marker class — the shape carries the attribution, the colour the severity. */
 export function markerKind(st) {
-  if (!st || st.vis_km === null) return 'none'
+  if (!st || visBand(st.vis_km) === null) return 'none'
   const band = visBand(st.vis_km)
   if (band === 'ceiling') return 'ceiling'
-  return st.aerosol_vis_km !== null ? 'aerosol' : 'other'
+  return Number.isFinite(st.aerosol_vis_km) && st.aerosol_vis_km >= 0 ? 'aerosol' : 'other'
 }
 
 const CAUSE_TH = {
@@ -65,7 +65,7 @@ export function createVisibilityLayer() {
   const group = L.layerGroup()
   group._airdashKind = 'visibility'
   const url = '/api/visibility'
-  const keys = ['?v=2.4.60']
+  const keys = ['?v=2.4.61']
   const state = { data: null, timer: null }
 
   const tip = (st) => {
@@ -81,18 +81,19 @@ export function createVisibilityLayer() {
       : kind === 'ceiling'
         ? 'ทัศนวิสัยดี (10 กม. ขึ้นไป)'
         : kind === 'other'
-          ? `ระยะมองลดลง แต่สาเหตุคือ${causeTh} ไม่ใช่ฝุ่น — ไม่นับเป็นสัญญาณฝุ่น`
+          ? `ระยะมองลดลง สาเหตุที่รายงาน: ${causeTh} — ยังระบุไม่ได้ว่าเกิดจากฝุ่น`
           : 'ไม่มีข้อมูล'
     const attrEn = kind === 'aerosol'
       ? 'extinction attributed to aerosol — a dust signal'
       : kind === 'ceiling'
         ? 'good visibility (10 km or more)'
         : kind === 'other'
-          ? `visibility reduced, but the cause is ${causeEn}, not dust — NOT counted as a dust signal`
+          ? `visibility reduced; reported cause: ${causeEn} — aerosol attribution is not established`
           : 'no data'
     return `<div class="vis-tip">
       <b>${escapeHtml(st.name_th || st.name_en || st.icao)}</b>
       <span class="vis-tip-en">${escapeHtml(st.name_en || '')}</span>
+      <div class="vis-tip-cause">${tr('รายงานทัศนวิสัยสนามบิน (METAR) ไม่ใช่ค่าฝุ่น PM2.5', 'Airport visibility observation (METAR), not a PM2.5 measurement')}</div>
       <div class="vis-tip-vis"><span>${escapeHtml(visTh)}</span><span>${escapeHtml(visEn)}</span></div>
       <div class="vis-tip-cause">${escapeHtml(attrTh)}</div>
       <div class="vis-tip-cause vis-tip-cause-en">${escapeHtml(attrEn)}</div>

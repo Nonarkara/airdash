@@ -16,17 +16,17 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/apple-touch-icon.png">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/css/tokens.css?v=2.4.60">
-<link rel="stylesheet" href="/css/layout.css?v=2.4.60">
-<link rel="stylesheet" href="/css/components.css?v=2.4.60">
-<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.60">
-<link rel="stylesheet" href="/css/witness.css?v=2.4.60">
+<link rel="stylesheet" href="/css/tokens.css?v=2.4.61">
+<link rel="stylesheet" href="/css/layout.css?v=2.4.61">
+<link rel="stylesheet" href="/css/components.css?v=2.4.61">
+<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.61">
+<link rel="stylesheet" href="/css/witness.css?v=2.4.61">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebSite","name":"AirDash","url":"https://air.nonarkara.org/","description":"Live Thailand air quality and dust watch — PM2.5, local risk and rain-washout outlook."}
 </script>
-<link rel="stylesheet" href="/css/brand.css?v=2.4.60">
+<link rel="stylesheet" href="/css/brand.css?v=2.4.61">
 </head>
 <body>
 
@@ -167,8 +167,7 @@
       </div>
     </div>
 
-    <!-- DANGER SCORE — the headline number for "is it safe to be outside
-         RIGHT NOW". Lives in the top bar because it answers the question
+    <!-- DANGER SCORE — a screening composite, not a clinical safety index. Lives in the top bar because it answers the question
          every parent, coach and elderly reader actually has. Color follows
          the AQI palette; number is the 0–100 composite (PM + heat amp +
          humidity amp − rain relief). -->
@@ -177,6 +176,7 @@
       <div class="danger-label">
         <span class="th" data-i18n="ดัชนีอันตราย|DANGER">ดัชนีอันตราย</span>
         <span class="en">DANGER</span>
+        <div class="danger-kind" data-i18n="ไม่ใช่ดัชนีคลินิก|NOT CLINICAL">ไม่ใช่ดัชนีคลินิก</div>
       </div>
       <div class="danger-num" id="danger-num">–</div>
       <div class="danger-band" id="danger-band">–</div>
@@ -864,6 +864,6 @@
 </div>
 
 <script src="/vendor/leaflet/leaflet.js"></script>
-<script type="module" src="/js/boot.js?v=2.4.60"></script>
+<script type="module" src="/js/boot.js?v=2.4.61"></script>
 </body>
 </html>

@@ -76,7 +76,9 @@ fi
 # launchd jobs at open(2) time, so on 2026-08-11..13 the FloodDash
 # -w check passed and sqlite3 then failed with "cannot open" three
 # nights in a row. Only an actual open tells the truth about TCC.
-if [ -d "$OFFDEVICE_MOUNT" ] && mkdir -p "$OFFDEVICE_DIR" 2>/dev/null \
+if [ -d "$OFFDEVICE_MOUNT" ] \
+   && [ "$(stat -f %d "$OFFDEVICE_MOUNT" 2>/dev/null)" != "$(stat -f %d "$DB" 2>/dev/null)" ] \
+   && mkdir -p "$OFFDEVICE_DIR" 2>/dev/null \
    && ( : > "$OFFDEVICE_DIR/.write-probe-$$" ) 2>/dev/null; then
   rm -f "$OFFDEVICE_DIR/.write-probe-$$"
   MODE="offdevice"

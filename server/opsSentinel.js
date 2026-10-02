@@ -19,6 +19,7 @@
 // once per 6 h per problem. Neither restarts or kills anything.
 import { execFile } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { stat as fsStat } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { CONFIG } from './config.js'
 import { readArchiveReceipt } from './retention.js'
@@ -66,10 +67,32 @@ export function receiptAgeH(receipt, nowMs = Date.now()) {
   return Number.isFinite(t) ? Math.round(((nowMs - t) / 3600_000) * 10) / 10 : null
 }
 
+let storageStatus = { available: null, checked_at: null, reason: 'not-checked' }
+
+// Probe asynchronously: a stalled external drive must not block the API thread.
+export async function probeArchiveStorage({
+  volumePath = process.env.AIRDASH_ARCHIVE_VOLUME ?? '/Volumes/Data',
+  archivePath = readArchiveReceipt()?.archive_db ?? `${volumePath}/dash-archive/dash-archive.db`,
+  internalPath = CONFIG.dbPath, stat = fsStat, timeoutMs = 3000,
+} = {}) {
+  let timer
+  try {
+    const [volume, archive, internal] = await Promise.race([
+      Promise.all([stat(volumePath), stat(archivePath), stat(internalPath)]),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('probe-timeout')), timeoutMs) }),
+    ])
+    if (!volume.isDirectory() || volume.dev === internal.dev) return { available: false, reason: 'external-volume-not-mounted' }
+    if (!archive.isFile() || archive.dev !== volume.dev) return { available: false, reason: 'archive-not-on-external-volume' }
+    return { available: true, reason: 'external-archive-present' }
+  } catch (error) {
+    return { available: false, reason: error.code ?? error.message }
+  } finally { clearTimeout(timer) }
+}
+
 export function archiveStatus() {
   const r = readArchiveReceipt()
   const age = receiptAgeH(r)
-  return { archived_through_id: r?.readings_src_id ?? null, receipt_age_h: age, stale: age === null || age > ARCHIVE_STALE_H }
+  return { archived_through_id: r?.readings_src_id ?? null, receipt_age_h: age, stale: age === null || age > ARCHIVE_STALE_H, storage: { ...storageStatus } }
 }
 
 export function startOpsSentinel({ startedAt = Date.now() } = {}) {
@@ -78,6 +101,17 @@ export function startOpsSentinel({ startedAt = Date.now() } = {}) {
       'Live DB is on an EXTERNAL volume — the synchronous server will freeze on every slow disk read. Move it back to internal storage.',
       { dbPath: CONFIG.dbPath })
   }
+  let probing = false
+  const checkStorage = async () => {
+    if (probing) return
+    probing = true
+    try {
+      storageStatus = { ...await probeArchiveStorage(), checked_at: new Date().toISOString() }
+      if (!storageStatus.available) alert('archive-storage', 'AirDash external archive is unavailable — a recent receipt does not prove the drive is still present.', storageStatus)
+    } finally { probing = false }
+  }
+  checkStorage()
+  setInterval(checkStorage, 5 * 60_000).unref()
   const check = () => {
     if (Date.now() - startedAt < BOOT_GRACE_MS) return
     const s = watchdogStatus()

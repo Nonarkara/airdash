@@ -137,3 +137,17 @@ copy the chosen snapshot back over `data/airdash.db` (remove any stale
 attached to the same machine/site. Offsite sync is not configured. A real second
 backend is also not configured; an edge mirror is stale read availability, not
 live failover.
+
+### Archive availability monitoring
+
+`/api/health` exposes `archive.storage.available`, `reason`, and `checked_at`.
+The sentinel probes at boot and every five minutes; a recent archive receipt
+does not suppress a missing-drive alarm. Availability means the archive file
+is present on a device distinct from the live DB, not that its contents have
+passed an integrity check. An unmounted directory on the internal disk is
+rejected, and nightly backup selection also checks device identity. The
+external archive and nightly snapshots are separate from offsite recovery.
+
+The header width gate exits 0 only after live values and a verdict render,
+1 for measured geometry failures, and 2 for an unmeasurable run. Missing
+Playwright must never be treated as a successful release check.
