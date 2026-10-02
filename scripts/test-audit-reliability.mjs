@@ -5,9 +5,25 @@ import vm from 'node:vm'
 import { buildRoutes } from '../server/api.js'
 import { provinceVerdict, nationalVerdict } from '../server/verdict.js'
 import { onRequest } from '../functions/api/[[path]].js'
+import { clientIp } from '../server/ratelimit.js'
+import { createHmac } from 'node:crypto'
 
 let passed = 0
 const test = async (name, fn) => { await fn(); passed++; console.log('PASS', name) }
+
+await test('forged forwarding headers cannot choose rate-limit identity; a signed proxy visitor can', () => {
+  const old = process.env.AIRDASH_PROXY_SECRET
+  process.env.AIRDASH_PROXY_SECRET = 'test-only-proxy-secret'
+  try {
+    const req = { headers: { 'cf-connecting-ip': '192.0.2.1', 'x-forwarded-for': '198.51.100.9, 192.0.2.1',
+      'x-airdash-client-ip': '198.51.100.9', 'x-airdash-client-signature': 'a'.repeat(64) }, socket: { remoteAddress: '127.0.0.1' } }
+    assert.equal(clientIp(req), '192.0.2.1')
+    req.headers['x-airdash-client-signature'] = createHmac('sha256', process.env.AIRDASH_PROXY_SECRET).update('198.51.100.9').digest('hex')
+    assert.equal(clientIp(req), '198.51.100.9')
+    req.headers['x-airdash-client-ip'] = '198.51.100.10'
+    assert.equal(clientIp(req), '192.0.2.1')
+  } finally { if (old === undefined) delete process.env.AIRDASH_PROXY_SECRET; else process.env.AIRDASH_PROXY_SECRET = old }
+})
 
 await test('all coordinate lookups reject absent, blank, nonnumeric, and out-of-coverage points before DB access', () => {
   const routes = buildRoutes({ db: { all() { throw Error('unexpected DB lookup') } } })
@@ -142,6 +158,16 @@ await test('source connection timestamps alone cannot paint observations LIVE', 
 
 const realFetch = globalThis.fetch
 try {
+  await test('Pages strips forged proxy identity and signs the Cloudflare-observed visitor', async () => {
+    let forwarded
+    globalThis.fetch = async (req) => { forwarded = req.headers; return new Response('{}', { headers: { 'x-service': 'airdash' } }) }
+    const headers = { 'cf-connecting-ip': '198.51.100.9', 'x-airdash-client-ip': '198.51.100.66', 'x-airdash-client-signature': 'forged' }
+    await onRequest({ request: new Request('https://air.test/api/health', { headers }), env: {} })
+    assert.equal(forwarded.get('x-airdash-client-ip'), null)
+    await onRequest({ request: new Request('https://air.test/api/health', { headers }), env: { AIRDASH_PROXY_SECRET: 'test-only-proxy-secret' } })
+    assert.equal(forwarded.get('x-airdash-client-ip'), '198.51.100.9')
+    assert.equal(forwarded.get('x-airdash-client-signature'), createHmac('sha256', 'test-only-proxy-secret').update('198.51.100.9').digest('hex'))
+  })
   await test('proxy rejects declared or streamed oversized uploads without contacting a backend', async () => {
     globalThis.fetch = async () => { throw Error('backend must not be called') }
     const declared = new Request('https://air.test/api/chat', { method: 'POST', headers: { 'content-length': '1000000' }, body: '{}' })

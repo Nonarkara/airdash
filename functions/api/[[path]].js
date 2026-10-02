@@ -155,6 +155,17 @@ export async function onRequest(context) {
   headers.delete('cf-ipcountry')
   const clientIp = request.headers.get('cf-connecting-ip')
   if (clientIp) headers.set('x-forwarded-for', clientIp)
+  headers.delete('x-airdash-client-ip')
+  headers.delete('x-airdash-client-signature')
+  if (clientIp && context.env?.AIRDASH_PROXY_SECRET) {
+    const encoder = new TextEncoder()
+    const key = await crypto.subtle.importKey('raw', encoder.encode(context.env.AIRDASH_PROXY_SECRET),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+    const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(clientIp))
+    headers.set('x-airdash-client-ip', clientIp)
+    headers.set('x-airdash-client-signature', Array.from(new Uint8Array(signature), (b) => b.toString(16).padStart(2, '0')).join(''))
+  }
+
 
   let body
   try {

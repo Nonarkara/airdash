@@ -3,6 +3,7 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 data/backups/
+data/.proxy-secret
 logs/*.log
 logs/*.old
 logs/.watchdog-*
