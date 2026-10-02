@@ -127,6 +127,69 @@ for (const w of WIDTHS) {
       const r = el.getBoundingClientRect()
       if (r.width < 8 || r.height < 8) out.push(`control crushed: ${el.id || el.className}`)
     }
+    // 5. THE DANGER CHIP FITS ITS OWN BOX.
+    //
+    //    This is the check that was missing while a real defect was live.
+    //    The chip is a fixed-height box holding five pieces of content
+    //    (label, "not a clinical index", number, band, scope). When they
+    //    wanted more room than the box had, a column flex with the
+    //    default `flex-shrink: 1` did not overflow and did not clip — it
+    //    quietly made every row shorter: label 17→16.2, number 30→26,
+    //    band 13→12.6, and the scope line 10→6.2, which shaved the top of
+    //    its Thai vowel marks and the bottom off the chip entirely.
+    //
+    //    Every existing check passed throughout, and so did the whole test
+    //    suite, because a shrunken box is legal CSS: there is no overflow
+    //    to detect and nothing to assert against. The one honest signal is
+    //    arithmetic — does the content the chip WANTS still fit the box it
+    //    has? Sum the children's natural heights and compare with the
+    //    content box. On the broken bar that was 70px of content in 64px
+    //    of box; it now measures ~59px in 64px.
+    //
+    //    Deliberately NOT a threshold on the rendered heights: those are
+    //    the crushed numbers, so testing them would test the bug. And
+    //    deliberately not `scrollHeight > clientHeight` on every child,
+    //    because a 24px numeral in a 1.05 line box reports 3px of
+    //    "overflow" forever with `overflow: visible` and nothing is
+    //    actually cut — a check that fires on a non-problem is a check
+    //    people learn to skip.
+    const heroEl = document.getElementById('danger-hero')
+    if (visible(heroEl)) {
+      const hbox = heroEl.getBoundingClientRect()
+      // Ask the box what height it would need if nothing were constraining
+      // it, then compare that with the height it was actually given. This
+      // is the one measurement that needs no assumptions about the
+      // internal layout — column, row, one track or two — and it is the
+      // only one that is not fooled by its own probe.
+      //
+      // Two things that looked like answers and are not:
+      //   * `getComputedStyle(el).height === 'auto'` — the computed value
+      //     ALWAYS resolves to pixels, so this is never true and the check
+      //     silently ran against every box including the auto-height ones.
+      //   * comparing children's scrollHeight to clientHeight — a 24px
+      //     numeral in a 1.05 line box reports 3px of "overflow" forever
+      //     with overflow:visible and nothing is cut, while the real
+      //     defect (10→6) is an integer-quantised 4. One false positive
+      //     trains you to skip the check, which is worse than no check.
+      //
+      // Relaxing the height is a probe, not a change: it is restored on the
+      // next line and nothing is painted or measured in between.
+      const prevHeight = heroEl.style.height
+      heroEl.style.height = 'auto'
+      const needed = heroEl.scrollHeight
+      heroEl.style.height = prevHeight
+      if (needed > hbox.height + 1) {
+        out.push(`danger chip COMPRESSED (needs ${needed}px, given ${Math.round(hbox.height)}px)`)
+      }
+      // ...and nothing inside it is hiding overflow of its own.
+      for (const c of heroEl.querySelectorAll('*')) {
+        const cs = getComputedStyle(c)
+        if (cs.overflowY !== 'hidden' && cs.overflowY !== 'clip') continue
+        if (c.scrollHeight > c.clientHeight + 1) {
+          out.push(`danger chip row CLIPPED: ${c.className || c.tagName} (${c.scrollHeight}>${c.clientHeight})`)
+        }
+      }
+    }
     return out
   })
   if (res.length) { problems += res.length; console.log(`${String(w).padStart(5)}px  FAIL  ${res.join(' | ')}`) }

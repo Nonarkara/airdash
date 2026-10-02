@@ -5,11 +5,11 @@
 // back to /api/science. Unavailable readings stay unknown while the page
 // retries; reference formulas remain available for explanation.
 // ────────────────────────────────────────────────────────────────────────────
-import { store, on, setLang, emit } from './state.js?v=2.4.66'
-import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.66'
-import { getJson } from './cache.js?v=2.4.66'
-import { fmtNum, escapeHtml } from './fmt.js?v=2.4.66'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.66'
+import { store, on, setLang, emit } from './state.js?v=2.4.67'
+import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.67'
+import { getJson } from './cache.js?v=2.4.67'
+import { fmtNum, escapeHtml } from './fmt.js?v=2.4.67'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.67'
 
 const $ = (sel) => document.querySelector(sel)
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches

@@ -254,6 +254,17 @@ html[lang="th"] .brand .sub-short { letter-spacing: 0.01em; text-transform: none
   gap: 0; line-height: 1.2; min-width: 0;
   overflow: hidden;
   align-self: center;
+  /* The verb is the HEADLINE of the entire bar — "what is the air doing
+     right now" — so it is the one thing in here that must not be
+     compressed. With both this and .national-secondary left shrinkable,
+     flexbox divided the deficit between them and the headline lost: at
+     1920 and 1700 the secondary line took 151px of the plate's 320px
+     while the verb was left 84px of the 124px it needs, so
+     "ติดตามสถานการณ์" rendered as a truncated headline in English mode.
+     Same principle as the Danger chip: the secondary absorbs the
+     shortfall, and it degrades to an ellipsis on a line that is allowed
+     to be secondary. */
+  flex: 0 0 auto;
 }
 /* The verb (TH/EN) is the headline — display font, deep teal. */
 .national .label .verb-th {
@@ -305,7 +316,42 @@ html[lang="th"] .brand .sub-short { letter-spacing: 0.01em; text-transform: none
    with its own number + band label. Color follows the AQI palette
    so the meaning is visually continuous with the rest of the system. */
 .danger {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  /* GRID, not a column flex — the single change that makes this chip fit.
+     The chip carries FIVE pieces of content: the label, the "not a
+     clinical index" caveat, the number, the band word, and the scope
+     line. Stacked, with the leading Thai actually needs (tone marks and
+     stacked vowels do not survive line-height 1.1 — they get shaved),
+     that is ~73px of content in a 64px box. It does not fit, and a
+     column flex does not report that: with the default flex-shrink:1
+     every row was quietly squeezed instead — label 17→16.2, number
+     30→26, band 13→12.6, scope 10→6.2. Nothing overflowed, so nothing
+     was reported, and no test suite could see it. The scope line — the
+     one that says WHICH province the 0–100 applies to — was losing 40%
+     of its height, and a 0–100 composite with its scope cut off is a
+     number pretending to mean more than it does.
+
+     The number and its band are one idea ("62 อันตราย"), so they share
+     a row. The two qualifiers above and the scope line below span the
+     full chip. Measured: 19.4 + 25.2 + 10.6 = 55.2px in 64px, so there
+     is real headroom rather than a stack balanced on the edge. The
+     ≤620px phone chip already used this two-column idea; desktop now
+     matches it instead of trying to out-stack a phone.
+
+     Grid also removes the failure mode: grid rows size to content, so
+     a future row that does not fit overflows VISIBLY instead of
+     shrinking into a lie. */
+  display: grid;
+  /* ONE column. The label and the scope are the widest thing in the chip,
+     so they set the track; row 2 (.danger-main) then centres the number
+     and its band as a unit inside it. A two-track grid was tried first
+     and it does not work: the label and scope span both tracks, and a
+     spanning item's width is distributed across the tracks it spans, so
+     track 1 inflated to 63.5px for a 30px number. `min-content` did not
+     stop it — the distribution happens after the track sizing — and the
+     number and band ended up at opposite sides of the chip. */
+  grid-template-columns: min-content;
+  align-content: center; justify-content: center;
+  row-gap: 0;
   padding: 4px 10px 0 10px;
   flex: none;
   min-width: 88px;
@@ -325,9 +371,9 @@ html[lang="th"] .brand .sub-short { letter-spacing: 0.01em; text-transform: none
    not tooltip-only, so touch/keyboard users can see that "62 Dangerous"
    is one worst province, not the whole country. */
 .danger-scope {
-  font-size: 8.5px; line-height: 1.1;
+  font-size: 8.5px; line-height: 1.35;  /* Thai with stacked vowels */
   color: var(--ink-mid);
-  max-width: 110px;
+  max-width: 100%;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .danger::before {
@@ -342,13 +388,32 @@ html[lang="th"] .brand .sub-short { letter-spacing: 0.01em; text-transform: none
 .danger.band-elevated::before { background: var(--aqi-unhealthy); }
 .danger.band-high::before     { background: var(--aqi-hazardous); }
 
+/* Explicit placement, so the row each element belongs to is a decision
+   rather than a consequence of source order. `.danger > * { flex: none }`
+   is deliberately NOT here any more: in a grid container `flex` is inert,
+   and leaving it would read as protection that does nothing. */
+.danger-label { grid-row: 1; }
+.danger-main  { grid-row: 2; }
+.danger-scope { grid-row: 3; }
+.danger-label, .danger-scope { text-align: center; }
+
+/* The number and its band, centred as one unit. Baseline (not center)
+   because these are two type sizes of the same thought: a centred 10.5px
+   word against a 24px numeral sits optically low, since the digits' cap
+   height is well above the middle of their line box. */
+.danger-main {
+  display: flex; align-items: baseline; justify-content: center;
+  column-gap: 6px; white-space: nowrap;
+}
+
 .danger-label {
   font-family: var(--font-num);
   font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--ink-mid);
   font-weight: 700;
-  line-height: 1;
-  margin-top: 2px;
+  line-height: 1.3;   /* Thai, not digits — 1.1 shaved the tone marks off
+                         the top of "ดัชนีอันตราย" and it read as damage */
+  margin-top: 1px;
 }
 .danger-label .en { display: none; }
 html[lang="en"] .danger-label .th { display: none; }
@@ -356,7 +421,7 @@ html[lang="en"] .danger-label .en { display: inline; }
 
 .danger-num {
   font-family: var(--font-num);
-  font-weight: 800; font-size: 26px; line-height: 1;
+  font-weight: 800; font-size: 24px; line-height: 1.05;
   color: var(--th-deep);
   letter-spacing: -0.02em;
   font-feature-settings: 'tnum' 1;
@@ -369,8 +434,7 @@ html[lang="en"] .danger-label .en { display: inline; }
   font-family: var(--font-display);
   font-size: 10.5px; font-weight: 700;
   color: var(--ink-mid);
-  line-height: 1.2;
-  margin-top: 1px;
+  line-height: 1.25;
   white-space: nowrap;
 }
 .danger.band-watch    .danger-band { color: #8B6F0B; }
@@ -787,8 +851,16 @@ html[lang="en"] .appfooter-line .en { display: inline; }
        519px wide, making the headline verdict unreadable across the
        whole 481–1100px band (tablets, split-screen windows, landscape
        phones). The search now owns row 3 full-width, matching what the
-       ≤480px block already does. */
-    grid-template-rows: 32px 32px 40px; overflow: visible;
+       ≤480px block already does.
+
+       The rows are 44px, not 32px, and that is not a preference: every
+       control in them is given `--ctl-h-touch: 44px` further down for
+       WCAG 2.5.5, and 44px buttons in 32px rows put the language toggle
+       and the mode toggle 6px INTO each other — measured, and visible as
+       the two dark buttons sharing a seam. A 44px touch target that
+       overlaps its neighbour is not a 44px touch target. The rows give
+       the targets the room the standard asks for. */
+    grid-template-rows: 44px 44px 44px; overflow: visible;
   }
   .brand, header .spacer, .focusbox, .ask-hero {
     display: none !important;
@@ -802,26 +874,47 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   .national .label .verb-en { font-size: 8px; }
   .national-secondary { display: none; }
 
+  /* The phone chip gets the SAME three-row stack as the desktop chip,
+     because one row cannot honestly hold the score, the caveat AND the
+     scope. It used to be a single row of the three, and the scope — last
+     in line, so first to be squeezed — was crushed to 4px wide in
+     English, i.e. the line saying WHICH province the score belongs to was
+     rendered as a hairline. The 19-width gate passed throughout: a
+     squeezed box is legal CSS and there is no overflow to detect.
+
+     It spans the two 32px rows its column already has (column 2, row 2
+     was empty), which is 64px, and the stack needs 55 of that. */
   .danger {
-    grid-column: 2; grid-row: 1; height: 32px; min-width: 0;
-    padding: 2px 8px 0 0; flex-direction: row; gap: 6px;
+    display: grid;
+    grid-template-columns: min-content;
+    align-content: center; justify-content: center;
+    grid-column: 2; grid-row: 1 / span 2;
+    height: auto; min-width: 0;
+    padding: 2px 8px 0 0;
     border-right: 0;
   }
   .danger::before { display: none; }
   .danger-label { margin-top: 0; }
+  .danger-label, .danger-scope { text-align: center; }
   .danger-num { font-size: 22px; }
-  .danger-band { margin-top: 0; }
+  .danger-main { column-gap: 4px; }
+  /* Never capped on the phone: the chip's own column is the budget, and a
+     cap here is what flattened it. */
+  .danger-scope { max-width: 100%; }
 
   #ask-btn {
-    grid-column: 3; grid-row: 1; height: 32px; margin-top: 0;
-    align-self: center; padding: 3px 8px; min-height: 26px;
+    grid-column: 3; grid-row: 1; margin-top: 0;
+    align-self: center; padding: 3px 8px;
   }
 
+  /* No fixed 32px height here: the rows are 44px now so that the touch
+     targets inside them can be 44px, and a hard 32px on the wrapper would
+     put the two 44px buttons back into the row below. */
   #modetoggle {
-    grid-column: 2; grid-row: 2; height: 32px;
-    align-items: center; padding: 4px 4px 0 4px;
+    grid-column: 2; grid-row: 2;
+    align-items: center; padding: 0 4px;
   }
-  #modetoggle button { min-width: 36px; min-height: 26px; padding: 3px 5px; font-size: 10px; }
+  #modetoggle button { min-width: 36px; padding: 3px 5px; font-size: 10px; }
   .searchbox {
     grid-column: 1 / -1; grid-row: 3; display: flex !important;
     width: 100%; min-width: 0; max-width: 100%;
@@ -837,17 +930,25 @@ html[lang="en"] .appfooter-line .en { display: inline; }
     height: 40px;
     padding: 4px 8px 4px 10px;
   }
+  /* The 26px left inset is the magnifier's, not a preference: the icon is
+     an absolutely-positioned `.searchbox::before` at `left: 9px`, and the
+     base input's `padding-left: 26px` is what keeps the placeholder clear
+     of it. This override dropped it to 9px, so on every phone the icon
+     sat on top of the first letters of "ค้นหาสถานที่" — a glitch that is
+     obvious in a screenshot and invisible to every geometry check, since
+     the two overlap by design as far as the box model is concerned. */
   .searchbox input, .searchbox input:focus {
-    width: 100%; max-width: 100%; min-width: 0; min-height: 26px; padding: 4px 32px 4px 9px; font-size: 12px;
+    width: 100%; max-width: 100%; min-width: 0; min-height: 26px;
+    padding: 6px 38px 6px 26px; font-size: 12px;
   }
   .searchbox #search-clear {
     right: 5px; min-width: 28px; min-height: 28px; color: var(--ink-mid);
   }
   #langtoggle {
-    grid-column: 3; grid-row: 2; height: 32px;
-    align-items: center; padding: 4px 8px 0 4px;
+    grid-column: 3; grid-row: 2;
+    align-items: center; padding: 0 4px;
   }
-  #langtoggle button { min-width: 36px; min-height: 26px; padding: 3px 5px; font-size: 11px; }
+  #langtoggle button { min-width: 36px; padding: 3px 5px; font-size: 11px; }
   /* Every header child must be EXPLICITLY placed in this grid. Anything
      left unplaced auto-flows into the next free cell — which is how the
      nav buttons landed on top of the searchbox across 481–1100px. The
@@ -1000,8 +1101,15 @@ html[lang="en"] .appfooter-line .en { display: inline; }
     grid-template-columns: minmax(0, 1fr) auto auto;
     /* Row 3 is 40px to match the searchbox's fixed height (set in the
        ≤1100px block, which also matches here) — a 32px row left the
-       input spilling 8px onto the home strip below it. */
-    grid-template-rows: auto 32px 40px;
+       input spilling 8px onto the home strip below it.
+
+       Row 2 is 44px, matching row 1 and the rows above it, because the
+       controls in it are `--ctl-h-touch: 44px` for WCAG 2.5.5. At 40px
+       the header's own box was 2px shorter than its content and — this
+       block sets `overflow: hidden` — it clipped. The Danger chip uses
+       two rows of its own here (caveit + score, then scope) and needs 35
+       of the 42 available. */
+    grid-template-rows: auto 44px 44px;
     height: auto;
     overflow: hidden;
     max-width: 100vw;
@@ -1017,11 +1125,24 @@ html[lang="en"] .appfooter-line .en { display: inline; }
     white-space: normal; overflow: hidden; text-overflow: ellipsis;
     max-width: 100%;
   }
+  /* Below 480 the national plate takes a full row of its own, so the chip
+     gets one 32px row and the three-row stack will not fit. Two rows
+     inside it do: the caveat and the score side by side, the scope on a
+     line of its own. Row 2 grows 32→40px to hold that, which is 8px more
+     header on a phone and is the honest price of not rendering the scope
+     as a 4px hairline. `.danger-kind` is nowrap, so it — not the Thai
+     word — sets column 1's width, and "NOT CLINICAL" stops being cut. */
   .danger {
     grid-column: 1; grid-row: 2;
-    justify-content: flex-start; padding: 2px 8px 0 10px;
+    display: grid;
+    grid-template-columns: auto auto;
+    align-content: center; justify-content: start;
+    column-gap: 6px; row-gap: 0;
+    padding: 2px 8px 0 10px;
   }
-  .danger-scope { max-width: 84px; }
+  .danger-label { grid-column: 1; grid-row: 1; text-align: left; }
+  .danger-main  { grid-column: 2; grid-row: 1; align-self: center; }
+  .danger-scope { grid-column: 1 / -1; grid-row: 2; max-width: 100%; text-align: left; }
   #ask-btn { grid-column: 2; grid-row: 2; }
   #modetoggle { grid-column: 3; grid-row: 2; }
   .searchbox { grid-column: 1 / 3; grid-row: 3; width: 100%; max-width: 100%; min-width: 0; flex: none; padding: 4px 4px 4px 10px; overflow: hidden; }
@@ -2174,7 +2295,7 @@ header .hd-tools .focusbox #back-to-thailand {
   header .hd-tools #cctv-wall-btn .cv-readout { display: none; }
   header .hd-tools #ask-btn .ask-lbl { display: none; }
   header .hd-tools #ask-btn { padding: 0 8px; }
-  header .hd-tools .searchbox { max-width: 168px; }
+  /* the 168px search step is gone — see the note at the end of this file */
 }
 @media (max-width: 1100px) {
   /* Touch: --ctl-h-touch (WCAG 2.5.5) and every target at least 44px. */
@@ -2376,6 +2497,23 @@ header { flex-wrap: wrap; align-content: flex-start; }
    as wide as its content and the tools take the rest; neither may inflate
    the other. */
 header .hd-data .national { flex: 0 1 auto; min-width: 170px; max-width: 320px; }
+
+/* Above the phone breakpoint the national block gets more of the bar when
+   there is genuinely room for it. At 1920 and 1700 it was pinned to its
+   320px cap with 46px of measured slack still sitting unused inside the
+   data zone, and the consequence was that the rain-washout line was cut
+   from 221px of text to 111px. The headline verb now keeps its full width
+   (that was the real bug, fixed on `.label`), so the only thing losing
+   out is the secondary line — which is allowed to ellipsize, but should
+   not be halved while 46px sits idle.
+
+   These come AFTER the base rule on purpose: they have identical
+   specificity, so order is the only thing that decides them, and putting
+   the media queries first would hand the 320px cap the last word at every
+   width and quietly do nothing at all. */
+@media (min-width: 1501px) { header .hd-data .national { max-width: 360px; } }
+@media (min-width: 1701px) { header .hd-data .national { max-width: 380px; } }
+@media (min-width: 1921px) { header .hd-data .national { max-width: 400px; } }
 header .hd-data #danger-hero { flex: 0 1 auto; min-width: 108px; max-width: 160px; }
 header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
 
@@ -2396,9 +2534,18 @@ header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
 @media (max-width: 1900px) {
   header .hd-tools #cctv-wall-btn .cv-readout { display: none; }
 }
-@media (max-width: 1800px) {
-  header .hd-tools .searchbox { max-width: 150px; }
-}
+/* The search field's max-width was budgeted here three more times. All
+   three are deleted rather than re-scoped: the consolidated id-based
+   ladder at the end of this file already sets every desktop step, and an
+   id selector outranks a class one, so these were ALREADY dead above the
+   phone breakpoint. They were not dead below it. `.hd-tools` becomes
+   `display: contents` under 1100px, and `display: contents` removes the
+   box without removing the element from the DOM — so
+   `header .hd-tools .searchbox` kept matching the phone's search, which
+   lives in the phone grid and owns a whole row. The result was a
+   full-width search field pinned to 150px on every screen from 390 to
+   1100, while the rule that was supposed to govern it was scoped to the
+   width range it had left months earlier. */
 @media (max-width: 1700px) {
   header .hd-tools #ask-btn .ask-lbl { display: none; }  /* −45 */
   header .hd-tools #ask-btn { padding: 0 8px; }
@@ -2605,10 +2752,10 @@ header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
   header .hd-tools #window-btn { padding: 0 8px; }
 }
 /* STEP 3 (≤1650, −41) the search field narrows. It is the only control
-   whose width is arbitrary rather than intrinsic, so it gives first. */
-@media (max-width: 1650px) {
-  header .hd-tools .searchbox { max-width: 150px; }
-}
+   whose width is arbitrary rather than intrinsic, so it gives first — the
+   step itself now lives in the single ladder at the end of this file.
+   It used to live HERE as well, which is how the phone ended up with an
+   88px-to-150px search: see the note on the deleted rules. */
 
 /* ── STEP 10: SLACK, not knife-edge ──────────────────────────────────────
    With the verdict capped, 1300 / 1280 / 1201 all landed within ONE PIXEL
@@ -2676,29 +2823,46 @@ header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
 
    Widths were measured, not chosen: the Thai placeholder is ~180px of
    content, so 180 is "everything visible" and each step below is what the
-   bar could afford at that viewport. */
-@media (max-width: 1920px) { header .hd-tools #place-search-container { min-width: 0; max-width: 150px; } }
-@media (max-width: 1700px) { header .hd-tools #place-search-container { min-width: 0; max-width: 130px; } }
-@media (max-width: 1500px) { header .hd-tools #place-search-container { min-width: 0; max-width: 120px; } }
-@media (max-width: 1400px) { header .hd-tools #place-search-container { min-width: 0; max-width: 108px; } }
-@media (max-width: 1300px) { header .hd-tools #place-search-container { min-width: 0; max-width: 96px; } }
-@media (max-width: 1250px) { header .hd-tools #place-search-container { min-width: 0; max-width: 88px; } }
+   bar could afford at that viewport.
+
+   EVERY STEP IS SCOPED `min-width: 1101px`, and that bound is the whole
+   point of the scoping rather than tidiness. These rules are a budget for
+   one search field sharing a single row with every other tool — which is
+   true only above the phone breakpoint. Below 1100px the zones become
+   `display: contents`, the search leaves the tools row and takes a grid
+   row to itself, and there is nothing to budget against. The ladder used
+   to be `max-width` only, so its last step (`≤1250px → 88px`) applied to
+   the phone as well and pinned a full-width search field to 88px — on a
+   900px screen, and on a 390px phone, the main way to find a place was an
+   88px box. The media query that authored the field decided its width on a
+   layout the field was no longer part of. */
+@media (min-width: 1101px) and (max-width: 1920px) { header .hd-tools #place-search-container { min-width: 0; max-width: 150px; } }
+@media (min-width: 1101px) and (max-width: 1700px) { header .hd-tools #place-search-container { min-width: 0; max-width: 130px; } }
+@media (min-width: 1101px) and (max-width: 1500px) { header .hd-tools #place-search-container { min-width: 0; max-width: 120px; } }
+@media (min-width: 1101px) and (max-width: 1400px) { header .hd-tools #place-search-container { min-width: 0; max-width: 108px; } }
+@media (min-width: 1101px) and (max-width: 1300px) { header .hd-tools #place-search-container { min-width: 0; max-width: 96px; } }
+@media (min-width: 1101px) and (max-width: 1250px) { header .hd-tools #place-search-container { min-width: 0; max-width: 88px; } }
 header .hd-tools #place-search { width: 100%; min-width: 0; max-width: none; }
 
 /* Visible even on touch devices: this model is not a clinical index. */
-.danger-kind { display: block; letter-spacing: 0; font-size: 7px; line-height: 1.1; color: var(--ink-mid); white-space: nowrap; }
+.danger-kind { display: block; letter-spacing: 0; font-size: 7px; line-height: 1.35; color: var(--ink-mid); white-space: nowrap; }
 
-/* Keep the visible model caveat beside a two-line score on small phones. */
+/* Small phones. No layout override at all any more: the ≤480px block
+   above already gives this range a two-row chip (caveat + score, then
+   scope) and the ≤1100px block above that a three-row one, both of which
+   are the desktop's own arrangement at a smaller size. What is left here
+   is only the type scale.
+
+   This block used to re-grid the chip into two columns so the "not
+   clinical" caveat could sit beside a two-line score. It addressed
+   `.danger-num` and `.danger-band` as direct grid children, and both now
+   live inside `.danger-main`, so the rule went stale at the same moment
+   the structure changed — which is how a stylesheet ends up with two
+   halves of a rule describing two different chips. */
 @media (max-width: 620px) {
-  header .hd-data #danger-hero, header #danger-hero {
-    display: grid;
-    grid-template-columns: auto auto;
-    grid-template-rows: 18px 11px;
-    column-gap: 5px; row-gap: 0;
-  }
-  #danger-hero .danger-label { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
-  #danger-hero .danger-num { grid-column: 2; grid-row: 1; font-size: 18px; }
-  #danger-hero .danger-band { grid-column: 2; grid-row: 2; font-size: 9px; }
+  #danger-hero .danger-num { font-size: 18px; }
+  #danger-hero .danger-band { font-size: 9px; }
+  #danger-hero .danger-main { column-gap: 4px; }
 }
 
 /* A bounded flex basis prevents translated text claiming the toolbar row

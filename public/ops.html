@@ -16,17 +16,17 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/apple-touch-icon.png">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/css/tokens.css?v=2.4.66">
-<link rel="stylesheet" href="/css/layout.css?v=2.4.66">
-<link rel="stylesheet" href="/css/components.css?v=2.4.66">
-<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.66">
-<link rel="stylesheet" href="/css/witness.css?v=2.4.66">
+<link rel="stylesheet" href="/css/tokens.css?v=2.4.67">
+<link rel="stylesheet" href="/css/layout.css?v=2.4.67">
+<link rel="stylesheet" href="/css/components.css?v=2.4.67">
+<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.67">
+<link rel="stylesheet" href="/css/witness.css?v=2.4.67">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebSite","name":"AirDash","url":"https://air.nonarkara.org/","description":"Live Thailand air quality and dust watch — PM2.5, local risk and rain-washout outlook."}
 </script>
-<link rel="stylesheet" href="/css/brand.css?v=2.4.66">
+<link rel="stylesheet" href="/css/brand.css?v=2.4.67">
 </head>
 <body>
 
@@ -178,8 +178,17 @@
         <span class="en">DANGER</span>
         <div class="danger-kind" data-i18n="ไม่ใช่ดัชนีคลินิก|NOT CLINICAL">ไม่ใช่ดัชนีคลินิก</div>
       </div>
-      <div class="danger-num" id="danger-num">–</div>
-      <div class="danger-band" id="danger-band">–</div>
+      <!-- The number and its band are ONE idea ("62 อันตราย"), so they
+           share a row and are centred as a unit. They used to be two
+           direct children of the grid, which split them apart: the label
+           and scope span both columns, and a spanning item's width is
+           distributed across the tracks it spans, so track 1 inflated to
+           63.5px for a 30px number and the pair drifted to opposite sides
+           of the chip. They need their own box to be centred together. -->
+      <div class="danger-main">
+        <span class="danger-num" id="danger-num">–</span>
+        <span class="danger-band" id="danger-band">–</span>
+      </div>
       <div class="danger-scope" id="danger-scope"></div>
     </button>
     </div><!-- /.hd-data -->
@@ -864,6 +873,6 @@
 </div>
 
 <script src="/vendor/leaflet/leaflet.js"></script>
-<script type="module" src="/js/boot.js?v=2.4.66"></script>
+<script type="module" src="/js/boot.js?v=2.4.67"></script>
 </body>
 </html>

@@ -2855,7 +2855,15 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 @media (max-width: 1100px) {
   .searchbox input, .searchbox input:focus {
     flex: 1; width: 100%; max-width: none; min-height: 34px;
-    padding: 6px 38px 6px 9px;
+    /* 26px left, not 9px. The magnifier is an absolutely-positioned
+       `.searchbox::before` at `left: 9px`, and the 9px inset put the
+       placeholder's first characters underneath it — "🔍ค้นหาสถานที่"
+       with the glyph sitting on the first letter, on every phone. It
+       duplicated a rule in layout.css that had already been corrected to
+       26px, which is the general hazard of two files setting one
+       property on the same selector: the second one silently wins and
+       the first one looks like it is working. */
+    padding: 6px 38px 6px 26px;
   }
   .search-results {
     position: fixed; top: 108px; left: 10px; right: 10px;
