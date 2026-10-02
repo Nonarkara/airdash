@@ -109,6 +109,38 @@ check('below 1100px the zones dissolve (display:contents) so the phone grid work
 check('the camera chip is given its own grid seat rather than auto-placing a 4th row',
   /#cctv-wall-btn\s*\{\s*grid-column:/.test(css))
 
+// Touch geometry must not leak above the phone breakpoint. --ctl-h-touch
+// is 44px — the WCAG 2.5.5 minimum for a TARGET, and a 1101–1250px window
+// is overwhelmingly a mouse. This block was once written at ≤1250 and it
+// cost 12px of height on the tightest widths on the bar, which then
+// wrapped at 1101px. It also carried the search field's `display:none`,
+// so search was visible at 1250, gone across 1201–1102, and back at ≤1100
+// where the phone grid re-showed it with !important: a control that left
+// and returned with no ladder step explaining it.
+const touchRules = [...css.matchAll(/@media \((max-width: (\d+)px)\) \{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g)]
+  .filter((m) => /--ctl-h-touch/.test(m[3]))
+  .map((m) => +m[2])
+check('touch geometry (--ctl-h-touch) appears only at 1100px and below',
+  touchRules.every((w) => w <= 1100),
+  `appears at: ${touchRules.filter((w) => w > 1100).join(', ')} — 44px targets on a mouse-driven bar`)
+
+// The search field's width was spread over five media queries in five
+// places in a 2600-line file, resolved by SOURCE ORDER, and had produced a
+// non-monotonic result (1400px got 96px, 1300px got a wider 108px). It is
+// now one ordered ladder. Two properties of it are worth pinning: strictly
+// decreasing, and every step releases `min-width` so the pre-existing
+// `.searchbox { min-width: 180px }` at layout.css:687 cannot beat it.
+const searchSteps = [...css.matchAll(
+  /@media \(max-width: (\d+)px\) \{\s*header \.hd-tools #place-search-container \{([^}]*)\}/g)]
+  .map((m) => ({ w: +m[1], max: +(m[2].match(/max-width:\s*(\d+)px/)?.[1] ?? 0), min0: /min-width:\s*0/.test(m[2]) }))
+searchSteps.sort((a, b) => b.w - a.w)
+check('the search ladder is a single monotonic run (no rule duplicated elsewhere)',
+  searchSteps.every((s, i) => i === 0 || s.max <= searchSteps[i - 1].max),
+  `widths ascend with narrower viewports: ${searchSteps.map((s) => `${s.w}→${s.max}`).join(' ')}`)
+check('every search step releases min-width (the 180px floor cannot win it)',
+  searchSteps.every((s) => s.min0),
+  `steps without min-width:0 — ${searchSteps.filter((s) => !s.min0).map((s) => s.w).join(', ')}`)
+
 // ── 5. The bar is one row where it claims to be ───────────────────────────
 // The ladder is a list of max-width steps; it is worthless if it has no
 // steps, and worse if the first version of it had none that mattered.

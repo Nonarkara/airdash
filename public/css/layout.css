@@ -2436,17 +2436,34 @@ header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
   header .hd-tools #split-btn { display: none; }    /* −27 */
   header .hd-tools #home-btn .lbl { display: none; } /* −44 */
   header .hd-tools #home-btn { padding: 0 8px; }
-  header .hd-tools #place-search-container { min-width: 0; max-width: 96px; }
 }
 /* STEP 9 (≤1200, −94) the last three to go. Everything still on the bar
    at this width is an instrument: the camera wall, the language and mode
    switches, and the Home link. Search is dropped at ≤1100 into the phone
    grid, which is where the phone already put it. */
 @media (max-width: 1250px) {
+  /* LADDER STEP 9 — the last three to go. Everything still on the bar at
+     this width is an instrument: the camera wall, the language and mode
+     switches, the search field and the Home link. */
   header .hd-tools #window-btn,
   header .hd-tools #about-btn,
   header .hd-tools #ask-btn { display: none; }
-  /* Touch: --ctl-h-touch is the WCAG 2.5.5 minimum. */
+}
+
+/* TOUCH GEOMETRY BELOW 1100 ONLY.
+   This was sitting at ≤1250, which was wrong twice over. --ctl-h-touch is
+   44px — the WCAG 2.5.5 minimum for a TARGET, and a 1101–1250px window is
+   overwhelmingly a mouse. Padding a laptop's toolbar out to 44px to satisfy
+   a rule about fingers costs 12px of height on exactly the widths that were
+   already the tightest. Touch starts where touch starts: 1100.
+
+   It also carried the searchbox `display:none`, which produced a bar whose
+   search field was visible at 1250, gone across 1201–1102, and back again
+   at ≤1100 where the phone grid re-shows it with !important. A control that
+   disappears and comes back with no ladder step explaining it is a bug
+   wearing a breakpoint. The phone grid owns search from 1100 down, so the
+   rule belongs here and only here. */
+@media (max-width: 1100px) {
   header .hd-tools { gap: 4px; padding: 0 8px; }
   header .hd-tools > button,
   header .hd-tools > a,
@@ -2456,7 +2473,6 @@ header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
   header .hd-tools #modetoggle { height: var(--ctl-h-touch); }
   header .hd-tools #langtoggle button,
   header .hd-tools #modetoggle button { height: calc(var(--ctl-h-touch) - 2px); min-height: calc(var(--ctl-h-touch) - 2px); }
-  header .hd-tools .searchbox { display: none; }  /* the mobile sheet owns search */
 }
 @media (max-width: 760px) {
   /* Eleven controls cannot share a 768px bar with a 470px verdict. These
@@ -2471,9 +2487,9 @@ header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
 }
 
 /* ── PHONE: the bar keeps the brand, the verdict and the two switches ────
-   At 414px there is no honest way to fit a 535px verdict beside eleven
-   controls. Rather than crush the verdict to 20px — which is exactly what
-   it did, and which reads as "verdict INVERTED: danger 92 > verdict 20" —
+   At 414px there is no honest way to fit a full verdict block beside even
+   the reduced set. Rather than crush the verdict to 20px — which is exactly
+   what it did, and which reads as "verdict INVERTED: danger 92 > verdict 20" —
    the bar keeps what answers the question on a phone (is it safe outside)
    and the rest of the instruments live in the sheet that already exists.
    Outbound links and About remain reachable from the About overlay. */
@@ -2615,15 +2631,10 @@ header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
    properties have to move together, which is the kind of thing a
    screenshot shows and a comment does not. */
 @media (max-width: 1500px) {
-  header .hd-tools #place-search-container { min-width: 0; max-width: 130px; }
-  header .hd-tools #place-search { width: 100%; min-width: 0; }
 }
 @media (max-width: 1400px) {
-  header .hd-tools #place-search-container { min-width: 0; max-width: 120px; }
-  header .hd-tools #place-search { width: 100%; min-width: 0; }
 }
 @media (max-width: 1300px) {
-  header .hd-tools #place-search-container { min-width: 0; max-width: 108px; }
 }
 
 /* ── STEP 11: the two tightest widths get a real margin ──────────────────
@@ -2639,9 +2650,37 @@ header .hd-data .data-freshness { flex: 0 0 auto; min-width: 104px; }
    the verdict's Thai verb is not a fixed string. Release the search's
    min-width at both. */
 @media (max-width: 1920px) {
-  header .hd-tools #place-search-container { min-width: 0; max-width: 150px; }
-  header .hd-tools #place-search { width: 100%; min-width: 0; }
 }
 @media (max-width: 1700px) {
-  header .hd-tools #place-search-container { min-width: 0; max-width: 130px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THE SEARCH FIELD — ONE LADDER, MONOTONIC, IN ONE PLACE
+
+   This rule was spread across five media queries at five different points
+   in a 2600-line stylesheet, with the effective width at any given viewport
+   decided purely by SOURCE ORDER. That is the same shape of problem as the
+   min-width trap this bar already hit once: in flexbox `min-width` beats
+   `max-width`, and here a later `max-width` beat an earlier one. It had
+   already produced a non-monotonic result — 1400px got a 96px field and
+   1300px got a WIDER 108px one — which no reader would predict and no test
+   would catch.
+
+   So all of it lives here now, in descending order, strictly decreasing,
+   with `min-width: 0` on every step so the pre-existing
+   `.searchbox { min-width: 180px }` at layout.css:687 cannot win it.
+   (That rule is left in place rather than deleted: it is shared with the
+   ≤1100px phone grid, where the field is full-width and the min is
+   released there too. Deleting it would break the phone; overriding it is
+   the correct relationship, and it is now written down here.)
+
+   Widths were measured, not chosen: the Thai placeholder is ~180px of
+   content, so 180 is "everything visible" and each step below is what the
+   bar could afford at that viewport. */
+@media (max-width: 1920px) { header .hd-tools #place-search-container { min-width: 0; max-width: 150px; } }
+@media (max-width: 1700px) { header .hd-tools #place-search-container { min-width: 0; max-width: 130px; } }
+@media (max-width: 1500px) { header .hd-tools #place-search-container { min-width: 0; max-width: 120px; } }
+@media (max-width: 1400px) { header .hd-tools #place-search-container { min-width: 0; max-width: 108px; } }
+@media (max-width: 1300px) { header .hd-tools #place-search-container { min-width: 0; max-width: 96px; } }
+@media (max-width: 1250px) { header .hd-tools #place-search-container { min-width: 0; max-width: 88px; } }
+header .hd-tools #place-search { width: 100%; min-width: 0; max-width: none; }
