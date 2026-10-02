@@ -21,7 +21,7 @@ Browser → air.nonarkara.org (Cloudflare Pages: static UI)
 ## 1. Frontend → Cloudflare Pages
 
 ```bash
-bash scripts/deploy-frontend.sh    # direct-upload + canonical-alias-first verify
+npm run deploy                    # version/syntax guards + canonical-first verification
 ```
 
 Or the manual steps (only if you know the poison-window rules below):
@@ -52,6 +52,14 @@ First run creates the `airdash` project (URL `airdash.pages.dev`). Add the
 custom domain once (dashboard: Pages → airdash → Custom domains →
 `air.nonarkara.org`, or via API). Redeploy anytime by re-running the deploy
 command.
+
+The Pages proxy signs visitor IPs for backend rate limiting. Production uses
+the Pages secret `AIRDASH_PROXY_SECRET`, matching `data/.proxy-secret` on the
+backend (a private, ignored file, mode 0600). `AIRDASH_PROXY_SECRET` in the
+backend environment can override the file. Provision the same key on every
+backend; rotate both sides together, redeploy Pages, and restart each backend.
+Without a matching key the backend uses the Cloudflare connection IP, so
+Pages visitors share a rate-limit bucket. Never commit or print the key.
 
 ## 2. Backend tunnel (one-time, needs your browser)
 
