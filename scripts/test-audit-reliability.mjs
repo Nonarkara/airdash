@@ -186,8 +186,11 @@ try {
     assert.equal(write.status, 500)
     assert.equal(calls, 1)
     calls = 0
-    await onRequest({ request: new Request('https://air.test/api/health'), env: {} })
+    await onRequest({ request: new Request('https://air.test/api/health'), env: { AIRDASH_BACKUP: 'https://backup.air.test' } })
     assert.equal(calls, 2)
+    calls = 0
+    await onRequest({ request: new Request('https://air.test/api/health'), env: {} })
+    assert.equal(calls, 1, 'no request to an unprovisioned backup')
   })
 } finally { globalThis.fetch = realFetch }
 

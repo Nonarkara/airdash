@@ -10,17 +10,19 @@
 //
 // FAILOVER + MIRROR (port from FloodDash v4.11.1/2): two machines can serve
 // production and a single tunnel 530 must not take the country's air picture
-// offline. Try primary (env AIRDASH_BACKEND) then the other; on 5xx / tunnel
+// offline. Try primary (env AIRDASH_BACKEND) then an optional configured
+// AIRDASH_BACKUP; on 5xx / tunnel
 // 52x/530 / timeout try the next; only then serve the stale edge mirror.
 // The mirror keeps last-known-good for boot-critical reads (snapshot, risk,
 // etc.) with x-airdash-stale-seconds so the frontend can show an honest
 // banner instead of a dead 502. Per-colo best-effort, but Bangkok/Singapore
 // stays warm for TH users.
 const BACKEND = 'https://api-air.nonarkara.org'
-const ALL_BACKENDS = ['https://api-air.nonarkara.org', 'https://api2-air.nonarkara.org']
 function backendOrder(env) {
   const primary = env?.AIRDASH_BACKEND ?? BACKEND
-  return [primary, ...ALL_BACKENDS.filter((b) => b !== primary)]
+  // api2-air.nonarkara.org was hard-coded but has no DNS record. Only
+  // advertise failover to a backend the operator has actually provisioned.
+  return [...new Set([primary, env?.AIRDASH_BACKUP].filter(Boolean))]
 }
 // A response only counts as "from AirDash" if it carries the identity header
 // the server sets on EVERY response (server/http.js). Status alone is not

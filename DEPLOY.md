@@ -61,6 +61,11 @@ backend; rotate both sides together, redeploy Pages, and restart each backend.
 Without a matching key the backend uses the Cloudflare connection IP, so
 Pages visitors share a rate-limit bucket. Never commit or print the key.
 
+Live failover requires a provisioned second server and a Pages
+`AIRDASH_BACKUP` binding containing its HTTPS origin. No live backup is
+configured by default; the former `api2-air.nonarkara.org` hostname does not
+resolve. The stale edge mirror remains the last fallback for supported reads.
+
 ## 2. Backend tunnel (one-time, needs your browser)
 
 ```bash
