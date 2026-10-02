@@ -8,7 +8,7 @@ import {join} from 'node:path'
 const fixture = mkdtempSync(join(tmpdir(), 'airdash-gate-launch-'))
 const brokenBrowser = join(fixture, 'broken.mjs')
 writeFileSync(brokenBrowser, "export const chromium = {launch: async () => {throw new Error('fixture browser unavailable')}}")
-const server=createServer((_req,res)=>res.end('<header><div class="national"><div id="national-th">LOADING</div></div><div id="danger-num">–</div></header>'))
+const server=createServer((_req,res)=>res.end('<header style="display:flex;height:30px"><div class="hd-data" style="display:flex"><div class="national" style="width:180px;height:30px"><div id="national-th">STAY INFORMED</div></div><div id="danger-hero" style="width:110px;height:30px"><div id="danger-num">–</div></div></div><div class="hd-tools"><button>EN</button></div></header>'))
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 const url=`http://127.0.0.1:${server.address().port}`
 const run=env=>new Promise((resolve,reject)=>{const child=spawn(process.execPath,['scripts/header-width-gate.mjs'],{env:{...process.env,QA_URL:url,QA_READY_TIMEOUT_MS:'500',...env}});let output='';child.stdout.on('data',b=>output+=b);child.stderr.on('data',b=>output+=b);child.on('error',reject);child.on('close',code=>resolve({code,output}))})

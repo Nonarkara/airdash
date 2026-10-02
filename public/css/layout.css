@@ -2701,7 +2701,14 @@ header .hd-tools #place-search { width: 100%; min-width: 0; max-width: none; }
   #danger-hero .danger-band { grid-column: 2; grid-row: 2; font-size: 9px; }
 }
 
-/* Bound the data zone's intrinsic English text width at narrow desktops. */
-@media (min-width: 1101px) and (max-width: 1200px) {
-  header .hd-data { max-width: 475px; }
+/* A bounded flex basis prevents translated text claiming the toolbar row
+   before flex shrink runs. Keep the data floor; compact gaps, not controls. */
+@media (min-width: 1101px) {
+  header .hd-data { flex: 1 1 475px; min-width: 475px; max-width: none; }
 }
+@media (min-width: 1101px) and (max-width: 1750px) {
+  header .hd-tools { gap: 3px; }
+}
+
+.danger.band-unknown::before { background: var(--ink-mid); }
+.danger.band-unknown .danger-num, .danger.band-unknown .danger-band { color: var(--ink-mid); }

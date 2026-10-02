@@ -111,6 +111,7 @@ probe_asset "${CANONICAL}" "css/layout.css"      || exit 4
 probe_asset "${CUSTOM}"    "css/layout.css"      || exit 4
 probe_asset "${CUSTOM}"    "js/story.js"         || exit 4
 probe_asset "${CUSTOM}"    "js/layers/cctvWall.js" || exit 4
+probe_asset "${CUSTOM}"    "js/panels/header.js"  || exit 4
 
 # Version tokens alone cannot distinguish the story from the dashboard.
 # Verify the page identity after Pages HTML canonicalization and SPA rewrites.

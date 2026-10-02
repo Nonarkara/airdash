@@ -11,13 +11,13 @@
 //
 // All coloring follows the AQI palette so the only saturated color band
 // on the page tells one consistent story.
-import { on, store, setLang } from '../state.js?v=2.4.64'
-import { tr } from '../i18n.js?v=2.4.64'
-import { openInsightsPane } from '../sensorHealth.js?v=2.4.64'
-import { riskCi } from '../confidence.js?v=2.4.64'
-import { getJson } from '../cache.js?v=2.4.64'
-import { flyToProvince } from '../map.js?v=2.4.64'
-import { showProvinceDetail } from './detail.js?v=2.4.64'
+import { on, store, setLang } from '../state.js?v=2.4.65'
+import { tr } from '../i18n.js?v=2.4.65'
+import { openInsightsPane } from '../sensorHealth.js?v=2.4.65'
+import { riskCi } from '../confidence.js?v=2.4.65'
+import { getJson } from '../cache.js?v=2.4.65'
+import { flyToProvince } from '../map.js?v=2.4.65'
+import { showProvinceDetail } from './detail.js?v=2.4.65'
 
 // AQI-derived 5-level palette — the same gradient the top stripe uses.
 // Watch (yellow) keeps dark text for contrast.
@@ -194,7 +194,7 @@ function renderStatus(snap) {
       dangerEl.classList.add(`band-${show.band}`)
       dangerNum.textContent = show.score ?? '–'
       const label = tr(show.label_th, show.label_en)
-      dangerBand.textContent = label
+      dangerBand.textContent = Number.isFinite(show.score) ? label : tr('ไม่มีข้อมูล', 'No data')
       // Add a small "scoped" badge so readers can tell whether the number
       // is national-worst or just-the-city. A tiny chip, not a redraw.
       const cityBadge = isCityScoped
