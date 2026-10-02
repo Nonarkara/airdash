@@ -502,6 +502,11 @@ function migrate(db) {
   addCol('news_items', 'lng', 'REAL')
   addCol('news_items', 'is_fire', 'INTEGER DEFAULT 0')
   addCol('news_items', 'places_json', 'TEXT')
+  const frameCols = db.prepare('PRAGMA table_info(cctv_haze_frames)').all().map(c => c.name)
+  for (const [name, type] of Object.entries({ haze_status: 'TEXT', contrast_loss: 'REAL', baseline_samples: 'INTEGER',
+    frame_hash: 'TEXT', view_signature: 'TEXT', dark_normalized: 'REAL', has_preview: 'INTEGER DEFAULT 0' })) {
+    if (!frameCols.includes(name)) db.exec(`ALTER TABLE cctv_haze_frames ADD COLUMN ${name} ${type}`)
+  }
   // Safe to run every boot regardless of whether the columns above were
   // just added or already existed — the columns are guaranteed present now.
   db.exec('CREATE INDEX IF NOT EXISTS idx_news_province ON news_items(province_code, fetched_at DESC)')

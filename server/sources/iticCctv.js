@@ -38,7 +38,7 @@
 
 import { fetchText, log } from '../util.js'
 
-const URL = 'https://camera.longdo.com/feed/'
+const FEED_URL = 'https://camera.longdo.com/feed/'
 
 /** Field names we read off each <item>. Same shape BKKx uses; locked
  *  here so the XML parser doesn't drift between BKKx and FloodDash. */
@@ -72,6 +72,7 @@ const STILL_HOSTS = new Set([
   'camera1.iticfoundation.org',
   'camera2.iticfoundation.org',
   'camera3.iticfoundation.org',
+  'camerai1.iticfoundation.org',
   'cameras.iticfoundation.org',
   'bma-itic1.iticfoundation.org',
 ])
@@ -118,8 +119,8 @@ function gateStill(raw) {
   if (!raw) return { snapshotUrl: null, still: false }
   const url = rewriteStillHost(raw)
   if (!stillHostAllowed(url)) return { snapshotUrl: null, still: false }
-  // Realtime iTIC streams use IPv4 + port camid, not "X.X.X.X" placeholders.
-  const hasLive = /[?&]camid=\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?(?:&|$)/i.test(url)
+  // Published camids include IPv4:port and named roads; reject placeholders.
+  const hasLive = /[?&]camid=[A-Za-z0-9._:-]+(?:&|$)/i.test(url)
   if (isPlaceholderStill(url) || !hasLive) return { snapshotUrl: null, still: false }
   // We don't proxy through FloodDash yet (no /api/cctv/still proxy in
   // this codebase); future work — for now use the upstream URL directly
@@ -183,7 +184,7 @@ function resolveHls(hls, imgHost) {
   // this looked exactly like a catalogue full of broken hardware. It was a
   // one-character hostname.
   if (hls.endsWith('.m3u8')) {
-    const base = imgHost && /^(camera|cameras|cctv\.|bma-itic)/.test(imgHost)
+    const base = imgHost && /^camerai\d?\.iticfoundation\.org$/.test(imgHost)
       ? imgHost
       : 'camerai1.iticfoundation.org'
     return `https://${base}/hls/${hls}`
@@ -253,7 +254,7 @@ function safeHost(url) {
  *  payload normalizes to [] but the previous good payload is kept by
  *  the registry's stale-while-error contract. */
 async function fetchLongdoCameras({ timeoutMs = 30_000 } = {}) {
-  const xml = await fetchText(URL, { timeoutMs, headers: { accept: 'application/rss+xml, application/xml, text/xml, */*' } })
+  const xml = await fetchText(FEED_URL, { timeoutMs, headers: { accept: 'application/rss+xml, application/xml, text/xml, */*' } })
   const cams = parseLongdoCameras(xml)
   return { cams, status: 'live', parsed: xml.length }
 }

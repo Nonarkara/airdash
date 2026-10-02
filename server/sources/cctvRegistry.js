@@ -1,72 +1,13 @@
-// Multi-source CCTV aggregator.
-//
-// Why this file exists: the operator pulled iTIC + GISTDA + NST + (more
-// later) cameras in their other codebases and wants one unified layer
-// on the map — "CCTVs are CCTVs, users don't care if the source is
-// iTIC or others" (operator, 2026-09-15). The browser doesn't render
-// 5 layers stitched together — it renders one. This module composes
-// every registered source into one normalized catalog, deduplicates by
-// (source, id), and tags each camera with the attribution it deserves
-// so the popup can show "ภาพจากกรมทางหลวง / image from DOH" with a
-// back-link to the source page.
-//
-// Pipeline per source: each entry is `{ name, fetch(): Promise<Raw[]> }.
-// Raw is anything the source picker returns — coordinates are required,
-// everything else is normalized here. A source may fail without killing
-// the rest; the registry reports a `degraded: true` flag in /api/cctv/all
-// so the UI can show which sources are stuck.
-//
-// Source status 2026-09-15:
-//   - gistda: LIVE (1,308 cameras, BMA + DOH + iTIC under one keyless
-//     keyless public aggregator). Wires through the existing
-//     gistdaCctv.js layer.
-//   - itic: STUB. The operator's BKKx / Lopburi codebase has a
-//     server-side scraper that returns iTIC camera data. Until they
-//     share the fetcher URL or paste a sample row, this source
-//     contributes [] with `status: 'awaiting-fetcher'`. The contract
-//     this file expects is documented inline; once the fetcher is
-//     plugged in, the cameras land immediately.
-//   - nst: SKELETON. https://nstcctv.nakhoncity.org/ inlines its camera
-//     data in the HTML. Deferring the parse logic until NST coverage
-//     is actually wanted — the registry seam is here.
-//
-// Stale-while-error: if a source fails today but had a good fetch
-// recently, the registry keeps the previous payload (a free
-// self-healing — never show the user a blank map because one source
-// hiccupped).
+// Public GISTDA, iTIC/Longdo and NST camera feeds, normalized and attributed.
+// Keep stream and snapshot addresses separately. Protocol support is not
+// proof of working video or useful pixels; health and frame sampling supply it.
 
 const num = (v) => {
   const n = Number(v)
   return Number.isFinite(n) ? n : null
 }
 
-/**
- * What KIND of stream does this camera actually have, and can a server-side
- * computer-vision sampler reach it?
- *
- * The registry used to answer one question — "is there an hls_url?" — and
- * everything without one was labelled 'embed', which quietly merged four very
- * different situations into one bucket. Measured against the live catalogue on
- * 2026-09-29, 'embed' was 807 cameras and only 6 of them could hand a frame to
- * ffmpeg:
- *
- *   hls       335  — a real .m3u8 playlist; ffmpeg reads it.   REACHABLE
- *   mjpeg      27  — an MJPEG-over-HTTP stream (iTIC mjpeg2.php). ffmpeg
- *                    reads it directly; 6 of 27 responded.        REACHABLE
- *   snapshot  572  — BMA PlayVideo.aspx is an ASP.NET page that polls
- *                    show.aspx?image=<ID>. That endpoint does answer, with a
- *                    real 400×266 image per camera — but measured at mean
- *                    255, stddev 0.000, i.e. a pure white placeholder with no
- *                    scene in it.                                NOT REACHABLE
- *   page      208  — NST embeds are MediaMTX WHEP (WebRTC). RTSP 8554 is
- *                    closed, SRT absent, no HLS on the web port. A browser
- *                    can play these; ffmpeg has no WebRTC.        NOT REACHABLE
- *   none        1  — no URL of any kind.                        NOT REACHABLE
- *
- * So `stream_kind` is not cosmetic: it is what lets the vision collector spend
- * its ffmpeg spawns on the 362 cameras that can actually produce a frame, and
- * lets the API say out loud why the other 801 cannot. Exported for tests.
- */
+/** Classify the published transport; snapshots still need a real pixel probe. */
 export function classifyStream(hlsUrl, viewerUrl) {
   const hls = hlsUrl ? String(hlsUrl) : ''
   const view = viewerUrl ? String(viewerUrl) : ''
@@ -80,9 +21,9 @@ export function classifyStream(hlsUrl, viewerUrl) {
   return 'none'
 }
 
-/** Can ffmpeg pull a frame from this camera without a human in the loop?
- *  Only these two kinds qualify; see classifyStream for the measurements. */
+/** The published address to attempt with ffmpeg, never a WebRTC viewer page. */
 export function grabUrlFor(cam) {
+  if (cam.stream_kind === 'snapshot') return cam.snapshot_url ?? null
   if (cam.stream_kind === 'hls' || cam.stream_kind === 'other-stream') return cam.hls_url ?? null
   if (cam.stream_kind === 'mjpeg') return cam.viewer_url ?? null
   return null
@@ -117,7 +58,9 @@ function normalize(raw, source) {
   if (lat < 4 || lat > 21.5 || lng < 96 || lng > 106.5) return null
   const hls_url = raw.hls_url ?? raw.streamData ?? null
   const viewer_url = raw.viewer_url ?? null
-  const stream_kind = classifyStream(hls_url, viewer_url)
+  const snapshot_url = raw.snapshot_url ?? raw.upstream_still_url ?? null
+  const stream_kind = !hls_url && snapshot_url && !/mjpeg/i.test(viewer_url ?? '')
+    ? 'snapshot' : classifyStream(hls_url, viewer_url)
   return {
     id: String(raw.id ?? raw.cameraId ?? `${source.id}:${lat},${lng}`),
     source: source.id,
@@ -132,13 +75,14 @@ function normalize(raw, source) {
     flooded: Boolean(raw.flooded ?? raw.is_flooded),
     hls_url,
     viewer_url,
+    snapshot_url,
     // What the stream actually is, and the one URL a server-side frame grab
     // should use. `stream_status` (live/down/embed) is about REACHABILITY and
     // is maintained by the health probe; `stream_kind` is about PROTOCOL and is
     // decided here, at parse time. Conflating them is what let 572 white
     // placeholder frames and 208 WebRTC-only embeds hide behind one word.
     stream_kind,
-    grab_url: grabUrlFor({ stream_kind, hls_url, viewer_url }),
+    grab_url: grabUrlFor({ stream_kind, hls_url, viewer_url, snapshot_url }),
     // Preserve the raw id under a separate namespace so the popup can
     // link to it on the source's own page.
     source_native_id: raw.source_native_id ?? raw.cameraId ?? null,
@@ -325,6 +269,8 @@ registerSource({
         viewer_url: c.streamMethod === 'BMA' && /^\d+$/.test(String(c.streamData ?? ''))
           ? `http://www.bmatraffic.com/PlayVideo.aspx?ID=${c.streamData}`
           : null,
+        snapshot_url: c.streamMethod === 'BMA' && /^\d+$/.test(String(c.streamData ?? ''))
+          ? `http://www.bmatraffic.com/show.aspx?image=${c.streamData}` : null,
       })
     }
     return { cams, status: 'live' }
@@ -371,6 +317,7 @@ registerSource({
         flooded: c.flooded,
         hls_url: c.hls_url,
         viewer_url: c.viewer_url,
+        snapshot_url: c.upstream_still_url,
         source_native_id: c.source_native_id,
         attribution_th: c.organization,
       }))

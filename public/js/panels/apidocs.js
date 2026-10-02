@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.57'
-import { escapeHtml } from '../fmt.js?v=2.4.57'
+import { store, on } from '../state.js?v=2.4.58'
+import { escapeHtml } from '../fmt.js?v=2.4.58'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -96,11 +96,15 @@ function GROUPS() {
           params: [['limit', false, tr('จำนวน (สูงสุด 400)', 'count (max 400)')], ['province', false, tr('รหัสจังหวัด 2 หลัก เช่น 50', '2-digit province code, e.g. 50')], ['claims', false, tr('smoke|dust|fog|washout — กรองตามสิ่งที่พาดหัวอ้าง', 'smoke|dust|fog|washout — filter by what the text claims')], ['min_confidence', false, tr('1..4 ต่ำสุด', '1..4 minimum')]],
           note_th: 'วงกลมโปร่ง = หมุดที่จุดกึ่งกลางของจังหวัด (อาจห่างจากจุดที่รายงานหลายสิบกิโลเมตร) · จุดเต็ม = สถานที่ที่พาดหัวระบุชื่อชัดเจน · ฝุ่นกับฝนพิชั่นคือคนละเรื่อง อย่าอ่านเหมือนกัน',
           note_en: 'A hollow pin is a PROVINCE CENTROID and may be tens of km from the reported spot; a filled pin is a named place · combustion and an incoming washout are different things and are not drawn alike.' },
-        { path: '/api/haze-vision', th: 'คุณลักษณะหมอกควันจากภาพกล้อง — ยังเป็นคะแนนคัดกรองเบื้องต้น ยังไม่ได้เทียบเทียบ',
-          en: 'Camera-frame haze features — a provisional triage score, not calibrated',
+        { path: '/api/cctv/frame', th: 'ภาพล่าสุดที่ดึงจากกล้องสาธารณะ — JPEG พร้อมเวลาที่เก็บภาพ',
+          en: 'Latest sampled public-camera image (JPEG), with x-airdash-sampled-at header.',
+          params: [['camera', true, tr('คีย์ source:id จากแค็ตตาล็อก', 'source:id key from the catalog')]],
+          note_th: 'ไม่รับ URL ใด ๆ จากผู้ใช้ ภาพหมดอายุใน 6 ชม.', note_en: 'Accepts a catalog camera key, never an arbitrary URL. Samples expire after 6 hours.' },
+        { path: '/api/haze-vision', th: 'เทียบความต่างของภาพกลางวันจากกล้องเดียวกัน พร้อมสถานะคุณภาพและจำนวนภาพอ้างอิง',
+          en: 'Per-camera daylight contrast checks, quality status and reference sample counts — not a PM2.5 estimate',
           params: [['hours', false, tr('ช่วงเวลาย้อนหลัง (สูงสุด 720)', 'lookback hours (max 720)')], ['limit', false, tr('จำนวนตัวอย่าง', 'sample count')]],
-          note_th: 'calibrated=false เสมอ — ค่านี้เป็นคะแนนจัดลำดับความเข้มข้น ไม่ใช่ค่า µg/m³ และไม่ใช่ระยะมองเห็น ห้ามอ้างเป็นค่าวัด',
-          note_en: 'calibrated is always false — this is a relative severity ranking, not a concentration in µg/m³ and not a visibility distance. Do not quote it as a measurement.' },
+          note_th: 'calibrated=false เสมอ ต้องมีภาพกลางวันที่เทียบกันได้อย่างน้อย 3 ภาพ ไม่ใช่ค่าฝุ่น หมอก ฝน หรือเลนส์สกปรกอาจให้ผลคล้ายกัน',
+          note_en: 'Needs at least three comparable daylight samples. Contrast loss is an optical cue, not a pollution measurement; fog, rain and dirty lenses can look similar.' },
         { path: '/api/cctv/north', th: 'กล้องในภาคเหนือ (ละติจูด ≥ ?min_lat) พร้อมค่า PM2.5 ที่ใกล้ที่สุด — เรียงตามค่าฝุ่นของสถานีใกล้เคียง เหมาะกับช่วงวางแผนขับรถช่วงฤดูฝุ่น',
           en: 'Cameras in northern Thailand (lat ≥ ?min_lat) paired with the nearest PM2.5 station, sorted by that station’s reading. Use ?live=1 to drop offline ones.',
           params: [['limit', false, tr('จำนวน (ค่าเริ่มต้น 60)', 'count (default 60)')], ['min_lat', false, tr('ละติจูดขั้นต่ำ (ค่าเริ่มต้น 17)', 'minimum latitude (default 17)')], ['max_km', false, tr('รัศมี pair (ค่าเริ่มต้น 30)', 'pair radius km (default 30)')], ['live', false, tr('1 = ตัดสตรีมที่ตายออก', '1 = drop offline streams')]],

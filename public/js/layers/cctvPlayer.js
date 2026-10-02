@@ -5,9 +5,9 @@
 // Upstream URLs come from third-party feeds, so nothing is dropped into
 // markup unchecked: embeds are HTTPS only (an http stream is blocked as mixed
 // content anyway), links may be http(s), everything else is refused.
-import { tr } from '../i18n.js?v=2.4.57'
-import { escapeHtml } from '../fmt.js?v=2.4.57'
-import { pm25Color } from '../paint.js?v=2.4.57'
+import { tr } from '../i18n.js?v=2.4.58'
+import { escapeHtml } from '../fmt.js?v=2.4.58'
+import { pm25Color } from '../paint.js?v=2.4.58'
 
 const HLS_CDN = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js'
 
@@ -115,8 +115,8 @@ export function detachHls(video) {
 // re-verify the second.
 const NO_PICTURE = {
   snapshot: {
-    th: 'กล้องนี้ส่งภาพสีขาวเปล่า (ยังไม่มีภาพจริงให้ระบบอ่าน)',
-    en: 'this camera returns a blank white image — no picture to read',
+    th: 'ยังไม่มีภาพนิ่งที่ใช้งานได้ — เปิดตรวจที่ต้นทาง',
+    en: 'no usable sampled snapshot yet — open the source to check',
   },
   page: {
     th: 'ภาพถ่ายทอดผ่าน WebRTC — เปิดดูได้ในเบราว์เซอร์ แต่ระบบอ่านภาพไม่ได้',
@@ -156,6 +156,9 @@ export function playerHtml(c) {
       <iframe class="cctv-video" src="${escapeHtml(c.viewer_url)}" loading="lazy" allow="autoplay; fullscreen" allowfullscreen frameborder="0" title="NST CCTV"></iframe>
       <span class="cctv-live">● ${tr('ภาพสด', 'LIVE')}</span>
     </div>`
+  }
+  if (c.vision?.frame_url?.startsWith('/api/cctv/frame?')) {
+    return `<a href="${escapeHtml(c.vision.frame_url)}" target="_blank" rel="noopener"><img class="cctv-sampled-frame" src="${escapeHtml(c.vision.frame_url)}" width="320" height="180" alt="${escapeHtml(tr('ภาพล่าสุดที่เก็บจากกล้อง', 'latest sampled camera image'))}" loading="lazy"></a>`
   }
   // A stream we could not play. Say which kind it is, because "may be
   // offline" is the wrong claim for 564 of the 807 cameras that have no
@@ -217,6 +220,15 @@ export const LOOK_LABEL = {
   'fog-like': { th: 'ภาพดูขาวหมอก', en: 'picture looks fog-white' },
   washed: { th: 'ภาพดูหมอง', en: 'picture looks washed out' },
   unclear: { th: 'อ่านภาพนี้ไม่ได้', en: 'this frame could not be read' },
+  'haze-like': { th: 'อาจมีหมอกควัน — เทียบภาพเดิมของกล้องนี้', en: 'possible haze — compared with this camera’s reference' },
+  unchanged: { th: 'ไม่พบความเปลี่ยนแปลงชัดเจนของภาพ', en: 'no substantial visual change' },
+}
+const QUALITY_LABEL = {
+  'low-light': ['แสงน้อยหรือกลางคืน — ไม่ประเมินหมอกควัน', 'night / low light — haze check withheld'],
+  blank: ['ภาพว่างหรือขาวเกินไป — ประเมินไม่ได้', 'blank / overexposed image — unavailable'],
+  frozen: ['ภาพไม่เปลี่ยน — อาจเป็นภาพค้าง', 'unchanged pixels — possibly a frozen feed'],
+  'changed-view': ['มุมกล้องเปลี่ยน — ต้องเก็บภาพอ้างอิงใหม่', 'view changed — a new reference is needed'],
+  'baseline-needed': ['กำลังเก็บภาพอ้างอิงช่วงกลางวัน', 'collecting comparable daylight reference frames'],
 }
 const AGREE_LABEL = {
   'agree-clear': { th: 'สถานีใกล้เคียงก็อ่านค่าต่ำ', en: 'the nearby station is low too' },
@@ -232,17 +244,25 @@ export function visionChipHtml(vision) {
   if (!vision?.look) return ''
   const look = LOOK_LABEL[vision.look] ?? LOOK_LABEL.unclear
   const agree = AGREE_LABEL[vision.agreement] ?? AGREE_LABEL.unknown
-  const cls = vision.look === 'smoke-like' ? 'is-smoke'
+  const cls = vision.look === 'smoke-like' || vision.look === 'haze-like' ? 'is-smoke'
     : vision.look === 'fog-like' ? 'is-fog'
       : vision.look === 'washed' ? 'is-washed'
         : vision.look === 'clear' ? 'is-clear' : 'is-unclear'
-  return `<div class="cctv-vision ${cls}"><b>${escapeHtml(tr(look.th, look.en))}</b> <span>${escapeHtml(tr(agree.th, agree.en))}</span></div>`
+  const quality = QUALITY_LABEL[vision.quality_status]
+  const label = quality ? tr(...quality) : tr(look.th, look.en)
+  const detail = vision.quality_status === 'baseline-needed'
+    ? `${vision.baseline_samples}/3 ${tr('ภาพอ้างอิง', 'reference samples')}`
+    : vision.contrast_loss != null ? tr(`ความต่างภาพลดลง ${vision.contrast_loss}% — ไม่ใช่ค่า PM2.5`, `contrast down ${vision.contrast_loss}% — not PM2.5`)
+      : tr(agree.th, agree.en)
+  const sampled = Number.isFinite(Date.parse(vision.observed_at))
+    ? new Date(vision.observed_at).toLocaleString('en-GB', { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' BKK' : ''
+  return `<div class="cctv-vision ${cls}"><b>${escapeHtml(label)}</b> <span>${escapeHtml(detail)}</span><span>${escapeHtml(tr('เก็บภาพ ', 'sampled ') + sampled)}</span></div>`
 }
 
 /** A corner dot on the pin, only when the frame itself looks smoke-tinted or fog-white. */
 export function visionMarkHtml(vision) {
-  if (vision?.look !== 'smoke-like' && vision?.look !== 'fog-like') return ''
+  if (!['smoke-like', 'fog-like', 'haze-like'].includes(vision?.look)) return ''
   const cls = vision.look === 'fog-like' ? 'is-fog' : 'is-smoke'
-  const label = vision.look === 'fog-like' ? tr('ภาพดูขาวหมอก', 'picture looks fog-white') : tr('ภาพออกโทนควัน', 'picture looks smoke-tinted')
+  const label = vision.look === 'haze-like' ? tr('อาจมีหมอกควัน — ตรวจสอบภาพ', 'possible haze — inspect the image') : vision.look === 'fog-like' ? tr('ภาพดูขาวหมอก', 'picture looks fog-white') : tr('ภาพออกโทนควัน', 'picture looks smoke-tinted')
   return `<i class="cctv-pin-mark ${cls}" title="${escapeHtml(label)}"></i>`
 }

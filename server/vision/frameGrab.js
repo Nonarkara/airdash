@@ -17,7 +17,7 @@
 // A frame is FRAME_W x FRAME_H x 3 bytes. ffmpeg's -vf scale does the
 // resizing, so we never decode the full-resolution frame into memory.
 
-import { spawn } from 'node:child_process'
+import { spawn, execFile } from 'node:child_process'
 import { FRAME_W, FRAME_H, FRAME_BYTES } from './hazeRead.js'
 
 const FFMPEG = process.env.FFMPEG_PATH || '/opt/homebrew/bin/ffmpeg'
@@ -53,8 +53,8 @@ export function grabFrame(hlsUrl, { seekSeconds = 2, timeoutMs = GRAB_TIMEOUT_MS
       reject(new Error(`grabFrame timed out after ${timeoutMs} ms`))
     }, timeoutMs)
 
-    child.stdout.on('data', (d) => { chunks.push(d); bytes += d.length })
-    child.stderr.on('data', (d) => { errText += d.toString() })
+    child.stdout.on('data', (d) => { const part = d.subarray(0, Math.max(0, FRAME_BYTES - bytes)); chunks.push(part); bytes += part.length })
+    child.stderr.on('data', (d) => { errText = (errText + d.toString()).slice(-2048) })
     child.on('error', (err) => {
       clearTimeout(timer)
       reject(new Error(`ffmpeg spawn failed (${ffmpegPath}): ${err.message}`))
@@ -83,7 +83,7 @@ export function grabFrame(hlsUrl, { seekSeconds = 2, timeoutMs = GRAB_TIMEOUT_MS
  * to `hls_url` so a bare `{hls_url}` object still works.
  */
 export function grabUrlOf(cam) {
-  return cam.grab_url || cam.hls_url || cam.viewer_url || null
+  return cam.grab_url || cam.hls_url || cam.snapshot_url || (cam.stream_kind === 'mjpeg' ? cam.viewer_url : null) || null
 }
 
 /**
@@ -111,7 +111,7 @@ export async function grabMany(cameras, { concurrency = 12, perHost = 3, ...opts
         const host = hostOf(cam)
         busy.set(host, (busy.get(host) ?? 0) + 1)
         active++
-        grabFrame(grabUrlOf(cam), opts)
+        grabFrame(grabUrlOf(cam), { ...opts, seekSeconds: cam.stream_kind === 'snapshot' ? 0 : (opts.seekSeconds ?? 2) })
           .then((buf) => out.set(cam, buf))
           .catch(() => out.set(cam, null))
           .finally(() => { busy.set(host, busy.get(host) - 1); active--; pump() })
@@ -120,5 +120,23 @@ export async function grabMany(cameras, { concurrency = 12, perHost = 3, ...opts
     }
     pump()
   })
+  // A second phase keeps fallback JPEG hosts under the same concurrency cap.
+  const fallbacks = cameras.filter(c => !out.get(c) && c.snapshot_url && c.snapshot_url !== grabUrlOf(c))
+    .map(original => ({ original, camera: { ...original, grab_url: original.snapshot_url,
+      snapshot_url: null, hls_url: null, stream_kind: 'snapshot' } }))
+  if (fallbacks.length) {
+    const frames = await grabMany(fallbacks.map(f => f.camera), { concurrency, perHost, ...opts })
+    for (const f of fallbacks) out.set(f.original, frames.get(f.camera) ?? null)
+  }
   return out
+}
+
+export function jpegFrame(buf, { ffmpegPath = FFMPEG } = {}) {
+  return new Promise((resolve, reject) => {
+    const child = execFile(ffmpegPath, ['-loglevel', 'error', '-f', 'rawvideo', '-pixel_format', 'rgb24',
+      '-video_size', `${FRAME_W}x${FRAME_H}`, '-i', 'pipe:0', '-frames:v', '1', '-f', 'image2pipe', '-c:v', 'mjpeg', 'pipe:1'],
+    { timeout: 5000, maxBuffer: 512*1024, encoding: 'buffer' }, (err, out) => err ? reject(err) : resolve(out))
+    child.stdin.on('error', () => {})
+    child.stdin.end(buf)
+  })
 }

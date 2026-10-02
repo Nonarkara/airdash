@@ -3,9 +3,9 @@
 // highest reading down and, for each, picks the nearest camera that a health
 // probe has shown to be alive. So this wall answers "what does that look
 // like, over there?" for the places the numbers say are worst.
-import { tr } from '../i18n.js?v=2.4.57'
-import { escapeHtml } from '../fmt.js?v=2.4.57'
-import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.57'
+import { tr } from '../i18n.js?v=2.4.58'
+import { escapeHtml } from '../fmt.js?v=2.4.58'
+import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.58'
 
 const MAX_AUTOPLAY = 4
 let overlay = null
@@ -34,6 +34,8 @@ function cardHtml(e, badge) {
 // are normalised here — a lookup that silently misses renders the fallback
 // label, which is indistinguishable from a real measurement.
 const LOOK_ORDER = [
+  { key: 'haze_like', look: 'haze-like' },
+  { key: 'unchanged', look: 'unchanged' },
   { key: 'clear', look: 'clear' },
   { key: 'washed', look: 'washed' },
   { key: 'smoke_like', look: 'smoke-like' },
@@ -65,22 +67,18 @@ function cvStrip(data) {
     </div>`
   }
   const chips = LOOK_ORDER.map(({ key, look }) => lookChip(key, look, s[key] || 0)).join('')
-  const pct = h?.total ? Math.round(((h.live || 0) + (h.embed || 0)) / h.total * 100) : null
+  const pct = h?.total ? Math.round(s.cameras_read / h.total * 100) : null
   const cov = h
     ? `<span class="cv-cov">${escapeHtml(tr(
-        `อ่านวิดีโอได้จาก ${(h.live || 0) + (h.embed || 0)} กล้อง จาก ${h.total} ตัว${pct === null ? '' : ` (${pct}%)`}`,
-        `Readable video from ${(h.live || 0) + (h.embed || 0)} of ${h.total} cameras${pct === null ? '' : ` (${pct}%)`}`,
+        `เก็บภาพได้จาก ${s.cameras_read} กล้อง จาก ${h.total} ตัว${pct === null ? '' : ` (${pct}%)`}`,
+        `Sampled images from ${s.cameras_read} of ${h.total} cameras${pct === null ? '' : ` (${pct}%)`}`,
       ))}</span>`
     : ''
-  const head = flags.length
-    ? tr(
-      `${flags.length} กล้องที่ภาพออกโทนควันหรือหมอก — เปิดดูเอง ตัวเลข µg/m³ คือสถานี ไม่ใช่คะแนนภาพ`,
-      `${flags.length} camera${flags.length === 1 ? '' : 's'} whose picture looks smoke-tinted or fog-white — open the frame. The µg/m³ number is the station, not the picture score`,
-    )
-    : tr(
-      `ภาพที่อ่านได้ ${s.cameras_read} กล้องในช่วง ${s.window_h} ชม. ไม่มีโทนควันหรือหมอก ค่าฝุ่นอยู่ที่สถานี`,
-      `None of the ${s.cameras_read} frames read in the last ${s.window_h} h look smoke-tinted or fog-white. The number is the station's`,
-    )
+  const comparable = (s.haze_like || 0) + (s.unchanged || 0)
+  const head = tr(
+    `เก็บภาพ ${s.cameras_read} กล้อง · เทียบภาพกลางวันได้ ${comparable} กล้อง · อาจมีหมอกควัน ${s.haze_like || 0} กล้อง ภาพกลางคืน ภาพว่าง และภาพที่ยังไม่มีอ้างอิงจะไม่ถูกประเมิน`,
+    `${s.cameras_read} camera samples · ${comparable} daylight comparisons · ${s.haze_like || 0} possible haze. Night, blank, and reference-pending frames are withheld. Fog, rain and lens contamination can look like haze.`,
+  )
   const grid = flags.length
     ? `<div class="cctv-wall-grid">${flags.map((c) => cardHtml({ rank: 0, air: c.air, camera: c }, tr('ภาพ', 'picture'))).join('')}</div>`
     : ''
@@ -93,8 +91,8 @@ function cvStrip(data) {
     <div class="cv-looks">${chips}</div>
     <p class="cctv-wall-relaxed cctv-wall-vision">${escapeHtml(head)}</p>
     ${s.calibrated ? '' : `<p class="cctv-wall-relaxed cv-uncalibrated">${escapeHtml(tr(
-      'คะแนนจากภาพยังไม่ได้เทียบเป็นค่า µg/m³ — ใช้คัดกรองว่าภาพไหนน่าสงสัยเท่านั้น ค่าฝุ่นจริงอ่านจากสถานี',
-      'The picture score is NOT calibrated to µg/m³ — it only triages which frames look suspicious. Real concentrations come from the stations.',
+      'ภาพบอกการเปลี่ยนแปลงของทัศนวิสัย ไม่ใช่ค่าฝุ่น µg/m³ ค่าฝุ่นอ่านจากสถานี',
+      'Camera checks show visual changes, not PM2.5 in µg/m³. Concentrations come from the stations.',
     ))}</p>`}
   </div>${grid}`
 }
@@ -123,7 +121,7 @@ export async function openHazeEyes({ onLocate } = {}) {
       </div>
       <div class="cctv-wall-sub">${tr('เรียงตามค่า PM2.5 ของสถานี · แถบบนภาพบอกว่าภาพดูเป็นอย่างไร (ยังไม่ได้เทียบเป็นค่าฝุ่น)', 'Ranked by the station’s PM2.5 · the line on each picture says what the frame looks like (not a concentration)')}</div>
       <div class="cctv-wall-body" aria-live="polite"><p class="cctv-wall-msg">${tr('กำลังโหลด…', 'loading…')}</p></div>
-      <div class="cctv-wall-foot">${NOT_OFFICIAL()} · ${tr('วิดีโอสตรีมตรงจากผู้ให้บริการต้นทาง AirDash ไม่ได้เก็บภาพ', 'video streams straight from each provider — AirDash stores no footage')}</div>
+      <div class="cctv-wall-foot">${NOT_OFFICIAL()} · ${tr('วิดีโอสตรีมจากผู้ให้บริการ AirDash เก็บภาพตัวอย่างล่าสุดเพื่อเปรียบเทียบ', 'video streams from each provider; AirDash keeps the latest sampled still for comparison')}</div>
     </div>`
   document.body.appendChild(overlay)
   document.body.style.overflow = 'hidden'
@@ -178,7 +176,16 @@ export async function openHazeEyes({ onLocate } = {}) {
   const eyesGrid = data.eyes?.length
     ? `<div class="cctv-wall-grid">${data.eyes.map((e) => cardHtml(e)).join('')}</div>`
     : ''
-  body.innerHTML = `${cvStrip(data)}${note}${eyesGrid}`
+  const samples = (data.sampled_cameras || []).filter(c => c.vision?.frame_url)
+  const sampleGrid = samples.length ? `<h3>${tr('ภาพล่าสุดที่ดึงได้จริง', 'Latest camera samples')}</h3><div class="cctv-wall-grid">${samples.map(c => {
+    const name = escapeHtml(tr(c.name_th || c.name_en, c.name_en || c.name_th) || c.id)
+    return `<div class="cctv-eye" data-cam="${escapeHtml(c.id)}" data-src="${escapeHtml(c.source)}">
+      <a href="${escapeHtml(c.vision.frame_url)}" target="_blank" rel="noopener"><img class="cctv-sampled-frame" src="${escapeHtml(c.vision.frame_url)}" width="320" height="180" alt="${name}" loading="lazy"></a>
+      <div class="cctv-eye-name">${name}</div>${visionChipHtml(c.vision)}${airChipHtml(c.air)}
+      <a href="${escapeHtml(c.source_url)}" target="_blank" rel="noopener">${escapeHtml(tr(c.source_label_th, c.source_label_en) || c.source)} ↗</a>
+      <button type="button" class="cctv-eye-locate">${tr('ดูบนแผนที่', 'show on map')} ↗</button></div>`
+  }).join('')}</div>` : ''
+  body.innerHTML = `${cvStrip(data)}${note}${sampleGrid}${eyesGrid}`
   body.querySelectorAll('.cctv-eye-locate').forEach((b) => {
     b.onclick = () => { const a = b.closest('.cctv-eye'); closeHazeEyes(); onLocate?.(a.dataset.cam, a.dataset.src) }
   })

@@ -31,3 +31,4 @@ data/.archive-receipt.json*
 
 # Stray empty git repo created in the project root by an editor, 2026-09-29
 Untitled/
+data/cctv-frames/

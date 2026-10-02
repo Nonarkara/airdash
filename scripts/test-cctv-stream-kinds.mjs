@@ -159,8 +159,8 @@ console.log('\n── coverageReport: the honest accounting ──')
   ]
   const rep = coverageReport(cat, { grabbedKeys: new Set(['itic:a', 'itic:c']) })
   check('total is the whole catalogue', rep.total === 6, `got ${rep.total}`)
-  check('reachable counts hls + mjpeg only', rep.reachable === 3, `got ${rep.reachable}`)
-  check('unreachable is the complement', rep.unreachable === 3, `got ${rep.unreachable}`)
+  check('reachable counts HLS, MJPEG and published snapshots', rep.reachable === 4, `got ${rep.reachable}`)
+  check('unreachable is the complement', rep.unreachable === 2, `got ${rep.unreachable}`)
   check('a class is only "available" once a frame came out of it',
     rep.classes.find((c) => c.stream_kind === 'mjpeg')?.available === true)
   check('an unprobed mjpeg class is reachable but not yet available',
@@ -168,7 +168,7 @@ console.log('\n── coverageReport: the honest accounting ──')
       .classes.find((c) => c.stream_kind === 'mjpeg')?.available === false)
   check('a blank-snapshot class carries a bilingual reason',
     (() => { const c = rep.classes.find((x) => x.stream_kind === 'snapshot')
-      return c?.reachable === false && /ขาว|white/i.test(c.why_en) && c.why_th.length > 0 })())
+      return c?.reachable === true && c.available === false && c.why_en && c.why_th.length > 0 })())
   check('a WebRTC page class carries a bilingual reason',
     (() => { const c = rep.classes.find((x) => x.stream_kind === 'page')
       return c?.reachable === false && /WebRTC/i.test(c.why_en) && c.why_th.length > 0 })())
@@ -178,10 +178,10 @@ console.log('\n── coverageReport: the honest accounting ──')
   check('reachable classes sort above unreachable ones',
     rep.classes[0].reachable === true)
   check('the headline names both numbers',
-    /6/.test(rep.headline_en) && /3/.test(rep.headline_en))
-  check('pct_reachable is a real percentage', rep.pct_reachable === 50, `got ${rep.pct_reachable}`)
-  check('REACHABLE_KINDS excludes the two dead classes',
-    !REACHABLE_KINDS.has('snapshot') && !REACHABLE_KINDS.has('page'))
+    /6/.test(rep.headline_en) && /4/.test(rep.headline_en))
+  check('pct_reachable is a real percentage', rep.pct_reachable === 66.7, `got ${rep.pct_reachable}`)
+  check('snapshots are probeable; WebRTC pages need a different reader',
+    REACHABLE_KINDS.has('snapshot') && !REACHABLE_KINDS.has('page'))
   check('an empty catalogue does not divide by zero',
     coverageReport([]).pct_reachable === 0)
 }

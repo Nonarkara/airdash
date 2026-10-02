@@ -1,37 +1,12 @@
-// What can computer vision actually see, camera by camera — stated plainly.
-//
-// WHY THIS FILE EXISTS
-// --------------------
-// The ask was "use computer vision to detect haze in ALL of them". The honest
-// answer is not a number and a shrug; it is a per-class accounting, because the
-// catalogue's 1,369 cameras are not 1,369 streams. Measured on the live
-// catalogue 2026-09-29 by probing every class with the production ffmpeg grab:
-//
-//   REACHABLE  — ffmpeg returns a real frame
-//     hls      335  .m3u8 playlists (61 live before the URL repair, 118 after)
-//     mjpeg     27  iTIC mjpeg2.php multipart streams — 6 of 27 responded
-//
-//   NOT REACHABLE — and the reason differs per class, which is the part worth
-//   publishing rather than hiding behind one 'embed' label
-//     snapshot 572  BMA show.aspx answers with a 400×266 image, measured
-//                  mean 255 / stddev 0.000 — a pure white placeholder. The
-//                  HTTP layer is healthy; the PIXELS are empty. A CV score
-//                  from this is not "clear air", it is "no information".
-//     page     208  NST embeds are MediaMTX WHEP (WebRTC over POST+SDP).
-//                  RTSP 8554 refused, SRT absent, no HLS on the web port.
-//                  A browser plays these; ffmpeg has no WebRTC stack, and
-//                  this project ships zero npm dependencies by design.
-//     none       1  no URL of any kind.
-//
-// Pure: no I/O, no clock, no database. Takes the catalog and a set of camera
-// keys the collector has already proven grabbable, so the numbers are
-// reproducible in a test with a synthetic catalog.
+// Distinguish supported protocols from individual cameras that have actually
+// yielded a recent decoded image. Decoding is not a haze result: blank/night
+// frames are counted here and withheld separately by hazeSignal.js.
 
 /** Reasons a class is unreachable, in both languages. Keyed by stream_kind. */
 export const UNREACHABLE = {
   snapshot: {
-    why_th: 'กล้องตอบกลับ แต่ภาพเป็นสีขาวทั้งหมด (ไม่มีภาพจริง) — วิเคราะห์ไม่ได้',
-    why_en: 'camera answers but returns a blank white frame — no image to analyse',
+    why_th: 'ยังไม่มีภาพที่ใช้งานได้ — ที่อยู่ภาพนิ่งอาจส่งภาพว่าง',
+    why_en: 'no usable sampled image yet — a snapshot endpoint may return a placeholder',
   },
   page: {
     why_th: 'ถ่ายทอดผ่าน WebRTC (WHEP) เบราว์เซอร์เปิดได้ แต่เซิร์ฟเวอร์ดึงเฟรมไม่ได้',
@@ -48,7 +23,7 @@ export const UNREACHABLE = {
 }
 
 /** stream_kind values ffmpeg can pull a frame from. */
-export const REACHABLE_KINDS = new Set(['hls', 'other-stream', 'mjpeg'])
+export const REACHABLE_KINDS = new Set(['hls', 'other-stream', 'mjpeg', 'snapshot'])
 
 /**
  * @param cams   normalized catalog (needs stream_kind + stream_status)
@@ -78,10 +53,10 @@ export function coverageReport(cams, { grabbedKeys = new Set() } = {}) {
     const reachable = REACHABLE_KINDS.has(b.stream_kind)
     // A class of reachable streams is "available" only if something has
     // actually produced a frame from it. Until then it is a promise.
-    const available = reachable && (b.proven > 0 || b.stream_status === 'live')
+    const available = reachable && b.proven > 0
     let why = null
     if (!reachable) why = UNREACHABLE[b.stream_kind] ?? UNREACHABLE.none
-    else if (b.stream_status === 'down') why = UNREACHABLE.down
+    else if (b.stream_status === 'down' && !available) why = UNREACHABLE.down
     else if (!available) why = {
       why_th: 'ยังไม่เคยดึงเฟรมสำเร็จจากกลุ่มนี้',
       why_en: 'no frame has been pulled successfully from this class yet',
@@ -104,7 +79,7 @@ export function coverageReport(cams, { grabbedKeys = new Set() } = {}) {
 
   const total = cams.length
   const reachable = rows.filter((r) => r.reachable).reduce((a, r) => a + r.n, 0)
-  const available = rows.filter((r) => r.available).reduce((a, r) => a + r.n, 0)
+  const available = rows.filter((r) => r.available).reduce((a, r) => a + r.proven, 0)
   const proven = rows.reduce((a, r) => a + r.proven, 0)
 
   return {
@@ -117,7 +92,7 @@ export function coverageReport(cams, { grabbedKeys = new Set() } = {}) {
     unreachable: total - reachable,
     pct_reachable: total ? Math.round((reachable / total) * 1000) / 10 : 0,
     classes: rows,
-    headline_th: `วิเคราะห์ภาพได้ ${available} จาก ${total} กล้อง (${reachable} กล้องเปิดสตรีมได้) ที่เหลือเป็นสตรีมที่เซิร์ฟเวอร์ดึงเฟรมไม่ได้`,
-    headline_en: `frame analysis covers ${available} of ${total} cameras (${reachable} expose a readable stream); the rest serve no frame a server can read`,
+    headline_th: `ดึงภาพจริงได้ ${available} จาก ${total} กล้อง (${reachable} กล้องใช้รูปแบบที่รองรับ) ต้องตรวจคุณภาพภาพและมีภาพอ้างอิงก่อนประเมินหมอกควัน`,
+    headline_en: `decoded images from ${available} of ${total} cameras (${reachable} use supported protocols); image quality and a daylight reference determine whether haze can be checked`,
   }
 }

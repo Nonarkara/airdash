@@ -19,7 +19,7 @@
 
 export const VISION_WINDOW_H = 6
 
-const FLAG_LOOKS = new Set(['smoke-like', 'fog-like'])
+const FLAG_LOOKS = new Set(['smoke-like', 'fog-like', 'haze-like'])
 
 /**
  * @param {object|null} frame row from cctv_haze_frames, or null
@@ -35,10 +35,12 @@ export function describeVision(frame) {
   else if (tint) look = tint
   else if (index >= 25) look = 'washed'
   else look = 'clear'
+  if (frame.haze_status) look = frame.haze_status === 'possible-haze' ? 'haze-like'
+    : frame.haze_status === 'unchanged' ? 'unchanged' : 'unclear'
 
   const pm = Number.isFinite(frame.pm25) ? frame.pm25 : null
   let agreement = 'unknown'
-  const pictureHazy = look === 'smoke-like' || look === 'fog-like' || look === 'washed'
+  const pictureHazy = look === 'smoke-like' || look === 'fog-like' || look === 'washed' || look === 'haze-like'
   if (look === 'unclear' || pm == null) agreement = 'unknown'
   else if (look === 'clear' && pm <= 25) agreement = 'agree-clear'
   else if (pictureHazy && pm > 25) agreement = 'agree-hazy'
@@ -56,6 +58,10 @@ export function describeVision(frame) {
     observed_at: frame.obs_time ?? null,
     pm25_at_sample: pm,
     agreement,
+    quality_status: frame.haze_status ?? null,
+    contrast_loss: frame.contrast_loss ?? null,
+    baseline_samples: frame.baseline_samples ?? 0,
+    frame_url: frame.has_preview && frame.camera_key ? `/api/cctv/frame?camera=${encodeURIComponent(frame.camera_key)}` : null,
   }
 }
 
@@ -91,8 +97,8 @@ export function withVision(cameras, byKey) {
 export function pictureFlags(cameras, byKey, { limit = 8 } = {}) {
   const flagged = withVision(cameras, byKey).filter((c) =>
     FLAG_LOOKS.has(c.vision?.look) &&
-    (c.stream_status === 'live' || c.stream_status === 'embed'))
-  const rank = { 'smoke-like': 0, 'fog-like': 1 }
+    (c.vision?.frame_url || c.stream_status === 'live' || c.stream_status === 'embed'))
+  const rank = { 'haze-like': 0, 'smoke-like': 1, 'fog-like': 2 }
   flagged.sort((a, b) =>
     (rank[a.vision.look] - rank[b.vision.look]) ||
     ((b.vision.haze_index ?? 0) - (a.vision.haze_index ?? 0)))
@@ -102,20 +108,23 @@ export function pictureFlags(cameras, byKey, { limit = 8 } = {}) {
 
 /** Counts over the latest frame of each camera. `calibrated` is always false. */
 export function summarizeLooks(byKey) {
-  const counts = { clear: 0, smoke_like: 0, fog_like: 0, washed: 0, unclear: 0 }
+  const counts = { clear: 0, smoke_like: 0, fog_like: 0, washed: 0, unclear: 0, haze_like: 0, unchanged: 0 }
+  const quality = {}
   const idx = byKey instanceof Map ? byKey : new Map()
   for (const frame of idx.values()) {
     const v = describeVision(frame)
     if (!v) continue
     const key = v.look === 'smoke-like' ? 'smoke_like'
       : v.look === 'fog-like' ? 'fog_like'
-        : v.look
+        : v.look === 'haze-like' ? 'haze_like' : v.look
     if (key in counts) counts[key]++
+    if (v.quality_status) quality[v.quality_status] = (quality[v.quality_status] ?? 0) + 1
   }
   return {
     calibrated: false,
     window_h: VISION_WINDOW_H,
     cameras_read: idx.size,
     ...counts,
+    quality,
   }
 }

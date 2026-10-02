@@ -19,6 +19,7 @@ import { readTmdWeather } from './sources/tmd-relay.js'
 import { AERONET_STATIONS } from './sources/aeronet.js'
 import { provinceVerdict } from './verdict.js'
 import { readFileSync } from 'node:fs'
+import { previewPath } from './vision/frameStore.js'
 import { gzipSync, gunzipSync } from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -131,6 +132,8 @@ async function loadHazeEyes(db, { limit = 12, minPm25 = 25, includeDown = false 
     generated_at: new Date().toISOString(), min_pm25: minPm25, include_down: includeDown,
     count: eyes.length, health: cat.health, eyes,
     picture_flags: flags,
+    sampled_cameras: withVision(paired, visionIdx).filter(c => c.vision?.frame_url && c.vision.quality_status !== 'blank')
+      .sort((a,b) => String(b.vision.observed_at).localeCompare(String(a.vision.observed_at))).slice(0, 8),
     vision_summary: summarizeLooks(visionIdx),
     vision_note_th: 'คะแนนจากภาพเป็นลักษณะที่เห็น ไม่ใช่ค่าฝุ่น — ตัวเลข µg/m³ คือสถานีวัด',
     vision_note_en: 'A picture score is what the frame looks like, not a concentration — the µg/m³ number is the station',
@@ -171,8 +174,9 @@ function loadVisionIndex(db) {
   try {
     const since = new Date(Date.now() - VISION_WINDOW_H * 3600_000).toISOString()
     const rows = db.all(
-      `SELECT camera_key, obs_time, haze_index, tint_hint, pm25
-       FROM cctv_haze_frames WHERE obs_time >= ?`, since)
+      `SELECT camera_key, obs_time, haze_index, tint_hint, pm25,
+              haze_status, contrast_loss, baseline_samples, has_preview
+       FROM cctv_haze_frames WHERE obs_time >= ? AND haze_status IS NOT NULL`, since)
     return indexLatestFrames(rows)
   } catch (e) {
     log('warn', 'vision index unavailable', { error: String(e) })
@@ -2076,6 +2080,18 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     // deliberately exposes `calibrated: false` and the reason a score was
     // withheld, because a consumer that reads features without those two
     // fields would be presenting a triage number as a measurement.
+    'GET /api/cctv/frame': (req, res, url) => {
+      const key = url.searchParams.get('camera')
+      if (!key || key.length > 200) return json(res, 400, { error: 'camera key required' })
+      const latest = db.get('SELECT obs_time, has_preview FROM cctv_haze_frames WHERE camera_key = ? ORDER BY obs_time DESC LIMIT 1', key)
+      if (!latest?.has_preview || Date.now() - Date.parse(latest.obs_time) > VISION_WINDOW_H*3600_000) {
+        return json(res, 404, { error: 'no recent camera sample' })
+      }
+      res.setHeader('x-airdash-sampled-at', latest.obs_time)
+      if (!sendFile(res, previewPath(key), { contentType: 'image/jpeg', cacheControl: 'no-store' })) {
+        json(res, 404, { error: 'camera sample unavailable' })
+      }
+    },
     'GET /api/haze-vision': async (req, res, url) => {
       if (!allow(req, { key: 'haze-vision', limit: 60, windowMs: 60_000 })) {
         return json(res, 429, { error: 'too many requests — wait a minute' })
@@ -2088,9 +2104,10 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
           `SELECT camera_key, camera_source, lat, lng, obs_time, haze_index,
                   calibrated, corridor_tail, contrast, edge_density,
                   dark_channel, transmission, edge_decay, saturation, warm_bias,
-                  mean_luma, tint_hint, pm25, pm25_station, pm25_km
+                  mean_luma, tint_hint, pm25, pm25_station, pm25_km,
+                  haze_status, contrast_loss, baseline_samples, has_preview
            FROM cctv_haze_frames
-           WHERE obs_time >= ?
+           WHERE obs_time >= ? AND haze_status IS NOT NULL
            ORDER BY obs_time DESC LIMIT ?`, since, limit)
         const scored = rows.filter((r) => r.haze_index !== null)
         // Stream health lives in the KV key cctv_health_v1, not in a table —
@@ -2119,12 +2136,15 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         // it at all — the table is the evidence, not an in-memory guess.
         const provenSince = new Set(db.all(
           `SELECT DISTINCT camera_key FROM cctv_haze_frames
-            WHERE obs_time >= ?`, since).map((r) => r.camera_key))
+            WHERE obs_time >= ? AND haze_status IS NOT NULL`,
+          new Date(Date.now() - 90*60_000).toISOString()).map((r) => r.camera_key))
         const coverage = coverageReport(cctvCat.cameras, { grabbedKeys: provenSince })
 
         json(res, 200, {
           generated_at: new Date().toISOString(),
           hours,
+          method: 'per-camera-daylight-v1',
+          score_basis: 'contrast_loss_percent',
           samples: rows.length,
           scored: scored.length,
           withheld: rows.length - scored.length,
@@ -2134,8 +2154,9 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
           },
           // The honest headline, not a number anyone can quote as a reading.
           calibrated: false,
-          note_th: 'ค่านี้เป็นคะแนนคัดกรองเบื้องต้น ยังไม่ได้เทียบเทียบกับเครื่องวัดมาตรฐาน และค่าฝุ่นวันนี้แทบไม่มีความผันแปร — เลยยังสรุปเป็นค่าความเข้มข้นไม่ได้',
-          note_en: 'Provisional triage score, not calibrated against a reference instrument, and today’s PM2.5 has too little spread to fit anything. Do not quote as a concentration.',
+          latest_cycle: safeMeta(db.kvGet('cctv_vision_cycle')),
+          note_th: 'เทียบความต่างของภาพช่วงกลางวันกับภาพอ้างอิงของกล้องเดียวกัน ไม่ใช่ค่าฝุ่น PM2.5 หมอก ฝน หรือเลนส์สกปรกอาจให้ผลคล้ายกัน ไม่ประเมินภาพมืด ภาพว่าง ภาพค้าง หรือมุมกล้องที่เปลี่ยน และต้องมีภาพอ้างอิงอย่างน้อย 3 ภาพ',
+          note_en: 'Per-camera daylight contrast change, not a PM2.5 estimate. Possible haze can also be fog, rain, or a dirty lens. Low-light, blank, frozen, and changed views are withheld; at least three comparable daylight samples are needed.',
           stream_status: live,
           coverage,
           samples_rows: rows,

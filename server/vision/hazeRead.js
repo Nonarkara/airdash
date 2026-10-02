@@ -140,7 +140,7 @@ export function darkChannel(buf, { omega = 0.95, patch = 5 } = {}) {
           const xx = x + dx
           if (xx < 0 || xx >= w) continue
           const i = (yy * w + xx) * 3
-          const m = buf[i] < buf[i + 1] ? buf[i] : buf[i + 1]
+          const m = Math.min(buf[i], buf[i + 1], buf[i + 2])
           if (m < mn) mn = m
         }
       }
