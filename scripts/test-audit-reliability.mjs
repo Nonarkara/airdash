@@ -120,6 +120,19 @@ await test('offline navigation preserves dashboard, install guide, and story ide
   assert.equal((await forced.event.response).status, 503)
 })
 
+await test('offline documents strip Pages redirect history before answering navigation', async () => {
+  const h = workerHarness()
+  h.context.caches.match = async () => {
+    const response = new Response('install guide', { headers: { 'content-type': 'text/html' } })
+    Object.defineProperty(response, 'redirected', { value: true })
+    return response
+  }
+  const response = await h.call('/install', 'navigate').event.response
+  assert.equal(response.redirected, false)
+  assert.equal(response.headers.get('content-type'), 'text/html')
+  assert.equal(await response.text(), 'install guide')
+})
+
 await test('service worker never intercepts live API or POST requests and keeps unrelated caches', async () => {
   const h = workerHarness()
   assert.equal(h.call('/api/snapshot').event.response, undefined)

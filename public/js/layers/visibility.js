@@ -65,7 +65,7 @@ export function createVisibilityLayer() {
   const group = L.layerGroup()
   group._airdashKind = 'visibility'
   const url = '/api/visibility'
-  const keys = ['?v=2.4.55']
+  const keys = ['?v=2.4.56']
   const state = { data: null, timer: null }
 
   const tip = (st) => {

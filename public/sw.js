@@ -17,36 +17,36 @@
  *     so a stale airdash-v3 / v4 / ... cache can never serve broken JS.
  */
 
-const CACHE = 'airdash-v73';
+const CACHE = 'airdash-v74';
 
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/ops.html',
   '/install.html',
-  '/css/brand.css?v=2.4.55',
+  '/css/brand.css?v=2.4.56',
   '/img/brand/airdash-signal-color.png',
   '/img/brand/airdash-signal-black.png',
   '/img/brand/airdash-signal-white.png',
-  '/css/tokens.css?v=2.4.55',
-  '/css/layout.css?v=2.4.55',
-  '/css/components.css?v=2.4.55',
-  '/css/city-dashboard.css?v=2.4.55',
-  '/css/story.css?v=2.4.55',
-  '/css/witness.css?v=2.4.55',
-  '/js/witness.js?v=2.4.55',
-  '/js/boot.js?v=2.4.55',
-  '/js/panels/burning.js?v=2.4.55',
-  '/js/main.js?v=2.4.55',
+  '/css/tokens.css?v=2.4.56',
+  '/css/layout.css?v=2.4.56',
+  '/css/components.css?v=2.4.56',
+  '/css/city-dashboard.css?v=2.4.56',
+  '/css/story.css?v=2.4.56',
+  '/css/witness.css?v=2.4.56',
+  '/js/witness.js?v=2.4.56',
+  '/js/boot.js?v=2.4.56',
+  '/js/panels/burning.js?v=2.4.56',
+  '/js/main.js?v=2.4.56',
 
-  '/js/feedAge.js?v=2.4.55',
-  '/js/story.js?v=2.4.55',
+  '/js/feedAge.js?v=2.4.56',
+  '/js/story.js?v=2.4.56',
   // The life-saving citizen panel additions (persona selector, action
   // timeline, mask guide, symptom checker, migrant phrases, time-of-day
   // forecast). Precache so the citizen panel works offline — the user
   // reading "ถ้าเจ็บหน้าอก โทร 1669" needs that line to work even
   // when the cellular drops.
-  '/js/panels/citizenLife.js?v=2.4.55',
+  '/js/panels/citizenLife.js?v=2.4.56',
   // New modules added in Phase 1. The SW does NOT precache every panel
   // (the install event is fragile if any 404s), but the runtime cache
   // picks them up on first load via stale-while-revalidate.
@@ -138,7 +138,12 @@ self.addEventListener('fetch', (event) => {
     }).catch(async () => {
       if (!forceReload) {
         const cached = await caches.match(request) || await caches.match(offlineDocument(url.pathname))
-        if (cached) return cached
+        // Pages canonicalizes .html URLs. Their cached responses retain a
+        // redirected URL list, which navigation's manual redirect mode rejects.
+        // Return the saved document body without that network redirect history.
+        if (cached) return new Response(cached.body, {
+          status: cached.status, statusText: cached.statusText, headers: cached.headers,
+        })
       }
       return new Response(
         '<!doctype html><meta charset="utf-8"><title>AirDash · offline</title>' +
