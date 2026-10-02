@@ -3,9 +3,9 @@
 // highest reading down and, for each, picks the nearest camera that a health
 // probe has shown to be alive. So this wall answers "what does that look
 // like, over there?" for the places the numbers say are worst.
-import { tr } from '../i18n.js?v=2.4.61'
-import { escapeHtml } from '../fmt.js?v=2.4.61'
-import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.61'
+import { tr } from '../i18n.js?v=2.4.62'
+import { escapeHtml } from '../fmt.js?v=2.4.62'
+import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.62'
 
 const MAX_AUTOPLAY = 4
 let overlay = null
@@ -143,7 +143,7 @@ export async function openHazeEyes({ onLocate } = {}) {
     data = await get(25)
     // Most of the wet season nothing is hazy. An empty wall would be true but
     // useless, so when fewer than 6 places pass the threshold, show the cameras
-    // nearest the highest readings instead — and say plainly that the air is fine.
+    // nearest the highest readings instead. Camera availability cannot establish clean air.
     if ((data.eyes?.length ?? 0) < 6) {
       const all = await get(0)
       if ((all.eyes?.length ?? 0) > (data.eyes?.length ?? 0)) { data = all; relaxed = true }
@@ -171,7 +171,7 @@ export async function openHazeEyes({ onLocate } = {}) {
     note += `<p class="cctv-wall-relaxed">${tr('สตรีมสดส่วนใหญ่ออฟไลน์ — แสดงกล้องที่อยู่บนเส้นทางหลักตามค่าฝุ่น แตะการ์ดเพื่อเปิดที่ต้นทาง iTIC/DOH', 'Most live streams are offline — showing motorway cameras near the highest readings. Tap a card to open it at the iTIC/DOH source page.')}</p>`
   }
   if (relaxed && !includedDown) {
-    note += `<p class="cctv-wall-relaxed">${tr('ตอนนี้ไม่มีพื้นที่ฝุ่นหนัก (PM2.5 เกิน 25) — แสดงกล้องที่ใกล้สถานีค่าสูงที่สุดแทน อากาศโดยรวมอยู่ในเกณฑ์ดี', 'No heavy haze right now (nothing above 25 µg/m³) — showing cameras near the highest readings instead. The air is broadly fine.')}</p>`
+    note += `<p class="cctv-wall-relaxed">${tr('มีกล้องใช้งานได้ไม่ถึง 6 ตัวในพื้นที่ PM2.5 ≥25 — ขยายการเลือกกล้องตามสถานีค่าสูง จำนวนกล้องไม่ได้ยืนยันว่าอากาศปลอดภัย', 'Fewer than six working cameras meet the PM2.5 ≥25 selection — broadening coverage near the highest readings. Camera availability does not establish air safety.')}</p>`
   }
   const eyesGrid = data.eyes?.length
     ? `<div class="cctv-wall-grid">${data.eyes.map((e) => cardHtml(e)).join('')}</div>`

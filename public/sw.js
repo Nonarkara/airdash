@@ -17,36 +17,36 @@
  *     so a stale airdash-v3 / v4 / ... cache can never serve broken JS.
  */
 
-const CACHE = 'airdash-v79';
+const CACHE = 'airdash-v80';
 
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/ops.html',
   '/install.html',
-  '/css/brand.css?v=2.4.61',
+  '/css/brand.css?v=2.4.62',
   '/img/brand/airdash-signal-color.png',
   '/img/brand/airdash-signal-black.png',
   '/img/brand/airdash-signal-white.png',
-  '/css/tokens.css?v=2.4.61',
-  '/css/layout.css?v=2.4.61',
-  '/css/components.css?v=2.4.61',
-  '/css/city-dashboard.css?v=2.4.61',
-  '/css/story.css?v=2.4.61',
-  '/css/witness.css?v=2.4.61',
-  '/js/witness.js?v=2.4.61',
-  '/js/boot.js?v=2.4.61',
-  '/js/panels/burning.js?v=2.4.61',
-  '/js/main.js?v=2.4.61',
+  '/css/tokens.css?v=2.4.62',
+  '/css/layout.css?v=2.4.62',
+  '/css/components.css?v=2.4.62',
+  '/css/city-dashboard.css?v=2.4.62',
+  '/css/story.css?v=2.4.62',
+  '/css/witness.css?v=2.4.62',
+  '/js/witness.js?v=2.4.62',
+  '/js/boot.js?v=2.4.62',
+  '/js/panels/burning.js?v=2.4.62',
+  '/js/main.js?v=2.4.62',
 
-  '/js/feedAge.js?v=2.4.61',
-  '/js/story.js?v=2.4.61',
+  '/js/feedAge.js?v=2.4.62',
+  '/js/story.js?v=2.4.62',
   // The life-saving citizen panel additions (persona selector, action
   // timeline, mask guide, symptom checker, migrant phrases, time-of-day
   // forecast). Precache so the citizen panel works offline — the user
   // reading "ถ้าเจ็บหน้าอก โทร 1669" needs that line to work even
   // when the cellular drops.
-  '/js/panels/citizenLife.js?v=2.4.61',
+  '/js/panels/citizenLife.js?v=2.4.62',
   // New modules added in Phase 1. The SW does NOT precache every panel
   // (the install event is fragile if any 404s), but the runtime cache
   // picks them up on first load via stale-while-revalidate.

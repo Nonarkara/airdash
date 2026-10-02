@@ -10,13 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.4.61] — 2026-10-02 — fail-closed verification and visible score meaning
+## [2.4.62] — 2026-10-02 — fail-closed verification and visible score meaning
 
 - Audited MiniMax's `6bbd98a` gate fix. Missing Playwright and navigation failures now exit 2 as unmeasurable, and the data wait uses Playwright's actual timeout argument. Both numeric danger and a rendered verdict are required. An optional real-browser regression script verifies that placeholders and a missing dependency cannot print success.
-- Danger Score carries a visible non-clinical label in the header, rankings, city card and formula breakdown. Camera scores are explicitly relative visual triage, never PM2.5 concentrations. METAR pins identify airport visibility observations, and unreported/non-aerosol causes no longer prove that dust is absent.
+- Danger Score carries a visible non-clinical label in the header, rankings, city card and formula breakdown. Camera scores are explicitly relative visual triage, never PM2.5 concentrations. A camera-count fallback no longer claims that the air is broadly fine. METAR pins identify airport visibility observations, and unreported/non-aerosol causes no longer prove that dust is absent.
 - The ops sentinel checks external archive storage at boot and every five minutes, independently of the 48-hour receipt-age alarm. It exposes a timestamped storage result in `/api/health` and flags missing storage, a same-disk mount directory, a misplaced archive file and a stalled probe. This verifies availability, not integrity or offsite recovery.
 - Nightly backup mode checks device identity before treating a writable directory as off-device storage. A same-disk directory falls back to the verified local compressed backup.
-- Test counts include Node TAP assertions: the prior release had 886 custom checks plus 14 TAP tests = 900. This release adds five storage checks and five visibility-marker checks; the optional browser gate and backup fixture are reported separately.
+- Test counts include Node TAP assertions: the prior release had 886 custom checks plus 14 TAP tests = 900. This release adds five storage checks and five visibility-marker checks; the optional browser gate, sparse-camera UI check and backup fixture are reported separately.
 
 Offsite storage and a second live backend are still unprovisioned. No superiority or clinical-validation claim is established by these changes.
 
