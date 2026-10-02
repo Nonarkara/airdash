@@ -85,6 +85,17 @@ function workerHarness() {
   return { context, handlers, entries, names, call }
 }
 
+await test('dashboard registers its worker even when the dynamic import arrives after window load', () => {
+  let registered = 0
+  const main = readFileSync('public/js/main.js', 'utf8')
+  const context = vm.createContext({
+    window: { addEventListener() {} }, // load has already fired
+    navigator: { serviceWorker: { register(path) { assert.equal(path, '/sw.js'); registered++; return Promise.resolve() } } },
+  })
+  vm.runInContext(main.slice(main.lastIndexOf("if ('serviceWorker' in navigator)")), context)
+  assert.equal(registered, 1)
+})
+
 await test('module requests cache before body consumption and survive offline', async () => {
   const h = workerHarness()
   h.context.fetch = async () => { const r = new Response('export const ready = true'); Object.defineProperty(r, 'type', { value: 'basic' }); return r }
