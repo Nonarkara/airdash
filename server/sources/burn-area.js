@@ -33,9 +33,9 @@ const INDEX = `${BASE}/server/getCsvFiles.jsp`
 const SEASON_MONTHS = new Set(['11', '12', '01', '02', '03', '04'])
 
 function numOrNull(v) {
-  if (v === undefined || v === null || v === '') return null
+  if (v === undefined || v === null || String(v).trim() === '') return null
   const n = Number(v)
-  return Number.isFinite(n) ? n : null
+  return Number.isFinite(n) && n >= 0 ? n : null
 }
 
 // The CSV is a plain comma file with a leading unnamed index column:
@@ -43,7 +43,7 @@ function numOrNull(v) {
 // Thai province names contain no commas in this feed, but split on the
 // header count rather than assuming, so a future comma cannot silently
 // shift every numeric column left.
-function parseCsv(text) {
+export function parseCsv(text) {
   const lines = text.split(/\r?\n/).filter((l) => l.trim())
   if (lines.length < 2) return []
   const head = lines[0].split(',').map((h) => h.trim())
@@ -75,7 +75,7 @@ function parseCsv(text) {
       province_en: c[iEn]?.trim() || null,
       yyyymm: month,
       paddy_rai: paddy, cane_rai: cane, corn_rai: corn, mixed_rai: mixed,
-      total_rai: [paddy, cane, corn, mixed].reduce((a, b) => a + (b ?? 0), 0),
+      total_rai: [paddy, cane, corn, mixed].every(Number.isFinite) ? paddy + cane + corn + mixed : null,
     })
   }
   return rows
@@ -114,6 +114,7 @@ export default {
 
     let seen = 0
     let added = 0
+    let failedFiles = 0
     const now = new Date().toISOString()
 
     for (const year of years) {
@@ -124,9 +125,10 @@ export default {
         try {
           rows = parseCsv(await getText(`${BASE}/tamroypao/data/csv/province/${year}/${file}`, ctl))
         } catch {
-          // One bad month must not abort the other eleven.
+          failedFiles++
           continue
         }
+        if (!rows.length) { failedFiles++; continue }
         seen += rows.length
         db.tx(() => {
           for (const r of rows) {
@@ -152,6 +154,8 @@ export default {
         })
       }
     }
+    if (failedFiles) throw new Error(`burn-area publication incomplete: ${failedFiles} monthly files failed; successful months retained`)
+    if (!seen) throw new Error('burn-area index returned no usable provincial data')
     return { seen, added }
   },
 }

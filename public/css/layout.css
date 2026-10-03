@@ -2876,3 +2876,18 @@ header .hd-tools #place-search { width: 100%; min-width: 0; max-width: none; }
 
 .danger.band-unknown::before { background: var(--ink-mid); }
 .danger.band-unknown .danger-num, .danger.band-unknown .danger-band { color: var(--ink-mid); }
+
+/* The modal's tab strip must scroll itself, not shift the entire overlay
+   sideways when keyboard focus moves to Close on a phone. */
+.about-tabs { min-width:0; overflow-x:auto; }
+.about-tab { flex:none; }
+.about-body { min-width:0; }
+.bn-brief-controls select { min-height:44px; }
+@media(max-width:720px) {
+  .about-head { height:auto; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px; padding:8px 12px; }
+  .about-head .sign { min-width:0; }
+  .about-head .sign .en { display:block; margin-left:0; }
+  .about-head > #about-close { grid-column:2; grid-row:1; min-height:44px; }
+  .about-head > .about-tabs { grid-column:1 / -1; width:100%; justify-content:flex-start; }
+  .about-tab { min-height:44px; padding:6px 10px; }
+}

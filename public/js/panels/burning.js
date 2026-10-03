@@ -9,7 +9,8 @@
 // Every figure here was read off a named source and is labelled with it.
 // Where two credible sources disagree (they do, by an order of
 // magnitude), both numbers are shown rather than the flattering one.
-import { store, on } from '../state.js?v=2.4.67'
+import { store, on } from '../state.js?v=2.4.68'
+import { mountBurnBriefing } from './burnBriefing.js?v=2.4.68'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -38,23 +39,6 @@ const GISTDA_SEP = {
   ],
 }
 
-
-// ตามรอยเผา (HII/KU) monthly province CSVs, summed across all 77 provinces
-// for the 2025/26 dust-smoke season. Fetched and totalled directly from
-// https://tamroypao.hii.or.th/openburn/tamroypao/data/csv/province/<Y>/
-// on 2026-09-10 — these are sums of published values, not estimates.
-// Units: rai. Sentinel-2, 20 m, crop-classified.
-const SEASON_2526 = {
-  total: 12283528,
-  months: [
-    { m: '202511', th: 'พ.ย.', en: 'Nov', paddy: 21752, cane: 18949, corn: 8488, total: 49320 },
-    { m: '202512', th: 'ธ.ค.', en: 'Dec', paddy: 469688, cane: 224126, corn: 64881, total: 759612 },
-    { m: '202601', th: 'ม.ค.', en: 'Jan', paddy: 2259820, cane: 1202829, corn: 320103, total: 3794197 },
-    { m: '202602', th: 'ก.พ.', en: 'Feb', paddy: 1272929, cane: 1212011, corn: 375073, total: 2871487 },
-    { m: '202603', th: 'มี.ค.', en: 'Mar', paddy: 823958, cane: 1263557, corn: 361941, total: 2462442 },
-    { m: '202604', th: 'เม.ย.', en: 'Apr', paddy: 1436263, cane: 713441, corn: 190360, total: 2346470 },
-  ],
-}
 
 function barRow(label, n, max, accent) {
   const pct = Math.max(1, Math.round((n / max) * 100))
@@ -156,55 +140,8 @@ function sectionSeptember() {
 }
 
 
-// Stacked monthly columns. The shape IS the argument: rice front-loads
-// the season, cane peaks two months later, and the two together make
-// January-March the wall.
-function svgCalendar() {
-  const M = SEASON_2526.months
-  const max = Math.max(...M.map((x) => x.total))
-  const W = 62, H = 118, GAP = 8
-  const cols = M.map((x, i) => {
-    const px = i * (W + GAP)
-    const h = (v) => Math.round((v / max) * H)
-    const hp = h(x.paddy), hc = h(x.cane), hk = h(x.corn)
-    let y = H
-    const seg = (hh, fill) => { y -= hh; return `<rect x="${px}" y="${y}" width="${W}" height="${hh}" fill="${fill}"/>` }
-    const bars = seg(hp, 'var(--aqi-watch)') + seg(hc, 'var(--th-red)') + seg(hk, 'var(--th-sage)')
-    return `${bars}
-      <text x="${px + W / 2}" y="${H + 13}" class="bn-svg-lbl" text-anchor="middle">${tr(x.th, x.en)}</text>
-      <text x="${px + W / 2}" y="${y - 4}" class="bn-svg-sub" text-anchor="middle">${(x.total / 1e6).toFixed(1)}M</text>`
-  }).join('')
-  return `
-    <svg viewBox="0 0 ${M.length * (W + GAP)} ${H + 42}" class="bn-svg bn-svg--wide" role="img"
-         aria-label="${tr('พื้นที่เผาไหม้รายเดือน แยกตามพืช', 'Monthly burned area by crop')}">
-      ${cols}
-      <g transform="translate(0,${H + 34})">
-        <rect x="0" y="-9" width="11" height="11" fill="var(--aqi-watch)"/><text x="16" y="0" class="bn-svg-sub">${tr('ข้าว', 'rice')}</text>
-        <rect x="62" y="-9" width="11" height="11" fill="var(--th-red)"/><text x="78" y="0" class="bn-svg-sub">${tr('อ้อย', 'sugarcane')}</text>
-        <rect x="140" y="-9" width="11" height="11" fill="var(--th-sage)"/><text x="156" y="0" class="bn-svg-sub">${tr('ข้าวโพด', 'maize')}</text>
-      </g>
-    </svg>`
-}
-
 function sectionCalendar() {
-  const t = SEASON_2526.total
-  return `
-    <section class="rp-section">
-      <h2>${tr('3. ปฏิทินการเผา — พืชแต่ละชนิดเผาคนละเดือน', '3. The burning calendar — each crop burns in a different month')}</h2>
-      <p class="rp-lead">${tr(
-        `ฤดูหมอกควัน 2568/69 (พ.ย.–เม.ย.) รวม ${t.toLocaleString()} ไร่ · ดาวเทียม Sentinel-2 ความละเอียด 20 ม. · ระบบตามรอยเผา (สสน. + ม.เกษตรศาสตร์)`,
-        `2025/26 dust-smoke season (Nov–Apr): ${t.toLocaleString()} rai burned · Sentinel-2 at 20 m · ตามรอยเผา (HII + Kasetsart University)`
-      )}</p>
-      <div class="rp-figure">${svgCalendar()}</div>
-      <p>${tr(
-        'ข้าวเผาก่อน — สูงสุดในเดือนมกราคม (2.26 ล้านไร่) ส่วนอ้อยขึ้นถึงจุดสูงสุดช้ากว่าสองเดือน คือเดือนมีนาคม (1.26 ล้านไร่) เพราะอ้อยเผาตามรอบการเข้าหีบของโรงงานน้ำตาล ไม่ใช่ตามรอบเก็บเกี่ยวข้าว ทั้งสองอย่างซ้อนกันในเดือนมกราคมถึงมีนาคม ซึ่งเป็นช่วงที่ค่าฝุ่นแย่ที่สุดของปี',
-        'Rice burns first, peaking in January (2.26 M rai). Sugarcane peaks two months later, in March (1.26 M rai), because cane burning follows the sugar mills\' crushing window rather than the rice harvest. The two overlap through January–March — which is exactly when PM2.5 is worst.'
-      )}</p>
-      <p class="bn-callout">${tr(
-        'สิ่งที่ปฏิทินนี้บอกและตัวเลขรวมทั้งปีบอกไม่ได้ คือมาตรการที่ได้ผลกับข้าวในเดือนธันวาคมแทบไม่มีผลกับอ้อยในเดือนมีนาคม เพราะเป็นพืชคนละชนิด คนละเหตุผล และคนละรอบเวลา',
-        'What the calendar shows and an annual total cannot: a measure that works on rice in December does almost nothing for cane in March. Different crop, different reason, different clock.'
-      )}</p>
-    </section>`
+  return `<section class="rp-section"><h2>${tr('สรุปพื้นที่ — ฝุ่นปัจจุบันและรอยเผาย้อนหลัง', 'Local briefing — current air and historical burning')}</h2><div id="burn-briefing"></div></section>`
 }
 
 function sectionEconomics() {
@@ -333,9 +270,9 @@ function paint() {
   if (!el) return
   el.innerHTML = [
     sectionLede(),
+    sectionCalendar(),
     sectionInversion(),
     sectionSeptember(),
-    sectionCalendar(),
     sectionEconomics(),
     sectionSensor(),
     sectionEnforcement(),
@@ -343,6 +280,7 @@ function paint() {
     sectionGaps(),
     sectionSources(),
   ].join('')
+  mountBurnBriefing(document.getElementById('burn-briefing'))
 }
 
 let wired = false

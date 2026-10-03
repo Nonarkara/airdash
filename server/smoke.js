@@ -93,12 +93,19 @@ export function computeSmoke(db) {
   if (c && Date.now() - c.at < TTL_MS) return c.value
   let value
   try {
+    const fireRun = db.all("SELECT started_at FROM ingest_runs WHERE source='firms_regional' AND ok=1 ORDER BY id DESC LIMIT 1")[0]
+    const fireAge = Date.now() - Date.parse(fireRun?.started_at ?? '')
+    if (!Number.isFinite(fireAge) || fireAge < -5 * 60_000 || fireAge > 12 * 3600_000) {
+      value = { available: false, reason: 'fire-source-unavailable-or-stale', fires_48h: null, provinces: [],
+        fire_source_checked_at: fireRun?.started_at ?? null, computed_at: new Date().toISOString() }
+      cache.set(db, { at: Date.now(), value }); return value
+    }
     const fires = db.all(
       `SELECT lat, lng, frp, in_thailand FROM regional_hotspots WHERE acq_date >= date('now', ?)`,
       `-${LOOKBACK_DAYS} days`)
     const cells = gridFires(fires)
     const wind = db.all(
-      `SELECT l.station_key AS code, l.metric, l.value, s.lat, s.lng, s.province_th, s.province_en
+      `SELECT l.station_key AS code, l.metric, l.value, l.obs_time, s.lat, s.lng, s.province_th, s.province_en
          FROM latest l JOIN stations s ON s.source = l.source AND s.station_key = l.station_key
         WHERE l.source = 'openmeteo' AND l.metric IN ('wind_dir_d0', 'wind_dir_d1')
           AND l.obs_time >= ?`,
@@ -107,18 +114,21 @@ export function computeSmoke(db) {
     for (const r of wind) {
       const p = byCode.get(r.code) ?? { code: r.code, lat: r.lat, lng: r.lng, province_th: r.province_th, province_en: r.province_en }
       p[r.metric] = r.value
+      p[`${r.metric}_updated_at`] = r.obs_time
       byCode.set(r.code, p)
     }
     const provinces = []
     for (const p of byCode.values()) {
       if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue
       const s = smokeFor(p, cells, p.wind_dir_d1 ?? p.wind_dir_d0)
-      if (s) provinces.push({ code: String(p.code), province_th: p.province_th, province_en: p.province_en, ...s })
+      if (s) provinces.push({ code: String(p.code), province_th: p.province_th, province_en: p.province_en, ...s,
+        wind_basis: Number.isFinite(p.wind_dir_d1) ? 'tomorrow-forecast' : 'today-forecast',
+        wind_updated_at: Number.isFinite(p.wind_dir_d1) ? p.wind_dir_d1_updated_at : p.wind_dir_d0_updated_at })
     }
     provinces.sort((a, b) => b.upwind_frp_mw - a.upwind_frp_mw)
-    value = { fires_48h: fires.length, provinces, computed_at: new Date().toISOString() }
+    value = { available: true, fire_source_checked_at: fireRun.started_at, fires_48h: fires.length, provinces, computed_at: new Date().toISOString() }
   } catch (err) {
-    value = { fires_48h: null, provinces: [], error: String(err?.message ?? err), computed_at: new Date().toISOString() }
+    value = { available: false, fires_48h: null, provinces: [], error: String(err?.message ?? err), computed_at: new Date().toISOString() }
   }
   cache.set(db, { at: Date.now(), value })
   return value

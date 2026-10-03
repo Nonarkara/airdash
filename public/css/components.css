@@ -4149,3 +4149,22 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .cctv-vision span { display: block; }
 
 .danger-chip .dc-kind { display: block; font-size: 7px; line-height: 1.2; color: var(--ink-mid); }
+
+/* Local burning briefing: controls wrap; the data table scrolls within its panel. */
+.bn-brief-controls { display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin:12px 0; }
+.bn-brief-controls label { display:flex; flex-direction:column; gap:4px; min-width:0; flex:1 1 180px; }
+.bn-brief-controls select { width:100%; min-width:0; max-width:100%; background:var(--paper); color:var(--ink); border:1px solid var(--rule); padding:8px; }
+.bn-brief-controls button { min-height:44px; padding:8px 12px; border:1px solid var(--rule); background:var(--paper); color:var(--ink); cursor:pointer; }
+.bn-brief-controls button:disabled { opacity:.5; cursor:wait; }
+.bn-brief-controls :focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+.bn-brief-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.bn-brief-grid > div { min-width:0; border-top:1px solid var(--rule); padding-top:10px; }
+.bn-brief-grid p, .bn-brief-note { font-size:12px; overflow-wrap:anywhere; }
+.bn-brief-table { max-width:100%; overflow-x:auto; margin:12px 0; }
+.bn-brief-table table { width:100%; border-collapse:collapse; font-size:12px; font-variant-numeric:tabular-nums; }
+.bn-brief-table th, .bn-brief-table td { padding:8px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--rule); }
+.bn-brief-table caption { text-align:left; margin-bottom:6px; }
+@media(max-width:600px) { .bn-brief-grid { grid-template-columns:1fr; } }
+
+.burn-brief-open { min-height:44px; padding:6px 10px; border:1px solid var(--rule); color:var(--ink); background:var(--paper); font:inherit; cursor:pointer; }
+.burn-brief-open:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }

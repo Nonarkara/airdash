@@ -1,3 +1,4 @@
+import { burnAreaPayload } from './burnArea.js'
 // JSON + SSE API surface consumed by the dashboard frontend.
 import { json, readBody, prebuild, sendPrebuilt, sendFile, SECURITY_HEADERS } from './http.js'
 import { allow } from './ratelimit.js'
@@ -1029,54 +1030,15 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
 
     'GET /api/burn-area': (req, res) => {
       const url = new URL(req.url, 'http://x')
-      const season = url.searchParams.get('season')
-      const province = url.searchParams.get('province')
-
-      // A season is Nov of year N through Apr of year N+1.
-      let range = null
-      if (season) {
-        const m = /^(\d{4})\/(\d{2})$/.exec(season)
-        if (!m) return json(res, 400, { error: 'season must look like 2025/26' })
-        const y = Number(m[1])
-        range = [`${y}11`, `${y + 1}04`]
+      const options = Object.fromEntries(['season', 'province', 'compare'].map(key => [key, url.searchParams.get(key)]))
+      // Validate query errors separately from database/server failures.
+      try {
+        const payload = burnAreaPayload(db, options)
+        json(res, 200, payload)
+      } catch (error) {
+        if (/^(season must|compare requires|unknown Thai province)/.test(error.message)) return json(res, 400, { error: error.message })
+        throw error
       }
-
-      const where = []
-      const args = []
-      if (range) { where.push('yyyymm BETWEEN ? AND ?'); args.push(range[0], range[1]) }
-      if (province) { where.push('province_code = ?'); args.push(province) }
-      const sql = `SELECT province_code, province_th, province_en, yyyymm,
-                          paddy_rai, cane_rai, corn_rai, mixed_rai, total_rai
-                   FROM burn_area
-                   ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-                   ORDER BY yyyymm, total_rai DESC`
-      const rows = db.all(sql, ...args)
-
-      // Monthly national roll-up alongside the rows, because the shape of
-      // the season (rice peaks January, cane peaks March) is the finding —
-      // and a client should not have to re-derive it to show it.
-      const byMonth = new Map()
-      for (const r of rows) {
-        const cur = byMonth.get(r.yyyymm) ?? { yyyymm: r.yyyymm, paddy_rai: 0, cane_rai: 0, corn_rai: 0, total_rai: 0 }
-        cur.paddy_rai += r.paddy_rai ?? 0
-        cur.cane_rai += r.cane_rai ?? 0
-        cur.corn_rai += r.corn_rai ?? 0
-        cur.total_rai += r.total_rai ?? 0
-        byMonth.set(r.yyyymm, cur)
-      }
-      json(res, 200, {
-        unit: 'rai',
-        source: {
-          name_th: 'ตามรอยเผา (สสน. + ม.เกษตรศาสตร์)',
-          name_en: 'Tam Roy Pao (HII + Kasetsart University)',
-          sensor: 'Sentinel-2, 20 m, crop-classified',
-          url: 'https://tamroypao.hii.or.th/openburn/map.jsp',
-          note_th: 'เผยแพร่เฉพาะฤดูหมอกควัน พ.ย.–เม.ย. เท่านั้น',
-          note_en: 'Published for the Nov–Apr dust-smoke season only.',
-        },
-        months: [...byMonth.values()].sort((a, b) => a.yyyymm.localeCompare(b.yyyymm)),
-        rows,
-      })
     },
 
     // Cross-border hotspot share — the honest answer to "is this our own
