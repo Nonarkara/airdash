@@ -170,7 +170,11 @@ export async function indexKnowledge(db, rag) {
     // removes one — an orphan keeps its vector forever and competes with the
     // current text as a stale duplicate. Library chunks use a `lib:` prefix and
     // are keyed differently, so scoping to this file's own prefix is safe.
-    for (const row of db.all('SELECT doc_key FROM rag_docs WHERE doc_key LIKE ?', [`${file}#%`])) {
+    // Spelled `?` with a bare scalar, not an array: the db wrapper forwards
+    // arguments straight to node:sqlite, which reads a lone array as a named
+    // parameter bag and throws "Unknown named parameter '0'" for an anonymous
+    // placeholder. An array here failed the entire boot-time index pass.
+    for (const row of db.all('SELECT doc_key FROM rag_docs WHERE doc_key LIKE ?', `${file}#%`)) {
       if (live.has(row.doc_key)) continue
       db.run('DELETE FROM rag_docs WHERE doc_key = ?', row.doc_key)
       pruned += 1

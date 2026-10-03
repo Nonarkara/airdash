@@ -110,10 +110,15 @@ check('EMBED_LIMIT is exported for the guard to read', EMBED_LIMIT > 0)
 // 6. The prune query must be scoped to a single file's own prefix, and library
 //    chunks live under `lib:` so they can never match. Assert against the real
 //    LIKE pattern the code uses.
-const pruneLine = knSrc.match(/doc_key LIKE \?[^)]*\[\s*`([^`]+)`\s*\]/)
-check('the prune query is scoped to one file prefix', pruneLine?.[1] === '${file}#%', pruneLine?.[1] ?? 'pattern not found')
+const pruneCall = knSrc.match(/db\.all\('SELECT doc_key FROM rag_docs WHERE doc_key LIKE \?',\s*([^\n]*?)\)\)/)
+check('the prune query is scoped to one file prefix',
+  pruneCall?.[1]?.trim() === '`${file}#%`', pruneCall?.[1]?.trim() ?? 'call not found')
+// The array form is the bug that killed the boot-time pass: node:sqlite reads a
+// lone array as a named-parameter bag and throws on an anonymous `?`.
+check('the LIKE argument is a bare scalar, not an array',
+  pruneCall?.[1]?.trim()?.startsWith('[') === false, pruneCall?.[1]?.trim() ?? 'call not found')
 check("library chunk keys are not reachable by the prune pattern",
-  !pruneLine?.[1].includes('lib') && chunkMarkdown('lib:sec01:th', '# x\n\n' + 'a'.repeat(200))[0].doc_key.startsWith('lib:'))
+  !String(pruneCall?.[1]).includes('lib') && chunkMarkdown('lib:sec01:th', '# x\n\n' + 'a'.repeat(200))[0].doc_key.startsWith('lib:'))
 
 // A chunk that used to be silently truncated must now be split, not cut. Build
 // the exact shape of the failure: one H2 section far over the limit, no H3s and
@@ -222,6 +227,26 @@ check('a lone H1 title line is kept rather than dropped by a size floor',
 // A source-pattern check cannot see a DELETE that has been replaced by a no-op,
 // so drive indexKnowledge with a stub db and assert rows actually disappear.
 const { indexKnowledge } = await import('../server/knowledge.js')
+
+/**
+ * node:sqlite binds named parameters when given an object or a lone array, and
+ * an anonymous `?` is not a name — so it throws. Mirror that here, otherwise a
+ * stub accepts the one call shape the real driver refuses.
+ */
+function bindLikeRealDriver(sql, args) {
+  const q = String(sql)
+  const placeholders = (q.match(/\?/g) ?? []).length
+  const named = (q.match(/[:$][A-Za-z_][A-Za-z0-9_]*/g) ?? []).length
+  for (const a of args) {
+    if (Array.isArray(a) && placeholders > named) {
+      throw new Error(`Unknown named parameter '0' — an array is a named-parameter bag in node:sqlite`)
+    }
+  }
+  if (placeholders !== args.length && !named) {
+    throw new Error(`wrong number of arguments: expected ${placeholders}, got ${args.length}`)
+  }
+}
+
 {
   const deleted = []
   const inserted = []
@@ -238,8 +263,18 @@ const { indexKnowledge } = await import('../server/knowledge.js')
     kvGet: () => 'test-embed-model',
     kvSet: () => {},
     get: () => undefined,                       // nothing pre-indexed
-    all: (sql) => (String(sql).includes('doc_key LIKE') ? staleRows : []),
+    // Reproduce the driver's parameter binding rather than accepting anything:
+    // the db wrapper forwards args straight to node:sqlite, which reads a lone
+    // array as a named-parameter bag and throws "Unknown named parameter '0'"
+    // for an anonymous `?`. A permissive stub silently accepted that, the boot
+    // pass died, and the whole corpus kept its old chunking — while every
+    // assertion in this file stayed green.
+    all: (sql, ...args) => {
+      bindLikeRealDriver(sql, args)
+      return String(sql).includes('doc_key LIKE') ? staleRows : []
+    },
     run: (sql, ...args) => {
+      bindLikeRealDriver(sql, args)
       if (String(sql).includes('DELETE FROM rag_docs')) deleted.push(args[0])
       if (String(sql).includes('INSERT INTO rag_docs')) inserted.push(args[0])
     },
