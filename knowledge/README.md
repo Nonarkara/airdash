@@ -19,6 +19,12 @@ methodology, in both Thai and English.
 | `pollutant-standards.md` | Thai standards per pollutant (PM2.5/PM10/O3/NO2/SO2/CO) and how the score uses them. | Operators |
 | `glossary.md` | TH–EN air-quality terms and agency acronyms. | New users |
 | `project-vision.md` | Why AirDash exists, the working method, the toolbox pattern, what's missing. | Contributors, next agents |
+| `gov-citizen-apps.md` | **Registry of Thai government/university-operated public monitoring apps** citizens actually use — ตามรอยเผา, warroom.pro. How to add an entry, what each publishes machine-readably, and where each is honest about its limits. Open — more expected. | Contributors, source negotiators, next agents |
+| `agri-burning.md` | Crop-residue burning: physiology, the Gal Embodiment crop calendar, economics, enforcement, and every open burn-area source including ตามรอยเผา. | Atmospheric scientists, local officers, DoA |
+| `burning-hotspots.md` | Hotspot detections and burned area as downloaded figures — national VIIRS volumes, provincial rankings, seasonal timing, warroom.pro. | Researchers, journalists, enforcement |
+| `forest-fire-haze.md` | Northern forest fire, transboundary haze transport, and the Thailand–Cambodia–Laos–Myanmar burn season. | Atmospheric scientists, regional planners |
+| `aq-monitoring-network.md` | How Air4Thai's ~200 stations are laid out, what they measure, and where the network is blind. | Data engineers, auditors |
+| `health-science.md` | The exposure-response evidence behind PM2.5 harm, and the honest limits of what a dashboard can say about it. | Anyone writing health copy |
 
 ## How the index is built
 

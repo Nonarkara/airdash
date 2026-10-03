@@ -330,6 +330,108 @@ legally-defined forest areas are filtered out first using **LDD** land-use layer
   (`firms.modaps.eosdis.nasa.gov/mapserver/wms/fires/.../fires_viirs_24/` and
   `fires_viirs_snpp_7/`) with an embedded key present in the page source.
 
+## ตามรอยเผา — the 2026 rebuild (verified 2026-10-03): a Dashboard, three new products, and downloadable GeoTIFFs
+
+*(This is the 2026-10-03 update to the section above. The old `/openburn/`
+entry point is unchanged and still serves every endpoint documented there; this
+covers what the rebuild added.)*
+
+The **root is now a three-card launcher** — Dashboard · แผนที่ · ข้อมูลให้บริการ
+— with the Dashboard loaded as an iframe of `dashboard/index.html?embed=1` and
+auto-heighted via `postMessage`. Four things about it matter downstream.
+
+**1. The GeoTIFF products ARE downloadable.** This **corrects** the "no download
+URL was found" note in [what these sources do NOT cover](#agricultural-burning-data--what-these-sources-do-not-cover)
+below, which was true on 2026-09-10 and is false now. `/product/<CODE>/` is a
+plain Apache directory listing with no index page — the listings *are* the
+download index. Verified 200s:
+
+| Product | Path | Checked |
+|---|---|---|
+| **B4** (7-day, per grid) | `/product/B4/<YYYY>/<MM>/BURNSCAR_<GRID>_20M_<YYYYMMDD>_<YYYYMMDD>_B4.tif` | `200 image/tiff`, 1.9 MB |
+| **MB4** (7-day national mosaic) | `/product/MB4/<YYYY>/BURNSCAR_NORTH_20M_<YYYYMMDD>_<YYYYMMDD>_MB4.tif` | 200 — **2025 populated; `MB4/2026/09/` returned empty** |
+| **SAVI L2** (fuel load) | `/product/SAVI2/<YYYY>/SAVI_<GRID>_20M_<YYYYMM>.tif` | `200 image/tiff`, 62.8 MB |
+
+**2. B4/MB4 add a denominator, which is the whole point.** The 7-day monitoring
+product is an integer GeoTIFF with **two bands**: Band 1 = number of burn-scar
+detections in the window, **Band 2 = number of satellite overpasses in the
+window**. Band 2 is what the classic monthly/seasonal products never publish.
+A cell reading 4/6 was not merely "burned" — the sensor looked six times and
+found a scar four times, which bounds the number of distinct burn events in that
+week and rules out burns that fell between overpasses. The site enumerates the
+overpass dates for grid `47PPT`, window `20250302–20250316`: 4, 6, 9, 11, 14 and
+16 March 2025. The answer is a **bound, not a date** — the honest ceiling on
+"When did this burn?" that a 20 m scar product can give.
+
+**3. The Dashboard republishes the other two indices as plain CSVs.** It reads
+three families under `/openburn/`, the first being the one AirDash already
+consumes (`tamroypao/data/csv/province/<YYYY>/burn_area_province_<YYYYMM>.csv`
+— same path, same filename contract as `server/sources/burn-area.js`), plus two
+new ones that were not previously public:
+
+```
+/openburn/data/hotspot/csv/hotspot_province_<YYYYMM>.csv     GISTDA MODIS, by province
+  province_code,province_th,month,total,agri,reserved_forest,conservation_forest,other
+  → months available: 202501-202505, 202601-202605
+
+/openburn/data/pm25/csv/pm25_province_<YYYYMM>.csv             Air4Thai, by province
+  province_code,province_th,month,avg,days_over
+  → months available: 202501-202504, 202511-202604
+```
+
+Note the gaps — no 202505–202510 in either family, and the PM2.5 series starts at
+202511. Any year-over-year comparison using these must tolerate a missing
+month, and a missing month is not a zero.
+
+**Read the hotspot schema before trusting the land split.** Sampled 202605,
+`total` is populated and `agri` / `reserved_forest` / `conservation_forest` /
+`other` are **empty strings**:
+
+```
+TH50,เชียงใหม่,202605,26,,,,
+```
+
+The land-class breakdown is the entire reason to prefer these over VIIRS for a
+burn analysis, and it is not filled in at the month checked. It may be backfilled;
+re-verify before building on it. An empty cell is **unknown, not zero**.
+
+**4. SAVI L2 is a fuel-load layer, and nothing else in the Thai open stack does
+this.** Monthly integer GeoTIFF, 77-grid mosaic, coded 1000 (Very High) through
+10000 (Very Low) biomass — i.e. *how much dry material was sitting there*, not
+*did it burn*. This is the only forward-looking input in the entire burning
+picture, and AirDash's burning panel has nothing equivalent. It answers the half
+of the risk question that no fire-detection system addresses.
+
+**5. The forest products are published with a defect notice above the download
+links.** The page states:
+
+> "กำลังอยู่ระหว่างพัฒนาปรับปรุงการประมวลผล ในพื้นที่ป่าอนุรักษ์ และป่าสงวน ที่มีชั้นเรือนยอด
+> ของต้นไม้ปกคลุม ยังพบความผิดพลาดในการประมวลผลตรวจจับรอยเผาไหม้... กรุณาใช้ข้อมูลอย่าง
+> ระมัดระวัง" — *under development; processing errors still occur in conservation
+> and reserved forest under closed canopy; please use with caution.*
+
+and, in the forest methods section:
+
+> "ในพื้นที่ป่าไม้ ยังไม่มีการประเมินผลความถูกต้องอย่างเป็นทางการ" — *no formal accuracy
+> assessment has been done in forest areas.*
+
+**B2F / B3F / MB2F / MB3F are therefore self-declared defective and formally
+unvalidated**, while the agricultural products carry a real assessment (87.66%
+cane, 80.84% multi-crop, 12,000 rai orthophoto). The asymmetry is real and the
+site discloses it. **Do not ingest MB2F/MB3F as peers of the agricultural
+products**; if they are ever displayed, carry their own caution, quoted with its
+date.
+
+**6. One code-level caution for anything built on their Dashboard bundle.**
+`dashboard/js/model/loader.js` coerces `''` / `None` / `nan` / `undefined` to `0`
+in its `num()` helper. It handles a *missing file* correctly (`resolve(null)` on
+404) but cannot distinguish a *missing cell* from a real zero. Their monthly
+CSVs contain empty land-class cells, so any copy of this loader inherits the
+defect. AirDash's own parsers must not.
+
+Full comparative write-up of this system and warroom.pro:
+[`gov-citizen-apps.md`](./gov-citizen-apps.md).
+
 ## DOAE burn-risk map (riskmap.doae.go.th) — farmer-level burn reporting and its undocumented open API
 
 Page: https://riskmap.doae.go.th/hnb_page
@@ -491,10 +593,20 @@ Real gaps hit while compiling this file on 2026-09-10.
 - **ตามรอยเผา's own season definition is internally inconsistent**: the About page
   says the B3 season is **พฤศจิกายน–เมษายน (Nov–Apr)**, while the QGIS example
   describes and names the same layer as **ธันวาคม–เมษายน (Dec–Apr, `202412_202504`)**.
-- **No GeoTIFF download URL was found.** The About page describes B1/B2/B3/MB2/MB3
-  GeoTIFF products in detail, but no download link or directory listing for them
-  appears in the page source — only the CSVs and the TMS raster tiles are
-  reachable.
+- **~~No GeoTIFF download URL was found.~~ CORRECTED 2026-10-03.** True on
+  2026-09-10, false after the site rebuild. `/product/B2A`, `/B2F`, `/B3A`,
+  `/B3F`, `/MB2A`, `/MB2F`, `/MB3A`, `/MB3F` and the newer `/B4`, `/MB4`,
+  `/SAVI2` are all Apache directory listings containing real
+  `image/tiff` files. See [the 2026 rebuild](#ตามรอยเผา--the-2026-rebuild-verified-2026-10-03-a-dashboard-three-new-products-and-downloadable-geotiffs).
+  The original finding was that the *landing page* carried no link — the files
+  were reachable but unadvertised, which is a weaker claim and was stated too
+  strongly.
+- **ตามรอยเผa's forest products are self-declared defective and unvalidated**
+  (stated on the page, 2026-10-03): processing errors under closed canopy, and
+  no formal accuracy assessment in forest areas. The agricultural products are
+  separately assessed. The two must not be presented as equivalent. The notice
+  names no affected products, no date and no severity, so "under development" is
+  not a bound on how wrong a cell may be.
 - **DOAE's burn-scar API exposed only 6 ten-day windows (2026-02-21 → 2026-04-20).**
   No multi-year history is available through it, and VIIRS hotspot dates only ran
   2026-01-24 → 2026-08-19. Anything older must come from GISTDA directly.

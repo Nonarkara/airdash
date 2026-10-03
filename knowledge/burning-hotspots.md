@@ -157,6 +157,94 @@ Complaint counts of zero across four consecutive years almost certainly reflect 
 
 Sources: `snk_mnre_69_12`, `snk_ddpm_69_45` — สำนักงานจังหวัดสกลนคร; `complainburn01` — สำนักงานจังหวัดลพบุรี. https://data.go.th/dataset/snk_ddpm_69_45
 
+## WARROOM ชุมชน (warroom.pro) — a live, keyless, licensed national hotspot + rain surface
+
+Not on data.go.th, and worth listing here because it is the one system found that
+serves **VIIRS hotspots with province attribution and an open file contract**,
+which is precisely the gap the "what this does NOT cover" section below keeps
+striking.
+
+**Operator.** The page carries **no institutional byline**. It states
+*"Supported by NRCT (สำนักงานการวิจัยแห่งชาติ)"* in text, and shows a logo image
+(`warroom.pro/tap-cmu.png`, `alt="CMU NRCT Support"`). Copyright reads
+`© 2024-2025 NORTH THAILAND HOTSPOT TRACKING SYSTEM · DATA: GISTDA / NASA FIRMS / JMA`.
+**The string "มหาวิทยาลัยเชียงใหม่" does not appear anywhere in the page.** The
+Chiang Mai University association is the owner's statement, not an on-site
+assertion — a different kind of claim, and recorded as such.
+
+**Hotspot coverage.** Stated as **17 northern provinces**, refreshed in
+**real time at 10-minute cadence**, with history tools for "yesterday's hotspots"
+and a 7-day replay. Supporting endpoints, all keyless, all 200 on 2026-10-03:
+
+- `https://warroom.pro/api/hotspots_nasa.csv` — NASA VIIRS, columns
+  `latitude, longitude, brightness, acq_date, acq_time, satellite, instrument,
+  confidence, bright_t31, frp, daynight, province_th`. **`province_th` is the
+  column data.go.th's HRDI file lacks and 91% of the note above says is not
+  trustworthy** — here it is a first-class field.
+- `https://warroom.pro/api/himawari_cache.json` — Himawari-8 geostationary cache.
+- `https://warroom.pro/landuse/lu_<PROVINCE>.json` — per-province land use, used
+  to classify hotspots client-side.
+- `https://warroom.pro/forest_data/forest_reserved.geojson` and
+  `forest_conservation.geojson` — reserved and conservation forest boundaries.
+  These are the polygon sets ตามรอยเผa needs to produce its B2F/B3F products, and
+  they are published here without the defect notice attached to those products.
+- `provinces.geojson`, `districts.geojson` — administrative boundaries.
+- `?ajax=local_wind_cache` and `local_wind_cache/local_wind_cache.json` — TMD/DPM
+  local wind, a genuinely scarce Thai open dataset.
+
+**The layer that is actually the news: hourly rain, per station, nationwide.**
+Labelled **"ฝนรายชั่วโมง รายสถานี (Thaiwater + DPM)"** — it credits ThaiWater
+**and DPM**, not ThaiWater alone. It is a colour-shaded interpolated raster, not
+a point layer.
+
+It is also, unusually, a **properly published product**:
+`https://warroom.pro/rain24v2_api.php?manifest` returns a 23.7 KB versioned JSON
+manifest stating its method, bounds, grid, colour scale and licence:
+
+- `product` / `version` — `WARROOM Rain 24h v2` / `2.0`
+- `method.field` — `P(เปียก/แห้ง) × ปริมาณฝน (ln(1+ฝน) เฉพาะสถานีที่ฝนตก)`
+- `method.idw` — `k=10` on a 360×641 grid, then smoothed
+- `method.params_chosen` — `up 0, down 0, beta 0, gamma 0, p0 0.2, p1 0.8`
+- `method.terrain` / `method.wind` — corrections applied **only when the test
+  says they improve**, not unconditionally
+- `method.validation` — `leave-one-out`, scored per frame in each frame's
+  `meta.json`
+- `scale` — log, 1–200 mm; `bounds` — 97.3–105.7 °E, 5.55–20.5 °N
+- Rasters in **both EPSG:3857 and EPSG:4326** (plate carrée + `.pgw` world file);
+  the manifest warns that `*_merc.png` must be used with `L.imageOverlay` because
+  the 3857 tiles are axis-flipped.
+
+Observed frame 2026-10-03 11:00 ICT: **4,551 stations, 950 wet, max station
+129 mm, max field 123.7 mm, wet area 31.4%**.
+
+**Licence — CC BY 4.0**, with attribution required and upstream credits
+enumerated: *"ระบุแหล่งที่มา warroom.pro (ข้อมูลต้นทาง: ThaiWater/สสน., Open-Meteo.com
+CC BY 4.0, ความสูงภูมิประเทศ: AWS Terrain Tiles/Mapzen)"*. Note this credits
+**Open-Meteo as CC BY 4.0** — the provider AirDash already uses. The licence
+string appears in the rain manifest; whether it extends to the hotspot CSV and
+the forest GeoJSONs was **not** established.
+
+**Citizen-facing honesty contract.** The map states plainly:
+*"จุดความร้อนจำลอง ไม่สามารถออกรายงานราชการ"* — *simulated hotspots cannot be used
+to issue an official report* — and offers a real report-request flow rather than
+a dead end. That single line separates a research product from a government
+finding, in the user's own language, at the moment of use.
+
+**Adoption.** `get_visitor_stats.php` publishes its own traffic: **54,592 page
+views, 44,557 unique visitors**, 102 on 2026-10-03. Referrers Direct 20,713 ·
+`m.facebook.com` 8,139 · Google 2,982 · Facebook 2,932 — Facebook alone is ~21k.
+Platform mix: Windows 21,498 · Android 14,252 · iOS 10,558 · macOS 7,280.
+
+**Two things not to copy.** `matching_api.php?action=list` returns volunteer
+names, item descriptions, quantities, purposes and **mobile phone numbers** with
+no authentication — a real privacy exposure, and a bad model for any
+citizen-report feature. And `healthpin_api.php?action=list` returns
+`{"ok":true,"data":[]}`: a health-pin feature wired into the UI, serving nothing,
+with a payload that cannot distinguish *empty* from *unreachable*.
+
+Full write-up, including the 13-layer inventory, the four map palettes and the
+no-build single-document architecture: [`gov-citizen-apps.md`](./gov-citizen-apps.md).
+
 ## Burning and hotspot data — what it does NOT cover
 
 Honest limits of everything above:
@@ -168,6 +256,7 @@ Honest limits of everything above:
 - **Data-quality defects carried through.** 165 rows in the HRDI BE 2568 file have an unparseable acquisition date; 25 rows in the BE 2567 file have blank satellite/confidence/date; Chiang Mai's case file uses `-` where a zero is meant; Phayao's area figures are stored as quoted strings with embedded commas and spaces.
 - **Units are not consistent across provinces.** Burn area appears as ไร่ (rai) in Phayao and Kamphaeng Phet but as แห่ง (sites) in Phitsanulok; enforcement appears as ราย (persons) in Yasothon and คดี (cases) in Uttaradit and Chiang Mai. Do not sum across provinces.
 - **Detections are not fires and not emissions.** None of these datasets report PM2.5 emitted, biomass consumed, or smoke transport.
+- **warroom.pro is northern-only for hotspots, despite its national rain layer.** Hotspot coverage is stated as 17 northern provinces. Its rain, wind, reservoir and radar layers are nationwide, so the app's *reach* is national while its *hotspot record* is not — a distinction easy to lose when the two are presented on one map. Its `province_th` attribution is also client-assigned against `landuse/lu_*.json` rather than a published authority boundary, so it should be cross-checked before being used as a provincial total.
 
 ## Burning and hotspot data — sources on data.go.th
 
