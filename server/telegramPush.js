@@ -245,13 +245,23 @@ export async function tickTelegramPush(db) {
       (sub.province_en && bandByName.get(sub.province_en.toLowerCase()))
     if (!live) continue
     if (live.band !== 'elevated' && live.band !== 'high') continue
+    // Reserve before awaiting the network: cron and alert fan-outs share this slot.
+    const claimedAt = new Date().toISOString().slice(0, 19).replace('T', ' ')
+    const claimed = db.run(
+      `UPDATE telegram_subs SET last_notified_at = ?, updated_at = datetime('now')
+       WHERE id = ? AND active = 1
+         AND (last_notified_at IS NULL OR (strftime('%s','now') - strftime('%s', last_notified_at)) * 1000 > ?)`,
+      claimedAt, sub.id, PER_SUB_GAP_MS)
+    if (!(claimed?.changes > 0)) continue
     const text = buildMessage(sub.province_th, sub.province_en, live.band, live.score ?? 0, sub.lang || 'th')
     try {
       await tg.sendMessage(sub.chat_id, text)
-      db.run(`UPDATE telegram_subs SET last_notified_at = datetime('now'), fail_count = 0, updated_at = datetime('now') WHERE id = ?`, sub.id)
+      db.run(`UPDATE telegram_subs SET fail_count = 0, updated_at = datetime('now') WHERE id = ?`, sub.id)
       pushed++
     } catch (err) {
       failed++
+      db.run(`UPDATE telegram_subs SET last_notified_at = ? WHERE id = ? AND last_notified_at = ?`,
+        sub.last_notified_at ?? null, sub.id, claimedAt)
       // 401 is OUR bot token being wrong, not this subscriber being dead —
       // purging on it silently destroyed the whole audience once (a rotated
       // token emptied telegram_subs in a single tick). Abort the run and let
@@ -353,8 +363,8 @@ export async function notifySubscribersForAlert(db, alert) {
       // next tick can still deliver, but ONLY if nobody else claimed it in
       // the meantime — otherwise we would undo another fan-out's push.
       if (!err.status || err.status >= 500 || err.status === 429) {
-        db.run(`UPDATE telegram_subs SET last_notified_at = NULL WHERE id = ? AND last_notified_at = ?`,
-          sub.id, claimedAt)
+        db.run(`UPDATE telegram_subs SET last_notified_at = ? WHERE id = ? AND last_notified_at = ?`,
+          sub.last_notified_at ?? null, sub.id, claimedAt)
       }
       const newCount = (sub.fail_count ?? 0) + 1
       if (err.status === 403 || isDeadChat(err) || newCount >= MAX_FAIL_COUNT) {

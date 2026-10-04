@@ -116,5 +116,20 @@ const check = (name, cond) => { cond ? pass++ : fail++; console.log(`${cond ? 'P
   check('re-run inside 12 h is suppressed', raiseForecastWarnings(alerts, w.filter((x) => x.code === '31')) === 0)
 }
 
+{
+  const s = register('gradual', '91')
+  register('gradual-neighbour', '91')
+  addReading('air4thai', 'gradual-neighbour', 'pm25', 90, now)
+  check('gradual rise sends the initial severity-2 warning', alerts.considerReading({
+    source: 'air4thai', station: s, metric: 'pm25', value: 50, prev: 20,
+  }) === true)
+  check('gradual rise across 75 sends a corroborated severity-3 warning', alerts.considerReading({
+    source: 'air4thai', station: s, metric: 'pm25', value: 90, prev: 50,
+  }) === true)
+  check('continued rise within severity 3 does not duplicate the warning', alerts.considerReading({
+    source: 'air4thai', station: s, metric: 'pm25', value: 95, prev: 90,
+  }) === false)
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

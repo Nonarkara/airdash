@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+
+## [2.4.70] — 2026-10-04
+
+- Recovered backend hardening: PM2.5 warnings escalate when readings gradually cross 75; Telegram `/start` restores stopped subscriptions; bot authentication failures preserve subscribers.
+- Scheduled and immediate LINE/Telegram pushes reserve the same notification slot before sending, preventing concurrent duplicates. Failed sends restore the prior cooldown timestamp for retry.
+- Restrict forwarded visitor identities to signed requests or local tunnel connections; canonicalize outage mirror cache keys; limit archive downloads and omit internal export build errors/paths from public status.
+- Added behavioral checks for gradual alert escalation, concurrent delivery, direct-client forwarding forgery, and failed-send eligibility. Full release tests and deployment verification are recorded in the release audit.
+
 ## 2.4.69 — frontend usability and recovery (2026-10-04)
 
 - Repaired the place-search dropdown collapsing to three pixels. It now fits the visual viewport, including keyboard space, and stale queries cannot overwrite new results or reopen dismissed search. Failures explain how to retry.

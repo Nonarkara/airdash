@@ -8,7 +8,8 @@ import { onRequest } from '../functions/api/[[path]].js'
 import { clientIp } from '../server/ratelimit.js'
 import { createHmac } from 'node:crypto'
 import { openDb } from '../server/db.js'
-import { notifySubscribersForAlert } from '../server/telegramPush.js'
+import { notifySubscribersForAlert, tickTelegramPush } from '../server/telegramPush.js'
+import { notifySubscribersForAlert as notifyLine, tickLinePush } from '../server/linePush.js'
 
 let passed = 0
 const test = async (name, fn) => { await fn(); passed++; console.log('PASS', name) }
@@ -343,5 +344,33 @@ await test('concurrent station alerts claim one Telegram delivery; auth failure 
     db.raw.close()
   }
 })
+
+for (const [channel, tick, notify] of [['telegram', tickTelegramPush, notifySubscribersForAlert], ['line', tickLinePush, notifyLine]]) {
+  await test(`${channel}: scheduled and immediate pushes share one slot and restore it on network failure`, async () => {
+    const db = openDb(':memory:')
+    const originalFetch = globalThis.fetch
+    const table = `${channel}_subs`
+    try {
+      db.kvSet('telegram_bot_token', 'test-only')
+      db.kvSet('risk_provinces', JSON.stringify([{ province_th: 'เชียงใหม่', band: 'high', score: 80 }]))
+      const identity = channel === 'telegram' ? 'chat_id' : 'token'
+      db.run(`INSERT INTO ${table} (${identity}, province_th, lang, created_at, updated_at)
+        VALUES (?, 'เชียงใหม่', 'th', datetime('now'), datetime('now'))`, channel === 'telegram' ? 123 : 'test-token')
+      const alert = { province_th: 'เชียงใหม่', severity: 3, rule: 'pm25_level' }
+      let sends = 0
+      globalThis.fetch = async () => { sends++; return new Response('{}', { status: 200 }) }
+      await Promise.all([tick(db), notify(db, alert), tick(db)])
+      assert.equal(sends, 1)
+      const previous = '2020-01-01 00:00:00'
+      db.run(`UPDATE ${table} SET last_notified_at = ?`, previous)
+      globalThis.fetch = async () => { throw new Error('test network failure') }
+      await tick(db)
+      assert.equal(db.get(`SELECT last_notified_at FROM ${table}`).last_notified_at, previous)
+    } finally {
+      globalThis.fetch = originalFetch
+      db.raw.close()
+    }
+  })
+}
 
 console.log(`\n${passed} passed, 0 failed`)
