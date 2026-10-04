@@ -24,6 +24,10 @@ Chat and JSON requests have bounded deadlines. Send is disabled while busy and r
 - Final uncached preview recovered: eleven widths from 320–1920px had numeric Danger Score 69, usable search height/width and no document overflow. Hidden-map selection and both camera dialog Escape/focus-return flows had no captured console errors. Phone More/Escape, bilingual home with 78 province options, and install guidance rendered without overflow. Earlier connection failures remain recorded above.
 - Asset deployment probes include canonical/custom hashes for preferences, dialog focus, map movement, search, Window and chat alongside existing shell/panel probes.
 
+## Production verification
+
+2.4.69 deployed successfully; canonical and custom HTML and all configured asset-content probes matched. Live phone view rendered Danger Score 70, 17 Bangkok search results in a 420px-high dropdown, no document overflow, correct Bangkok city card and no captured console errors. English chat example questions updated after language switching. Evidence: `/tmp/airdash-2.4.69-search.png`. Backend changes concurrently present in server/ were left untouched by this frontend release.
+
 ## Limits
 
 No performance trace tool was available; no Lighthouse, Core Web Vitals, physical-iPhone keyboard or screen-reader certification is claimed. Browser checks and regression tests reduce known defects; they do not prove absence of every possible glitch. One live backend and same-machine USB archive remain the operational failure domain documented in prior audits. Third-party cameras, data feeds and AI services can still fail; the interface must represent those states honestly.
