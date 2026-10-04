@@ -17,9 +17,15 @@ export function timingSafeStrEqual(a, b) {
 }
 
 export function log(level, msg, extra = {}) {
-  const line = JSON.stringify({ ts: new Date().toISOString(), level, msg, ...extra })
-  if (level === 'error') process.stderr.write(line + '\n')
-  else process.stdout.write(line + '\n')
+  // Logging must NEVER throw. On 2026-09-23 an ENOSPC disk turned every log
+  // write into an exception, and because the fatal handlers in index.js log,
+  // the crash-loop could not even record why it was crashing. A dropped log
+  // line is survivable; an exception inside uncaughtException is not.
+  try {
+    const line = JSON.stringify({ ts: new Date().toISOString(), level, msg, ...extra })
+    if (level === 'error') process.stderr.write(line + '\n')
+    else process.stdout.write(line + '\n')
+  } catch { /* disk full / closed fd — keep the process alive */ }
 }
 
 const UA = 'AirDash/1.0 (local air-quality monitoring; nonsmartcity@gmail.com)'

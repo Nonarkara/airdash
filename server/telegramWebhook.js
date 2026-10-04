@@ -170,9 +170,13 @@ async function handleTrustedUpdate(db, update) {
     text = `/province ${text}`
   }
 
-  // /start [code] — the only path into a binding.
-  if (text === '/start' || text.startsWith('/start ')) {
-    const code = text === '/start' ? null : text.slice(7).trim().split(/\s+/)[0]?.toUpperCase() || null
+  // /start [code] — the only path into a binding. Telegram appends
+  // "@BotName" when the command is used inside a group, so
+  // "/start@AirDash_bot" must land here too — it used to fall through to
+  // /help and a group deep-link silently got the wrong reply.
+  if (text === '/start' || text.startsWith('/start ') || text.startsWith('/start@')) {
+    const bare = text.replace(/^\/start(@\S+)?/, '/start') // '/start@AirDash_bot C0DE' → '/start C0DE'
+    const code = bare === '/start' ? null : bare.slice(7).trim().split(/\s+/)[0]?.toUpperCase() || null
     // Persist chat_id + handle + first_name first; the user might
     // /start the bot BEFORE visiting the dashboard (common — they
     // discover the bot in a forwarded link).
@@ -181,8 +185,12 @@ async function handleTrustedUpdate(db, update) {
     const now = new Date().toISOString()
     const existing = db.get('SELECT id, lang, binding_code FROM telegram_subs WHERE chat_id = ?', chatId)
     if (existing) {
+      // /start is the documented way back after /stop ("ส่ง /start เพื่อ
+      // สมัครอีกครั้ง") — without active = 1 the row stayed opted out and
+      // every later push was silently dropped, so the re-subscribe path
+      // advertised in the stop/status messages never worked.
       db.run(`UPDATE telegram_subs SET binding_code = ?, user_handle = COALESCE(?, user_handle),
-              first_name = COALESCE(?, first_name), updated_at = ? WHERE id = ?`,
+              first_name = COALESCE(?, first_name), active = 1, fail_count = 0, updated_at = ? WHERE id = ?`,
         code, handle, firstName, now, existing.id)
     } else {
       db.run(`INSERT INTO telegram_subs (chat_id, binding_code, user_handle, first_name, lang, created_at, updated_at)
@@ -265,7 +273,7 @@ async function handleTrustedUpdate(db, update) {
     return true
   }
 
-  if (text === '/help' || text === '/start@AirDash_bot') {
+  if (text === '/help') {
     await tg.sendMessage(chatId, s.help).catch(() => {})
     return true
   }

@@ -258,7 +258,17 @@ export function createAlerts(db, bus, { line = null, telegramBroadcaster = null 
     // station escalating through the lines inside the window raises once
     // per NEW severity level — a later, higher severity always gets
     // through; a same-or-lower one waits out the cooldown.
-    if (metric === 'pm25' && value >= t.pm25Unhealthy && (prev === null || prev < t.pm25Unhealthy)) {
+    //
+    // Two ways in, not one: the base crossing (prev below 37.5) and an
+    // ESCALATION of a station that is already over 37.5 (50 → 90). The old
+    // single condition required prev < 37.5, so a station that climbed
+    // gradually to hazardous never emitted anything past its first alert —
+    // the severity-aware cooldown existed but had nothing to be severity
+    // -aware about.
+    const crossesBase = value >= t.pm25Unhealthy && (prev === null || prev < t.pm25Unhealthy)
+    const escalatesToSev3 = value >= t.pm25VeryUnhealthy && prev !== null &&
+      prev >= t.pm25Unhealthy && prev < t.pm25VeryUnhealthy
+    if (metric === 'pm25' && (crossesBase || escalatesToSev3)) {
       const isVery = value >= t.pm25VeryUnhealthy
       const severity = isVery ? 3 : 2
       // Sev-3 (≥75) needs corroboration before it can broadcast — see the

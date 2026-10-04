@@ -2764,7 +2764,21 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     'GET /api/exports': (req, res) => {
       const all = listWeeklyExports()
       const state = getBuildState()
-      json(res, 200, { count: all.length, exports: all, build: state })
+      // Public endpoint: expose scheduling status only. The raw build
+      // error (fs/SQLite text with absolute paths) and result.file (the
+      // server's filesystem path) stay behind POST /api/exports/build,
+      // which requires the admin token — one failed weekly build used to
+      // park them here for anyone, forever.
+      json(res, 200, {
+        count: all.length,
+        exports: all,
+        build: {
+          running: Boolean(state.running),
+          started_at: state.started_at ?? null,
+          finished_at: state.finished_at ?? null,
+          ok: !state.error && Boolean(state.result),
+        },
+      })
     },
     'GET /api/exports/latest': (req, res) => {
       const all = listWeeklyExports()
@@ -2773,6 +2787,11 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       res.end()
     },
     'GET /api/exports/:filename': (req, res, url) => {
+      // A 46 MB archive with no budget of its own: 300 req/min of the
+      // global limiter is ~14 GB/min of amplification from one IP.
+      if (!allow(req, { key: 'export_download', limit: 6, windowMs: 60_000 })) {
+        return json(res, 429, { error: 'too many archive downloads — try again in a minute' })
+      }
       // The HTTP framework copies the matched :filename into the URL's
       // searchParams under the `:filename` key (see http.js), so we read
       // it from there rather than via a separate params argument.

@@ -44,6 +44,11 @@ const FETCH_TIMEOUT_MS = 10_000
 // storms, short enough that a fresh spike hours later still gets through.
 const PER_SUB_GAP_MS = 3 * 60 * 60_000
 
+// All-clear pushes bypass the 3 h gap but need a floor: one province-wide
+// episode raises an alert per station, and all fan-outs read
+// last_notified_at before any of them writes it (see telegramPush.js).
+const ALL_CLEAR_SUB_GAP_MS = 5 * 60_000
+
 // Fail-count cap. A token that returns 401 (revoked) or persistent 5xx
 // gets purged after this many consecutive failures so the table doesn't
 // fill with dead tokens. Reset to 0 on any successful push.
@@ -150,7 +155,7 @@ export async function sendLineNotify(token, message) {
 // a few thousand rows; the gap check is one indexed column.
 export async function tickLinePush(db) {
   const subs = db.all(
-    `SELECT id, token, province_th, province_en, province_code, lang, last_notified_at
+    `SELECT id, token, province_th, province_en, province_code, lang, last_notified_at, fail_count
      FROM line_subs
      WHERE active = 1
        AND (last_notified_at IS NULL OR (strftime('%s','now') - strftime('%s', last_notified_at)) * 1000 > ?)`,
@@ -190,9 +195,12 @@ export async function tickLinePush(db) {
     } catch (err) {
       failed++
       const newCount = (sub.fail_count ?? 0) + 1
-      // Permanent failure (token revoked): purge immediately so the next
-      // tick doesn't waste a send on the same dead token.
-      if (err.status === 401 || err.status === 403 || err.status === 410 || newCount >= MAX_FAIL_COUNT) {
+      // 403/410 = this citizen's token is gone (per-token semantics) — purge
+      // immediately. 401 is also per-token, but a server-side mistake (bad
+      // header, bot-wide credential problem) would look identical, and an
+      // immediate purge destroyed the whole telegram_subs table once — so
+      // 401 only purges once MAX_FAIL_COUNT consecutive failures agree.
+      if (err.status === 403 || err.status === 410 || newCount >= MAX_FAIL_COUNT) {
         db.run(`DELETE FROM line_subs WHERE id = ?`, sub.id)
         log('warn', 'line-push subscriber purged', { id: sub.id, status: err.status, fail_count: newCount })
       } else {
@@ -222,7 +230,7 @@ export async function notifySubscribersForAlert(db, alert) {
   // name match is case-insensitive on English to absorb capitalization
   // differences between alert producers.
   const subs = db.all(
-    `SELECT id, token, province_th, province_en, lang, last_notified_at
+    `SELECT id, token, province_th, province_en, lang, last_notified_at, fail_count
      FROM line_subs
      WHERE active = 1
        AND (last_notified_at IS NULL OR (strftime('%s','now') - strftime('%s', last_notified_at)) * 1000 > ?)
@@ -231,7 +239,7 @@ export async function notifySubscribersForAlert(db, alert) {
          province_th = ? OR
          LOWER(province_en) = LOWER(?)
        )`,
-    isAllClear ? 0 : PER_SUB_GAP_MS,
+    isAllClear ? ALL_CLEAR_SUB_GAP_MS : PER_SUB_GAP_MS,
     alert.province_code ?? '',
     alert.province_th ?? '',
     alert.province_en ?? '',
@@ -240,6 +248,17 @@ export async function notifySubscribersForAlert(db, alert) {
 
   let pushed = 0, failed = 0
   for (const sub of subs) {
+    // Claim BEFORE sending — see telegramPush.js: every station in an
+    // ingest fans out concurrently and would otherwise all read an
+    // eligible subscriber before any of them wrote the timestamp.
+    const gapMs = isAllClear ? ALL_CLEAR_SUB_GAP_MS : PER_SUB_GAP_MS
+    const claimedAt = new Date().toISOString().slice(0, 19).replace('T', ' ')
+    const claimed = db.run(
+      `UPDATE line_subs SET last_notified_at = ?, updated_at = datetime('now')
+       WHERE id = ? AND active = 1
+         AND (last_notified_at IS NULL OR (strftime('%s','now') - strftime('%s', last_notified_at)) * 1000 > ?)`,
+      claimedAt, sub.id, gapMs)
+    if (!(claimed?.changes > 0)) continue
     const msg = isAllClear
       ? buildAllClearMessage(alert.province_th ?? sub.province_th, alert.province_en ?? sub.province_en, sub.lang || 'th')
       : buildMessage(
@@ -251,12 +270,18 @@ export async function notifySubscribersForAlert(db, alert) {
       )
     try {
       await sendLineNotify(sub.token, msg)
-      db.run(`UPDATE line_subs SET last_notified_at = datetime('now'), fail_count = 0, updated_at = datetime('now') WHERE id = ?`, sub.id)
+      db.run(`UPDATE line_subs SET fail_count = 0, updated_at = datetime('now') WHERE id = ?`, sub.id)
       pushed++
     } catch (err) {
       failed++
+      // Transient (network / 5xx / 429): hand the slot back so the next
+      // tick can still deliver — only if nobody else claimed it since.
+      if (!err.status || err.status >= 500 || err.status === 429) {
+        db.run(`UPDATE line_subs SET last_notified_at = NULL WHERE id = ? AND last_notified_at = ?`,
+          sub.id, claimedAt)
+      }
       const newCount = (sub.fail_count ?? 0) + 1
-      if (err.status === 401 || err.status === 403 || err.status === 410 || newCount >= MAX_FAIL_COUNT) {
+      if (err.status === 403 || err.status === 410 || newCount >= MAX_FAIL_COUNT) {
         db.run(`DELETE FROM line_subs WHERE id = ?`, sub.id)
         log('warn', 'line-push subscriber purged (alert)', { id: sub.id, status: err.status })
       } else {

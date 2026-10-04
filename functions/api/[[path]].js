@@ -85,7 +85,13 @@ function isStreaming(pathname, method) {
 }
 
 function mirrorKey(url) {
-  return new Request(new URL('/__mirror__' + url.pathname + url.search, url.origin).toString())
+  // Pathname ONLY: the gate below (MIRROR_PATHS.has(url.pathname)) ignores
+  // the query, so keying on it too let anyone mint unlimited
+  // /api/snapshot?x=N entries into the 512 MB zone cache — cheaply evicting
+  // the one canonical copy the outage fallback depends on. mirrorReport()
+  // already looked keys up pathname-only, so query-string entries were
+  // also invisible to the diagnostic.
+  return new Request(new URL('/__mirror__' + url.pathname, url.origin).toString())
 }
 
 async function storeMirror(cache, key, upstream) {
@@ -153,10 +159,17 @@ export async function onRequest(context) {
   headers.delete('host')
   headers.delete('content-length')
   headers.delete('connection')
-  headers.delete('cf-connecting-ip')
   headers.delete('cf-ray')
   headers.delete('cf-ipcountry')
   const clientIp = request.headers.get('cf-connecting-ip')
+  // Cloudflare sets CF-Connecting-IP itself and overwrites any client copy,
+  // so forwarding it lets the backend keep one bucket PER VISITOR even when
+  // AIRDASH_PROXY_SECRET is missing. The backend only honours it from
+  // loopback (our tunnel), never from a direct client. Deleting it instead
+  // sent every visitor through the tunnel into a single shared 300/min
+  // bucket — a stranger could rate-limit the whole site with 300 requests.
+  if (clientIp) headers.set('cf-connecting-ip', clientIp)
+  else headers.delete('cf-connecting-ip')
   if (clientIp) headers.set('x-forwarded-for', clientIp)
   headers.delete('x-airdash-client-ip')
   headers.delete('x-airdash-client-signature')

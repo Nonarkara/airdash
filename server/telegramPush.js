@@ -33,6 +33,14 @@ import { log } from './util.js'
 import { createTelegram } from './telegram.js'
 
 const PER_SUB_GAP_MS = 3 * 60 * 60_000
+// All-clear pushes ignore the 3 h gap (a subscriber who just got a danger
+// push SHOULD hear that it passed) but they still need a real floor: one
+// haze episode raises an alert per station in a province, and every fan-out
+// used to see the subscriber as eligible (they all read last_notified_at
+// before any of them wrote it) — 4 stations in Chiang Mai produced 4
+// identical "air is fine" pushes. 5 minutes absorbs an in-batch storm while
+// still letting a danger→all-clear sequence through.
+const ALL_CLEAR_SUB_GAP_MS = 5 * 60_000
 const MAX_FAIL_COUNT = 5
 const BINDING_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // skip 0/O/1/I/L
 const BINDING_CODE_LEN = 6
@@ -203,7 +211,7 @@ export function bindChat(db, { chatId, code, province_th, province_en, province_
 // a few thousand rows; the gap check is one indexed column.
 export async function tickTelegramPush(db) {
   const subs = db.all(
-    `SELECT id, chat_id, province_th, province_en, province_code, lang, last_notified_at
+    `SELECT id, chat_id, province_th, province_en, province_code, lang, last_notified_at, fail_count
      FROM telegram_subs
      WHERE active = 1
        AND province_th IS NOT NULL
@@ -244,13 +252,21 @@ export async function tickTelegramPush(db) {
       pushed++
     } catch (err) {
       failed++
+      // 401 is OUR bot token being wrong, not this subscriber being dead —
+      // purging on it silently destroyed the whole audience once (a rotated
+      // token emptied telegram_subs in a single tick). Abort the run and let
+      // the operator re-register the webhook; no row is deleted.
+      if (err.status === 401) {
+        log('error', 'telegram bot auth failed (401) — aborting push tick, subscribers untouched', { status: err.status })
+        return { pushed, failed, scanned: subs.length, aborted: true }
+      }
       const newCount = (sub.fail_count ?? 0) + 1
-      // 401/403/429-persistent: user blocked the bot, kicked it, or
+      // 403 = user blocked the bot, kicked it, or
       // repeated rate-limit. 400 "chat not found" / "user is deactivated"
       // means the account is gone — equally permanent. Purge so the next
       // tick doesn't waste sends on dead chats; other errors keep the
       // 5-strike logic.
-      if (err.status === 401 || err.status === 403 || isDeadChat(err) || newCount >= MAX_FAIL_COUNT) {
+      if (err.status === 403 || isDeadChat(err) || newCount >= MAX_FAIL_COUNT) {
         db.run(`DELETE FROM telegram_subs WHERE id = ?`, sub.id)
         log('warn', 'telegram subscriber purged', { id: sub.id, status: err.status, fail_count: newCount })
       } else {
@@ -278,7 +294,7 @@ export async function notifySubscribersForAlert(db, alert) {
     return { pushed: 0, failed: 0 }
   }
   const subs = db.all(
-    `SELECT id, chat_id, province_th, province_en, lang, last_notified_at
+    `SELECT id, chat_id, province_th, province_en, lang, last_notified_at, fail_count
      FROM telegram_subs
      WHERE active = 1
        AND (last_notified_at IS NULL OR (strftime('%s','now') - strftime('%s', last_notified_at)) * 1000 > ?)
@@ -287,7 +303,7 @@ export async function notifySubscribersForAlert(db, alert) {
          province_th = ? OR
          LOWER(province_en) = LOWER(?)
        )`,
-    isAllClear ? 0 : PER_SUB_GAP_MS,
+    isAllClear ? ALL_CLEAR_SUB_GAP_MS : PER_SUB_GAP_MS,
     alert.province_code ?? '',
     alert.province_th ?? '',
     alert.province_en ?? '',
@@ -297,6 +313,19 @@ export async function notifySubscribersForAlert(db, alert) {
   const tg = createTelegram(db)
   let pushed = 0, failed = 0
   for (const sub of subs) {
+    // Claim the notification slot BEFORE sending. alerts.raise() fans out
+    // once per station in a single ingest, so every fan-out reads the table
+    // before any of them writes last_notified_at — reading first and writing
+    // after the send let N identical pushes reach one citizen. The conditional
+    // UPDATE makes the loser of that race see changes === 0 and skip.
+    const gapMs = isAllClear ? ALL_CLEAR_SUB_GAP_MS : PER_SUB_GAP_MS
+    const claimedAt = new Date().toISOString().slice(0, 19).replace('T', ' ')
+    const claimed = db.run(
+      `UPDATE telegram_subs SET last_notified_at = ?, updated_at = datetime('now')
+       WHERE id = ? AND active = 1
+         AND (last_notified_at IS NULL OR (strftime('%s','now') - strftime('%s', last_notified_at)) * 1000 > ?)`,
+      claimedAt, sub.id, gapMs)
+    if (!(claimed?.changes > 0)) continue
     const text = isAllClear
       ? buildAllClearMessage(alert.province_th ?? sub.province_th, alert.province_en ?? sub.province_en, sub.lang || 'th')
       : buildMessage(
@@ -308,12 +337,27 @@ export async function notifySubscribersForAlert(db, alert) {
       )
     try {
       await tg.sendMessage(sub.chat_id, text)
-      db.run(`UPDATE telegram_subs SET last_notified_at = datetime('now'), fail_count = 0, updated_at = datetime('now') WHERE id = ?`, sub.id)
+      db.run(`UPDATE telegram_subs SET fail_count = 0, updated_at = datetime('now') WHERE id = ?`, sub.id)
       pushed++
     } catch (err) {
       failed++
+      // 401 = our own bot token is wrong (bot-wide) — never a reason to
+      // delete subscribers. Stop the whole fan-out instead.
+      if (err.status === 401) {
+        db.run(`UPDATE telegram_subs SET last_notified_at = ? WHERE id = ? AND last_notified_at = ?`,
+          sub.last_notified_at ?? null, sub.id, claimedAt)
+        log('error', 'telegram bot auth failed (401) — aborting alert fan-out, subscribers untouched', { status: err.status })
+        return { pushed, failed }
+      }
+      // Transient failure (network / 5xx / 429): give the slot back so the
+      // next tick can still deliver, but ONLY if nobody else claimed it in
+      // the meantime — otherwise we would undo another fan-out's push.
+      if (!err.status || err.status >= 500 || err.status === 429) {
+        db.run(`UPDATE telegram_subs SET last_notified_at = NULL WHERE id = ? AND last_notified_at = ?`,
+          sub.id, claimedAt)
+      }
       const newCount = (sub.fail_count ?? 0) + 1
-      if (err.status === 401 || err.status === 403 || isDeadChat(err) || newCount >= MAX_FAIL_COUNT) {
+      if (err.status === 403 || isDeadChat(err) || newCount >= MAX_FAIL_COUNT) {
         db.run(`DELETE FROM telegram_subs WHERE id = ?`, sub.id)
         log('warn', 'telegram subscriber purged (alert)', { id: sub.id, status: err.status })
       } else {
@@ -441,7 +485,11 @@ export function createTelegramBroadcaster(db) {
     if (timer && at >= timerAt) return
     if (timer) clearTimeout(timer)
     timerAt = at
-    timer = setTimeout(() => { timer = null; flush() }, delayMs)
+    timer = setTimeout(() => {
+      timer = null
+      // Must not reject: index.js exits the process on unhandledRejection.
+      flush().catch((err) => log('error', 'telegram broadcast flush crashed', { error: String(err?.message ?? err) }))
+    }, delayMs)
     timer.unref?.()
   }
 
@@ -451,53 +499,60 @@ export function createTelegramBroadcaster(db) {
     if (!token()) return // not configured — free no-op
     const batch = queue.splice(0)
     sending = true
-    const tg = createTelegram(db)
-    const built = buildBroadcast(batch)
-    // Get the snapshot of active subscribers AT FLUSH TIME. A user who
-    // /stops between scheduling and the flush won't be in this list.
-    let subs
     try {
-      subs = db.all(
-        `SELECT id, chat_id, lang FROM telegram_subs WHERE active = 1`)
-    } catch (err) {
-      log('error', 'telegram broadcaster: subs query failed', { error: String(err?.message ?? err) })
-      sending = false
-      return
-    }
-    if (!subs.length) {
-      log('info', 'telegram broadcaster: no active subs, dropped batch', { alerts: batch.length })
-      sending = false
-      return
-    }
-    let ok = 0, fail = 0, blocked = 0
-    for (const sub of subs) {
-      // Send the user's preferred language. Falls back to Thai.
-      const text = sub.lang === 'en' ? built.en : built.th
+      const tg = createTelegram(db)
+      const built = buildBroadcast(batch)
+      // Get the snapshot of active subscribers AT FLUSH TIME. A user who
+      // /stops between scheduling and the flush won't be in this list.
+      let subs
       try {
-        await tg.sendMessage(sub.chat_id, text)
-        ok++
+        subs = db.all(
+          `SELECT id, chat_id, lang FROM telegram_subs WHERE active = 1`)
       } catch (err) {
-        fail++
-        // 403 = user blocked the bot. Purge so the next flush doesn't
-        // waste a send on a dead chat. 401 = bot-wide auth failure —
-        // stop the whole batch (other chats will also fail).
-        if (err.status === 401) {
-          log('error', 'telegram broadcaster: bot auth failed — aborting batch', { status: err.status })
-          sending = false
-          return
-        }
-        // 403 = user blocked the bot; 400 "chat not found"/"user is
-        // deactivated" = the account is gone. Both are permanent — purge.
-        if (err.status === 403 || isDeadChat(err)) {
-          db.run(`DELETE FROM telegram_subs WHERE id = ?`, sub.id)
-          blocked++
-        }
-        log('warn', 'telegram broadcaster send failed', { chat_id: sub.chat_id, status: err.status, error: String(err?.message ?? err) })
+        // Transient DB failure: put the batch back and retry, or these
+        // alerts are lost forever (the queue is memory-only).
+        queue.unshift(...batch)
+        if (queue.length > BROADCAST_MAX_QUEUE) queue.length = BROADCAST_MAX_QUEUE
+        log('error', 'telegram broadcaster: subs query failed — batch requeued', { error: String(err?.message ?? err) })
+        schedule(BROADCAST_RETRY_DELAY_MS)
+        return
       }
+      if (!subs.length) {
+        log('info', 'telegram broadcaster: no active subs, dropped batch', { alerts: batch.length })
+        return
+      }
+      let ok = 0, fail = 0, blocked = 0
+      for (const sub of subs) {
+        // Send the user's preferred language. Falls back to Thai.
+        const text = sub.lang === 'en' ? built.en : built.th
+        try {
+          await tg.sendMessage(sub.chat_id, text)
+          ok++
+        } catch (err) {
+          fail++
+          // 403 = user blocked the bot. Purge so the next flush doesn't
+          // waste a send on a dead chat. 401 = bot-wide auth failure —
+          // stop the whole batch (other chats will also fail).
+          if (err.status === 401) {
+            log('error', 'telegram broadcaster: bot auth failed — aborting batch', { status: err.status })
+            return
+          }
+          // 403 = user blocked the bot; 400 "chat not found"/"user is
+          // deactivated" = the account is gone. Both are permanent — purge.
+          if (err.status === 403 || isDeadChat(err)) {
+            db.run(`DELETE FROM telegram_subs WHERE id = ?`, sub.id)
+            blocked++
+          }
+          log('warn', 'telegram broadcaster send failed', { id: sub.id, status: err.status, error: String(err?.message ?? err) })
+        }
+      }
+      db.kvSet('telegram_broadcast_last_at', String(Date.now()))
+      log('info', 'Telegram broadcast sent', { alerts: batch.length, chats: ok, failed: fail, blocked })
+    } finally {
+      // Every exit path — including a throw from db.kvSet or buildBroadcast
+      // — must clear the single-flight flag, or broadcasts stop for good.
+      sending = false
     }
-    db.kvSet('telegram_broadcast_last_at', String(Date.now()))
-    log('info', 'Telegram broadcast sent', { alerts: batch.length, chats: ok, failed: fail, blocked })
-    sending = false
   }
 
   /** Queue a severe alert; batched into ≤1 broadcast per 30 minutes. */

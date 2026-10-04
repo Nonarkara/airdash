@@ -171,7 +171,13 @@ export function createLine(db) {
     if (timer && at >= timerAt) return
     if (timer) clearTimeout(timer)
     timerAt = at
-    timer = setTimeout(() => { timer = null; flush() }, delayMs)
+    timer = setTimeout(() => {
+      timer = null
+      // An unhandled rejection here reaches index.js's process.exit(1):
+      // one SQLITE_BUSY inside flush used to be able to take the whole
+      // server down (and the queue with it).
+      flush().catch((err) => log('error', 'LINE broadcast flush crashed', { error: String(err?.message ?? err) }))
+    }, delayMs)
     timer.unref?.()
   }
 
@@ -241,23 +247,39 @@ export function createLine(db) {
     if (sending) { schedule(RETRY_DELAY_MS); return } // a send is already in flight
     if (queue.length === 0) return
     const t = await ensureFreshToken()
-    if (!t) return
-    if (!(await canPush())) return   // dormant on a non-Messaging-API channel
+    // Token mint/refresh failed (or creds rotated away): don't sit on the
+    // batch silently — severe alerts are sitting in a memory-only queue.
+    if (!t) {
+      log('warn', 'LINE broadcast deferred — no usable channel token', { queued: queue.length })
+      schedule(RETRY_DELAY_MS)
+      return
+    }
+    if (!(await canPush())) {
+      // Permanent until the operator enables Messaging API on the channel:
+      // log it, but don't spin a 60 s retry loop on a condition a retry
+      // cannot fix. The next notifyAlert() reschedules.
+      log('warn', 'LINE broadcast deferred — channel cannot push (dormant)', { queued: queue.length })
+      return
+    }
     // Snapshot the batch OUT of the queue up front. Alerts that arrive during
     // the (up to ~30s) send window then land in a fresh queue and are NOT
     // wiped when this send succeeds — the drop-on-success race in the previous
     // version. On failure we return this exact batch to the front.
     const batch = queue.splice(0)
     sending = true
-    const built = buildBroadcast(batch)
-    // LINE OA follows the user's lang setting; LINE's `language` field on
-    // the broadcast endpoint is unreliable across regions, so we send BOTH
-    // languages back-to-back as a single message. 5000-char cap on LINE
-    // broadcast — both versions are well under it.
-    const text = `${built.th}\n\n— — —\n\n${built.en}`
-    const body = JSON.stringify({ messages: [{ type: 'text', text }] })
-    const headers = { 'content-type': 'application/json', authorization: `Bearer ${t}` }
+    // Everything from here — including building the payload, which throws
+    // just as well as the network does — runs inside the try so `sending`
+    // can never be left stuck true (that disabled LINE broadcasts for the
+    // rest of the process lifetime).
     try {
+      const built = buildBroadcast(batch)
+      // LINE OA follows the user's lang setting; LINE's `language` field on
+      // the broadcast endpoint is unreliable across regions, so we send BOTH
+      // languages back-to-back as a single message. 5000-char cap on LINE
+      // broadcast — both versions are well under it.
+      const text = `${built.th}\n\n— — —\n\n${built.en}`
+      const body = JSON.stringify({ messages: [{ type: 'text', text }] })
+      const headers = { 'content-type': 'application/json', authorization: `Bearer ${t}` }
       // One retry: LINE occasionally 500s on transient infra issues.
       for (let attempt = 0; attempt < 2; attempt++) {
         try {

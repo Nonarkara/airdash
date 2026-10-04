@@ -7,6 +7,8 @@ import { provinceVerdict, nationalVerdict } from '../server/verdict.js'
 import { onRequest } from '../functions/api/[[path]].js'
 import { clientIp } from '../server/ratelimit.js'
 import { createHmac } from 'node:crypto'
+import { openDb } from '../server/db.js'
+import { notifySubscribersForAlert } from '../server/telegramPush.js'
 
 let passed = 0
 const test = async (name, fn) => { await fn(); passed++; console.log('PASS', name) }
@@ -310,6 +312,36 @@ await test('an older what-if response cannot overwrite a newer slider request', 
   requests[0].resolve(result)
   await older
   assert.equal(vm.runInContext('lastDataRain', context), 50)
+})
+
+await test('direct clients cannot forge the Cloudflare visitor identity', () => {
+  assert.equal(clientIp({ headers: { 'cf-connecting-ip': '198.51.100.9' },
+    socket: { remoteAddress: '192.0.2.1' } }), '192.0.2.1')
+})
+
+await test('concurrent station alerts claim one Telegram delivery; auth failure restores eligibility', async () => {
+  const db = openDb(':memory:')
+  const originalFetch = globalThis.fetch
+  try {
+    db.kvSet('telegram_bot_token', 'test-only')
+    db.run(`INSERT INTO telegram_subs (chat_id, province_th, lang, created_at, updated_at)
+      VALUES (123, 'เชียงใหม่', 'th', datetime('now'), datetime('now'))`)
+    const alert = { province_th: 'เชียงใหม่', severity: 3, rule: 'pm25_unhealthy' }
+    let sends = 0
+    globalThis.fetch = async () => { sends++; return new Response('{}', { status: 200 }) }
+    await Promise.all([notifySubscribersForAlert(db, alert), notifySubscribersForAlert(db, alert)])
+    assert.equal(sends, 1)
+    const previous = '2020-01-01 00:00:00'
+    db.run('UPDATE telegram_subs SET last_notified_at = ?', previous)
+    globalThis.fetch = async () => new Response('Unauthorized', { status: 401 })
+    await notifySubscribersForAlert(db, alert)
+    const sub = db.get('SELECT last_notified_at, fail_count FROM telegram_subs WHERE chat_id = 123')
+    assert.equal(sub.last_notified_at, previous)
+    assert.equal(sub.fail_count, 0)
+  } finally {
+    globalThis.fetch = originalFetch
+    db.raw.close()
+  }
 })
 
 console.log(`\n${passed} passed, 0 failed`)
