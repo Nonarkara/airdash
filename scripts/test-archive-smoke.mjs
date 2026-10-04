@@ -125,9 +125,15 @@ const archive = () => new DatabaseSync(join(archiveDir, 'dash-archive.db'), { re
   const lockPath = join(archiveDir, '.archive.lock')
   const started = Date.now()
   const poll = setInterval(() => {
-    if (existsSync(lockPath) || Date.now() - started > 15_000) { clearInterval(poll); child.kill('SIGTERM') }
+    if (existsSync(lockPath)) { clearInterval(poll); child.kill('SIGTERM') }
+    else if (Date.now() - started > 120_000) {
+      clearInterval(poll)
+      console.error('Archive fixture did not acquire its lock within 120 seconds; startup was not tested')
+      child.kill('SIGKILL')
+    }
   }, 5)
   const code = await new Promise((r) => child.on('close', r))
+  clearInterval(poll)
   const interrupted = /archive run interrupted \(SIGTERM\) after [\d,]+ rows — watermarks saved/.test(out)
   check('SIGTERM → exit 0 with "interrupted" line (or finished first)', code === 0 && (interrupted || /archive run complete/.test(out)))
   check('lock released after SIGTERM', !existsSync(join(archiveDir, '.archive.lock')))

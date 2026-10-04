@@ -114,6 +114,10 @@ probe_asset "${CUSTOM}"    "js/layers/cctvWall.js" || exit 4
 probe_asset "${CUSTOM}"    "js/panels/header.js"  || exit 4
 probe_asset "${CUSTOM}"    "js/panels/burning.js" || exit 4
 probe_asset "${CUSTOM}"    "js/panels/burnBriefing.js" || exit 4
+for asset in js/preferences.js js/dialogFocus.js js/mapView.js js/panels/search.js js/witness.js js/panels/chat.js; do
+  probe_asset "${CANONICAL}" "$asset" || exit 4
+  probe_asset "${CUSTOM}" "$asset" || exit 4
+done
 
 # Version tokens alone cannot distinguish the story from the dashboard.
 # Verify the page identity after Pages HTML canonicalization and SPA rewrites.

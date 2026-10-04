@@ -26,7 +26,7 @@ export async function cachedFetch(key, fetcher, ttlMs) {
 
 export async function getJson(url, ttlMs = 30_000) {
   return cachedFetch(url, async () => {
-    const res = await fetch(url)
+    const res = await fetch(url, { signal: AbortSignal.timeout(35_000) })
     if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`)
     return res.json()
   }, ttlMs)

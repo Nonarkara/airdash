@@ -1,8 +1,9 @@
+import { readPreference, writePreference } from './preferences.js?v=2.4.69'
 // Tiny pub/sub store shared by panels and map layers.
 const listeners = new Map() // topic → Set<fn>
 
 export const store = {
-  lang: localStorage.getItem('ad_lang') === 'en' ? 'en' : 'th',
+  lang: readPreference('ad_lang') === 'en' ? 'en' : 'th',
   snapshot: null,      // last /api/snapshot payload
   sensorHealth: null,  // last /api/sensors/health payload
   connected: false,    // SSE liveness
@@ -24,6 +25,6 @@ export function emit(topic, data) {
 
 export function setLang(lang) {
   store.lang = lang === 'en' ? 'en' : 'th'
-  localStorage.setItem('ad_lang', store.lang)
+  writePreference('ad_lang', store.lang)
   emit('lang', store.lang)
 }

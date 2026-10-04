@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 2.4.69 — frontend usability and recovery (2026-10-04)
+
+- Repaired the place-search dropdown collapsing to three pixels. It now fits the visual viewport, including keyboard space, and stale queries cannot overwrite new results or reopen dismissed search. Failures explain how to retry.
+- Province/city selection no longer animates a zero-sized hidden phone map. Invalid coordinates are rejected and reduced-motion preferences respected. Late city details and refreshes cannot replace a newer selection.
+- Browser storage failures no longer stop startup, language, mode, basemap, area or persona choices. Session choices work without persistent storage; invalid saved story profiles recover.
+- Camera and information dialogs contain keyboard focus and restore their opener. Closed/replaced camera requests cannot paint into another dialog. More navigation closes with Escape and exposes the current destination accessibly.
+- Chat requests and general JSON fetching have deadlines. Send disables while busy and recovers; example chips update with the language; connection errors use plain guidance. Phone inputs use readable text and search has one clear button with a full touch target.
+- Added 13 behavioral UX checks. Full test command passed 1,024 checks; follow-up header and consistency checks passed after final phone styles. The archive interruption fixture now waits for its actual readiness lock rather than signalling during startup after 15 seconds.
+- Deployment probes verify the changed search/chat/dialog/preference modules on canonical and custom hosts before completing.
+
 ## [2.4.68] — 2026-10-03 — local fire briefings, honest burn comparisons and reference-grounded retrieval
 - Replaced the fixed 2025/26 agricultural-burning calendar with selectable province and season briefings. Current reported maximum PM and upwind fire context are separate from historical Sentinel-2 agricultural scars. All 77 provinces are selectable even when a province has no published scars. A footer entry works on phones, and the dialog supports Escape, focus return and keyboard containment. CSV briefings include source dates, coverage and comparison exclusions.
 - Season comparisons use only matching province/month cells with complete crop observations; absent crops remain unknown rather than zero. Source coverage is explicit: the current national publication has 62 provinces (372 of 462 possible province-month cells), not full Thailand coverage. Both DOPA and TH-prefixed codes are accepted, and malformed/nonconsecutive seasons are rejected. Upstream monthly download failures now surface as source failures while preserving successfully ingested months.

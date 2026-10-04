@@ -1,11 +1,12 @@
+import { readPreference, writePreference } from '../preferences.js?v=2.4.69'
 // Universal place search — search any place name (province, station, focus area)
 // and get autocomplete results. Select one → map flies there + place card opens
 // with live data: nearest AQ stations, watch score, rain-washout outlook.
-import { on, store, emit } from '../state.js?v=2.4.68'
-import { tr, pick, BAND, bandColor, pmColorFor } from '../i18n.js?v=2.4.68'
-import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.68'
-import { getJson } from '../cache.js?v=2.4.68'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.68'
+import { on, store, emit } from '../state.js?v=2.4.69'
+import { tr, pick, BAND, bandColor, pmColorFor } from '../i18n.js?v=2.4.69'
+import { fmtNum, fmtClock, escapeHtml } from '../fmt.js?v=2.4.69'
+import { getJson } from '../cache.js?v=2.4.69'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.69'
 
 // Cached province centroids — fetched once, used to give postal results
 // a fly-to target. Same numbers the server's gazetteer uses (see
@@ -40,6 +41,9 @@ let searchResults = null
 let placeCard = null
 let debounceTimer = null
 let currentSelection = null
+let searchRequest = 0
+let placeRequest = 0
+let repositionResults = () => {}
 
 
 // Recent places — frictionless reopen. Empty focus / short query shows
@@ -50,7 +54,7 @@ const RECENT_MAX = 6
 
 function loadRecentPlaces() {
   try {
-    const list = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]')
+    const list = JSON.parse(readPreference(RECENT_KEY) ?? '[]')
     return Array.isArray(list) ? list : []
   } catch { return [] }
 }
@@ -71,7 +75,7 @@ function rememberRecent(r) {
     const k = `${x.type || ''}|${x.name_th || ''}|${x.province_th || ''}|${x.lat}|${x.lng}`
     return k !== key
   })].slice(0, RECENT_MAX)
-  try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)) } catch { /* private mode */ }
+  try { writePreference(RECENT_KEY, JSON.stringify(next)) } catch { /* private mode */ }
 }
 
 function showRecentPlaces() {
@@ -116,6 +120,8 @@ function showRecentPlaces() {
     })
   }
   searchResults.style.display = 'block'
+  repositionResults()
+  searchInput.removeAttribute('aria-activedescendant')
   searchInput.setAttribute('aria-expanded', 'true')
 }
 
@@ -134,11 +140,14 @@ export function initSearch() {
   // Autocomplete on type (debounced 350ms)
   searchInput.addEventListener('input', () => {
     clearTimeout(debounceTimer)
+    searchRequest++
+    searchInput.removeAttribute('aria-activedescendant')
     const q = searchInput.value.trim()
     if (q.length < 2) {
       showRecentPlaces()
       return
     }
+    searchResults.replaceChildren()
     debounceTimer = setTimeout(() => doSearch(q), 350)
   })
 
@@ -157,17 +166,12 @@ export function initSearch() {
     const inputRect = searchInput.getBoundingClientRect()
     // Distance from input's bottom edge to the top of the keyboard
     // (visualViewport.height is the visible area when keyboard is up).
-    const bottom = Math.max(8, vv.height - inputRect.bottom - 4)
-    const top = inputRect.bottom + 4
-    searchResults.style.position = 'fixed'
-    searchResults.style.top = `${top}px`
-    searchResults.style.bottom = `${bottom}px`
-    searchResults.style.left = `${Math.max(8, inputRect.left - 4)}px`
-    searchResults.style.right = `${Math.max(8, vv.width - inputRect.right - 4)}px`
-    searchResults.style.width = 'auto'
-    searchResults.style.maxHeight = 'none'
-    searchResults.style.maxWidth = 'none'
+    const bounds = searchBounds(inputRect, vv)
+    Object.assign(searchResults.style, { position: 'fixed', top: `${bounds.top}px`,
+      bottom: 'auto', left: `${bounds.left}px`, right: 'auto', width: `${bounds.width}px`,
+      maxHeight: `${bounds.height}px`, maxWidth: 'none' })
   }
+  repositionResults = reposition
   searchInput.addEventListener('focus', () => {
     requestAnimationFrame(reposition)
     if (searchInput.value.trim().length < 2) showRecentPlaces()
@@ -206,6 +210,7 @@ export function initSearch() {
 
   // Clear search button
   document.getElementById('search-clear')?.addEventListener('click', () => {
+    clearTimeout(debounceTimer)
     searchInput.value = ''
     hideResults()
     hidePlaceCard()
@@ -223,6 +228,14 @@ export function initSearch() {
 }
 
 async function doSearch(q) {
+  const token = ++searchRequest
+  const current = () => token === searchRequest && searchInput.value.trim() === q
+  searchResults.innerHTML = `<div class="search-empty" role="status">${tr('กำลังค้นหา…', 'Searching…')}</div>`
+  searchResults.style.display = 'block'
+  repositionResults()
+  searchInput.removeAttribute('aria-activedescendant')
+  searchInput.setAttribute('aria-expanded', 'true')
+  repositionResults()
   try {
     // 5-digit numeric → postal-code lookup, which returns tambons served
     // by the same zip. This is the "I don't know my tambon name but I
@@ -245,14 +258,24 @@ async function doSearch(q) {
           lat: c?.lat ?? null, lng: c?.lng ?? null, zoom: 12,
         }
       })
-      showResults(results)
+      if (current()) showResults(results)
       return
     }
     data = await getJson(`/api/search?q=${encodeURIComponent(q)}&limit=20`, 10_000)
-    showResults(data.results ?? [])
+    if (current()) showResults(data.results ?? [])
   } catch {
-    hideResults()
+    if (!current()) return
+    searchResults.innerHTML = `<div class="search-empty" role="status">${tr('ค้นหาไม่ได้ในตอนนี้ — ตรวจการเชื่อมต่อแล้วลองพิมพ์ใหม่', 'Search unavailable — check your connection and try typing again')}</div>`
+    repositionResults()
   }
+}
+
+export function searchBounds(rect, viewport) {
+  const x = viewport.offsetLeft || 0, y = viewport.offsetTop || 0
+  const left = Math.max(x + 8, Math.min(rect.left - 4, x + viewport.width - 348))
+  const width = Math.max(0, Math.min(420, Math.max(340, rect.width + 8), x + viewport.width - left - 8))
+  const top = Math.max(y + 8, rect.bottom + 4)
+  return { left, top, width, height: Math.max(0, Math.min(420, y + viewport.height - top - 8)) }
 }
 
 function showResults(results) {
@@ -290,10 +313,14 @@ function showResults(results) {
     }),
   )
   searchResults.style.display = 'block'
+  repositionResults()
+  searchInput.removeAttribute('aria-activedescendant')
   searchInput.setAttribute('aria-expanded', 'true')
 }
 
 function hideResults() {
+  searchRequest++
+  clearTimeout(debounceTimer)
   if (searchResults) {
     searchResults.style.display = 'none'
     // Clear the keyboard-aware inline styles so the next open re-applies
@@ -360,7 +387,7 @@ async function bootFromSavedCity() {
   if (location.pathname !== '/' && location.pathname !== '') return
   if (new URLSearchParams(location.search).get('city')) return
   let saved = null
-  try { saved = JSON.parse(localStorage.getItem('ad_my_city_v1') ?? 'null') } catch {}
+  try { saved = JSON.parse(readPreference('ad_my_city_v1') ?? 'null') } catch {}
   if (!saved || typeof saved.lat !== 'number' || typeof saved.lng !== 'number') return
   selectResult(saved)
 }
@@ -407,6 +434,9 @@ function setCityMode(onMode) {
 
 async function loadPlaceDetail(r) {
   if (!placeCard) return
+  const token = ++placeRequest
+  currentSelection = null
+  clearInterval(refreshTimer)
   setCityMode(true)
   placeCard.style.display = 'block'
   placeCard.innerHTML = `<div class="place-loading">${tr('กำลังโหลดข้อมูล…', 'Loading data…')}</div>`
@@ -416,6 +446,7 @@ async function loadPlaceDetail(r) {
       `/api/place?lat=${r.lat}&lng=${r.lng}&province=${encodeURIComponent(r.province_th ?? '')}&radius=30`,
       60_000,
     )
+    if (token !== placeRequest) return
     currentSelection = { ...r, detail }
     renderPlaceCard(currentSelection)
     // War-room boards sit on walls for hours — refresh the live data every
@@ -423,17 +454,19 @@ async function loadPlaceDetail(r) {
     // in localStorage, so a re-render never loses them.
     clearInterval(refreshTimer)
     refreshTimer = setInterval(async () => {
-      if (!currentSelection) return
+      if (!currentSelection || token !== placeRequest) return
       try {
         const fresh = await getJson(
           `/api/place?lat=${r.lat}&lng=${r.lng}&province=${encodeURIComponent(r.province_th ?? '')}&radius=30`,
           60_000,
         )
+        if (token !== placeRequest || !currentSelection) return
         currentSelection = { ...currentSelection, detail: fresh }
         renderPlaceCard(currentSelection)
       } catch { /* transient — keep showing the last good board */ }
     }, 120_000)
   } catch {
+    if (token !== placeRequest) return
     // The honest failure path — the snapshot or detail fetch blew up.
     // Plain language + a retry button so the user isn't stranded on a
     // blank card wondering "did the network drop, or is the dashboard
@@ -479,10 +512,10 @@ function checklistKey(sel, level) {
   return `fd-check-${sel.name_th ?? sel.name_en}-${level}-${day}`
 }
 function loadTicks(key) {
-  try { return new Set(JSON.parse(localStorage.getItem(key) ?? '[]')) } catch { return new Set() }
+  try { return new Set(JSON.parse(readPreference(key) ?? '[]')) } catch { return new Set() }
 }
 function saveTicks(key, ticks) {
-  try { localStorage.setItem(key, JSON.stringify([...ticks])) } catch { /* private mode */ }
+  try { writePreference(key, JSON.stringify([...ticks])) } catch { /* private mode */ }
 }
 
 function verdictHero(v) {
@@ -747,6 +780,7 @@ document.addEventListener('keydown', (e) => {
 })
 
 function hidePlaceCard() {
+  placeRequest++
   if (placeCard) {
     placeCard.style.display = 'none'
     placeCard.innerHTML = ''

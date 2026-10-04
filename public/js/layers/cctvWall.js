@@ -1,11 +1,13 @@
+import { containDialog } from '../dialogFocus.js?v=2.4.69'
+let releaseDialogFocus
 // Haze eyes — the working cameras that face the worst air right now.
 // The server (GET /api/cctv/haze-eyes) walks the PM2.5 stations from the
 // highest reading down and, for each, picks the nearest camera that a health
 // probe has shown to be alive. So this wall answers "what does that look
 // like, over there?" for the places the numbers say are worst.
-import { tr } from '../i18n.js?v=2.4.68'
-import { escapeHtml } from '../fmt.js?v=2.4.68'
-import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.68'
+import { tr } from '../i18n.js?v=2.4.69'
+import { escapeHtml } from '../fmt.js?v=2.4.69'
+import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.69'
 
 const MAX_AUTOPLAY = 4
 let overlay = null
@@ -103,7 +105,7 @@ export function closeHazeEyes() {
   stopVideos(overlay)
   document.removeEventListener('keydown', onKey)
   overlay.remove(); overlay = null
-  document.body.style.overflow = ''
+  releaseDialogFocus?.(); releaseDialogFocus = null
 }
 const onKey = (e) => { if (e.key === 'Escape') closeHazeEyes() }
 
@@ -112,7 +114,7 @@ export async function openHazeEyes({ onLocate } = {}) {
   closeHazeEyes()
   overlay = document.createElement('div')
   overlay.className = 'cctv-wall-overlay'
-  overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true')
+  overlay.setAttribute('aria-label', tr('กล้องดูฝุ่น', 'Haze cameras')); overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true')
   overlay.innerHTML = `<div class="cctv-wall-backdrop"></div>
     <div class="cctv-wall-sheet">
       <div class="cctv-wall-head">
@@ -124,7 +126,8 @@ export async function openHazeEyes({ onLocate } = {}) {
       <div class="cctv-wall-foot">${NOT_OFFICIAL()} · ${tr('วิดีโอสตรีมจากผู้ให้บริการ AirDash เก็บภาพตัวอย่างล่าสุดเพื่อเปรียบเทียบ', 'video streams from each provider; AirDash keeps the latest sampled still for comparison')}</div>
     </div>`
   document.body.appendChild(overlay)
-  document.body.style.overflow = 'hidden'
+  releaseDialogFocus = containDialog(overlay)
+  const opened = overlay
   overlay.querySelector('.cctv-wall-close').onclick = closeHazeEyes
   overlay.querySelector('.cctv-wall-backdrop').onclick = closeHazeEyes
   overlay.querySelector('.cctv-wall-close').focus()
@@ -134,7 +137,7 @@ export async function openHazeEyes({ onLocate } = {}) {
   const get = async (minPm25, includeDown = false) => {
     const qs = new URLSearchParams({ limit: '12', min_pm25: String(minPm25) })
     if (includeDown) qs.set('include_down', '1')
-    const res = await fetch(`/api/cctv/haze-eyes?${qs}`)
+    const res = await fetch(`/api/cctv/haze-eyes?${qs}`, { signal: AbortSignal.timeout(20_000) })
     if (!res.ok) throw new Error(String(res.status))
     return res.json()
   }
@@ -158,10 +161,11 @@ export async function openHazeEyes({ onLocate } = {}) {
       if ((withDown.eyes?.length ?? 0) > (data.eyes?.length ?? 0)) { data = withDown; relaxed = true; includedDown = true }
     }
   } catch {
+    if (overlay !== opened) return
     body.innerHTML = `<p class="cctv-wall-msg">${tr('โหลดไม่สำเร็จ — ลองใหม่อีกครั้งในอีกสักครู่', 'could not load — try again in a moment')}</p>`
     return
   }
-  if (!overlay) return // closed while loading
+  if (overlay !== opened) return // closed or replaced while loading
   if (!data.eyes?.length && !data.picture_flags?.length) {
     body.innerHTML = `<p class="cctv-wall-msg">${tr('ยังไม่มีกล้องที่ใช้งานได้ใกล้สถานีวัดฝุ่น', 'no working camera near a PM2.5 station yet')}</p>`
     return

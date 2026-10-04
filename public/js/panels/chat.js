@@ -1,9 +1,9 @@
 // Ask-AI panel: streams answers from the local gemma4:e4b via the server's
 // RAG endpoint. When the model is offline the server returns a structured live
 // summary — shown honestly as data, not generated prose.
-import { store } from '../state.js?v=2.4.68'
-import { tr } from '../i18n.js?v=2.4.68'
-import { el } from '../fmt.js?v=2.4.68'
+import { store, on } from '../state.js?v=2.4.69'
+import { tr } from '../i18n.js?v=2.4.69'
+import { el, escapeHtml } from '../fmt.js?v=2.4.69'
 
 export function initChat() {
   const form = document.getElementById('chat-form')
@@ -17,11 +17,13 @@ export function initChat() {
 
   async function refreshStatus() {
     try {
-      const s = await (await fetch('/api/chat/status')).json()
+      const res = await fetch('/api/chat/status', { signal: AbortSignal.timeout(10_000) })
+      if (!res.ok) throw new Error(String(res.status))
+      const s = await res.json()
       statusEl.innerHTML = s.reachable && s.hasChat
-        ? `<span class="on">●</span> ${s.chatModel} · ${tr('พร้อมตอบจากข้อมูลจริงในระบบ', 'answering from live system data')}`
+        ? `<span class="on">●</span> ${escapeHtml(s.chatModel ?? 'AI')} · ${tr('พร้อมตอบจากข้อมูลจริงในระบบ', 'answering from live system data')}`
         : `<span class="off">●</span> ${tr('โมเดลออฟไลน์ — จะแสดงสรุปข้อมูลจริงแทน', 'model offline — live-data summary fallback')}`
-    } catch { statusEl.textContent = '…' }
+    } catch { statusEl.textContent = tr('ตรวจสถานะ AI ไม่ได้ — ลองใหม่ได้', 'AI status unavailable — you can retry') }
   }
 
   log.append(el('div', { class: 'chat-msg bot' },
@@ -42,7 +44,7 @@ export function initChat() {
       { th: 'ฝนจะช่วยล้างฝุ่นที่ไหนบ้าง', en: 'Where will rain wash out the dust?' },
       { th: 'อธิบายวิธีคำนวณคะแนนเสี่ยง', en: 'Explain how the risk score is calculated' },
     ].map((ex) => el('button', {
-      class: 'chat-example-chip', type: 'button',
+      class: 'chat-example-chip', type: 'button', 'data-th': ex.th, 'data-en': ex.en,
       onclick: () => {
         const q = store.lang === 'th' ? ex.th : ex.en
         input.value = q
@@ -52,6 +54,10 @@ export function initChat() {
     }, tr(ex.th, ex.en))),
   )
   log.append(examples)
+  on('lang', () => {
+    for (const chip of examples.querySelectorAll('button')) chip.textContent = tr(chip.dataset.th, chip.dataset.en)
+    refreshStatus()
+  })
 
   // Thumbs up/down on a completed answer — fires once, then locks so a
   // visitor can't spam-vote the same response.
@@ -70,6 +76,7 @@ export function initChat() {
       rowEl.classList.add('sent')
       fetch(`/api/chat/logs/${logId}/feedback`, {
         method: 'POST',
+        signal: AbortSignal.timeout(90_000),
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ value }),
       }).catch(() => {})
@@ -82,6 +89,8 @@ export function initChat() {
     const message = input.value.trim()
     if (!message || busy) return
     busy = true
+    document.getElementById('chat-send').disabled = true
+    log.setAttribute('aria-busy', 'true')
     input.value = ''
     log.append(el('div', { class: 'chat-msg user' }, message))
     const botEl = el('div', { class: 'chat-msg bot' }, '…')
@@ -91,10 +100,12 @@ export function initChat() {
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
+        signal: AbortSignal.timeout(90_000),
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ message, lang: store.lang }),
       })
 
+      if (!res.ok) throw new Error(String(res.status))
       if (res.headers.get('content-type')?.includes('application/json')) {
         const j = await res.json()
         if (j.faq) {
@@ -141,6 +152,8 @@ export function initChat() {
       botEl.textContent = tr('ขออภัย ตอบไม่สำเร็จ ลองอีกครั้ง', 'Sorry — request failed, please retry.')
     } finally {
       busy = false
+      document.getElementById('chat-send').disabled = false
+      log.setAttribute('aria-busy', 'false')
       log.scrollTop = log.scrollHeight
     }
   })

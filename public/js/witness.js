@@ -1,11 +1,13 @@
+import { containDialog } from './dialogFocus.js?v=2.4.69'
+let releaseDialogFocus
 // The Window. One place at a time: the camera that faces it, what people
 // reported, and the headline that names it. The filmstrip swaps the place.
 // Only the place on the glass plays video — a wall of streams starves the
 // small servers these cameras live on.
-import { tr } from './i18n.js?v=2.4.68'
-import { escapeHtml, ago } from './fmt.js?v=2.4.68'
-import { pm25Color } from './paint.js?v=2.4.68'
-import { BAND_LABEL, playerHtml, startVideos, stopVideos, visionChipHtml, NOT_OFFICIAL } from './layers/cctvPlayer.js?v=2.4.68'
+import { tr } from './i18n.js?v=2.4.69'
+import { escapeHtml, ago } from './fmt.js?v=2.4.69'
+import { pm25Color } from './paint.js?v=2.4.69'
+import { BAND_LABEL, playerHtml, startVideos, stopVideos, visionChipHtml, NOT_OFFICIAL } from './layers/cctvPlayer.js?v=2.4.69'
 
 const CLAIM = {
   smoke: { th: 'ควันไฟ', en: 'fire smoke' },
@@ -164,7 +166,7 @@ export function closeWindow() {
   overlay.remove()
   overlay = null
   data = null
-  document.body.style.overflow = ''
+  releaseDialogFocus?.(); releaseDialogFocus = null
 }
 
 export async function openWindow() {
@@ -183,19 +185,23 @@ export async function openWindow() {
     <div class="win-body"><div class="win-stage"><p class="win-msg">${tr('กำลังหากล้องที่มองอากาศนี้…', 'finding the camera that faces this air…')}</p></div><div class="win-ledger"></div></div>
     <div class="win-strip"></div>`
   document.body.appendChild(overlay)
-  document.body.style.overflow = 'hidden'
+  releaseDialogFocus = containDialog(overlay)
+  const opened = overlay
   overlay.querySelector('.win-close').onclick = closeWindow
   overlay.querySelector('.win-close').focus()
   document.addEventListener('keydown', onKey)
   try {
-    const res = await fetch('/api/witness')
+    const res = await fetch('/api/witness', { signal: AbortSignal.timeout(20_000) })
     if (!res.ok) throw new Error(String(res.status))
-    data = await res.json()
+    const next = await res.json()
+    if (overlay !== opened) return
+    data = next
   } catch {
+    if (overlay !== opened) return
     overlay.querySelector('.win-stage').innerHTML = `<p class="win-msg">${tr('เปิดหน้าต่างไม่ได้ในตอนนี้ — ลองอีกครั้งในอีกสักครู่', 'the window could not open — try again in a moment')}</p>`
     return
   }
-  if (!overlay) return
+  if (overlay !== opened) return
   if (!data.places?.length) {
     overlay.querySelector('.win-stage').innerHTML = `<p class="win-msg">${tr('ยังไม่มีกล้องที่ใช้งานได้ใกล้สถานีวัดฝุ่น', 'no working camera near a PM2.5 station yet')}</p>`
     const note = overlay.querySelector('.win-note')

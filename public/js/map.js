@@ -1,20 +1,22 @@
+import { moveMap } from './mapView.js?v=2.4.69'
+import { readPreference, writePreference } from './preferences.js?v=2.4.69'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.68'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.68'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.68'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.68'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.68'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.68'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.68'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.68'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.68'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.68'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.68'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.68'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.68'
-import { openWindow } from './witness.js?v=2.4.68'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.68'
+import { on, store } from './state.js?v=2.4.69'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.69'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.69'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.69'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.69'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.69'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.69'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.69'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.69'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.69'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.69'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.69'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.69'
+import { openWindow } from './witness.js?v=2.4.69'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.69'
 
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
@@ -30,7 +32,7 @@ let aeronetApi = null
 let basemaps = null
 const BASEMAP_KEY = 'ad_basemap'
 let currentBasemap = (() => {
-  const saved = localStorage.getItem(BASEMAP_KEY)
+  const saved = readPreference(BASEMAP_KEY)
   return BASEMAP_META.some((b) => b.id === saved) ? saved : 'street'
 })()
 
@@ -263,7 +265,7 @@ function addLayerControl() {
         if (b.id === currentBasemap) return
         basemaps[currentBasemap].remove()
         currentBasemap = b.id
-        localStorage.setItem(BASEMAP_KEY, currentBasemap)
+        writePreference(BASEMAP_KEY, currentBasemap)
         basemaps[currentBasemap].addTo(map)
         for (const r of basemapRows) r.el.classList.toggle('on', r.id === currentBasemap)
       }
@@ -412,9 +414,9 @@ function addLegend() {
 }
 
 export function flyToProvince(p) {
-  if (p.lat !== null && p.lng !== null) map.flyTo([p.lat, p.lng], 9, { duration: 0.8 })
+  moveMap(map, [p.lat, p.lng], 9, { duration: 0.8 })
 }
 export function flyToStation(s) {
-  if (s.lat !== null && s.lng !== null) map.flyTo([s.lat, s.lng], 12, { duration: 0.8 })
+  moveMap(map, [s.lat, s.lng], 12, { duration: 0.8 })
 }
 export function invalidateMap() { map?.invalidateSize() }

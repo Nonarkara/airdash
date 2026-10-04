@@ -1,3 +1,4 @@
+import { moveMap } from '../mapView.js?v=2.4.69'
 // Focus switcher — populates the (optional) header dropdown from the
 // /api/focus manifest. Selecting an area flies the map and (when it names
 // a province) scopes the ranking rail to that province's stations. The
@@ -10,9 +11,9 @@
 // like /?city=chiangmai loads that city on first paint; selections
 // update the URL via history.replaceState (no full reload, no
 // back-button clutter).
-import { getJson } from '../cache.js?v=2.4.68'
-import { store, on, emit } from '../state.js?v=2.4.68'
-import { showProvinceDetail, hideDetail } from './detail.js?v=2.4.68'
+import { getJson } from '../cache.js?v=2.4.69'
+import { store, on, emit } from '../state.js?v=2.4.69'
+import { showProvinceDetail, hideDetail } from './detail.js?v=2.4.69'
 
 let areas = []
 let initialised = false
@@ -117,7 +118,7 @@ function applyFocus(id, map, { source = 'programmatic' } = {}) {
   // roughly the right view (avoids the camera jumping on a refresh).
   // The dropdown always flies.
   if (source !== 'url' || !store.activeArea) {
-    map.flyTo(area.center, area.zoom, { duration: source === 'url' ? 0 : 1.0, essential: true })
+    moveMap(map, area.center, area.zoom, { duration: source === 'url' ? 0 : 1.0 })
   }
   // Track the current area on the store so other panels (top-bar danger
   // chip, city dashboard) can scope themselves without re-fetching.

@@ -1,36 +1,39 @@
+import { moveMap } from './mapView.js?v=2.4.69'
+import { containDialog } from './dialogFocus.js?v=2.4.69'
+import { readPreference, writePreference } from './preferences.js?v=2.4.69'
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.4.68'
-import { paintChrome } from './i18n.js?v=2.4.68'
-import { startTap } from './sse.js?v=2.4.68'
-import { initMap, invalidateMap } from './map.js?v=2.4.68'
-import { initHeader } from './panels/header.js?v=2.4.68'
-import { initRanking } from './panels/ranking.js?v=2.4.68'
-import { initForecast } from './panels/forecast.js?v=2.4.68'
-import { initWhatIf } from './panels/whatif.js?v=2.4.68'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.4.68'
-import { initTap } from './panels/tap.js?v=2.4.68'
-import { initSources } from './panels/sources.js?v=2.4.68'
-import { initHistory } from './panels/history.js?v=2.4.68'
-import { initInsights } from './panels/insights.js?v=2.4.68'
-import { initAnalytics } from './panels/analytics.js?v=2.4.68'
-import { initFeeds } from './panels/feeds.js?v=2.4.68'
-import { initChat } from './panels/chat.js?v=2.4.68'
-import { initCitizen } from './panels/citizen.js?v=2.4.68'
-import { initWaterways } from './panels/waterways.js?v=2.4.68'
-import { initFocus } from './panels/focus.js?v=2.4.68'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.68'
-import { initSplit } from './panels/split.js?v=2.4.68'
-import { initLibrary } from './panels/library.js?v=2.4.68'
-import { initResearch } from './panels/research.js?v=2.4.68'
-import { initManual } from './panels/manual.js?v=2.4.68'
-import { initBurning } from './panels/burning.js?v=2.4.68'
-import { initApiDocs } from './panels/apidocs.js?v=2.4.68'
-import { initSearch } from './panels/search.js?v=2.4.68'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.68'
-import { initWitness } from './witness.js?v=2.4.68'
-import { initCctvWall } from './cctvEntry.js?v=2.4.68'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.4.68'
+import { on, emit, store, setLang } from './state.js?v=2.4.69'
+import { paintChrome } from './i18n.js?v=2.4.69'
+import { startTap } from './sse.js?v=2.4.69'
+import { initMap, invalidateMap } from './map.js?v=2.4.69'
+import { initHeader } from './panels/header.js?v=2.4.69'
+import { initRanking } from './panels/ranking.js?v=2.4.69'
+import { initForecast } from './panels/forecast.js?v=2.4.69'
+import { initWhatIf } from './panels/whatif.js?v=2.4.69'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.4.69'
+import { initTap } from './panels/tap.js?v=2.4.69'
+import { initSources } from './panels/sources.js?v=2.4.69'
+import { initHistory } from './panels/history.js?v=2.4.69'
+import { initInsights } from './panels/insights.js?v=2.4.69'
+import { initAnalytics } from './panels/analytics.js?v=2.4.69'
+import { initFeeds } from './panels/feeds.js?v=2.4.69'
+import { initChat } from './panels/chat.js?v=2.4.69'
+import { initCitizen } from './panels/citizen.js?v=2.4.69'
+import { initWaterways } from './panels/waterways.js?v=2.4.69'
+import { initFocus } from './panels/focus.js?v=2.4.69'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.69'
+import { initSplit } from './panels/split.js?v=2.4.69'
+import { initLibrary } from './panels/library.js?v=2.4.69'
+import { initResearch } from './panels/research.js?v=2.4.69'
+import { initManual } from './panels/manual.js?v=2.4.69'
+import { initBurning } from './panels/burning.js?v=2.4.69'
+import { initApiDocs } from './panels/apidocs.js?v=2.4.69'
+import { initSearch } from './panels/search.js?v=2.4.69'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.69'
+import { initWitness } from './witness.js?v=2.4.69'
+import { initCctvWall } from './cctvEntry.js?v=2.4.69'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.4.69'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -80,15 +83,15 @@ async function loadSnapshotWithRetry(attempts = 2, delayMs = 1500) {
 function showBootError(err) {
   const boot = document.getElementById('boot')
   if (!boot) return
-  const th = tr('เชื่อมต่อไม่สำเร็จ — ตรวจสอบว่าเซิร์ฟเวอร์และ tunnel ทำงานอยู่',
-    'Connection failed — check that the server and tunnel are running')
+  const th = tr('ยังโหลดข้อมูลสดไม่ได้ — ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่',
+    'Live data could not load — check your internet connection and retry')
   const hint = tr('ลองใหม่', 'Retry')
   boot.replaceChildren()
   const sign = document.createElement('div')
   sign.className = 'sign'
   sign.style.textAlign = 'center'
   sign.innerHTML = `<div class="th" style="font-size:16px;color:var(--th-red,#A51931)">${th}</div>
-    <div class="en" style="font-size:12px;color:var(--ink-mid);margin-top:6px">${err?.message ?? ''}</div>`
+    `
   const btn = document.createElement('button')
   btn.className = 'boot-retry'
   btn.textContent = hint
@@ -155,7 +158,7 @@ function applyMode(mode) {
     b.classList.toggle('active', active)
     b.setAttribute('aria-pressed', active ? 'true' : 'false')
   })
-  localStorage.setItem(MODE_KEY, mode)
+  writePreference(MODE_KEY, mode)
   // When switching to citizen mode, the right rail only shows My Area and
   // Alerts. Auto-activate My Area so the panel
   // is visible immediately — that's the whole point of toggling.
@@ -173,9 +176,9 @@ function applyMode(mode) {
   setTimeout(() => invalidateMap(), 60)
 }
 function initMode() {
-  const stored = localStorage.getItem(MODE_KEY)
+  const stored = readPreference(MODE_KEY)
   const cityLink = new URLSearchParams(location.search).has('city')
-  const mode = stored ?? (cityLink ? 'citizen' : 'operator')
+  const mode = ['citizen', 'operator'].includes(stored) ? stored : (cityLink ? 'citizen' : 'operator')
   applyMode(mode)
   document.getElementById('modetoggle')?.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-mode]')
@@ -294,7 +297,7 @@ function initSheet() {
     nav.querySelectorAll('button[data-sheet]').forEach((b) => {
       const active = b.dataset.sheet === target
       b.classList.toggle('active', active)
-      b.setAttribute('aria-selected', active ? 'true' : 'false')
+      b.setAttribute('aria-current', active ? 'true' : 'false')
     })
     if (!mobile) { closeMore(); invalidateMap(); return }
     if (target === MAP_SHEET) {
@@ -330,6 +333,11 @@ function initSheet() {
     if (!btn.dataset.sheet) return
     closeMore()          // picking anything dismisses the overflow grid
     apply(btn.dataset.sheet)
+  })
+  nav.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && nav.classList.contains('more-open')) {
+      e.preventDefault(); closeMore(); moreBtn?.focus()
+    }
   })
   // Panels elsewhere ask for a destination through the store bus rather
   // than importing this module — main.js already imports them, so a direct
@@ -416,9 +424,9 @@ function initAbout() {
       node.textContent = tr(node.dataset.th, node.dataset.en)
     }
   }
-  let returnFocus = btn
-  const open = trigger => { returnFocus = trigger; overlay.hidden = false; paint(); close.focus() }
-  const dismiss = () => { overlay.hidden = true; returnFocus?.focus() }
+  let releaseFocus
+  const open = () => { if (!overlay.hidden) return; overlay.hidden = false; releaseFocus = containDialog(overlay); paint(); close.focus() }
+  const dismiss = () => { overlay.hidden = true; releaseFocus?.(); releaseFocus = null }
   btn.addEventListener('click', () => open(btn))
   const fireBrief = document.getElementById('burn-brief-open')
   fireBrief?.addEventListener('click', () => {
@@ -429,11 +437,7 @@ function initAbout() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) dismiss() })
   overlay.addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.preventDefault(); dismiss() }
-    if (e.key !== 'Tab') return
-    const nodes = [...overlay.querySelectorAll('button, a[href], input, select, textarea, [tabindex="0"]')].filter(node => !node.disabled && node.getClientRects().length)
-    const first = nodes[0], last = nodes.at(-1)
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus() }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus() }
+
   })
   on('lang', paint)
   paint()
@@ -528,7 +532,7 @@ async function boot() {
   // Place search → fly the map
   on('place-select', ({ lat, lng, zoom }) => {
     if (map && Number.isFinite(lat) && Number.isFinite(lng)) {
-      map.flyTo([lat, lng], zoom ?? 11, { duration: 0.8 })
+      moveMap(map, [lat, lng], zoom ?? 11, { duration: 0.8 })
     }
   })
   on('search-clear', () => {

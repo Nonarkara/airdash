@@ -1,3 +1,4 @@
+import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.69'
 // LIFE-SAVING ADDITIONS FOR THE CITIZEN PANEL
 // =============================================
 // This module extends the citizen (EASY) panel with four action-oriented
@@ -40,10 +41,10 @@
 // 7-year-old the panel is meant to help has an even shorter attention
 // span. The English side uses a registered-nurse register: warm,
 // direct, never preachy. "Don't" is reserved for emergencies.
-import { on, store } from '../state.js?v=2.4.68'
-import { tr } from '../i18n.js?v=2.4.68'
-import { el } from '../fmt.js?v=2.4.68'
-import { getJson } from '../cache.js?v=2.4.68'
+import { on, store } from '../state.js?v=2.4.69'
+import { tr } from '../i18n.js?v=2.4.69'
+import { el } from '../fmt.js?v=2.4.69'
+import { getJson } from '../cache.js?v=2.4.69'
 
 // ── 1. PERSONA SELECTOR + SPECIFIC ADVICE ─────────────────────────────────
 
@@ -115,7 +116,7 @@ const PERSONA_KEY = 'ad_my_persona'
 
 function readPersona() {
   try {
-    const raw = localStorage.getItem(PERSONA_KEY)
+    const raw = readPreference(PERSONA_KEY)
     if (!raw) return null
     const id = JSON.parse(raw)
     return PERSONAS.find((p) => p.id === id) ?? null
@@ -123,8 +124,8 @@ function readPersona() {
 }
 
 function writePersona(id) {
-  if (id === null) localStorage.removeItem(PERSONA_KEY)
-  else localStorage.setItem(PERSONA_KEY, JSON.stringify(id))
+  if (id === null) removePreference(PERSONA_KEY)
+  else writePreference(PERSONA_KEY, JSON.stringify(id))
 }
 
 // Returns "20 นาที" / "20 min" — the persona's play budget at the

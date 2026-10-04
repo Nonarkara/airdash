@@ -1,3 +1,4 @@
+import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.69'
 // Citizen-mode panel — what ordinary people need to see in 30 seconds.
 // Surfaces the four questions that matter during a dust episode:
 //   1. Am I safe right now?          → JMA verb at the top
@@ -15,19 +16,19 @@
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.68'
-import { tr, BAND } from '../i18n.js?v=2.4.68'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.68'
-import { getJson } from '../cache.js?v=2.4.68'
-import { flyToProvince } from '../map.js?v=2.4.68'
-import { sharePlace, copyText } from '../share.js?v=2.4.68'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.68'
+import { on, store, emit } from '../state.js?v=2.4.69'
+import { tr, BAND } from '../i18n.js?v=2.4.69'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.69'
+import { getJson } from '../cache.js?v=2.4.69'
+import { flyToProvince } from '../map.js?v=2.4.69'
+import { sharePlace, copyText } from '../share.js?v=2.4.69'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.69'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare, renderNoiseTrends,
-} from './citizenLife.js?v=2.4.68'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.68'
+} from './citizenLife.js?v=2.4.69'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.69'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -84,7 +85,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.68').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.69').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -169,7 +170,7 @@ function paint(box) {
 
 function readMyProvince() {
   try {
-    const raw = localStorage.getItem(MY_PROVINCE_KEY)
+    const raw = readPreference(MY_PROVINCE_KEY)
     if (!raw) return null
     return JSON.parse(raw)
   } catch { return null }
@@ -177,9 +178,9 @@ function readMyProvince() {
 
 export function setMyProvince(p) {
   if (!p) {
-    localStorage.removeItem(MY_PROVINCE_KEY)
+    removePreference(MY_PROVINCE_KEY)
   } else {
-    localStorage.setItem(MY_PROVINCE_KEY, JSON.stringify(p))
+    writePreference(MY_PROVINCE_KEY, JSON.stringify(p))
   }
   // Use the internal pub/sub (state.js) so listeners registered via
   // `on('my-province-changed', ...)` actually fire. A window.CustomEvent

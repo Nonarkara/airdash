@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from './preferences.js?v=2.4.69'
 // ────────────────────────────────────────────────────────────────────────────
 // AIR STORY — the new front door. A scroll narrative about TODAY's air for
 // smart kids and curious adults. Not a dashboard: one question per chapter,
@@ -5,11 +6,11 @@
 // back to /api/science. Unavailable readings stay unknown while the page
 // retries; reference formulas remain available for explanation.
 // ────────────────────────────────────────────────────────────────────────────
-import { store, on, setLang, emit } from './state.js?v=2.4.68'
-import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.68'
-import { getJson } from './cache.js?v=2.4.68'
-import { fmtNum, escapeHtml } from './fmt.js?v=2.4.68'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.68'
+import { store, on, setLang, emit } from './state.js?v=2.4.69'
+import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.69'
+import { getJson } from './cache.js?v=2.4.69'
+import { fmtNum, escapeHtml } from './fmt.js?v=2.4.69'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.69'
 
 const $ = (sel) => document.querySelector(sel)
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -55,10 +56,11 @@ const FALLBACK_SCIENCE = {
 let science = null       // /api/science payload (or FALLBACK_SCIENCE)
 let offline = false      // true when no science observations are available
 let snapshot = null      // /api/snapshot payload (may stay null)
-let province = localStorage.getItem('ad_story_province') ?? ''   // '' = national
-let persona = localStorage.getItem('ad_story_persona') ?? 'kid'  // kid first — parents look for their kids
+let province = readPreference('ad_story_province') ?? ''   // '' = national
+let persona = readPreference('ad_story_persona') ?? 'kid'  // kid first — parents look for their kids
 
 const PERSONA_ORDER = ['kid', 'teen', 'adult', 'athlete', 'senior', 'pregnant', 'asthma']
+if (!PERSONA_ORDER.includes(persona)) persona = 'kid'
 const PERSONA_FALLBACK_LABEL = {
   kid: ['เด็ก', 'Kid'], teen: ['วัยรุ่น', 'Teen'], adult: ['ผู้ใหญ่', 'Adult'],
   athlete: ['นักกีฬา', 'Athlete'], senior: ['ผู้สูงอายุ', 'Senior'],
@@ -184,7 +186,7 @@ function renderPersonaChips() {
     b.setAttribute('aria-pressed', active ? 'true' : 'false')
     b.addEventListener('click', () => {
       persona = id
-      localStorage.setItem('ad_story_persona', id)
+      writePreference('ad_story_persona', id)
       renderPersonaChips()
       renderPersonal()
     })
@@ -589,7 +591,7 @@ function resolveLocation() {
         (p.name_en && String(name).toLowerCase().includes(p.name_en.toLowerCase())))
       if (hit) {
         province = hit.code
-        localStorage.setItem('ad_story_province', province)
+        writePreference('ad_story_province', province)
         buildProvinceSelect()
         renderAll()
       }
@@ -616,7 +618,7 @@ function wireChrome() {
   const sel = $('#province-select')
   if (sel) sel.addEventListener('change', () => {
     province = sel.value
-    localStorage.setItem('ad_story_province', province)
+    writePreference('ad_story_province', province)
     renderAll()
   })
 
