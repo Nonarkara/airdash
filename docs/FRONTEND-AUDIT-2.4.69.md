@@ -21,6 +21,7 @@ Chat and JSON requests have bounded deadlines. Send is disabled while busy and r
 - Live baseline phone audit exercised overview, washout, history, signals, news, tap, sources and library; panels rendered and captured console errors were empty.
 - Repaired search preview: 17 actual Bangkok results, 420px dropdown, keyboard ArrowDown/Enter opened the Bangkok card, document width matched the 390px viewport. That flow exposed the hidden-map error repaired above.
 - Subsequent local browser verification was interrupted by backend/preview connection stalls. The existing backend was restarted and an HTTP probe returned 200. Do not describe those interrupted browser runs as successful checks.
+- Final uncached preview recovered: eleven widths from 320–1920px had numeric Danger Score 69, usable search height/width and no document overflow. Hidden-map selection and both camera dialog Escape/focus-return flows had no captured console errors. Phone More/Escape, bilingual home with 78 province options, and install guidance rendered without overflow. Earlier connection failures remain recorded above.
 - Asset deployment probes include canonical/custom hashes for preferences, dialog focus, map movement, search, Window and chat alongside existing shell/panel probes.
 
 ## Limits
