@@ -14,3 +14,7 @@ Project continuation heartbeat: `airdash-away-operations`, every four hours in t
 - Existing application ingestion and daily knowledge indexing remain scheduled; no new model training or paid workload started.
 
 On each continuation inspect actual health and source observations, archive receipt/storage, service jobs, backup completion and git state. Record only durable findings/actions. Stay quiet when unchanged; notify meaningful failures, completed deliverables or decisions needing input. Pause the project heartbeat at window expiry or user return.
+
+## Check — 2026-10-05 22:30 Asia/Bangkok
+
+Local and public health HTTP 200, 2.4.70, 21/21 sources current, no source failures. Server/tunnel remain running; hourly watchdog receipt 30 minutes old. Archive storage available and receipt 7.3 hours old, not stale; latest scheduled backup remains today's successful 03:19 run. No restart or forced provider fetch justified. Working tree was clean. Bounded alert/reliability regression audit: 23 + 23 behavioral checks passed using isolated tests, no live notification delivery. No code or schedule changes.
