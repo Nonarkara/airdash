@@ -46,3 +46,7 @@ Local/public health HTTP 200, 2.4.70, 21/21 sources current without failures. Se
 ## Check — 2026-10-07 02:34 Asia/Bangkok
 
 Local/public health HTTP 200, now 2.4.71 after the user-requested outage-integrity release (see RELEASE-AUDIT-2.4.71.md). All 21 sources current without failures. Server/tunnel stable; watchdog 35 minutes old. Archive advanced to 16934076, receipt 0.4 hours old, storage available. Backup next due today 03:17; yesterday's run completed normally. Working tree clean. Bounded continuation inspected the production edge-mirror diagnostic following namespace migration, without forced ingestion, fault injection or redundant regression reruns. Operational limits remain one live backend and no verified offsite recovery.
+
+## Check — 2026-10-07 06:34 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, all 21 sources current, no failures. Server/tunnel stable; watchdog 34 minutes old. Archive advanced to 16960905, receipt 1.5 hours old, storage available. Today's backup completed 03:20:13 Bangkok, offdevice/staged, compressed copy 150,498,071 bytes. Bounded backup audit: gzip integrity check of data/backups/airdash-latest.db.gz exited 0; this verifies compressed-stream integrity, not a SQLite restore or offsite survivability. Working tree initially clean. No repair, restart, duplicate backup or deployment justified.
