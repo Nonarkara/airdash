@@ -42,3 +42,7 @@ Local/public health HTTP 200, 2.4.70, all 21 sources current without failures. S
 ## Check — 2026-10-06 22:34 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.70, 21/21 sources current without failures. Server/tunnel stable; watchdog 34 minutes old. Archive receipt 7.4 hours old, not stale, storage available; daily backup remains successful. Working tree clean. Bounded knowledge audit: reviewed content-hash skipping of unchanged embedded chunks and model-identity invalidation; isolated knowledge-chunking regression checks passed. Existing daily indexing retained; no embedding calls, new training workload, forced ingestion, repair or release initiated.
+
+## Check — 2026-10-07 02:34 Asia/Bangkok
+
+Local/public health HTTP 200, now 2.4.71 after the user-requested outage-integrity release (see RELEASE-AUDIT-2.4.71.md). All 21 sources current without failures. Server/tunnel stable; watchdog 35 minutes old. Archive advanced to 16934076, receipt 0.4 hours old, storage available. Backup next due today 03:17; yesterday's run completed normally. Working tree clean. Bounded continuation inspected the production edge-mirror diagnostic following namespace migration, without forced ingestion, fault injection or redundant regression reruns. Operational limits remain one live backend and no verified offsite recovery.
