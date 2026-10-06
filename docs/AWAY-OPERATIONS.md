@@ -30,3 +30,7 @@ Local/public health HTTP 200, 21/21 sources current, no source failures. Server/
 ## Check — 2026-10-06 10:31 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.70, 21/21 sources current, no failures. Server/tunnel running; watchdog 32 minutes old. Archive receipt 5.3 hours old, not stale, external storage available; today's 03:19:54 backup remains successful. Working tree clean. Bounded camera audit: camera-haze 17/17 and METAR visibility 59/59 isolated checks passed, including withheld low-light/blank/frozen/changed-view frames, distinct baseline samples, exposure-only rejection and instrument parsing. These checks do not certify live camera reachability or calibrated PM2.5 estimation. No repair, restart, forced fetch, release or schedule changes.
+
+## Check — 2026-10-06 14:32 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.70, 21/21 sources current, no source failures. Server/tunnel stable; watchdog 33 minutes old. Archive advanced to 16808826 (49,293 readings since the preceding check), receipt 3.4 hours old, storage available. Today's backup remains completed. Working tree clean. Bounded frontend audit: interaction and header-layout regression checks completed successfully; these are isolated behavior/CSS checks, not a new live browser width sweep. No repair, restart, provider fetch, deployment or schedule changes justified.
