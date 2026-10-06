@@ -38,3 +38,7 @@ Local/public health HTTP 200, 2.4.70, 21/21 sources current, no source failures.
 ## Check — 2026-10-06 18:32 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.70, all 21 sources current without failures. Server/tunnel stable; watchdog 32 minutes old. Archive advanced to 16838077, receipt 3.4 hours old and not stale; storage available, today's backup completed. Working tree clean. Bounded quota audit: 10/10 isolated breaker checks passed, covering daily-quota detection, host-scoped cooldowns, bounded duration and distinguishing ordinary rate limits. No real provider calls or live-process quota state changes. No repair, restart, deployment or schedule changes justified.
+
+## Check — 2026-10-06 22:34 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.70, 21/21 sources current without failures. Server/tunnel stable; watchdog 34 minutes old. Archive receipt 7.4 hours old, not stale, storage available; daily backup remains successful. Working tree clean. Bounded knowledge audit: reviewed content-hash skipping of unchanged embedded chunks and model-identity invalidation; isolated knowledge-chunking regression checks passed. Existing daily indexing retained; no embedding calls, new training workload, forced ingestion, repair or release initiated.
