@@ -1,13 +1,13 @@
-import { containDialog } from './dialogFocus.js?v=2.4.70'
+import { containDialog } from './dialogFocus.js?v=2.4.71'
 let releaseDialogFocus
 // The Window. One place at a time: the camera that faces it, what people
 // reported, and the headline that names it. The filmstrip swaps the place.
 // Only the place on the glass plays video — a wall of streams starves the
 // small servers these cameras live on.
-import { tr } from './i18n.js?v=2.4.70'
-import { escapeHtml, ago } from './fmt.js?v=2.4.70'
-import { pm25Color } from './paint.js?v=2.4.70'
-import { BAND_LABEL, playerHtml, startVideos, stopVideos, visionChipHtml, NOT_OFFICIAL } from './layers/cctvPlayer.js?v=2.4.70'
+import { tr } from './i18n.js?v=2.4.71'
+import { escapeHtml, ago } from './fmt.js?v=2.4.71'
+import { pm25Color } from './paint.js?v=2.4.71'
+import { BAND_LABEL, playerHtml, startVideos, stopVideos, visionChipHtml, NOT_OFFICIAL } from './layers/cctvPlayer.js?v=2.4.71'
 
 const CLAIM = {
   smoke: { th: 'ควันไฟ', en: 'fire smoke' },

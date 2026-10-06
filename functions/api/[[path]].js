@@ -91,7 +91,8 @@ function mirrorKey(url) {
   // the one canonical copy the outage fallback depends on. mirrorReport()
   // already looked keys up pathname-only, so query-string entries were
   // also invisible to the diagnostic.
-  return new Request(new URL('/__mirror__' + url.pathname, url.origin).toString())
+  // New namespace discards older entries that filtered requests could poison.
+  return new Request(new URL('/__mirror_v2__' + url.pathname, url.origin).toString())
 }
 
 async function storeMirror(cache, key, upstream) {
@@ -152,7 +153,10 @@ export async function onRequest(context) {
   const download = request.method === 'GET' && /^\/api\/(?:exports\/airdash-.*\.tar\.gz|export\/(?:full|daily)|sensors\/dead\.csv)$/.test(url.pathname)
   const snapshot = request.method === 'GET' && url.pathname === '/api/snapshot'
   const cache = context.cache ?? globalThis.caches?.default ?? null
-  const mirrorable = Boolean(cache && request.method === 'GET' && MIRROR_PATHS.has(url.pathname))
+  // Only canonical requests share the bounded pathname cache. Filtered series,
+  // province or station requests must never overwrite or receive another
+  // query's data during an outage.
+  const mirrorable = Boolean(cache && request.method === 'GET' && !url.search && MIRROR_PATHS.has(url.pathname))
   const timeoutMs = streaming ? STREAM_TIMEOUT_MS : snapshot ? SNAPSHOT_TIMEOUT_MS : JSON_TIMEOUT_MS
 
   const headers = new Headers(request.headers)

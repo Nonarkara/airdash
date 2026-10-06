@@ -373,4 +373,30 @@ for (const [channel, tick, notify] of [['telegram', tickTelegramPush, notifySubs
   })
 }
 
+await test('filtered requests cannot poison or consume canonical outage mirrors', async () => {
+  const originalFetch = globalThis.fetch
+  const entries = new Map()
+  const cache = {
+    match: async key => entries.get(key.url)?.clone(),
+    put: async (key, response) => { entries.set(key.url, response.clone()) },
+  }
+  const call = path => onRequest({ request: new Request('https://air.test' + path), cache })
+  try {
+    globalThis.fetch = async () => new Response('{"series":"national"}', { headers: { 'x-service': 'airdash' } })
+    await call('/api/series/daily')
+    assert.equal(entries.size, 1)
+    globalThis.fetch = async () => new Response('{"series":"province-50"}', { headers: { 'x-service': 'airdash' } })
+    await call('/api/series/daily?province=50')
+    assert.equal(entries.size, 1)
+    globalThis.fetch = async () => { throw new Error('offline') }
+    const canonical = await call('/api/series/daily')
+    assert.equal(canonical.status, 200)
+    assert.equal((await canonical.json()).series, 'national')
+    assert.equal((await call('/api/series/daily?province=50')).status, 502)
+    entries.clear()
+    entries.set('https://air.test/__mirror__/api/series/daily', new Response('{"series":"legacy-wrong-filter"}'))
+    assert.equal((await call('/api/series/daily')).status, 502)
+  } finally { globalThis.fetch = originalFetch }
+})
+
 console.log(`\n${passed} passed, 0 failed`)

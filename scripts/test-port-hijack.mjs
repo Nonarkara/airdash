@@ -54,7 +54,7 @@ class MemCache {
   async put(req, res) { this.store.set(req.url, res) }
 }
 const ORIGIN = 'https://air.nonarkara.org'
-const MIRROR_URL = (p) => `${ORIGIN}/__mirror__${p}`
+const MIRROR_URL = (p) => `${ORIGIN}/__mirror_v2__${p}`
 const seedMirror = (cache, path, body) => cache.store.set(MIRROR_URL(path), new Response(body, {
   status: 200,
   headers: { 'content-type': 'application/json', 'x-airdash-mirror-at': String(Date.now() - 120_000) },

@@ -1,9 +1,9 @@
 // Ask-AI panel: streams answers from the local gemma4:e4b via the server's
 // RAG endpoint. When the model is offline the server returns a structured live
 // summary — shown honestly as data, not generated prose.
-import { store, on } from '../state.js?v=2.4.70'
-import { tr } from '../i18n.js?v=2.4.70'
-import { el, escapeHtml } from '../fmt.js?v=2.4.70'
+import { store, on } from '../state.js?v=2.4.71'
+import { tr } from '../i18n.js?v=2.4.71'
+import { el, escapeHtml } from '../fmt.js?v=2.4.71'
 
 export function initChat() {
   const form = document.getElementById('chat-form')

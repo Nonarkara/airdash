@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 
+## [2.4.71] — 2026-10-07
+
+- Outage mirrors now accept only canonical requests without query parameters. Filtered requests cannot overwrite or consume a different selection's cached data.
+- New mirror namespace discards older entries that may have mixed filtered and canonical responses. Parameterized reads return explicit unavailability during an outage rather than unrelated data.
+- Behavioral regression verifies canonical fallback, filtered cache isolation, bounded entry count and rejection of legacy entries.
+
 ## [2.4.70] — 2026-10-04
 
 - Recovered backend hardening: PM2.5 warnings escalate when readings gradually cross 75; Telegram `/start` restores stopped subscriptions; bot authentication failures preserve subscribers.
