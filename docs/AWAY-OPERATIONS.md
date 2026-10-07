@@ -50,3 +50,7 @@ Local/public health HTTP 200, now 2.4.71 after the user-requested outage-integri
 ## Check — 2026-10-07 06:34 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, all 21 sources current, no failures. Server/tunnel stable; watchdog 34 minutes old. Archive advanced to 16960905, receipt 1.5 hours old, storage available. Today's backup completed 03:20:13 Bangkok, offdevice/staged, compressed copy 150,498,071 bytes. Bounded backup audit: gzip integrity check of data/backups/airdash-latest.db.gz exited 0; this verifies compressed-stream integrity, not a SQLite restore or offsite survivability. Working tree initially clean. No repair, restart, duplicate backup or deployment justified.
+
+## Check — 2026-10-07 10:34 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, all 21 pipelines current without recorded failures. Server/tunnel stable; watchdog 35 minutes old. Archive receipt 5.5 hours old, not stale, storage available; today's backup remains completed. Public snapshot HTTP 200, marked live. Working tree initially clean. Bounded security audit: isolated webhook-auth regression completed successfully, preserving fail-closed verification before subscription writes; no production webhook or citizen messages sent. No fault repair, restart, forced ingestion, deployment or schedule changes justified.
