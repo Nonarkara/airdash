@@ -62,3 +62,7 @@ Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. 
 ## Check — 2026-10-07 18:35 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 36 minutes old. Archive advanced to 17043733, receipt 3.5 hours old, storage available; today's backup completed. Working tree initially clean. Bounded read-only audit reviewed weekly export scheduling and single-build guard: existing Sunday 02:00 host-local timer retained, with background build state; no duplicate export triggered. No repeated regression suite, provider fetch, repair, restart, deployment or schedule changes justified.
+
+## Check — 2026-10-07 22:35 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, all 21 pipelines current without failures. Server/tunnel stable; watchdog 36 minutes old. Archive receipt 7.5 hours old, not stale, storage available; today's backup completed. Working tree initially clean. Bounded retention review confirmed hot-tier deletion is gated on receipt presence, receipt/live-id consistency and accessible external archive storage, then limited to archived IDs inside the retention window. No live deletion or duplicate retention run initiated. No repair, restart, repeated tests, release or schedule changes justified.
