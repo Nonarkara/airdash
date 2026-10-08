@@ -70,3 +70,7 @@ Local/public health HTTP 200, 2.4.71, all 21 pipelines current without failures.
 ## Check — 2026-10-08 02:36 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 37 minutes old. Archive advanced to 17147452 (103,719 readings since the prior check), receipt 0.3 hours old, storage available. Backup next due 03:17; previous daily run completed. Working tree initially clean. Bounded scheduler review confirmed expired ingestion runs cannot overwrite replacement-run state and quota failures park rather than trigger a retry storm. No source run, test rerun, repair, restart, release or duplicate schedule initiated.
+
+## Check — 2026-10-08 11:07 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 7 minutes old. Archive advanced to 17173706, receipt 6 hours old, not stale, storage available. Today's scheduled backup completed 03:19:14 Bangkok, compressed copy 152,470,199 bytes. Working tree initially clean. Bounded frontend recovery review confirmed SSE reconnection closes the previous socket, requests state resync after reconnect, and restores a silent connection when the page becomes visible. No fault repair, restart, repeat test suite, provider fetch, deployment or schedule changes justified.
