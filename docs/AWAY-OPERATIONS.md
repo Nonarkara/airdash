@@ -78,3 +78,7 @@ Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. 
 ## Check — 2026-10-08 15:08 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, all 21 pipelines current without failures. Server/tunnel stable; watchdog 8 minutes old. Archive advanced to 17264497 (90,791 readings since the prior check), receipt age rounded to 0 hours, storage available. Today's backup remains completed. Working tree initially clean. Bounded streaming review confirmed server event replay ring is limited by configured tapRingSize and disconnected clients are removed on close/write exceptions; no claim of a new slow-client load test. No fault repair, restart, regression rerun, provider fetch, release or schedule changes justified.
+
+## Check — 2026-10-08 19:10 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 10 minutes old. Archive receipt 4.1 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. Bounded camera-resource review confirmed the existing 240-camera cycle ceiling, rotating fallback batches, URL deduplication and 15-second frame-grab timeout. No camera probes or model work added. No repair, restart, repeated tests, release or schedule changes justified.
