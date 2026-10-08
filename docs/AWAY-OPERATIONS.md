@@ -74,3 +74,7 @@ Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. 
 ## Check — 2026-10-08 11:07 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 7 minutes old. Archive advanced to 17173706, receipt 6 hours old, not stale, storage available. Today's scheduled backup completed 03:19:14 Bangkok, compressed copy 152,470,199 bytes. Working tree initially clean. Bounded frontend recovery review confirmed SSE reconnection closes the previous socket, requests state resync after reconnect, and restores a silent connection when the page becomes visible. No fault repair, restart, repeat test suite, provider fetch, deployment or schedule changes justified.
+
+## Check — 2026-10-08 15:08 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, all 21 pipelines current without failures. Server/tunnel stable; watchdog 8 minutes old. Archive advanced to 17264497 (90,791 readings since the prior check), receipt age rounded to 0 hours, storage available. Today's backup remains completed. Working tree initially clean. Bounded streaming review confirmed server event replay ring is limited by configured tapRingSize and disconnected clients are removed on close/write exceptions; no claim of a new slow-client load test. No fault repair, restart, regression rerun, provider fetch, release or schedule changes justified.
