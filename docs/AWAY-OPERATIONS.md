@@ -82,3 +82,7 @@ Local/public health HTTP 200, 2.4.71, all 21 pipelines current without failures.
 ## Check — 2026-10-08 19:10 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 10 minutes old. Archive receipt 4.1 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. Bounded camera-resource review confirmed the existing 240-camera cycle ceiling, rotating fallback batches, URL deduplication and 15-second frame-grab timeout. No camera probes or model work added. No repair, restart, repeated tests, release or schedule changes justified.
+
+## Check — 2026-10-08 23:10 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 11 minutes old. Archive receipt 8.1 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. Bounded rate-limit review confirmed per-route/per-client buckets reset at window expiry and stale entries are swept every five minutes with an unreferenced timer. This is source review, not distributed traffic/load certification. No repair, restart, repeated tests, new provider calls, deployment or schedule changes justified.
