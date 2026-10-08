@@ -86,3 +86,7 @@ Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. 
 ## Check — 2026-10-08 23:10 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 11 minutes old. Archive receipt 8.1 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. Bounded rate-limit review confirmed per-route/per-client buckets reset at window expiry and stale entries are swept every five minutes with an unreferenced timer. This is source review, not distributed traffic/load certification. No repair, restart, repeated tests, new provider calls, deployment or schedule changes justified.
+
+## Check — 2026-10-09 03:11 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, data_ok true; 20/21 source status current after one twin_flood timeout at 03:04. A single diagnostic GET to the local FloodDash twin returned HTTP 200, correct identity, 77 provinces and a current update timestamp. Leave the existing scheduler's bounded backoff to recover; no forced ingest or service restart justified. Server/tunnel stable; watchdog 14 minutes old. Archive advanced to 17365275, receipt 0.9 hours old, external storage available. Last completed backup is October 8 03:19; today's 03:17 job is not yet due. Working tree initially clean. Bounded scheduler review confirmed transient failures schedule exponential backoff and successful runs reset failure state. No deployment, provider/model calls or schedule changes.
