@@ -106,3 +106,7 @@ Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. 
 ## Check — 2026-10-09 19:12 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 13 minutes old. Archive receipt 4 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. Follow-up daily-series input review found that clamp accepts fractional day values, so the cache's day-key space is not limited to 90 integer choices. A future bounded hardening change should normalize this route to integer days and verify cache behavior before shipping; no adversarial aggregate requests were sent to the live synchronous database. No observed outage, restart, deployment, extra provider calls or schedule changes.
+
+## Check — 2026-10-09 23:13 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 14 minutes old. Archive receipt 8.1 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. Bounded follow-up review confirmed the daily-series route has the HTTP layer's general 300 requests/minute/client backstop, but no dedicated aggregate-query limiter. This does not resolve the fractional cache-key finding recorded above; integer normalization remains a pending hardening item. No live load probes, repair, restart, deployment, provider calls or schedule changes.
