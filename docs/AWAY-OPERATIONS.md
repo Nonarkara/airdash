@@ -110,3 +110,7 @@ Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. 
 ## Check — 2026-10-09 23:13 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 14 minutes old. Archive receipt 8.1 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. Bounded follow-up review confirmed the daily-series route has the HTTP layer's general 300 requests/minute/client backstop, but no dedicated aggregate-query limiter. This does not resolve the fractional cache-key finding recorded above; integer normalization remains a pending hardening item. No live load probes, repair, restart, deployment, provider calls or schedule changes.
+
+## Check — 2026-10-10 03:13 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 14 minutes old. Archive advanced to 17586667, receipt 1 hour old, external storage available. Last backup completed October 9 03:19; today's 03:17 run is not yet due. Working tree initially clean. Bounded archive-storage review confirmed asynchronous stat probes with a three-second deadline, distinct-device validation against the internal database, archive-file/device checks and timer cleanup. Receipt freshness and mounted-storage availability remain separate health fields. No repair, restart, deployment, repeated tests, extra provider calls or schedule changes justified.
