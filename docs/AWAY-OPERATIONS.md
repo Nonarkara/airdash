@@ -94,3 +94,7 @@ Local/public health HTTP 200, 2.4.71, data_ok true; 20/21 source status current 
 ## Check — 2026-10-09 07:11 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures; the prior twin_flood timeout recovered through normal scheduling (latest successful ingest 07:03, 77 provinces). Server/tunnel stable; watchdog 12 minutes old. Archive advanced to 17391701, receipt 2 hours old, external storage available. Today's backup completed 03:19:35, compressed copy 154209670 bytes. Working tree initially clean. Bounded fetch-policy review confirmed per-attempt abort deadlines, at most three retries, capped Retry-After waits and terminal daily-quota exhaustion handling. No repair, restart, repeated tests, extra provider calls, deployment or schedule changes justified.
+
+## Check — 2026-10-09 11:11 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 13 minutes old. Archive advanced to 17447197, receipt 0.1 hours old, external storage available; today's backup completed 03:19:35. Working tree initially clean. Bounded process-lifecycle review confirmed fatal exceptions/rejections exit for launchd recovery. Signal handling calls server.close then exits immediately; this is crash-only operation, not a verified graceful drain of in-flight requests. No observed service fault or restart justified; no deployment, repeated tests, extra provider calls or schedule changes.
