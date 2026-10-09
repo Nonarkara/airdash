@@ -102,3 +102,7 @@ Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. 
 ## Check — 2026-10-09 15:12 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 13 minutes old. Archive advanced to 17484347, receipt freshly updated, external storage available; today's backup completed 03:19:35. Working tree initially clean. Bounded daily-series source review confirmed cache reuse for matching day selections within the 30-minute TTL, with queries limited to the selected date range. No expensive aggregate request or load test performed. No observed fault, repair, restart, deployment, extra provider calls or schedule changes justified.
+
+## Check — 2026-10-09 19:12 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 13 minutes old. Archive receipt 4 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. Follow-up daily-series input review found that clamp accepts fractional day values, so the cache's day-key space is not limited to 90 integer choices. A future bounded hardening change should normalize this route to integer days and verify cache behavior before shipping; no adversarial aggregate requests were sent to the live synchronous database. No observed outage, restart, deployment, extra provider calls or schedule changes.
