@@ -98,3 +98,7 @@ Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures; 
 ## Check — 2026-10-09 11:11 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 13 minutes old. Archive advanced to 17447197, receipt 0.1 hours old, external storage available; today's backup completed 03:19:35. Working tree initially clean. Bounded process-lifecycle review confirmed fatal exceptions/rejections exit for launchd recovery. Signal handling calls server.close then exits immediately; this is crash-only operation, not a verified graceful drain of in-flight requests. No observed service fault or restart justified; no deployment, repeated tests, extra provider calls or schedule changes.
+
+## Check — 2026-10-09 15:12 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 13 minutes old. Archive advanced to 17484347, receipt freshly updated, external storage available; today's backup completed 03:19:35. Working tree initially clean. Bounded daily-series source review confirmed cache reuse for matching day selections within the 30-minute TTL, with queries limited to the selected date range. No expensive aggregate request or load test performed. No observed fault, repair, restart, deployment, extra provider calls or schedule changes justified.
