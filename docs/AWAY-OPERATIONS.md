@@ -126,3 +126,7 @@ Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. 
 ## Check — 2026-10-10 15:14 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 15 minutes old. Archive advanced to 17705525, receipt 0.1 hours old, external storage available; today's backup completed. Working tree initially clean. Bounded missing-noise scoring review confirmed absent/non-finite noise contributes no amplifier while the exported noise measurement remains null; missing PM still yields a null score and unknown band. Absence of an amplifier is not evidence of quiet conditions. No repair, restart, deployment, repeated tests, upstream calls or schedule changes justified.
+
+## Check — 2026-10-10 19:15 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 16 minutes old. Archive receipt 4.1 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. Bounded frontend noise review confirmed detail rows handle null noise separately, while header and ranking text only include measured noise when present. This was source inspection, not a fresh browser interaction audit. No observed fault, repair, restart, deployment, repeated tests, extra upstream calls or schedule changes justified.
