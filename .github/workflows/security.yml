@@ -1,0 +1,349 @@
+# Report-only security scan. Findings are uploaded to code scanning and
+# written to the job summary. They do not fail this workflow.
+name: Security
+
+on:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly, Monday 06:17 UTC.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Semgrep and Trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Semgrep OSS
+        id: semgrep
+        run: |
+          set +e
+          docker run --rm --platform linux/amd64 \
+            -v "${GITHUB_WORKSPACE}:/src:ro" \
+            -v "${RUNNER_TEMP}:/out" \
+            -w /src \
+            --entrypoint semgrep \
+            semgrep/semgrep@sha256:529ee8a277ec8adc5b534d7c74eea0a47e9de21d62852b6ba7ac6ba9566845c3 \
+            scan \
+            --config p/javascript \
+            --config p/secrets \
+            --config p/github-actions \
+            --metrics=off \
+            --disable-version-check \
+            --quiet \
+            --sarif \
+            --output /out/semgrep.sarif
+          status=$?
+          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
+          # 0 = no findings, 1 = findings. Either way this step succeeds.
+          exit 0
+
+      - name: Trivy filesystem scan
+        id: trivy
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          format: sarif
+          output: ${{ runner.temp }}/trivy.sarif
+          exit-code: "0"
+          cache: "false"
+          hide-progress: "true"
+        env:
+          TRIVY_SKIP_VERSION_CHECK: "true"
+
+      - name: Summarize findings
+        if: always()
+        env:
+          SEMGREP_SARIF: ${{ runner.temp }}/semgrep.sarif
+          TRIVY_SARIF: ${{ runner.temp }}/trivy.sarif
+          SEMGREP_EXIT: ${{ steps.semgrep.outputs.exit_code }}
+          TRIVY_OUTCOME: ${{ steps.trivy.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from urllib.parse import unquote
+
+          SEVERITIES = ("critical", "high", "medium", "low", "unknown")
+          LEVEL_MAP = {"error": "high", "warning": "medium", "note": "low", "none": "unknown"}
+          REDACTED = "Potential secret detected. Value redacted."
+          TOP_LIMIT = 20
+          SECRET_NEEDLES = (
+              "secret",
+              "credential",
+              "private-key",
+              "private_key",
+              "password",
+              "api-key",
+              "api_key",
+          )
+
+          def tags_of(obj):
+              props = (obj or {}).get("properties") or {}
+              return [str(tag) for tag in (props.get("tags") or [])]
+
+          def is_secret(rule_id, rule):
+              lowered = (rule_id or "").lower()
+              tag_values = [tag.lower() for tag in tags_of(rule)]
+              if any(tag in {"secret", "secrets"} for tag in tag_values):
+                  return True
+              if any("cwe-798" in tag for tag in tag_values):
+                  return True
+              if str((rule or {}).get("name") or "").lower() == "secret":
+                  return True
+              return any(needle in lowered for needle in SECRET_NEEDLES)
+
+          def severity_of(result, rule):
+              for source in (result, rule):
+                  for tag in tags_of(source):
+                      if tag.lower() in SEVERITIES:
+                          return tag.lower()
+              for source in (result, rule):
+                  raw = ((source or {}).get("properties") or {}).get("security-severity")
+                  if raw is None:
+                      continue
+                  if isinstance(raw, str) and raw.lower() in SEVERITIES:
+                      return raw.lower()
+                  try:
+                      score = float(raw)
+                  except (TypeError, ValueError):
+                      continue
+                  if score >= 9.0:
+                      return "critical"
+                  if score >= 7.0:
+                      return "high"
+                  if score >= 4.0:
+                      return "medium"
+                  if score > 0:
+                      return "low"
+              level = result.get("level") or ((rule or {}).get("defaultConfiguration") or {}).get("level") or "none"
+              return LEVEL_MAP.get(str(level).lower(), "unknown")
+
+          def location_of(result):
+              locations = result.get("locations") or []
+              if not locations:
+                  return "unknown", 0
+              physical = (locations[0].get("physicalLocation") or {})
+              artifact = physical.get("artifactLocation") or {}
+              uri = unquote(str(artifact.get("uri") or "unknown"))
+              for prefix in ("file:///workspace/", "/workspace/", "file://"):
+                  if uri.startswith(prefix):
+                      uri = uri[len(prefix):]
+                      break
+              if uri.startswith("./"):
+                  uri = uri[2:]
+              line = (physical.get("region") or {}).get("startLine") or 0
+              return uri, line
+
+          def code(text):
+              return "`" + str(text).replace("`", "'") + "`"
+
+          def short_message(result):
+              text = ((result.get("message") or {}).get("text") or "").replace("\n", " ")
+              text = " ".join(text.split())
+              if not text or "Match:" in text:
+                  return ""
+              if len(text) > 220:
+                  text = text[:217] + "..."
+              return text.replace("`", "'")
+
+          def redact_text_object(obj):
+              if isinstance(obj, dict):
+                  obj["text"] = REDACTED
+                  obj.pop("markdown", None)
+
+          def strip_snippets(location):
+              if not isinstance(location, dict):
+                  return
+              physical = location.get("physicalLocation")
+              if isinstance(physical, dict):
+                  for key in ("region", "contextRegion"):
+                      region = physical.get(key)
+                      if isinstance(region, dict):
+                          region.pop("snippet", None)
+              redact_text_object(location.get("message"))
+
+          def redact(data):
+              for run in data.get("runs") or []:
+                  driver = ((run.get("tool") or {}).get("driver") or {})
+                  rules = driver.get("rules") or []
+                  rules_by_id = {rule.get("id"): rule for rule in rules}
+                  secret_ids = set()
+                  for rule in rules:
+                      if not is_secret(rule.get("id"), rule):
+                          continue
+                      secret_ids.add(rule.get("id"))
+                      rule.pop("fullDescription", None)
+                      redact_text_object(rule.get("help"))
+                      short = rule.get("shortDescription")
+                      if isinstance(short, dict):
+                          text = short.get("text") or ""
+                          if "\n" in text or len(text) > 180:
+                              redact_text_object(short)
+                  for result in run.get("results") or []:
+                      rule_id = result.get("ruleId")
+                      if rule_id not in secret_ids and not is_secret(rule_id, rules_by_id.get(rule_id) or {}):
+                          continue
+                      message = result.get("message")
+                      if isinstance(message, dict):
+                          redact_text_object(message)
+                      else:
+                          result["message"] = {"text": REDACTED}
+                      for location in result.get("locations") or []:
+                          strip_snippets(location)
+                      for location in result.get("relatedLocations") or []:
+                          strip_snippets(location)
+                      props = result.get("properties") or {}
+                      kept = {}
+                      if "tags" in props:
+                          kept["tags"] = props["tags"]
+                      if "security-severity" in props:
+                          kept["security-severity"] = props["security-severity"]
+                      result["properties"] = kept
+              return data
+
+          def load_sarif(path):
+              file_path = Path(path)
+              if not path or not file_path.is_file() or file_path.stat().st_size == 0:
+                  return None, "no SARIF file"
+              try:
+                  data = json.loads(file_path.read_text(encoding="utf-8"))
+              except json.JSONDecodeError as exc:
+                  return None, f"SARIF was not valid JSON ({exc})"
+              if not isinstance(data, dict) or not isinstance(data.get("runs"), list):
+                  return None, "SARIF has no runs"
+              return data, ""
+
+          def summarize(title, data, status_line):
+              lines = [f"### {title}", "", status_line, ""]
+              if data is None:
+                  lines.append("No results to summarize.")
+                  lines.append("")
+                  return lines, 0
+              counts = {name: 0 for name in SEVERITIES}
+              ranked = []
+              secrets = []
+              for run in data.get("runs") or []:
+                  driver = ((run.get("tool") or {}).get("driver") or {})
+                  rules_by_id = {rule.get("id"): rule for rule in (driver.get("rules") or [])}
+                  for result in run.get("results") or []:
+                      rule = rules_by_id.get(result.get("ruleId") or "") or {}
+                      rule_id = result.get("ruleId") or "unknown-rule"
+                      sev = severity_of(result, rule)
+                      counts[sev] = counts.get(sev, 0) + 1
+                      uri, line_no = location_of(result)
+                      secret = is_secret(rule_id, rule)
+                      item = (sev, uri, line_no, rule_id, secret, "" if secret else short_message(result))
+                      if secret:
+                          secrets.append(item)
+                      if sev in {"critical", "high"}:
+                          ranked.append(item)
+              lines.append("| Severity | Count |")
+              lines.append("| --- | ---: |")
+              for name in SEVERITIES:
+                  lines.append(f"| {name} | {counts[name]} |")
+              lines.append("")
+              ranked.sort(key=lambda item: (0 if item[0] == "critical" else 1, item[1], item[2], item[3]))
+              lines.append("#### Critical and high")
+              lines.append("")
+              if not ranked:
+                  lines.append("None.")
+              else:
+                  shown = ranked[:TOP_LIMIT]
+                  for sev, uri, line_no, rule_id, secret, message in shown:
+                      lines.append(f"- {code(f'{uri}:{line_no}')} {code(rule_id)} ({sev})")
+                      if message and not secret:
+                          lines.append(f"  - {message}")
+                  if len(ranked) > TOP_LIMIT:
+                      lines.append(f"- {len(ranked) - TOP_LIMIT} more critical/high findings omitted.")
+              lines.append("")
+              lines.append("#### Secrets")
+              lines.append("")
+              lines.append("File, line, and rule only. Values are not printed.")
+              lines.append("")
+              if not secrets:
+                  lines.append("None.")
+              else:
+                  secrets.sort(key=lambda item: (item[1], item[2], item[3]))
+                  for _sev, uri, line_no, rule_id, _secret, _message in secrets[:TOP_LIMIT]:
+                      lines.append(f"- {code(f'{uri}:{line_no}')} {code(rule_id)}")
+                  if len(secrets) > TOP_LIMIT:
+                      lines.append(f"- {len(secrets) - TOP_LIMIT} more secret findings omitted.")
+              lines.append("")
+              return lines, len(secrets)
+
+          semgrep_data, semgrep_error = load_sarif(os.environ.get("SEMGREP_SARIF", ""))
+          trivy_data, trivy_error = load_sarif(os.environ.get("TRIVY_SARIF", ""))
+          semgrep_exit = os.environ.get("SEMGREP_EXIT") or "unknown"
+          trivy_outcome = os.environ.get("TRIVY_OUTCOME") or "unknown"
+
+          if semgrep_error:
+              semgrep_status = f"Semgrep exit code {semgrep_exit}. {semgrep_error}."
+          elif semgrep_exit == "1":
+              semgrep_status = "Semgrep exit code 1 (findings reported; this does not fail the job)."
+          elif semgrep_exit == "0":
+              semgrep_status = "Semgrep exit code 0."
+          else:
+              semgrep_status = f"Semgrep exit code {semgrep_exit}. SARIF was still parsed."
+
+          if trivy_error:
+              trivy_status = f"Trivy step outcome: {trivy_outcome}. {trivy_error}."
+          else:
+              trivy_status = f"Trivy step outcome: {trivy_outcome}. Exit code is forced to 0."
+
+          summary = [
+              "## Security scan (report only)",
+              "",
+              "Findings do not fail this job. Secret values are never written here.",
+              "",
+          ]
+          semgrep_lines, _ = summarize("Semgrep OSS", semgrep_data, semgrep_status)
+          trivy_lines, _ = summarize(
+              "Trivy filesystem (vuln, secret, misconfig)",
+              trivy_data,
+              trivy_status,
+          )
+          summary.extend(semgrep_lines)
+          summary.extend(trivy_lines)
+          text = "\n".join(summary).rstrip() + "\n"
+          print(text)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write(text)
+
+          workspace = Path(os.environ["GITHUB_WORKSPACE"])
+          for name, data in (("semgrep.sarif", semgrep_data), ("trivy.sarif", trivy_data)):
+              if data is None:
+                  continue
+              redacted = redact(json.loads(json.dumps(data)))
+              (workspace / name).write_text(json.dumps(redacted), encoding="utf-8")
+          PY
+
+      - name: Upload Semgrep SARIF
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+      - name: Upload Trivy SARIF
+        if: always() && hashFiles('trivy.sarif') != ''
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
