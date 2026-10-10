@@ -130,3 +130,7 @@ Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. 
 ## Check — 2026-10-10 19:15 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 16 minutes old. Archive receipt 4.1 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. Bounded frontend noise review confirmed detail rows handle null noise separately, while header and ranking text only include measured noise when present. This was source inspection, not a fresh browser interaction audit. No observed fault, repair, restart, deployment, repeated tests, extra upstream calls or schedule changes justified.
+
+## Check — 2026-10-10 23:15 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, data_ok true; 20/21 pipeline status current after the news run hit its ten-minute ceiling at 23:04. Previous news ingest succeeded 22:22 (100 seen); the existing scheduler reset running state and scheduled backoff. Bounded diagnosis confirmed feed fetches run with Promise.allSettled and the scheduler ignores late completion for state ownership after expiry; this does not cancel an expired source's underlying work. No extra feed probes or forced ingest. Server/tunnel stable; watchdog 16 minutes old. Archive receipt 8.1 hours old, not stale, external storage available; today's backup completed. Working tree initially clean. No service restart, deployment or schedule changes justified; check normal news recovery next heartbeat.
