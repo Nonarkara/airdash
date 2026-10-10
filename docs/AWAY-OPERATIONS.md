@@ -122,3 +122,7 @@ Local/public health HTTP 200, 2.4.71, data_ok true; 20/21 pipelines current afte
 ## Check — 2026-10-10 11:14 Asia/Bangkok
 
 Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. The pcd_noise transport failure recovered normally; latest successful poll 10:53 had zero readings, so this is transport recovery rather than restored noise coverage. Server/tunnel stable; watchdog 14 minutes old. Archive advanced to 17668149, receipt 0.1 hours old, external storage available; today's backup completed. Working tree initially clean. Bounded scoring review confirmed the noise component reads observations within its 30-hour cutoff rather than treating a successful source poll as new measurements. No repair, restart, deployment, repeated tests, extra upstream calls or schedule changes justified.
+
+## Check — 2026-10-10 15:14 Asia/Bangkok
+
+Local/public health HTTP 200, 2.4.71, 21/21 pipelines current without failures. Server/tunnel stable; watchdog 15 minutes old. Archive advanced to 17705525, receipt 0.1 hours old, external storage available; today's backup completed. Working tree initially clean. Bounded missing-noise scoring review confirmed absent/non-finite noise contributes no amplifier while the exported noise measurement remains null; missing PM still yields a null score and unknown band. Absence of an amplifier is not evidence of quiet conditions. No repair, restart, deployment, repeated tests, upstream calls or schedule changes justified.
