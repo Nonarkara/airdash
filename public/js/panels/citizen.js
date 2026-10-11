@@ -1,4 +1,4 @@
-import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.72'
+import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.74'
 // Citizen-mode panel — what ordinary people need to see in 30 seconds.
 // Surfaces the four questions that matter during a dust episode:
 //   1. Am I safe right now?          → JMA verb at the top
@@ -16,19 +16,19 @@ import { readPreference, writePreference, removePreference } from '../preference
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.72'
-import { tr, BAND } from '../i18n.js?v=2.4.72'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.72'
-import { getJson } from '../cache.js?v=2.4.72'
-import { flyToProvince } from '../map.js?v=2.4.72'
-import { sharePlace, copyText } from '../share.js?v=2.4.72'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.72'
+import { on, store, emit } from '../state.js?v=2.4.74'
+import { tr, BAND } from '../i18n.js?v=2.4.74'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.74'
+import { getJson } from '../cache.js?v=2.4.74'
+import { flyToProvince } from '../map.js?v=2.4.74'
+import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.74'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.74'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare, renderNoiseTrends,
-} from './citizenLife.js?v=2.4.72'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.72'
+} from './citizenLife.js?v=2.4.74'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.74'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -85,7 +85,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.72').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.74').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -657,10 +657,12 @@ function nativeShareButton(province, band, score, live = null) {
         text: buildShareText(province, band, score, live),
         title: 'AirDash',
       })
-      if (state === 'copied') {
-        btn.textContent = tr('คัดลอกแล้ว ✓', 'Copied ✓')
-        setTimeout(() => { btn.textContent = tr('แชร์…', 'Share…') }, 2000)
-      }
+      // shareFeedback owns the flash for every caller, so a failed copy
+      // reports itself instead of leaving the button looking untouched.
+      shareFeedback(btn, state, {
+        copied: tr('คัดลอกแล้ว ✓', 'Copied ✓'),
+        failed: tr('คัดลอกไม่สำเร็จ ✕', 'Copy failed ✕'),
+      })
     }
   }, tr('แชร์…', 'Share…'))
   return btn

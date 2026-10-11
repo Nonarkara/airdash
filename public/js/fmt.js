@@ -1,5 +1,5 @@
 // Formatting: numbers, clocks, relative time — bilingual.
-import { store } from './state.js?v=2.4.72'
+import { store } from './state.js?v=2.4.74'
 
 export function fmtNum(v, digits = 1) {
   if (v === null || v === undefined || Number.isNaN(v)) return '—'
@@ -35,11 +35,7 @@ export function ago(ts) {
   return `${Math.round(s / 86400)}d ago`
 }
 
-/** PM/pollutant concentration with unit — bilingual µg/m³ suffix. */
-export function fmtUg(v, digits = 0) {
-  if (v === null || v === undefined || Number.isNaN(v)) return '—'
-  return `${fmtNum(v, digits)} ${store.lang === 'th' ? 'มคก./ลบ.ม.' : 'µg/m³'}`
-}
+
 
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 /** Station names ultimately come from government API responses, not our

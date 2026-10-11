@@ -366,19 +366,4 @@ function findAirAnomalies(db) {
   return { mismatches, spikes }
 }
 
-/** Province-level data-quality note for the risk payload / UI tooltips. */
-export function provinceQuality(db, provinceCode) {
-  const health = sensorHealth(db)
-  const p = health.by_province.find((x) => x.province_code === provinceCode)
-  if (!p) return null
-  const issues = []
-  if (p.stale) issues.push(`stale ${p.stale}`)
-  if (p.flatline) issues.push(`flatline ${p.flatline}`)
-  if (p.outlier) issues.push(`outlier ${p.outlier}`)
-  if (p.mismatch) issues.push(`mismatch ${p.mismatch}`)
-  return {
-    score: health.quality_score,
-    issues,
-    stale: p.stale, flatline: p.flatline, outlier: p.outlier, mismatch: p.mismatch,
-  }
-}
+

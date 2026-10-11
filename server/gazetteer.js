@@ -120,40 +120,6 @@ function loadMunicipalities() {
   return _municipalities
 }
 
-function trName(en, th, lang) {
-  return lang === 'th' ? th : (en ?? th ?? '—')
-}
-
-// Look up the display name of any entity by code.
-export function resolveName(code, kind, lang = 'en') {
-  if (kind === 'province') {
-    const p = loadProvinces().byCode.get(Number(code))
-    return p ? trName(p.provinceNameEn, p.provinceNameTh, lang) : null
-  }
-  if (kind === 'district') {
-    const d = loadDistricts().byCode.get(Number(code))
-    if (!d) return null
-    const p = loadProvinces().byCode.get(d.provinceCode)
-    return {
-      name: trName(d.districtNameEn, d.districtNameTh, lang),
-      province: p ? trName(p.provinceNameEn, p.provinceNameTh, lang) : null,
-    }
-  }
-  if (kind === 'tambon') {
-    const t = loadTambons().byCode.get(Number(code))
-    if (!t) return null
-    const d = loadDistricts().byCode.get(t.districtCode)
-    const p = loadProvinces().byCode.get(t.provinceCode)
-    return {
-      name: trName(t.subdistrictNameEn, t.subdistrictNameTh, lang),
-      district: d ? trName(d.districtNameEn, d.districtNameTh, lang) : null,
-      province: p ? trName(p.provinceNameEn, p.provinceNameTh, lang) : null,
-      postalCode: t.postalCode,
-    }
-  }
-  return null
-}
-
 // Generic substring search with prefix-boost. Returns at most `limit` rows.
 function searchList(rows, q, fields, limit) {
   const ql = q.toLowerCase()
@@ -794,7 +760,6 @@ export function lookupPlace(code, kind, lang = 'en') {
 // memoize; building the index walks the same data searchGazetteer uses so
 // what a /<name> URL resolves to matches what the search bar would pick.
 const _slugIndex = new Map()        // slug -> { kind, code }
-const _slugByRef = new Map()        // "kind:code" -> slug
 
 function buildSlugIndex() {
   if (_slugIndex.size > 0) return _slugIndex
@@ -807,7 +772,6 @@ function buildSlugIndex() {
     const slug = slugify(name)
     if (!slug) return
     if (!_slugIndex.has(slug)) _slugIndex.set(slug, { kind, code })
-    _slugByRef.set(`${kind}:${code}`, slug)
   }
   for (const p of loadProvinces().list) register('province', p.provinceCode, p.provinceNameEn)
   for (const d of loadDistricts().list) register('district', d.districtCode, d.districtNameEn)
@@ -824,9 +788,4 @@ export function resolvePlaceSlug(slug) {
   const place = lookupPlace(entry.code, entry.kind, 'en')
   if (!place) return null
   return { ...place, slug: String(slug).toLowerCase() }
-}
-
-export function slugFor(kind, code) {
-  buildSlugIndex()
-  return _slugByRef.get(`${kind}:${code}`) ?? null
 }

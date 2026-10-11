@@ -29,7 +29,7 @@ export function hydrateOnce(db) {
   } catch { /* an unreadable cache is just "unknown" until the next probe */ }
 }
 
-export function __resetForTests() { health = new Map(); hydrated = false; checkedAt = null }
+
 
 /** Overlay health on the catalog. Pure: returns new objects. */
 export function applyHealth(cams, healthMap, keyFn = keyOf) {

@@ -127,23 +127,6 @@ export function sortByPriority(cams) {
   })
 }
 
-/**
- * Pick the N closest cameras to (lat, lng) — used by /api/decision?
- * and the citizen card "nearest camera" surface. Distance is haversine
- * km; matches the threshold used elsewhere in the system (radius_km).
- */
-export function nearestCams(cams, lat, lng, { radius_km = 0, limit = 8 } = {}) {
-  const out = []
-  for (const c of cams) {
-    if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng)) continue
-    const km = Math.hypot((c.lat - lat) * 111, (c.lng - lng) * 104)
-    if (radius_km > 0 && km > radius_km) continue
-    out.push({ ...c, km: Math.round(km * 10) / 10 })
-  }
-  out.sort((a, b) => a.km - b.km)
-  return out.slice(0, Math.max(1, Math.min(50, Math.trunc(Number(limit) || 8))))
-}
-
 // ── Source registry ──────────────────────────────────────────────────────────
 // Each source has a stable id, a fetch() that returns { cams, fetched_at,
 // status } in its own native shape, plus label strings for the popup
@@ -168,7 +151,7 @@ let _cache = null
 let _cacheAt = 0
 const CACHE_MS = 5 * 60_000 // 5 min: GISTDA poll is 10 min; avoid hitting their origin per browser request
 
-export function __clearCacheForTests() { _cache = null; _cacheAt = 0 }
+
 
 /** Resolve and run every source's fetch(). A failing source contributes
  *  `{status: 'failed', error}`; the caller decides whether to surface

@@ -54,10 +54,13 @@ export const FRAME_BYTES = FRAME_W * FRAME_H * 3 // rgb24
 const SKY_ROWS = Math.round(FRAME_H * 0.28)
 const ROAD_ROWS = Math.round(FRAME_H * 0.22)
 
-// CIE / WMO contrast threshold: the fraction of inherent contrast a black
-// object retains when it is just barely visible. 5% is the meteorological
-// definition; we use it as the constant in Koschmieder.
-export const KOSCHMIEDER_C = 0.05
+// NOTE ON THE TRANSMITTANCE MODEL. There is no Koschmieder c constant here,
+// despite one having been declared at this spot for a while. darkChannel()
+// estimates transmittance logarithmically, as t = 1 - omega*(dark/I) with
+// omega = 0.95, and then averages log(t). That is a dark-channel/log-ATM
+// formulation; it is NOT the classical Koschmieder relation I = J0 * e^(-c*d).
+// The two are not interchangeable, so do not reintroduce c=0.05 expecting the
+// transmission numbers to come out the same.
 
 /** Build a frame buffer filled with one RGB colour. Test helper. */
 export function solidFrame(r, g, b) {

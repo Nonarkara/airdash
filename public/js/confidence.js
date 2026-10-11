@@ -3,9 +3,6 @@
 // a source-specific measurement accuracy or a probability of coverage.
 
 const RISK_SIGMA = 5                // 0-100 score, ±5 = ±1 band width
-const FORECAST_REL_SIGMA = 0.35     // 35% of rain forecast
-const PM25_REL_SIGMA = 0.08         // 8% monitor noise at ambient PM2.5
-const RISE_SIGMA_REL = 0.30         // 30% of 6h PM2.5 rise
 
 /** Wrap a number with an assumed display range. Returns a shape
  *  the UI can render: "value (lo–hi)" in the right language. */
@@ -43,6 +40,3 @@ function round(n, p) {
 
 // ── Specialised helpers (per-metric) ────────────────────────────────────
 export function riskCi(score)   { return ci(score, RISK_SIGMA, { precision: 0 }) }
-export function forecastCi(mm)  { return ci(mm, Math.abs(mm) * FORECAST_REL_SIGMA, { unit: 'mm', precision: 0 }) }
-export function pm25Ci(ug)      { return ci(ug, Math.abs(ug) * PM25_REL_SIGMA, { unit: 'µg/m³', precision: 0 }) }
-export function riseCi(ug)      { return ci(ug, Math.abs(ug) * RISE_SIGMA_REL, { unit: 'µg', precision: 0 }) }

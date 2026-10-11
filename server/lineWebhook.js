@@ -30,7 +30,6 @@ export const REPORTS_DIR = join(CONFIG.root, 'data/reports')
 const REPORT_MERGE_WINDOW_MS = 15 * 60_000     // photo + location from the same user this close together = one report
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024        // LINE's own platform cap is similar; defend the disk regardless
 const REPORTS_PER_HOUR_PER_USER = 10            // generous for a real reporter, blocks a scripted flood
-const REJECTED_RETENTION_DAYS = 7               // rejected reports serve no purpose after review
 const TOTAL_DIR_CAP_BYTES = 1024 * 1024 * 1024  // 1GB safety net — prune oldest images if ever exceeded
 const TOTAL_DIR_TARGET_BYTES = 800 * 1024 * 1024 // ...down to this, so pruning doesn't thrash every cycle
 
@@ -328,18 +327,9 @@ export function decideReport(db, id, { status, note = null } = {}) {
   }
   const now = new Date().toISOString()
   updateReport(db, id, { status, reviewed_at: now, review_note: note })
-  // Rejected reports are auto-deleted after REJECTED_RETENTION_DAYS so the
-  // table doesn't grow without bound from a stream of misclassifications.
-  // We do NOT delete them now — the operator might want to revisit.
+  // Rejected reports are KEPT, not deleted — the operator might want to
+  // revisit a misclassification. Nothing purges the row: the only growth
+  // left is a few hundred bytes per rejected report, and their image files
+  // are already bounded by pruneReports()'s directory cap.
   return db.get(`SELECT id, status, reviewed_at, review_note FROM line_reports WHERE id = ?`, id)
-}
-
-export function purgeRejected(db) {
-  const cutoff = new Date(Date.now() - REJECTED_RETENTION_DAYS * 24 * 3600_000).toISOString()
-  const rows = db.all(`SELECT id, image_path FROM line_reports WHERE status = 'rejected' AND reviewed_at < ?`, cutoff)
-  for (const r of rows) {
-    if (r.image_path) try { unlinkSync(r.image_path) } catch {}
-  }
-  db.run(`DELETE FROM line_reports WHERE status = 'rejected' AND reviewed_at < ?`, cutoff)
-  return { purged: rows.length }
 }

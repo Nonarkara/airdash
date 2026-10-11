@@ -32,7 +32,4 @@ export async function getJson(url, ttlMs = 30_000) {
   }, ttlMs)
 }
 
-/** Fire-and-forget warm of a URL, so a later getJson is instant. */
-export function prefetch(url, ttlMs = 30_000) {
-  getJson(url, ttlMs).catch(() => {})
-}
+

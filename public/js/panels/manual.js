@@ -9,8 +9,8 @@
 // Rule for this file: every entry describes a control that ACTUALLY
 // EXISTS and was verified working. Delete a control, delete its row —
 // a manual that lists a phantom button sends people hunting for nothing.
-import { store, on } from '../state.js?v=2.4.72'
-import { escapeHtml } from '../fmt.js?v=2.4.72'
+import { store, on } from '../state.js?v=2.4.74'
+import { escapeHtml } from '../fmt.js?v=2.4.74'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 

@@ -21,4 +21,4 @@ export function airStationsNow(db) {
   return rows
 }
 
-export function __clearAirStationsCache() { cache = null }
+

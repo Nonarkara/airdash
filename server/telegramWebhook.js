@@ -95,8 +95,6 @@ async function loadProvinceIndex(db) {
     return []
   }
 }
-function resetProvinceIndex() { _provinceIndex = null }
-
 function norm(s) { return (s ?? '').toString().trim().toLowerCase().replace(/\s+/g, '') }
 function resolveProvince(list, q) {
   if (!q) return null
@@ -283,6 +281,8 @@ async function handleTrustedUpdate(db, update) {
   return true
 }
 
-// Reset the cached province index when the risk snapshot changes so
-// /province always sees fresh data.
-export function _resetProvinceIndex() { resetProvinceIndex() }
+// The province index is memoized for the life of the process ON PURPOSE.
+// It is built from the same risk snapshot the dashboard reads, so freezing
+// it is what guarantees /province answers with the very province list the
+// user is looking at — a re-read mid-session could otherwise disagree with
+// the rendered map. A restart re-reads it. There is deliberately no reset.

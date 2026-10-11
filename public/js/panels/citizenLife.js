@@ -1,4 +1,4 @@
-import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.72'
+import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.74'
 // LIFE-SAVING ADDITIONS FOR THE CITIZEN PANEL
 // =============================================
 // This module extends the citizen (EASY) panel with four action-oriented
@@ -41,10 +41,10 @@ import { readPreference, writePreference, removePreference } from '../preference
 // 7-year-old the panel is meant to help has an even shorter attention
 // span. The English side uses a registered-nurse register: warm,
 // direct, never preachy. "Don't" is reserved for emergencies.
-import { on, store } from '../state.js?v=2.4.72'
-import { tr } from '../i18n.js?v=2.4.72'
-import { el } from '../fmt.js?v=2.4.72'
-import { getJson } from '../cache.js?v=2.4.72'
+import { store } from '../state.js?v=2.4.74'
+import { tr } from '../i18n.js?v=2.4.74'
+import { el } from '../fmt.js?v=2.4.74'
+import { getJson } from '../cache.js?v=2.4.74'
 
 // ── 1. PERSONA SELECTOR + SPECIFIC ADVICE ─────────────────────────────────
 
@@ -253,20 +253,6 @@ function renderPersonaInto(host, province, band) {
   host._personaRequest = request
   renderPersonaSection(province, band).then((node) => {
     if (host.isConnected && host._personaRequest === request) host.replaceChildren(node)
-  })
-}
-
-export function initCitizenPersona() {
-  // Hook into snapshot + my-province-changed to refresh the persona
-  // card. The section lives inside a #citizen-persona-host wrapper that
-  // the citizen panel creates in renderForProvince().
-  on('snapshot', (s) => {
-    const host = document.getElementById('citizen-persona-host')
-    if (!host) return
-    const province = window.__myProvince ?? null
-    if (!province) return
-    host.replaceChildren()
-    renderPersonaInto(host, province, null)
   })
 }
 

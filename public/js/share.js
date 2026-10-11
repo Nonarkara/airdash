@@ -76,6 +76,8 @@ export async function sharePlace({ url, title = '', text = '' }) {
  * Standard button feedback: swap the label briefly, then restore.
  * 'cancelled' deliberately does nothing — the user closed the sheet on
  * purpose and flashing ✓/✕ at them would misreport what happened.
+ * Callers pass `labels` from tr() so the flash is bilingual; the defaults
+ * here are Thai because that is the primary language of the panel.
  */
 export function shareFeedback(btn, state, labels = {}) {
   if (!btn || state === 'cancelled' || state === 'shared') return

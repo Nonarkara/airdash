@@ -10,6 +10,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.74] — 2026-10-11 — two features that were built but never switched on, and 17 dead exports
+
+Front-end and backend. Asset token 2.4.74 (the service-worker cache moves with it, `airdash-v92`).
+
+**Two features were 90% built and had no edge into them. Both are now live.**
+
+- **The RECENT places strip could never populate.** `public/js/panels/search.js` rendered a RECENT list, read it out of local storage, and shipped an empty state promising *"recent opens appear here after your first search"* — but `rememberRecent()` had no caller, so nothing was ever written. Every visitor saw that empty state forever. The fix is one line in `selectResult()`, which is the single funnel every path into a place goes through: a search hit, a RECENT button, a `?city=` boot link, and the saved-city boot. Recorded there deliberately — putting it on any one of those four paths would leave the other three unrecorded.
+- **The share button's ✓ flash was a partial copy.** `shareFeedback()` existed and was correct, so `citizen.js` inlined a worse version of it that handled only `copied`, never reported a failure (so a failed copy left the button looking untouched), and hardcoded a Thai label in a bilingual panel. The inline copy is gone; `citizen.js` now calls the helper with `tr()`-supplied labels, so a failure says so.
+- `scripts/test-deadcode-wiring.mjs`, 26 checks, wired into `npm test`. The recorder's dedup, its cap, its newest-first ordering and its private-mode safety are *executed* — the two module-private functions are lifted out of the source and run against a stub preference layer, because the module itself touches `document` at import time and cannot be imported in node. Only the wiring itself is pattern-matched. **Eleven planted bugs turn it red**, including dropping the `rememberRecent` call, disabling dedup, removing the cap, removing the no-coordinates guard, removing the private-mode `try`, reverting to the inline flash, dropping the import, and reversing the ordering.
+
+**Removed — 17 exports referenced nowhere in the repository, verified one at a time:**
+
+`__clearAirStationsCache`, `resolveName`, `slugFor`, `purgeRejected`, `provinceQuality`, `__resetForTests`, `nearestCams`, `__clearCacheForTests`, `_resetProvinceIndex`, `prefetch`, `forecastCi`, `pm25Ci`, `riseCi`, `fmtUg`, `initCitizenPersona`, `focusAreas`, `KOSCHMIEDER_C`. Four of them (`__clear*`, `_reset*`) were test-reset hooks that no test ever called.
+
+Seven private symbols went with them, having been left orphaned: `trName` (only `resolveName` called it), `REJECTED_RETENTION_DAYS`, `resetProvinceIndex` (only its own dead alias called it), the write-only `_slugByRef` map, the three now-unused sigma constants behind `forecastCi`/`pm25Ci`/`riseCi`, and the `on` import in `citizenLife.js`.
+
+**Three comments that were simply wrong:**
+
+- `purgeRejected()` claimed rejected LINE reports were auto-deleted after 7 days. Nothing has ever called it — and there is no delete route either, so rejected reports were permanent while the comment said otherwise. Removed, because `pruneReports()` already caps the report *directory* on disk and the only thing left ungoverned was a few hundred bytes per rejected row. (The table held **1 row in total, 0 rejected**, at audit time.)
+- `nearestCams()` was documented as "used by `/api/decision?` and the citizen card". **`/api/decision` does not exist**, and the citizen card's "nearest" logic is about AQ stations, not cameras. Removed.
+- `KOSCHMIEDER_C = 0.05` sat above `darkChannel()` with a comment explaining it as the constant in Koschmieder's equation. The code implements `t = 1 − ω(dark/I)` with `ω = 0.95`, averaged in log space — a dark-channel/log-ATM formulation, not the classical `I = J₀·e^(−c·d)`. The two are not interchangeable, so the constant and its comment are gone and a note says so, to stop someone reintroducing `c=0.05` expecting the same numbers.
+
+**Kept deliberately:** the Telegram province index stays memoized for the life of the process. It is built from the same risk snapshot the dashboard renders, so freezing it is what guarantees `/province` answers with the province list the user is actually looking at. Its reset function was vestigial and is gone; the comment now explains that there is deliberately no reset.
+
+Also: a stale 34 MB copy of the whole repo was living at `.claude/worktrees/nifty-curran-b1d3e5` as a registered git worktree pinned to an August commit — fully superseded by `main`, holding no unique file, and silently corrupting repository-wide greps. Removed and pruned. `.claude/` was listed twice in `.gitignore`; now once.
+
+**How this was checked.** A repository-wide scan of 476 exported symbols across 149 modules now reports **0 referenced nowhere else**, and 1093 checks pass with 0 failures. The scan itself was wrong three times before it was right — it resolved import paths without a base, mixed relative and absolute entry paths, ignored `?v=` cache-busting tokens, and finally iterated a joined string character-by-character so live exports looked dead. Every finding was confirmed by hand before anything was deleted; seven of the eight it last reported were in fact referenced by tests and were left alone.
+
 ## [2.4.73] — 2026-10-11 — the camera health probe can no longer take the site down for nine minutes
 
 Backend-only; no file under `public/` changed, so the asset token stays at 2.4.72.

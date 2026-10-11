@@ -16,8 +16,6 @@ public/vendor/
 public/fonts/
 .DS_Store
 .wrangler/
-# Local tool configs (per-machine paths, never share)
-.claude/
 # Kimi blueprint working files — large binaries stay on disk, untracked
 corpus/kimi-blueprint/**/*.docx
 corpus/kimi-blueprint/**/*.png
