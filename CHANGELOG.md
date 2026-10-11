@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.75] — 2026-10-11 — the R2 cost guard was watching a bucket that already held 159 MB
+
+Ops-only; no file under `public/` changed, so the asset token stays at 2.4.74.
+
+`ops/offsite-r2.sh` records the R2 bucket size into `logs/.r2-bucket-bytes`, and `ops/health-watchdog.sh` alerts when that exceeds 9 GB against Cloudflare's 10 GB free tier. The guard was structurally incapable of firing.
+
+- On its first run — bucket created 17:24:54 local — the script pushed a 159 MB object at 17:27:24 and queried `bucket_size` at 17:27:26. **R2 answered `0 B`.** That zero was recorded faithfully, so the cost guard watched a bucket that already held 159 MB and would have reported no growth indefinitely.
+- The parsing was never wrong. R2's `bucket_size` is eventually consistent, so a query issued in the same second as the PUT measures *propagation*, not storage. The same command run minutes later answers `159 MB`. The size is now read **before** the upload, which also measures what the guard is actually for — the bucket as it stood — rather than racing the object the run just added. Lagging by one run costs nothing against a 9 GB ceiling; reading zero costs everything.
+- A size that cannot be parsed no longer overwrites the last good reading, and is logged as a WARN. A future wrangler that renames the field would otherwise reset the guard to zero — the same silent failure arriving by a different route. A genuinely empty bucket still records `0`, because that is a real reading, not an error.
+- `logs/.r2-bucket-bytes` refreshed from the stale `0` to the true `166723584`.
+- `scripts/test-offsite-bucket-size.mjs`, 14 checks, wired into `npm test`. Unit parsing is executed by lifting the zsh function out of the script and running it against a stubbed `wrangler`; the ordering property is asserted on the source, since it is a fact about where a line sits. **Four planted bugs turn it red**: moving the query back after the upload, removing the unreadable guard, and corrupting the GB and TB multipliers.
+
+**Still unobserved, and honestly so:** the offsite job has only ever run by hand. The log contains exactly one entry, at 17:27 on 2026-10-11 — a manual run — and no 03:50 entry, because the whole R2 setup is less than a day old and the 03:50 slot had already passed when the bucket was created. The first genuinely unattended run is tomorrow morning. That is the honest limit of the restore evidence so far.
+
 ## [2.4.74] — 2026-10-11 — two features that were built but never switched on, and 17 dead exports
 
 Front-end and backend. Asset token 2.4.74 (the service-worker cache moves with it, `airdash-v92`).
