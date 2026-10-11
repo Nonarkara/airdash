@@ -84,7 +84,7 @@ export default {
     // A station is useful context, never a prerequisite for seeing the sky.
     const stations = airStationsNow(db)
     const pick = [...stridePick(pairAir(candidates, stations), MAX_CAMS - panel.length, tick), ...pairAir(panel, stations)]
-    const frames = await grabMany(pick, { perHost: 2 })
+    const frames = await grabMany(pick, { perHost: 2, hostLimits: { 'maholan.net': 1 } }) // hobbyist host: one at a time
     if (panel.length) {
       const panelKeys = new Set(panel.map((c) => `${c.source}:${c.id}`))
       recordHealth(db, pick.filter((c) => panelKeys.has(`${c.source}:${c.id}`))

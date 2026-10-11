@@ -95,7 +95,8 @@ export function grabUrlOf(cam) {
  * bucket and the box stops serving. We hold 3 in flight per host and 12
  * overall, the same numbers cctvHealth.js uses.
  */
-export async function grabMany(cameras, { concurrency = 12, perHost = 3, ...opts } = {}) {
+export async function grabMany(cameras, { concurrency = 12, perHost = 3, hostLimits = {}, ...opts } = {}) {
+  const limitOf = (h) => { for (const [k, v] of Object.entries(hostLimits)) if (h === k || h.endsWith('.' + k)) return v; return perHost }
   const queue = cameras.filter((c) => grabUrlOf(c))
   const busy = new Map()
   const out = new Map()
@@ -105,7 +106,7 @@ export async function grabMany(cameras, { concurrency = 12, perHost = 3, ...opts
     let active = 0
     const pump = () => {
       while (active < concurrency) {
-        const i = queue.findIndex((c) => (busy.get(hostOf(c)) ?? 0) < perHost)
+        const i = queue.findIndex((c) => (busy.get(hostOf(c)) ?? 0) < limitOf(hostOf(c)))
         if (i < 0) break
         const cam = queue.splice(i, 1)[0]
         const host = hostOf(cam)
@@ -125,7 +126,7 @@ export async function grabMany(cameras, { concurrency = 12, perHost = 3, ...opts
     .map(original => ({ original, camera: { ...original, grab_url: original.snapshot_url,
       snapshot_url: null, hls_url: null, stream_kind: 'snapshot' } }))
   if (fallbacks.length) {
-    const frames = await grabMany(fallbacks.map(f => f.camera), { concurrency, perHost, ...opts })
+    const frames = await grabMany(fallbacks.map(f => f.camera), { concurrency, perHost, hostLimits, ...opts })
     for (const f of fallbacks) out.set(f.original, frames.get(f.camera) ?? null)
   }
   return out

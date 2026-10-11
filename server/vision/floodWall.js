@@ -22,7 +22,7 @@ import { fetchJson, log } from '../util.js'
 
 const FLOODDASH = process.env.FLOODDASH_LOCAL ?? 'http://127.0.0.1:8340'
 const CATALOG_TTL_MS = 6 * 3600_000
-export const PER_PROVINCE = 3
+export const PER_PROVINCE = 2
 const FAIL_BENCH = 3                 // consecutive failures → benched
 const BENCH_RETRY_MS = 24 * 3600_000 // a benched camera is retried after a day
 const SKIP_ID = /^floodbkk-/
@@ -52,7 +52,7 @@ export function provinceOf(key, lat, lng) {
 
 /** FloodDash's snapshot cameras, normalised for grabMany, with a province. */
 export async function floodWallCameras() {
-  if (Date.now() - catalog.at < CATALOG_TTL_MS && catalog.cams.length) return catalog.cams
+  if (Date.now() - catalog.at < CATALOG_TTL_MS) return catalog.cams
   try {
     const j = await fetchJson(`${FLOODDASH}/api/cctv/all`, { timeoutMs: 30_000 })
     const cams = []
@@ -70,7 +70,9 @@ export async function floodWallCameras() {
     }
     catalog = { at: Date.now(), cams }
   } catch (err) {
-    // FloodDash down: keep the last catalogue; the panel degrades, never throws.
+    // FloodDash down: keep the last catalogue and reset the timer, so an outage
+    // costs FloodDash one request per 6 h, not one 30 s probe per cycle.
+    catalog = { at: Date.now(), cams: catalog.cams }
     log('warn', 'flood-wall catalogue unavailable', { error: String(err?.message ?? err) })
   }
   return catalog.cams
