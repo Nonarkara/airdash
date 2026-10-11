@@ -180,6 +180,33 @@ export function provinceVerdict(p, sat = null, near = null) {
     `ค่า ${p.pollutant_worst.metric.toUpperCase()} เริ่มสูง (${Math.round(p.pollutant_worst.value)})`,
     `${p.pollutant_worst.metric.toUpperCase()} starting to rise (${Math.round(p.pollutant_worst.value)})`)
 
+  // Optical evidence (server/vision/hazeEvidence.js): cameras judged against
+  // their own clear-day baseline + airport visibility. Corroboration only —
+  // it never claims a PM2.5 number. Fog is named as the likelier cause when
+  // the air is saturated, so a misty dawn is not reported as smoke.
+  const ev = p?.vision
+  if (ev && (ev.level === 'widespread' || ev.level === 'some')) {
+    const many = ev.level === 'widespread'
+    const lossTh = Number.isFinite(ev.median_contrast_loss) ? ` (ความคมชัดลดลง ~${ev.median_contrast_loss}%)` : ''
+    const lossEn = Number.isFinite(ev.median_contrast_loss) ? ` (contrast down ~${ev.median_contrast_loss}%)` : ''
+    if (ev.fog_likely) R(
+      `กล้อง ${ev.cams_hazy}/${ev.cams_judged} ตัวเห็นภาพพร่ามัวกว่าปกติ แต่ความชื้นสูง${Number.isFinite(ev.humidity_pct) ? ` ${Math.round(ev.humidity_pct)}%` : ''} — น่าจะเป็นหมอก ไม่ใช่ควัน`,
+      `${ev.cams_hazy} of ${ev.cams_judged} cameras look hazier than usual, but humidity is high${Number.isFinite(ev.humidity_pct) ? ` (${Math.round(ev.humidity_pct)}%)` : ''} — more likely fog than smoke`)
+    else R(
+      `กล้อง ${ev.cams_hazy}/${ev.cams_judged} ตัวในจังหวัดเห็นภาพพร่ามัวกว่าวันอากาศใส${lossTh}${many ? ' — สัญญาณหมอกควันกระจายทั่ว' : ''}`,
+      `${ev.cams_hazy} of ${ev.cams_judged} cameras in the province look hazier than on clear days${lossEn}${many ? ' — haze-like, widespread' : ''}`)
+    if (many && !ev.fog_likely && pm25 !== null && pm25 < PM_GOOD && p?.pm25_source === 'air4thai') R(
+      'กล้องเห็นหมอกควันแต่เครื่องวัดยังต่ำ — อาจเป็นควันเฉพาะจุดระหว่างสถานี หรือเครื่องวัดผิดปกติ',
+      'Cameras see haze while the sensors read low — possibly local smoke between stations, or a sensor fault')
+    if (ev.floored_to_watch) R(
+      'ไม่มีเครื่องวัดภาคพื้นรายงานในจังหวัดนี้ — ยกระดับเป็น "เฝ้าระวัง" จากภาพกล้อง',
+      'No ground sensor is reporting in this province — raised to WATCH on camera evidence')
+  }
+  const mt = ev?.metar
+  if (mt && mt.cause === 'aerosol' && mt.vis_km <= 5) R(
+    `สนามบิน${mt.station_th ? ` ${mt.station_th}` : ''} รายงานหมอกควัน/ฝุ่น ทัศนวิสัย ${mt.vis_km.toFixed(1)} กม.`,
+    `Airport${mt.station_en ? ` ${mt.station_en}` : ''} reports haze/smoke — visibility ${mt.vis_km.toFixed(1)} km`)
+
   // Relief signals — the washout story. Rain already falling beats forecast.
   const satFresh = sat && (Date.now() - new Date(sat.obs_time).getTime()) < 8 * 3600_000
   if (satFresh && sat.value >= 2 && (pm25 ?? 0) >= PM_GOOD) R(

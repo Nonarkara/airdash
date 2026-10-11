@@ -12,6 +12,7 @@
 // It also persists a snapshot in kv so the UI can show trend arrows.
 import { CONFIG } from './config.js'
 import { forecastBias } from './forecastBias.js'
+import { hazeEvidence, shouldFloorToWatch } from './vision/hazeEvidence.js'
 import { nationalVerdict, provinceVerdict } from './verdict.js'
 import { isThaiProvinceCode } from './provinces.js'
 import { readTwinFlood, floodByCode } from './sources/twin-flood.js'
@@ -329,13 +330,24 @@ export function createRisk(db, washout) {
       p.flood = (p.province_code && floodMap.get(String(p.province_code))) || null
     }
 
+    // Optical evidence (cameras + airport visibility) per province — see
+    // server/vision/hazeEvidence.js. Corroboration, never a PM2.5 number.
+    const vision = hazeEvidence(db)
+    for (const p of provinces.values()) p.vision = (p.province_code && vision.get(String(p.province_code))) || null
+
     const w = CONFIG.risk.weights
     const prevSnapshot = readPrevSnapshot()
     const list = [...provinces.values()].map((p) => {
-      const score = Math.round(
+      const computed = Math.round(
         w.pm25 * p.pm25_comp + w.pollutants * p.pollutants_comp + w.trend * p.trend_comp +
         w.forecast * p.forecast_comp + w.stagnation * p.stagnation_comp,
       )
+      // The one case cameras may move the band: no ground sensor reporting
+      // here and widespread non-fog haze on the province's cameras → at least
+      // WATCH. Under-warning a blind province is the failure we refuse.
+      const floored = shouldFloorToWatch(p, p.vision) && computed < CONFIG.risk.bands.watch
+      const score = floored ? CONFIG.risk.bands.watch : computed
+      if (floored) p.vision = { ...p.vision, floored_to_watch: true }
       const key = p.province_code ?? p.province_th
       const prevScore = prevSnapshot?.scores?.[key]
       const delta = typeof prevScore === 'number' ? Math.round(score - prevScore) : null

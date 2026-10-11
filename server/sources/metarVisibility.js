@@ -61,6 +61,8 @@
 // Pure parsing, exported for tests. No clock, no network.
 
 import { log } from '../util.js'
+import { pointInThailand } from '../geo/pointInThailand.js'
+import { provinceByName } from '../provinces.js'
 
 const BASE = 'https://aviationweather.gov/api/data/metar'
 
@@ -92,6 +94,23 @@ export const NON_AEROSOL_CODES = {
  * on the Gulf biomass-burn corridor, and Nakhon Phanom on the Laos border —
  * the three routes Thai dust actually arrives by.
  */
+/** aviationweather.gov gives obsTime as epoch SECONDS (reportTime as an ISO
+ *  string). Every other source stores Bangkok-local 'YYYY-MM-DDTHH:MM'; so
+ *  must this one, or freshness filters never see it (see db.isDateLikeObs). */
+export function toBangkokObs(t) {
+  const ms = typeof t === 'number' || /^\d+(\.\d+)?$/.test(String(t ?? ''))
+    ? Number(t) * (Number(t) < 1e12 ? 1000 : 1)
+    : Date.parse(t ?? '')
+  return Number.isFinite(ms) ? new Date(ms + 7 * 3600_000).toISOString().slice(0, 16) : null
+}
+
+/** Province fields for a coordinate (polygon test → DOPA registry). */
+function provinceFields(lat, lng) {
+  const hit = pointInThailand(lat, lng)
+  const reg = hit.inThailand ? provinceByName(hit.province_th, hit.province_en) : null
+  return { province_th: reg?.province_th ?? hit.province_th, province_en: reg?.province_en ?? hit.province_en, province_code: reg?.province_code ?? null }
+}
+
 export const THAI_STATIONS = [
   // northern border belt — the dust-import gateways
   { icao: 'VTPM', name_th: 'แม่สอด', name_en: 'Mae Sot', lat: 16.703, lng: 98.542 },
@@ -256,7 +275,7 @@ export function normalizeMetar(rec, station) {
     codes,
     wx: rec.wxString ?? null,
     temp_c: Number.isFinite(Number(rec.temp)) ? Number(rec.temp) : null,
-    obs_time: rec.obsTime ?? rec.reportTime ?? null,
+    obs_time: toBangkokObs(rec.obsTime ?? rec.reportTime),
   }
 }
 
@@ -291,7 +310,7 @@ export default {
   label_en: 'Airport visibility (METAR) — an optical dust/haze detector',
   intervalMs: 30 * 60_000, // METAR files every 30 min; polling faster re-reads the same report
   enabled: true,
-  version: 1, // bump when the parser changes → runs at next boot
+  version: 2, // bump when the parser changes → runs at next boot
 
   async run({ db }) {
     const { rows, unknownStation } = normalizeMetars(
@@ -303,6 +322,17 @@ export default {
     const fetched_at = new Date().toISOString()
     let added = 0
     db.tx(() => {
+      // One-time repair (v2): rows stored with epoch-seconds obs_time before
+      // toBangkokObs existed. Rewrite them in place; a row whose converted
+      // time already exists is left alone (OR IGNORE) — it duplicates one.
+      if (!db.kvGet('metar_obs_repair_v1')) {
+        const fix = `SET obs_time = strftime('%Y-%m-%dT%H:%M', CAST(obs_time AS REAL), 'unixepoch', '+7 hours')
+                     WHERE source = 'metar' AND obs_time NOT LIKE '____-__%'`
+        const a = db.run(`UPDATE OR IGNORE readings ${fix}`).changes
+        const b = db.run(`UPDATE OR IGNORE latest ${fix}`).changes
+        db.kvSet('metar_obs_repair_v1', JSON.stringify({ readings: a, latest: b, at: fetched_at }))
+        log('info', 'metar: repaired epoch obs_time rows', { readings: a, latest: b })
+      }
       for (const r of rows) {
         db.upsertStation({
           source: 'metar',
@@ -310,7 +340,9 @@ export default {
           station_key: r.station_key,
           name_th: r.name_th,
           name_en: r.name_en,
-          province_th: null, province_en: null, province_code: null,
+          // Province from the coordinates, so visibility can sit beside the
+          // province's PM2.5 and cameras (it was null: no reader could join it).
+          ...provinceFields(r.lat, r.lng),
           region_th: null, region_en: null, basin_th: null, basin_en: null,
           lat: r.lat, lng: r.lng,
           meta_json: JSON.stringify({
@@ -318,7 +350,7 @@ export default {
             cause: r.cause, wx: r.wx,
           }),
         })
-        const obs = r.obs_time ?? fetched_at
+        const obs = r.obs_time ?? toBangkokObs(fetched_at)
         // Three metrics, and the third is the point of the whole source.
         if (db.insertReading({ source: 'metar', station_key: r.station_key, metric: 'vis_km', value: r.vis_km, obs_time: obs, fetched_at })) added++
         if (r.beta_km1 !== null && db.insertReading({ source: 'metar', station_key: r.station_key, metric: 'beta_km1', value: r.beta_km1, obs_time: obs, fetched_at })) added++

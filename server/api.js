@@ -44,9 +44,10 @@ import { indexLatestFrames, withVision, pictureFlags, summarizeLooks, describeVi
 import { sensorHealth } from './sensors.js'
 import { harmPayload, HARM_METHOD } from './harm.js'
 import { watchdogStatus, dbOnExternalVolume, archiveStatus } from './opsSentinel.js'
-import { futureRejects, SERIES_INDEX } from './db.js'
+import { futureRejects, badObsRejects, SERIES_INDEX } from './db.js'
 import { forecastBias } from './forecastBias.js'
 import { computeSmoke, SMOKE_METHOD } from './smoke.js'
+import { hazeEvidence } from './vision/hazeEvidence.js'
 import { CAMS_HOURLY_KEY } from './sources/openmeteo-aq.js'
 
 /** Fold Effective Harm onto each risk province row (Danger-style join). */
@@ -421,7 +422,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         version: currentAppVersion(),
         now: new Date().toISOString(),
         uptime_s: Math.round((Date.now() - startedAt) / 1000),
-        db: { ...dbStats, size_mb: Math.round(dbSize / 1048576 * 10) / 10, on_external_volume: dbOnExternalVolume(CONFIG.dbPath), future_obs_rejected: Object.fromEntries(futureRejects) },
+        db: { ...dbStats, size_mb: Math.round(dbSize / 1048576 * 10) / 10, on_external_volume: dbOnExternalVolume(CONFIG.dbPath), future_obs_rejected: Object.fromEntries(futureRejects), bad_obs_time_rejected: Object.fromEntries(badObsRejects) },
         archive: archiveStatus(),
         watchdog: watchdogStatus(),
         sources,
@@ -1026,6 +1027,22 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     'GET /api/smoke': (req, res) => {
       const s = computeSmoke(db)
       json(res, 200, { ...s, method_th: SMOKE_METHOD.th, method_en: SMOKE_METHOD.en })
+    },
+
+    // Optical haze evidence per province: cameras (each vs its own clear-day
+    // baseline) + airport visibility + humidity. Corroboration for the
+    // verdict — never a PM2.5 number. See server/vision/hazeEvidence.js.
+    'GET /api/haze-evidence': (req, res) => {
+      const ev = hazeEvidence(db)
+      let cycle = null
+      try { cycle = JSON.parse(db.kvGet('cctv_vision_cycle') ?? 'null') } catch { cycle = null }
+      const provinces = [...ev.entries()].map(([code, e]) => ({ code, ...e }))
+        .sort((a, b) => (b.cams_hazy ?? 0) - (a.cams_hazy ?? 0) || (b.cams_judged ?? 0) - (a.cams_judged ?? 0))
+      json(res, 200, {
+        updated: new Date().toISOString(), last_cycle: cycle, provinces,
+        method_th: 'กล้องแต่ละตัวเทียบกับภาพวันอากาศใสของตัวเองในช่วงเวลาใกล้กัน (ความคมชัดลดลง + dark channel เพิ่ม) · ความชื้น ≥90% ถือว่าน่าจะเป็นหมอก · ทัศนวิสัยและรหัสสภาพอากาศจากรายงาน METAR ของสนามบิน — เป็นหลักฐานประกอบ ไม่ใช่ค่า PM2.5',
+        method_en: 'Each camera vs its own clear-day frames at a similar hour (contrast loss + dark-channel rise) · humidity ≥90% = fog likelier · airport METAR visibility and weather codes — corroborating evidence, not a PM2.5 measurement',
+      })
     },
 
     'GET /api/burn-area': (req, res) => {

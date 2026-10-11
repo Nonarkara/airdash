@@ -12,12 +12,15 @@ import { readFrame } from './hazeRead.js'
 import { coverageReport, REACHABLE_KINDS } from './coverage.js'
 import { frameIdentity, assessHaze } from './hazeSignal.js'
 import { savePreview } from './frameStore.js'
+import { floodWallCameras, choosePanel, loadHealth, recordHealth, provinceOf } from './floodWall.js'
+import { daylightInThailand } from './hazeSignal.js'
 
 /** Hard ceiling on ffmpeg spawns per cycle. Sampling is I/O bound, not CPU
  *  bound — the whole reachable set costs a few seconds of wall clock. This is
  *  a blast-radius guard, not a sampling plan: if the catalogue ever grows past
  *  it we want to notice in the log, not silently sample a prefix of it. */
-const MAX_CAMS = 240
+const MAX_CAMS = 320 // ~76 rotating HLS/still cameras + the ≤231-camera flood-wall panel
+const PANEL_EVERY_MS = 55 * 60_000 // flood-wall panel ~hourly (polite to small hosts)
 
 /** Rotate through a list so consecutive cycles do not hammer the same few. */
 function stridePick(cams, n, tick) {
@@ -40,7 +43,7 @@ export default {
   // `dataVersion` — server/scheduler.js reads s.source.version. A source that
   // declares `dataVersion` is silently ignored by the guard and deferred
   // forever, which is exactly what happened to the first run of this source.
-  version: 5,
+  version: 6, // 6: flood-wall panel + province_code
 
   async run({ db }) {
     // The registry's health overlay reads an in-process map that is only
@@ -70,9 +73,23 @@ export default {
       urls.add(url); return true
     })
     if (!candidates.length) return { sampled: 0, reachable: 0 }
+    // FloodDash's flood-wall snapshot cameras as a stable per-province panel
+    // (server/vision/floodWall.js). Daylight only — a night frame cannot show
+    // haze — and every other cycle (hourly), to stay polite to small hosts.
+    const nowMsIso = new Date().toISOString()
+    const lastPanel = Number(db.kvGet('flood_wall_panel_at') ?? 0)
+    const panelDue = daylightInThailand(nowMsIso) && Date.now() - lastPanel >= PANEL_EVERY_MS
+    const panel = panelDue ? choosePanel(await floodWallCameras(), loadHealth(db)) : []
+    if (panel.length) db.kvSet('flood_wall_panel_at', String(Date.now()))
     // A station is useful context, never a prerequisite for seeing the sky.
-    const pick = stridePick(pairAir(candidates, airStationsNow(db)), MAX_CAMS, tick)
-    const frames = await grabMany(pick)
+    const stations = airStationsNow(db)
+    const pick = [...stridePick(pairAir(candidates, stations), MAX_CAMS - panel.length, tick), ...pairAir(panel, stations)]
+    const frames = await grabMany(pick, { perHost: 2 })
+    if (panel.length) {
+      const panelKeys = new Set(panel.map((c) => `${c.source}:${c.id}`))
+      recordHealth(db, pick.filter((c) => panelKeys.has(`${c.source}:${c.id}`))
+        .map((c) => ({ key: `${c.source}:${c.id}`, ok: frames.has(c) })))
+    }
     const nowIso = new Date().toISOString()
     const grabbedKeys = new Set()
     let stored = 0
@@ -103,8 +120,8 @@ export default {
             corridor_tail, contrast, edge_density, dark_channel, transmission,
             edge_decay, saturation, warm_bias, mean_luma, tint_hint,
             pm25, pm25_station, pm25_km, haze_status, contrast_loss, baseline_samples,
-            frame_hash, view_signature, dark_normalized, has_preview)
-         VALUES (?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            frame_hash, view_signature, dark_normalized, has_preview, province_code)
+         VALUES (?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         key, cam.source, cam.lat, cam.lng, nowIso, index,
         r.features.corridorTail, r.features.contrast, r.features.edgeDensity,
         r.features.darkChannel, r.features.transmission, r.features.edgeDecay,
@@ -112,11 +129,12 @@ export default {
         cam.air?.pm25 ?? null, cam.air?.station_key ?? null, cam.air?.km ?? null,
         signal.status, signal.contrastLoss, signal.baselineSamples, identity.hash,
         JSON.stringify(identity.signature), r.features.darkChannelNorm, preview,
+        cam.province_code ?? provinceOf(key, cam.lat, cam.lng)?.code ?? null,
       )
       stored++
     }
     const coverage = coverageReport(cat.cameras, { grabbedKeys })
-    const result = { sampled: stored, scored, blank, attempted: pick.length, failed: pick.length-stored,
+    const result = { sampled: stored, scored, blank, attempted: pick.length, failed: pick.length-stored, panel: panel.length,
       quality, reachable: coverage.reachable, unavailable: coverage.unreachable,
       coverage_pct: coverage.pct_reachable, calibration_ok: false }
     db.kvSet('cctv_vision_cycle', JSON.stringify({ ...result, observed_at: nowIso }))

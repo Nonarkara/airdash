@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict'
 import { washoutBand, reliefEta, WASHOUT_LABELS } from '../server/washout.js'
 import { parkUntil, bootDelayMs } from '../server/scheduler.js'
-import { isFutureObs } from '../server/db.js'
+import { isFutureObs, isDateLikeObs } from '../server/db.js'
+import { toBangkokObs } from '../server/sources/metarVisibility.js'
 import { correct, computeRatios } from '../server/forecastBias.js'
 import { noiseDay } from '../server/sources/pcd-noise.js'
 
@@ -67,5 +68,15 @@ t('bias: ratios need MIN_DAYS paired days, else national', () => {
   const r = computeRatios(g, c)
   assert.equal(r.byCode.get('10').ratio, 2)
   assert.equal(computeRatios(g.slice(0, 2), c.slice(0, 2)).byCode.size, 0)
+})
+t('obs_time guard: epoch-number strings are refused, dates accepted', () => {
+  assert.equal(isDateLikeObs('1791687600.0'), false)
+  assert.equal(isDateLikeObs(1791687600), false)
+  assert.equal(isDateLikeObs('2026-10-11T10:00'), true)
+  assert.equal(isDateLikeObs('2026-08'), true) // ENSO monthly
+})
+t('METAR: epoch seconds → Bangkok-local minute', () => {
+  assert.equal(toBangkokObs(Date.UTC(2026, 9, 11, 3, 0) / 1000), '2026-10-11T10:00')
+  assert.equal(toBangkokObs('2026-10-11T03:00:00Z'), '2026-10-11T10:00')
 })
 console.log(`\n${passed} passed, 0 failed`)

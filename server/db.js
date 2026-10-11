@@ -320,6 +320,14 @@ CREATE TABLE IF NOT EXISTS cctv_haze_frames (
 );
 CREATE INDEX IF NOT EXISTS cctv_haze_frames_cam_ts ON cctv_haze_frames(camera_key, obs_time DESC);
 CREATE INDEX IF NOT EXISTS cctv_haze_frames_ts    ON cctv_haze_frames(obs_time DESC);
+-- Grab health for the flood-wall camera panel (server/vision/floodWall.js):
+-- a camera that keeps failing is benched for a day so the panel heals itself.
+CREATE TABLE IF NOT EXISTS vision_cam_health (
+  camera_key TEXT PRIMARY KEY,
+  ok         INTEGER NOT NULL DEFAULT 0,  -- successful grabs, ever
+  fails      INTEGER NOT NULL DEFAULT 0,  -- consecutive failures
+  last_try   TEXT
+);
 
 -- Citizen and social haze reports pinned to the map (2026-09-28).
 --
@@ -504,7 +512,9 @@ function migrate(db) {
   addCol('news_items', 'places_json', 'TEXT')
   const frameCols = db.prepare('PRAGMA table_info(cctv_haze_frames)').all().map(c => c.name)
   for (const [name, type] of Object.entries({ haze_status: 'TEXT', contrast_loss: 'REAL', baseline_samples: 'INTEGER',
-    frame_hash: 'TEXT', view_signature: 'TEXT', dark_normalized: 'REAL', has_preview: 'INTEGER DEFAULT 0' })) {
+    frame_hash: 'TEXT', view_signature: 'TEXT', dark_normalized: 'REAL', has_preview: 'INTEGER DEFAULT 0',
+    // Province of the camera (flood-wall panel + evidence roll-up, 2026-10-11).
+    province_code: 'TEXT' })) {
     if (!frameCols.includes(name)) db.exec(`ALTER TABLE cctv_haze_frames ADD COLUMN ${name} ${type}`)
   }
   // Safe to run every boot regardless of whether the columns above were
@@ -527,6 +537,17 @@ export function isFutureObs(obsTime, nowMs = Date.now()) {
 }
 /** source → rows rejected as future-dated since boot (surfaced in /api/health). */
 export const futureRejects = new Map()
+
+/** obs_time must be a date string (YYYY-MM[-DD[THH:MM...]]). The METAR source
+ *  stored raw epoch seconds ("1791687600.0") for two weeks: SQLite sorts every
+ *  number-like string below every date string, so `obs_time >= cutoff` was
+ *  never true and every freshness-filtered reader saw METAR as stale — and the
+ *  future-date guard (a string compare) waved it through. */
+export function isDateLikeObs(obsTime) {
+  return typeof obsTime === 'string' && /^\d{4}-\d{2}/.test(obsTime)
+}
+/** source → rows rejected for a non-date obs_time since boot. */
+export const badObsRejects = new Map()
 
 export function openDb(path = CONFIG.dbPath) {
   mkdirSync(dirname(path), { recursive: true })
@@ -594,6 +615,10 @@ function wrap(db) {
      *  so one future row freezes a station's "current" value until the clock
      *  catches up (pcd_noise did this, 6 h ahead, on 2026-09-27). */
     insertReading(r) {
+      if (!isDateLikeObs(r.obs_time)) {
+        badObsRejects.set(r.source, (badObsRejects.get(r.source) ?? 0) + 1)
+        return false
+      }
       if (isFutureObs(r.obs_time)) {
         futureRejects.set(r.source, (futureRejects.get(r.source) ?? 0) + 1)
         return false
