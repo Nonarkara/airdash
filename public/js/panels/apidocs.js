@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.71'
-import { escapeHtml } from '../fmt.js?v=2.4.71'
+import { store, on } from '../state.js?v=2.4.72'
+import { escapeHtml } from '../fmt.js?v=2.4.72'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -150,6 +150,7 @@ function GROUPS() {
           params: [['season', false, tr('รูปแบบ 2025/26', 'format 2025/26')], ['province', false, tr('รหัส DOPA หรือ TH10', 'DOPA code or TH10')], ['compare', false, tr('ฤดูก่อนหน้า เช่น 2024/25 — เทียบจังหวัดและเดือนที่มีข้อมูลตรงกัน', 'prior season, e.g. 2024/25 — matched province/month coverage')]] },
         { path: '/api/regional-fire-share', th: 'สัดส่วนจุดความร้อนไทยเทียบเพื่อนบ้าน (FIRMS) — ควันข้ามแดนมาจากไหน', en: 'Thailand\'s share of regional hotspots (FIRMS) — where transboundary smoke comes from.',
           params: [['days', false, tr('ย้อนหลังกี่วัน', 'look-back days')]] },
+        { path: '/api/haze-evidence', th: 'หลักฐานหมอกควันจากกล้องสาธารณะ (เทียบกับวันอากาศใสของกล้องเอง) + ทัศนวิสัยสนามบิน รายจังหวัด', en: 'Per-province haze evidence from public cameras (each vs its own clear days) + airport visibility.' },
         { path: '/api/smoke', th: 'ไฟที่อยู่เหนือลมของแต่ละจังหวัด (จุดความร้อน VIIRS 3 ดาวเทียม × ทิศลมพรุ่งนี้) — ควันมีโอกาสพัดมาหรือไม่', en: 'Fire burning upwind of each province (VIIRS hotspots from 3 satellites × tomorrow\'s wind) — can smoke reach you.' },
         { path: '/api/aeronet', th: 'ค่าความหนาของฝุ่นในอากาศ (AOD) จากสถานีภาคพื้นดิน AERONET ของ NASA — ใช้ตรวจความแม่นของดาวเทียม', en: 'Aerosol optical depth measured from the ground by NASA AERONET stations — the check on the satellite layers.',
           params: [['days', false, tr('ย้อนหลังกี่วัน (1–30, ค่าเริ่มต้น 1)', 'look-back days (1–30, default 1)')]] },
