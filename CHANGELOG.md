@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.73] — 2026-10-11 — the camera health probe can no longer take the site down for nine minutes
+
+Backend-only; no file under `public/` changed, so the asset token stays at 2.4.72.
+
+- `cctvHealth` measured **410–497 seconds per pass** on four consecutive runs. 806 cameras, 12 in flight, an 8-second per-probe timeout, and roughly 457 of them already dead — so most of the pass was spent waiting on sockets that would never answer. The probe runs inside the HTTP event loop, and for those nine minutes the server could not answer `/api/ping` and the public site returned **504**.
+- The pass now has a wall-clock ceiling of **25 seconds**, deliberately below Cloudflare's 30-second origin timeout — a 90-second ceiling would still hand every visitor a 504, only a shorter one. A camera the pass never reaches keeps the verdict it already had. It is not marked failing, because that would hide a working camera, and not marked passing, because that would un-hide a dead one: both are silent lies about a camera on a public map.
+- Because the queue is cut short, it now starts at a **rotating offset** each pass. Without that the same prefix would be probed every cycle and the tail of the catalog never examined at all.
+- Per-probe timeout 8 s → 5 s and overall concurrency 12 → 24. An HLS `#EXTM3U` header that has not arrived in five seconds is not going to.
+- `scripts/test-cctv-probe-budget.mjs`, 24 checks, wired into `npm test`. All five planted bugs turn it red, including a 90-second budget, a removed ceiling, a skipped camera marked live, a skipped camera marked dead, and rotation removed.
+
+**Not fixed, and worth knowing:** the probe still runs on the event loop. The ceiling bounds the damage; it does not remove the cause. Moving the pass to a worker thread, or not re-probing cameras already known dead, is the real fix and is a larger change than a ceiling.
+
 ## [2.4.72] — 2026-10-11 — flood-wall cameras as haze eyes, and a repaired airport-visibility feed
 
 Shipped as the frontend asset bump alongside the backend work below. This entry was missing until 2026-10-11: the `?v=` token had already reached 2.4.72 and been deployed, which is the second time a release has shipped undocumented. `scripts/check-bump.mjs` now refuses to deploy a token the changelog does not name.
