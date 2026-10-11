@@ -301,6 +301,21 @@ case "$snap_age" in
   *) if [ "$snap_age" -gt 3600 ]; then log "warn: edge mirror /api/snapshot is ${snap_age}s old — snapshots may be too slow to mirror"
      else log "ok: edge mirror holds a ${snap_age}s-old snapshot"; fi ;;
 esac
+# Keep the outage net fresh for the OTHER pages too. The edge mirrors a path
+# only when a visitor hits it with no query string, so on 2026-10-11 the
+# mirrored /api/risk was 3.8 days old. One quiet GET per path per hour.
+for p in /api/risk /api/forecast /api/washout /api/series/daily /api/smoke /api/haze-evidence; do
+  curl -s -o /dev/null --max-time 20 "https://air.nonarkara.org$p" 2>/dev/null
+done
+
+# ── 3c. Memory pressure ──────────────────────────────────────────────
+# The server is synchronous; when the host swaps hard, single DB batches
+# stall for seconds (5.3 s seen 2026-10-10) and swap growth eats the disk.
+swap_now=$(sysctl -n vm.swapusage 2>/dev/null | awk '{u=$6+0; t=$3+0; if (t>0) printf "%.0f", u*100/t; else print 0}')
+if [ "${swap_now:-0}" -ge 80 ]; then
+  log "warn: swap ${swap_now}% used ($(sysctl -n vm.swapusage | awk '{print $6"/"$3}')) — top memory users:"
+  ps -axm -o rss=,comm= 2>/dev/null | head -6 | awk '{printf "  %5dM  %s\n", $1/1024, $2}' >> "$LOG"
+fi
 
 # ── 4. Disk space (preventive — caused a 09:23 boot loop earlier) ─────
 # df -P /System/Volumes/Data gives POSIX-formatted output: a header line
@@ -343,6 +358,9 @@ elif [ "$disk_pct" -ge 92 ]; then
     du -skx -L 1 /Users/axiom/AirDash/data 2>/dev/null
     du -skx -L 1 /Users/axiom/AirDash/.git 2>/dev/null
     du -skx -L 1 /Users/axiom/.npm 2>/dev/null
+    # macOS swap files share this disk container: 9 GB of swap on
+    # 2026-10-11 is the likeliest cause of that morning's 98% spike.
+    du -skx /System/Volumes/VM 2>/dev/null
   } 2>/dev/null | awk 'NF == 2 && $1 + 0 >= 1048576 {
     # 1 GB = 1,048,576 KB. Show in MB if under 1 GB, else in GB.
     kb = $1 + 0

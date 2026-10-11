@@ -270,7 +270,11 @@ function summarizeDataFreshness(sources) {
   let oldest = { source: null, age_s: 0 }
   let okCount = 0
   let total = 0
+  const unconfigured = []
   for (const [name, s] of Object.entries(sources || {})) {
+    // A source with no operator key (DustBoy, IMERG) runs "ok" doing nothing.
+    // Counting it healthy hid two dead feeds for weeks; list it instead.
+    if (s?.unconfigured) { unconfigured.push(name); continue }
     total++
     if (!s?.lastOk) {
       if (worstStatus === 'ok') worstStatus = 'unknown'
@@ -298,6 +302,7 @@ function summarizeDataFreshness(sources) {
     oldest_age_s: oldest.age_s || null,
     sources_ok: okCount,
     sources_total: total,
+    sources_unconfigured: unconfigured,
   }
 }
 
@@ -727,7 +732,9 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     // result is cached in-memory with a TTL — the scan happens at most once per
     // window, off the hot path.
     'GET /api/series/daily': (req, res, url) => {
-      const days = clamp(url.searchParams.get('days'), 1, 90, 14)
+      // Whole days only: the cache is keyed by this value, and days=1.0001,
+      // 1.0002, … each forced a fresh full GROUP BY on the synchronous DB.
+      const days = Math.trunc(clamp(url.searchParams.get('days'), 1, 90, 14))
       const cached = seriesDailyCache.get(days)
       if (cached && Date.now() - cached.at < SERIES_DAILY_TTL_MS) {
         return json(res, 200, cached.payload)

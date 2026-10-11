@@ -93,9 +93,9 @@ export default {
   async run({ db, bus }) {
     const token = db.kvGet('earthdata_token')
     if (!token) {
-      // Not configured — skip quietly (logged once per boot by the scheduler's
-      // run history showing 0/0).
-      return { seen: 0, added: 0 }
+      // Not configured — skip quietly; /api/health lists it under
+      // sources_unconfigured rather than counting it healthy.
+      return { seen: 0, added: 0, skipped_no_token: true }
     }
 
     let granule = null, text = null

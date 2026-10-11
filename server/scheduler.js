@@ -113,6 +113,7 @@ export function createScheduler({ db, bus, alerts, sources }) {
       s.failures = 0
       s.lastRun = startedAt
       s.lastOk = startedAt
+      s.unconfigured = !!result?.skipped_no_token
       s.lastError = null
       s.parkedUntil = null  // any prior rate-limit park is lifted on a clean run
       if (s.source.version) db.kvSet(`src_version:${name}`, String(s.source.version))
@@ -227,6 +228,7 @@ export function createScheduler({ db, bus, alerts, sources }) {
         lastRun: s.lastRun,
         lastOk: s.lastOk,
         lastError: s.lastError,
+        unconfigured: !!s.unconfigured,
         running: s.running,
         parkedUntil: s.parkedUntil ? new Date(s.parkedUntil).toISOString() : null,
       }

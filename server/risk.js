@@ -263,7 +263,7 @@ export function createRisk(db, washout) {
       if (v === undefined) continue
       const p = prov(g.row)
       if (!p || p.pm25 !== null) continue
-      p.pm25 = v
+      p.pm25 = Math.round(v * 10) / 10
       p.pm25_comp = pm25Score(v)
       p.pm25_source = 'gistda_satellite'
       p.pm25_station_th = 'ค่าประมาณจากดาวเทียม GISTDA (ไม่มีสถานีภาคพื้นรายงาน)'
