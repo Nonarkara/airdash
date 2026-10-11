@@ -464,6 +464,16 @@ for lf in /Users/axiom/AirDash/logs/*.log(N); do
   fi
 done
 
+# ── Offsite R2 cost guard: ops/offsite-r2.sh records the bucket size daily.
+R2_STATE="$STATE_DIR/.r2-bucket-bytes"
+if [ -f "$R2_STATE" ]; then
+  r2b=$(cat "$R2_STATE" 2>/dev/null || echo 0)
+  if [ "${r2b:-0}" -gt 9663676416 ]; then
+    log "warn: R2 bucket airdash-backups is ${r2b} bytes (> 9 GB; free tier is 10 GB)"
+    problems=$((problems+1))
+  fi
+fi
+
 if [ "$problems" -gt 0 ]; then
   notify "Unresolved issue — check logs/watchdog.log"
 fi
