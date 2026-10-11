@@ -28,6 +28,19 @@ Shipped as the frontend asset bump alongside the backend work below. This entry 
 - New mirror namespace discards older entries that may have mixed filtered and canonical responses. Parameterized reads return explicit unavailability during an outage rather than unrelated data.
 - Behavioral regression verifies canonical fallback, filtered cache isolation, bounded entry count and rejection of legacy entries.
 
+## [2.4.69] — 2026-10-04 — frontend interaction recovery
+
+Entry recovered 2026-10-11 from `docs/FRONTEND-AUDIT-2.4.69.md`; the release was deployed and audited but never added here. That is the third undocumented release, and it is why `scripts/check-bump.mjs` now refuses to deploy a token the changelog does not name.
+
+- Search results existed but the dropdown was three pixels tall — its top and bottom consumed the entire viewport. Bounds now provide usable width and height against the visual viewport, request generations stop a stale search from replacing a newer one or reopening after Escape, and failures offer recovery.
+- Choosing a search result on a phone raised `Invalid LatLng (NaN, NaN)` in Leaflet while the map sheet was hidden. Movement now stops any running animation, rejects non-finite coordinates, uses an immediate view for a zero-size map and respects reduced-motion.
+- Direct `localStorage` access could interrupt module initialisation and user actions; a shared preference adapter now catches unavailable or full storage and preserves choices for the current visit.
+- Camera dialogs gained a keyboard Tab boundary, focus return on close and Escape support; a response can no longer dereference an overlay removed while a window request was in flight.
+- Chat and JSON requests have bounded deadlines, send is disabled while busy and restored on failure, and example questions follow the language. Phone inputs use 16px text with 44px touch targets.
+- 1,010 custom checks plus 14 TAP tests, no failures. Full evidence, including the interrupted browser runs that were not counted as passes, is in `docs/FRONTEND-AUDIT-2.4.69.md`.
+
+No Lighthouse, Core Web Vitals or screen-reader certification is claimed.
+
 ## [2.4.70] — 2026-10-04
 
 - Recovered backend hardening: PM2.5 warnings escalate when readings gradually cross 75; Telegram `/start` restores stopped subscriptions; bot authentication failures preserve subscribers.

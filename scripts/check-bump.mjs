@@ -27,12 +27,22 @@ if (!token) { console.error('✗ no ?v= token found in public/js/boot.js'); proc
 //
 // Placed before the "assets unchanged" early exit so it runs on every deploy,
 // including the --record pass.
+//
+// Accepts either naming convention this project has used. Older entries are
+// headed by the product version and name the asset token inside the heading —
+// "## [3.3.1] — 2026-09-20 · token 2.4.33" — while recent ones are headed by
+// the token itself. A guard that only understood one of them would block a
+// correctly documented release, which is its own kind of wrong.
 const changelog = readFileSync('CHANGELOG.md', 'utf8')
-const documented = new RegExp(`^## \\[${token.replace(/\./g, '\\.')}\\]`, 'm').test(changelog)
+const esc = token.replace(/\./g, '\\.')
+const documented =
+  new RegExp(`^## \\[${esc}\\]`, 'm').test(changelog) ||
+  new RegExp(`^## \\[[^\\]]+\\][^\\n]*\\btoken ${esc}\\b`, 'm').test(changelog)
 if (!documented) {
   console.error(
-    `✗ the asset token is ?v=${token} but CHANGELOG.md has no "## [${token}]" entry.\n` +
-    `  Assets deployed without a release note have shipped twice (2.4.67, 2.4.72).\n` +
+    `✗ the asset token is ?v=${token} but CHANGELOG.md documents no release carrying it.\n` +
+    `  Accepted forms: a "## [${token}]" heading, or any heading naming "token ${token}".\n` +
+    `  Assets deployed without a release note have shipped three times (2.4.67, 2.4.69, 2.4.72).\n` +
     `  Add the entry describing what this release changed, then deploy again.`)
   process.exit(1)
 }
