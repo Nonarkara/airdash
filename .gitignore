@@ -7,6 +7,10 @@ data/.proxy-secret
 logs/*.log
 logs/*.old
 logs/.watchdog-*
+# ops/offsite-r2.sh rewrites this daily with the R2 bucket size for the
+# watchdog's 9 GB cost guard. A state file like logs/.watchdog-*, so it is
+# ignored for the same reason — not source.
+logs/.r2-bucket-bytes
 # Vendored at setup time (setup.sh) — regenerated, not committed.
 public/vendor/
 public/fonts/

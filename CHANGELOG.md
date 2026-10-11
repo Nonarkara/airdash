@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.72] — 2026-10-11 — flood-wall cameras as haze eyes, and a repaired airport-visibility feed
+
+Shipped as the frontend asset bump alongside the backend work below. This entry was missing until 2026-10-11: the `?v=` token had already reached 2.4.72 and been deployed, which is the second time a release has shipped undocumented. `scripts/check-bump.mjs` now refuses to deploy a token the changelog does not name.
+
+- **Optical haze evidence, cooked into the verdict.** `server/vision/floodWall.js` builds a deterministic, health-checked panel from FloodDash's camera wall — up to 2 cameras per province across all 77, daylight only, hourly, at most 2 requests in flight per host, with failing cameras benched for a day. `server/vision/hazeEvidence.js` rolls each camera's own clear-day baseline up per province, adds humidity and airport visibility, and names fog as the likelier cause when the air is saturated. Exposed at `/api/haze-evidence`.
+- **Cameras never produce a PM2.5 number.** They can raise a province to at least WATCH in exactly one case: no ground station is reporting there and widespread non-fog haze is seen. At audit time that condition was reachable by only the 6 provinces whose PM2.5 comes from the GISTDA satellite estimate, and 72 of 75 provinces with camera frames were still below the two-judged-camera minimum, so the path was inert.
+- **METAR airport visibility was unreadable for two weeks.** Its timestamps were stored as raw epoch seconds, which SQLite sorts below every date string, so every freshness-filtered reader saw the feed as stale. Existing rows were converted, all 28 stations now carry a province, and `insertReading` rejects any non-date `obs_time` from any source. The rejection counter is surfaced in `/api/health`, and callers already branch on the return value, so a repeat is visible in three places rather than silent for a fortnight.
+- **DustBoy and IMERG no longer report healthy while doing nothing.** Neither has an API key; both are now listed under `unconfigured` and excluded from the fresh-data count.
+- A daily-series query parameter could force a full database scan on every request; fixed. The hourly watchdog now refreshes the Cloudflare edge mirror and reports swap pressure above 80%, naming the largest memory users.
+- **Encrypted offsite backup to Cloudflare R2.** `ops/offsite-r2.sh` age-encrypts the nightly database on this Mac before upload, so the bucket only ever holds ciphertext, refuses files over 500 MB and refuses a backup older than 26 hours. Retention is enforced by bucket lifecycle rules. No credential is committed: the API token is read from `~/.zshrc` and the age key lives outside the repo. The watchdog alerts above 9 GB against the 10 GB free-tier ceiling.
+
 
 ## [2.4.71] — 2026-10-07
 
