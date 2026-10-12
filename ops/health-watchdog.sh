@@ -464,6 +464,42 @@ for lf in /Users/axiom/AirDash/logs/*.log(N); do
   fi
 done
 
+# ── Offsite R2 freshness ────────────────────────────────────────────────
+# A backup that silently stops is worse than no backup, because you go on
+# believing you have one. Check 5 above covers the LOCAL snapshot only — its
+# receipt guard watches data/.archive-receipt.json, which the offsite job
+# never touches. So on 2026-10-12 the 03:50 offsite run could fail on
+# `mkdir '/.wrangler/cache'` (launchd hands a LaunchAgent a CWD of /) and
+# upload nothing at all, with every health number still green.
+#
+# A failed offsite run only sends a desktop notification, at 03:50, which is
+# precisely when nobody is at the machine to see it.
+#
+# 30h rather than 24: the job runs once a day at 03:50, so one missed run
+# should not raise an alarm, but two consecutive misses means the offsite
+# copy is gone and the only surviving data sits on the same SSD it existed
+# to protect from.
+OFFSITE_LOG="${WATCHDOG_OFFSITE_LOG:-/Users/axiom/AirDash/logs/offsite.log}"
+OFFSITE_MAX_AGE_H="${WATCHDOG_OFFSITE_MAX_AGE_H:-30}"
+last_offsite_ok=""
+if [ -f "$OFFSITE_LOG" ]; then
+  last_offsite_ok=$(grep -aE '\] ok: uploaded ' "$OFFSITE_LOG" 2>/dev/null | tail -1)
+fi
+if [ -z "$last_offsite_ok" ]; then
+  log "warn: NO successful offsite R2 upload has ever been recorded in ${OFFSITE_LOG} — the encrypted offsite copy may not exist at all"
+  problems=$((problems + 1))
+else
+  off_ts=$(print -r -- "$last_offsite_ok" | sed -nE 's/^\[([^]]+)\].*/\1/p')
+  off_epoch=$(date -j -f '%Y-%m-%dT%H:%M:%S%z' "$off_ts" +%s 2>/dev/null || print -r -- 0)
+  offsite_age_h=$(( ( $(date +%s) - off_epoch ) / 3600 ))
+  if [ "$off_epoch" -eq 0 ] || [ "$offsite_age_h" -ge "$OFFSITE_MAX_AGE_H" ]; then
+    log "warn: offsite R2 copy is STALE — last successful upload ${offsite_age_h}h ago (limit ${OFFSITE_MAX_AGE_H}h). A failed run only raises a desktop notification at 03:50."
+    problems=$((problems + 1))
+  else
+    log "ok: offsite R2 copy fresh (last successful upload ${offsite_age_h}h ago)"
+  fi
+fi
+
 # ── Offsite R2 cost guard: ops/offsite-r2.sh records the bucket size daily.
 R2_STATE="$STATE_DIR/.r2-bucket-bytes"
 if [ -f "$R2_STATE" ]; then

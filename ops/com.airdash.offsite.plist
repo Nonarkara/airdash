@@ -3,6 +3,16 @@
 <plist version="1.0"><dict>
   <key>Label</key><string>com.airdash.offsite</string>
   <key>ProgramArguments</key><array><string>/bin/zsh</string><string>/Users/axiom/AirDash/ops/offsite-r2.sh</string></array>
+  <!-- launchd sets an agent's working directory to / when this is absent, and
+       wrangler resolves its cache as process.cwd()/.wrangler/cache. The first
+       unattended run (2026-10-12 03:50) failed on mkdir '/.wrangler/cache'
+       and uploaded nothing. ops/offsite-r2.sh also cds itself, so the script is
+       correct even if this key is lost again. -->
+  <key>WorkingDirectory</key><string>/Users/axiom/AirDash</string>
+  <key>EnvironmentVariables</key><dict>
+    <key>HOME</key><string>/Users/axiom</string>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
   <key>StartCalendarInterval</key><dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>50</integer></dict>
   <key>RunAtLoad</key><false/>
   <key>StandardErrorPath</key><string>/Users/axiom/AirDash/logs/offsite.err.log</string>

@@ -15,6 +15,14 @@ MAX_BYTES=$((500 * 1024 * 1024))
 log() { print -r -- "[$(date '+%Y-%m-%dT%H:%M:%S%z')] $*" >> "$LOG" }
 fail() { log "FAIL: $*"; osascript -e "display notification \"$*\" with title \"AirDash offsite backup\"" 2>/dev/null; exit 1 }
 
+# Run from the repo, never from whatever CWD launchd hands us. launchd sets a
+# LaunchAgent's CWD to / unless the plist declares WorkingDirectory, and wrangler
+# puts its cache in process.cwd()/.wrangler/cache — so the first unattended run
+# (2026-10-12 03:50) died on `mkdir '/.wrangler/cache'` after encryption, before
+# uploading a single byte. The plist now also sets WorkingDirectory; this keeps
+# the script correct however it is invoked.
+cd /Users/axiom/AirDash || fail "cannot cd to /Users/axiom/AirDash"
+
 [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || eval "$(grep -E '^export CLOUDFLARE_API_TOKEN=' ~/.zshrc)"
 [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || fail "no CLOUDFLARE_API_TOKEN"
 [ -r "$KEY" ] || fail "age key missing at $KEY"

@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.76] — 2026-10-12 — the encrypted offsite backup had never once run on its own, and nothing would have told you
+
+Ops-only; no file under `public/` changed, so the asset token stays at 2.4.74.
+
+The 2026-10-11 entry said the first unattended offsite run was unobserved. It was worse than unobserved — **it had already failed.**
+
+- **The 03:50 job died before uploading a byte.** `mkdir '/.wrangler/cache'`. launchd gives a LaunchAgent a working directory of `/` unless its plist declares `WorkingDirectory`, and wrangler puts its cache in `process.cwd()/.wrangler/cache`. Auth was fine — it had already fetched the account when it died. Fixed in both layers: the plist now declares `WorkingDirectory` (and explicit `HOME`/`PATH`), and the script `cd`s itself so it stays correct even if that key is lost again.
+- **Verified by running the job the way launchd runs it**, not by hand: `launchctl kickstart` uploaded 165,362,854 bytes as `daily/airdash-2026-10-12.db.gz.age`, exit code 0. The object was then fetched back and its first bytes read — `age-encryption.org/v1`, an X25519 recipient stanza. The bucket holds ciphertext, never the database.
+- **The failure was invisible, and that is the part that mattered.** The watchdog's 48-hour receipt guard covers the *local* archive — `data/.archive-receipt.json`, a file the offsite job never touches. So the offsite copy could stop entirely while every health number stayed green. A failed run raised only a desktop notification, at 03:50, which is exactly when nobody is at the machine. The watchdog now also checks that a successful upload is recorded in `logs/offsite.log` within 30 hours — one missed run is not alarming, two consecutive misses means the only surviving data sits on the SSD the copy existed to protect from. It treats "log exists but never recorded a success" and "timestamp unparseable" as failures, not passes.
+- **The pre-upload bucket-size read, shipped yesterday, proved itself here.** On the failed run it logged `WARN: bucket size unreadable` and **kept the previous reading instead of writing a zero** — precisely the failure it was added to prevent, on the very next execution.
+- `OLLAMA_KEEP_ALIVE` was `-1` — *never unload* — set globally by `org.nonarkara.setenv-ollama-keepalive` to keep `claude-mem-observer` warm. That is not "warm", it is "pinned for the life of the process": every model any client loads stays resident forever. On a 16 GB machine that is what held `gemma3:4b`'s 3.7 GB indefinitely, and the resulting swap pressure is what produced the intermittent 502/504s. Now `30m`, which gives the same warmth for an active session's gaps and still lets an idle model be evicted. The `LLM_TIMEOUT_MS` fix remains the real safety net, as that plist's own comment said.
+- Two new guards, 31 checks, wired into `npm test`. The freshness block is **executed** against synthetic logs rather than pattern-matched, because the properties that matter are behavioural: a fresh upload is silent, a stale one is not, and a log that exists but never recorded a success is a failure. **Four planted bugs turn it red** — removing `WorkingDirectory`, removing the script's `cd`, widening the 30-hour limit to 720, and dropping the `problems` increment.
+
 ## [2.4.75] — 2026-10-11 — the R2 cost guard was watching a bucket that already held 159 MB
 
 Ops-only; no file under `public/` changed, so the asset token stays at 2.4.74.
