@@ -390,6 +390,44 @@ else
   log "ok: disk ${disk_pct}% used"
 fi
 
+# ── Host saturation: detect and alert ────────────────────────────────────
+# host_starved() already exists above, but until 2026-10-12 it was consulted
+# ONLY to decide whether to suppress a restart. It could tell a starved host
+# apart from a dead one and then said nothing about it: this watchdog reported
+# "0 unresolved problems" on an hour when the box was at load average 82–141 on
+# 8 cores with 87% of swap in use and /api/ping was taking 21 seconds. Nothing
+# was actionable — a restart would not help — but "nothing we can do" is not
+# the same as "nothing to say", and the operator was the only one who could
+# have noticed.
+#
+# Two consecutive checks are required, so a legitimate one-off spike — the
+# nightly backup compressing a 1.2 GB database, an npm install — does not page
+# anyone. The notification itself is once a day, like the disk warning, because
+# a saturated host that does not clear is a sustained condition and hourly
+# repeats would be noise.
+STARVE_COUNT="$STATE_DIR/.watchdog-starve-count"
+STARVE_STATE="$STATE_DIR/.watchdog-starve-notify"
+if host_starved; then
+  starve_n=$(cat "$STARVE_COUNT" 2>/dev/null || print -r -- 0)
+  case "$starve_n" in ''|*[!0-9]*) starve_n=0 ;; esac
+  starve_n=$(( starve_n + 1 ))
+  print -r -- "$starve_n" > "$STARVE_COUNT"
+  if [ "$starve_n" -ge 2 ]; then
+    log "warn: host saturated ($(starve_detail)) for ${starve_n} consecutive checks — the server is alive but starved of CPU/memory"
+    st_today=$(date '+%Y-%m-%d')
+    st_last=$(cat "$STARVE_STATE" 2>/dev/null || true)
+    if [ "$st_last" != "$st_today" ]; then
+      notify "Host saturated ($(starve_detail)) — AirDash stays up but slow until this clears. Restarting will not help."
+      print -r -- "$st_today" > "$STARVE_STATE"
+    fi
+  else
+    log "info: host busy ($(starve_detail)) — first consecutive check, not alerting yet"
+  fi
+else
+  print -r -- 0 > "$STARVE_COUNT"
+  log "ok: host not saturated ($(starve_detail))"
+fi
+
 # ── 5. LLM chat API (informational only — degraded ≠ down) ─────────────
 llm_reachable=$(curl -sf --max-time 8 "$LOCAL/api/chat/status" 2>/dev/null | grep -o '"reachable":[a-z]*' | cut -d: -f2)
 if [ "${llm_reachable:-}" = "true" ]; then

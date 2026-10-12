@@ -30,7 +30,18 @@ Backend-only; no file under `public/` changed, so the asset token stays at 2.4.7
 
 `scripts/test-cctv-dead-backoff.mjs`, 26 checks, mutation-tested. **1150+ checks, 0 failures.**
 
-**Still not addressed:** `host_starved()` correctly detects a saturated host (load ≥ ncpu×4) but is only ever consulted to *suppress a restart* — nothing in the watchdog alerts on sustained starvation, and this host was seen at **load 82–141 on 8 cores with 87 % of swap in use** while `/api/ping` took 21 s.
+**Still not addressed:** the probe remains deliberately budget-bound (see above). Fixing that means raising `PER_HOST` against third-party servers, which is not this project's call to make alone.
+
+## [2.4.78] — 2026-10-12 — the watchdog could see a saturated host and chose to say nothing about it
+
+Ops-only; no file under `public/` changed, so the asset token stays at 2.4.74.
+
+- `host_starved()` has been in the watchdog for a long time, and until now it was consulted for exactly one purpose: deciding whether to **suppress a restart**. It could reliably tell a starved host apart from a dead one, and then said nothing at all. On 2026-10-12 07:00 it logged `check complete — 0 unresolved problem(s)` — while the box was at **load average 82–141 on 8 cores with 87 % of swap in use and `/api/ping` taking 21 seconds**.
+- Nothing in the watchdog could have *fixed* it; a restart would have added load to an already saturated machine, and suppressing one is the correct action. But "nothing we can do" is not the same as "nothing to say" — the operator is the only one positioned to notice a host being slowly ground down, and no other part of the system reports it.
+- The watchdog now logs the saturation every check and notifies after **two consecutive saturated checks**, so a legitimate one-off spike — the nightly backup compressing a 1.2 GB database, an `npm install` — does not page anyone. The notification itself is **once a day**, matching the disk warning, because a host that stays saturated is a sustained condition and hourly repeats would be noise. Recovery resets the streak, so a later incident has to earn its alert again.
+- `scripts/test-host-starvation.mjs`, 17 checks. The block is executed against a controllable `host_starved()` rather than pattern-matched, because what is being tested is behaviour over time — one check vs two, alerting vs silence, recovery resetting the streak. **Three planted bugs turn it red:** removing the consecutive-check requirement, not resetting the streak on recovery, and removing the daily cap.
+
+**1180 checks, 0 failures.**
 
 ## [2.4.76] — 2026-10-12 — the encrypted offsite backup had never once run on its own, and nothing would have told you
 
