@@ -37,6 +37,31 @@ export function bootDelayMs(lastOkIso, intervalMs, now = Date.now()) {
   return Math.max(0, t + intervalMs - now)
 }
 
+/** Has this source's fetch/parse logic changed since we last recorded a run?
+ *
+ *  Pure, and deliberately narrow. A source that declares a `version` but has
+ *  no stored row counts as changed: both sides used to default to 1, so the
+ *  first version a source ever declared compared equal to the default and was
+ *  treated as unchanged. cctvHealth gained a `version` on 2026-10-12 for the
+ *  first time, and its new dead-camera backoff sat waiting out a full 30-minute
+ *  interval precisely because it looked unchanged. Not knowing which version is
+ *  deployed is not the same as knowing it is current.
+ *
+ *  A source with no `version` field is never "changed" — it has nothing to
+ *  declare, and the boot guard exists to stop a restart re-running every source
+ *  at once (13 restarts on 2026-09-27 spent the shared Open-Meteo quota). */
+export function isLogicChanged(source, storedVersion) {
+  const declared = source?.version
+  if (declared === undefined) return false
+  // No recorded version at all means we do not know what is deployed. This
+  // must NOT fall back to the same default the declared value is compared
+  // against — that fallback is the bug being fixed here: with `?? 1` on both
+  // sides, a source declaring `version: 1` for the first time compared equal
+  // to the missing row and read as unchanged.
+  if (storedVersion === undefined || storedVersion === null || storedVersion === '') return true
+  return Number(storedVersion) !== Number(declared)
+}
+
 export function parkUntil(err, now = Date.now()) {
   if (/daily quota exhausted/i.test(String(err?.message ?? err))) {
     const d = new Date(now)
@@ -202,8 +227,9 @@ export function createScheduler({ db, bus, alerts, sources }) {
     for (const [name, s] of state) {
       const last = lastOkAt(name)
       // A source whose fetch logic changed (its `version` bumped) runs now:
-      // the new code must not wait hours behind the quota guard.
-      const changed = (s.source.version ?? 1) !== Number(db.kvGet(`src_version:${name}`) ?? 1)
+      // the new code must not wait hours behind the quota guard. See
+      // isLogicChanged for why a declared-but-unrecorded version counts.
+      const changed = isLogicChanged(s.source, db.kvGet(`src_version:${name}`))
       const wait = changed ? 0 : bootDelayMs(last, s.source.intervalMs)
       if (wait > 0) {
         s.lastOk = last // health shows the real last success, not "never"

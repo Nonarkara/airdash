@@ -14,9 +14,29 @@ import { KV_KEY, setHealth, getHealth, hydrateOnce, applyHealth, summarize } fro
 export { applyHealth, summarize }
 
 export const PROBE_TIMEOUT_MS = 5_000
-const CONCURRENCY = 24   // in flight overall
+const CONCURRENCY = 24   // in flight overall — SEE THE NOTE BELOW, it is not the real ceiling
 const PER_HOST = 3       // in flight against any one server — these are municipal servers
 const DEAD_AFTER_STRIKES = 2 // timeouts/5xx: two probes 30 min apart before a camera is hidden
+
+// NOTE ON WHY CONCURRENCY IS NOT THE REAL CEILING (measured 2026-10-12).
+//
+// The 561 probeable cameras resolve to FIVE distinct hosts —
+// camerai1.iticfoundation.org (314), streaming.noc.nakhoncity.org (153),
+// streaming2.highwaytraffic.go.th (72), streaming1.highwaytraffic.go.th (22)
+// and camera1.iticfoundation.org — so the per-host cap, not the overall cap,
+// binds: sum(min(camerasPerHost, PER_HOST)) = 15 in flight, and CONCURRENCY=24
+// is never reached. Measured `probe_ms` sits on the 25 s budget every pass,
+// which is what that looks like: 96 due-but-dead cameras on ONE host, three at
+// a time, each holding its slot for the full timeout, is ~32 s of waiting by
+// itself.
+//
+// Raising PER_HOST would fit the queue inside the budget, and it is the
+// obvious lever — but these are third-party institutional servers, and raising
+// their concurrent load to chase our own latency is a decision for whoever owns
+// them, not a side effect of this change. The pass is therefore left
+// deliberately budget-bound and rotating: it checks a slice, the offset rotates,
+// and every camera is eventually reached. That is a design choice with a cost,
+// not an oversight.
 
 // ── Why a pass used to take eight minutes ─────────────────────────────────
 // CORRECTION to an earlier comment in this file, which claimed the probe
@@ -150,17 +170,34 @@ export default {
   // field at all, so it never qualified for the boot-time "run immediately"
   // path — a change here would otherwise have waited its full 30-minute turn
   // before anyone could see it had any effect.
-  version: 1, // bump when the fetch/parse logic changes → runs at next boot
+  version: 2, // bump when the fetch/parse logic changes → runs at next boot
 
   async run({ db }) {
     hydrateOnce(db)
+    // Timed separately on purpose. `dur_ms` for this source has always been a
+    // single number covering both halves, and on 2026-10-12 it was impossible to
+    // tell from it whether the 25 s probe budget was binding or whether the
+    // work was really in composing the catalog — which is the difference
+    // between "the probe is too slow" and "the catalog fetch is".
+    const t0 = Date.now()
     const cat = await composeAll({ useCache: false, skipHealth: true })
+    const composeMs = Date.now() - t0
+    const t1 = Date.now()
     const results = await probeAll(cat.cameras, getHealth())
+    const probeMs = Date.now() - t1
     // Cameras that left the catalog drop out; everything probed replaces its old entry.
     setHealth(results)
     db.kvSet(KV_KEY, JSON.stringify({ checked_at: new Date().toISOString(), cameras: Object.fromEntries(results) }))
     const s = summarize(applyHealth(cat.cameras, results))
-    log('info', 'cctv health probed', s)
+    log('info', 'cctv health probed', {
+      ...s,
+      compose_ms: composeMs,
+      probe_ms: probeMs,
+      budget_ms: PROBE_BUDGET_MS,
+      // If probe_ms sits on the budget, the queue is being cut short and
+      // coverage is partial — that is the number to look at, not the total.
+      probe_budget_bound: probeMs >= PROBE_BUDGET_MS - 250,
+    })
     return { seen: results.size, added: 0 }
   },
 }
