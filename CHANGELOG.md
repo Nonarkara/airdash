@@ -10,6 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.77] — 2026-10-12 — stop re-proving cameras that have already been proven dead
+
+Backend-only; no file under `public/` changed, so the asset token stays at 2.4.74.
+
+This is the root cause behind the 2.4.73 ceiling. The ceiling bounded the damage; this removes most of the work.
+
+- **First, a correction to the file's own comment.** `cctvHealth.js` claimed the probe "blocks the event loop". It never did — every fetch is awaited, so the loop stays free. The cost was arithmetic: the 2026-10-12 health map held **561 cameras of which 456 were dead (81 %)**, and the 30-minute schedule re-probed every one of them, every pass, forever, each dead camera holding a concurrency slot until its 5-second timeout expired. A pass was 410–497 s of waiting on sockets that were never going to answer — **21,888 dead-camera probes a day**.
+- **A camera already known to be down is now re-probed on a backoff ladder** — 1 h, 2 h, 4 h, 8 h, then 12 h, indexed by its streak — instead of every 30 minutes. A live probe resets the streak, so a camera that recovers is back on the normal cadence immediately, and worst-case detection of a recovery is one backoff period. Measured against the live map at deploy: **363 of 561 cameras deferred, 65 % less work per pass.**
+- **The safety property, which is the reason this is not simply "skip the dead ones":** the returned health map *replaces* the previous one, and a camera with no verdict is drawn. A skipped camera that vanished from the map would therefore have **un-hidden 456 dead cameras at once**. `carryForward` now iterates every camera with a stream, not merely the ones due, so a backed-off camera keeps its exact prior `down` verdict and streak. That is pinned directly: five planted bugs turn the guard red, and the one that narrows `carryForward` back to the due set is the mutation that un-hides cameras.
+- **`fail_streak` is now capped.** A camera dead for 11 days had accumulated a streak of **555**, rewritten to the database every 30 minutes — a number that reads like a rate, means nothing, and grows without bound. Past the point where a camera is already hidden and already on the longest rung, the exact count cannot change any decision, so anything above the last rung is now the same number.
+- `cctvHealth` had **no `version` field at all**, so it never qualified for the boot-time "run immediately" path and a change here would have waited its full 30-minute turn before anyone could see it had any effect. It now has one.
+- `scripts/test-cctv-dead-backoff.mjs`, 26 checks, wired into `npm test`.
+
+**Honest limits, not claims:**
+
+- **The end-to-end pass duration is not yet measured.** The pass has not run since the change: at boot this source was listed in `deferred_fresh`, because the boot guard defers a source that succeeded within its interval and `src_version:cctvHealth` had **no prior row to compare against** — so adding a `version` field for the first time does not force a boot run, only changing it from a known value does. The 65 % figure is arithmetic over the live health map, not a timed pass.
+- **The host, not the probe, may now be the binding constraint.** At the time of writing this host was at **load average 82–141 on 8 cores with 87 % of swap used**, and `/api/ping` answered in 21 s during a pass. `host_starved()` correctly detects that (load ≥ ncpu×4), but it is only ever consulted to *suppress a restart* — nothing in the watchdog alerts on sustained starvation. That gap is recorded, not fixed.
+- 456 dead cameras is itself the thing worth questioning. These are municipal and provincial streams that have not served a playlist in days. Hiding them is the honest response to the evidence, and the map already does — but it means the camera wall is thin, and that is a data problem upstream of this one.
+
 ## [2.4.76] — 2026-10-12 — the encrypted offsite backup had never once run on its own, and nothing would have told you
 
 Ops-only; no file under `public/` changed, so the asset token stays at 2.4.74.
