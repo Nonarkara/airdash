@@ -13,8 +13,8 @@
 <meta name="twitter:card" content="summary">
 <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/apple-touch-icon.png">
-<link rel="stylesheet" href="/css/tokens.css?v=2.4.82">
-<link rel="stylesheet" href="/css/story.css?v=2.4.82">
+<link rel="stylesheet" href="/css/tokens.css?v=2.4.83">
+<link rel="stylesheet" href="/css/story.css?v=2.4.83">
 <style>
 /* Slim live-alert strip — appears under the hero only when the air is
    dangerous somewhere (sev≥2 alert in the last 24h) or the viewed area is
@@ -36,7 +36,7 @@
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
-<link rel="stylesheet" href="/css/brand.css?v=2.4.82">
+<link rel="stylesheet" href="/css/brand.css?v=2.4.83">
 </head>
 <body class="story">
 
@@ -101,7 +101,7 @@
        alert in the last 24h or the viewed area is ≥ unhealthy. Filled and
        revealed by story.js (renderAlertStrip). -->
   <div class="alert-strip" id="alert-strip" hidden role="alert">
-    <a class="as-msg" id="alert-strip-msg" href="/ops.html"></a>
+    <a class="as-msg" id="alert-strip-msg" href="#ch-persona"></a>
     <a class="as-cta" href="#act-subscribe" data-i18n="รับการแจ้งเตือน →|Get alerts →">รับการแจ้งเตือน →</a>
   </div>
 
@@ -266,15 +266,15 @@
       <span class="en-sub" data-i18n="เล็ก ๆ แต่ปกป้องปอดได้จริง|SMALL MOVES THAT ACTUALLY PROTECT YOUR LUNGS">เล็ก ๆ แต่ปกป้องปอดได้จริง</span>
     </h2>
 
-    <div class="alert-links act-cta" id="act-subscribe" style="margin-bottom:16px">
-      <a href="https://line.me/R/ti/p/@630xxaki" target="_blank" rel="noopener" data-i18n="🔔 LINE OA — รับแจ้งเตือน|🔔 LINE OA — get alerts">🔔 LINE OA — รับแจ้งเตือน</a>
-      <a href="https://t.me/AirDash_bot" target="_blank" rel="noopener" data-i18n="✈️ Telegram — รับแจ้งเตือน|✈️ Telegram — get alerts">✈️ Telegram — รับแจ้งเตือน</a>
-    </div>
-
+    <!-- The subscribe block used to appear twice: once above the checklist and
+         once below it under its own "want a heads-up?" heading, with the same
+         two destinations both times. Only the second survives, because that is
+         where the heading that introduces it lives; #act-subscribe is what
+         the alert strip's CTA jumps to. -->
     <div class="checklist" id="checklist"></div>
 
     <div data-i18n="อยากให้เตือนก่อนฝุ่นมา? สมัครรับแจ้งเตือนฟรี|Want a heads-up before the haze? Free alerts:">อยากให้เตือนก่อนฝุ่นมา? สมัครรับแจ้งเตือนฟรี</div>
-    <div class="alert-links">
+    <div class="alert-links act-cta" id="act-subscribe">
       <a href="https://line.me/R/ti/p/@630xxaki" target="_blank" rel="noopener" data-i18n="LINE OA — ช่องทางหลัก · แจ้งเตือนฝุ่นรุนแรงระดับประเทศ|LINE OA — primary channel · national severe-haze alerts">LINE OA — ช่องทางหลัก · แจ้งเตือนฝุ่นรุนแรงระดับประเทศ</a>
       <a href="https://t.me/AirDash_bot" target="_blank" rel="noopener" data-i18n="Telegram — คุยกับ AirDash Bot|Telegram — chat with the AirDash bot">Telegram — คุยกับ AirDash Bot</a>
     </div>
@@ -297,6 +297,6 @@
   <div>AirDash 3.0 · AIR STORY v2.2.0-story2 · depa / Smart City Thailand Office</div>
 </footer>
 
-<script type="module" src="/js/story.js?v=2.4.82"></script>
+<script type="module" src="/js/story.js?v=2.4.83"></script>
 </body>
 </html>

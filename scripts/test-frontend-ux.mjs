@@ -117,6 +117,15 @@ await test('closing the Window during a failed request cannot update a removed d
 
   const mk = () => {
     const box = element()
+    // Count real writes so "was this live region mutated?" is answerable —
+    // an unchanged innerHTML string cannot tell a guarded no-op from an
+    // unguarded reassignment.
+    let html = ''
+    box.writes = 0
+    Object.defineProperty(box, 'innerHTML', {
+      get: () => html,
+      set: (v) => { html = String(v); box.writes++ },
+    })
     const s = vm.createContext({
       console, tr: (th, en) => en, escapeHtml: (x) => String(x ?? ''),
       store: { lang: 'en' },
@@ -169,6 +178,26 @@ await test('closing the Window during a failed request cannot update a removed d
     const { s, box } = mk()
     vm.runInContext('renderVerdict(20)', s)
     assert.ok(box.innerHTML.includes('as of'), 'a number carries its clock')
+  })
+
+  // refresh() re-renders every 60 s. Assigning identical HTML into an
+  // aria-live region is still a mutation, so a screen reader would otherwise
+  // be re-announced the verdict every minute through hours of unchanged air.
+  await test('an unchanged verdict is not rewritten into its live region', () => {
+    const { s, box } = mk()
+    vm.runInContext('renderVerdict(20)', s)
+    const after = box.writes
+    vm.runInContext('renderVerdict(20); renderVerdict(20)', s)
+    assert.equal(box.writes, after, 'two identical renders wrote nothing')
+  })
+
+  await test('a changed verdict IS rewritten, so the guard never silences a real change', () => {
+    const { s, box } = mk()
+    vm.runInContext('renderVerdict(20)', s)
+    const after = box.writes
+    vm.runInContext('renderVerdict(60)', s)
+    assert.equal(box.writes, after + 1, 'a genuine change still reaches the reader')
+    assert.ok(box.innerHTML.includes('Hazardous'))
   })
 
   // Adding a persona to PERSONA_ORDER without adding it to

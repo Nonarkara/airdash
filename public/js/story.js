@@ -1,4 +1,4 @@
-import { readPreference, writePreference } from './preferences.js?v=2.4.82'
+import { readPreference, writePreference } from './preferences.js?v=2.4.83'
 // ────────────────────────────────────────────────────────────────────────────
 // AIR STORY — the new front door. A scroll narrative about TODAY's air for
 // smart kids and curious adults. Not a dashboard: one question per chapter,
@@ -6,11 +6,11 @@ import { readPreference, writePreference } from './preferences.js?v=2.4.82'
 // back to /api/science. Unavailable readings stay unknown while the page
 // retries; reference formulas remain available for explanation.
 // ────────────────────────────────────────────────────────────────────────────
-import { store, on, setLang, emit } from './state.js?v=2.4.82'
-import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.82'
-import { getJson } from './cache.js?v=2.4.82'
-import { fmtNum, escapeHtml } from './fmt.js?v=2.4.82'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.82'
+import { store, on, setLang, emit } from './state.js?v=2.4.83'
+import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.83'
+import { getJson } from './cache.js?v=2.4.83'
+import { fmtNum, escapeHtml } from './fmt.js?v=2.4.83'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.83'
 
 const $ = (sel) => document.querySelector(sel)
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -91,6 +91,27 @@ function bandLabel(level) {
   return tr(b.th, b.en)
 }
 
+/**
+ * Write into a live region only when the content actually changed.
+ *
+ * refresh() re-runs the whole render every 60 s. Several of the nodes it
+ * touches — the hero number, the life-minutes figure and the verdict — sit
+ * inside `aria-live="polite"`. Assigning identical HTML still counts as a
+ * mutation, so before this guard a screen-reader user was re-announced the
+ * verdict every minute, forever, including through every hour of unchanged
+ * air. It also churned the DOM for nothing.
+ */
+function setHtml(node, html) {
+  if (!node || node.innerHTML === html) return false
+  node.innerHTML = html
+  return true
+}
+function setText(node, text) {
+  if (!node || node.textContent === text) return false
+  node.textContent = text
+  return true
+}
+
 // ── Count-up (wallet) — eased cubic, skipped entirely under reduced motion ──
 function countUp(node, target, format, dur = 1400) {
   if (!node) return
@@ -119,23 +140,18 @@ function renderHero() {
   const breath = $('#breath')
   if (breath) breath.style.setProperty('--breath', tint)
 
-  const cigNode = $('#cig-num')
-  if (cigNode) {
-    cigNode.innerHTML = cigs == null
-      ? '—'
-      : `${fmtNum(cigs, 1)} <span class="unit">${tr('มวน', 'cigarettes')}</span>`
-  }
-  const lifeNode = $('#life-min')
-  if (lifeNode) lifeNode.textContent = lifeMin == null ? '—' : fmtNum(lifeMin, 0)
-  const pmNode = $('#hero-pm')
-  if (pmNode) pmNode.textContent = pm == null ? '—' : `${fmtNum(pm, 0)} µg/m³`
+  setHtml($('#cig-num'), cigs == null
+    ? '—'
+    : `${fmtNum(cigs, 1)} <span class="unit">${tr('มวน', 'cigarettes')}</span>`)
+  setText($('#life-min'), lifeMin == null ? '—' : fmtNum(lifeMin, 0))
+  setText($('#hero-pm'), pm == null ? '—' : `${fmtNum(pm, 0)} µg/m³`)
 
   const chip = $('#bandchip')
   if (chip) {
     chip.style.setProperty('--breath', tint)
-    chip.querySelector('.txt').textContent = tr(
+    setText(chip.querySelector('.txt'), tr(
       `ตอนนี้อากาศ: ${bandLabel(level)} · PM2.5 ${pm == null ? '—' : fmtNum(pm, 0)} µg/m³`,
-      `Right now: ${bandLabel(level)} · PM2.5 ${pm == null ? '—' : fmtNum(pm, 0)} µg/m³`)
+      `Right now: ${bandLabel(level)} · PM2.5 ${pm == null ? '—' : fmtNum(pm, 0)} µg/m³`))
   }
 
   renderVerdict(pm)
@@ -163,12 +179,12 @@ function renderVerdict(pm) {
 
   if (pm == null) {
     box.dataset.state = 'unknown'
-    box.innerHTML = `
+    setHtml(box, `
       <div class="v-head">${tr('ยังบอกไม่ได้ — ยังไม่มีค่าฝุ่นสด', 'Not answering yet — no live reading')}</div>
       <div class="v-body">${tr(
         'เราไม่เดาค่าฝุ่นให้คุณ ถ้าสถานีใกล้ที่สุดยังไม่ส่งค่ามา คำตอบนี้จะขึ้นเองทันทีที่มีข้อมูล',
         'We will not invent a number for you. The moment the nearest station reports, this line answers on its own.'
-      )}</div>`
+      )}</div>`)
     return
   }
 
@@ -186,10 +202,10 @@ function renderVerdict(pm) {
   // Colour comes from --breath-now on :root (the live band), so the verdict
   // cannot read as a different severity than the breathing circle above it.
   box.dataset.state = 'live'
-  box.innerHTML = `
+  setHtml(box, `
     <div class="v-eyebrow">${tr('สำหรับ', 'For')} <b>${escapeHtml(who)}</b></div>
     <div class="v-head">${escapeHtml(answer || bandLabel(currentLevel()))}</div>
-    ${freshnessLine()}`
+    ${freshnessLine()}`)
 }
 
 /** "as of 14:07 · 3 min ago" — a number nobody should trust without a clock. */
@@ -230,9 +246,15 @@ async function renderAlertStrip() {
   if (!severe && !unhealthyHere) { strip.hidden = true; return }
 
   strip.classList.toggle('severe', severe)
-  msg.textContent = severe
-    ? tr('🔴 อากาศอันตรายในบางพื้นที่ — ดูรายละเอียด', '🔴 Hazardous air in some areas — details')
-    : tr('🟠 อากาศมีผลต่อสุขภาพในพื้นที่นี้ — ดูรายละเอียด', '🟠 Unhealthy air in this area — details')
+  // The strip used to point at /ops.html — the operator console with ~2,000
+  // live points and layer controls. A person who was just told the air is
+  // hazardous does not need that; they need the advice for their own
+  // profile, which is the chapter immediately below. Mission Control is still
+  // reachable, but it is labelled in the act chapter for the audience it is
+  // actually for.
+  setText(msg, severe
+    ? tr('🔴 อากาศอันตรายในบางพื้นที่ — ดูว่าควรทำอะไร', '🔴 Hazardous air in some areas — what to do now')
+    : tr('🟠 อากาศมีผลต่อสุขภาพในพื้นที่นี้ — ดูว่าควรทำอะไร', '🟠 Unhealthy air in this area — what to do now'))
   strip.hidden = false
 }
 
