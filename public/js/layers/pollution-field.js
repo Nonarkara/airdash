@@ -28,7 +28,13 @@ export function createPollutionField(options={}){
   onRemove(map){map.off('moveend zoomend resize',this.draw,this);this.canvas.remove();this.map=null},
   setData(points,settings={}){this.points=points??[];Object.assign(this.settings,settings);if(this.map)this.draw();return this},
   draw(){const map=this.map;if(!map)return
-   const size=map.getSize(),step=Math.max(8,Math.ceil(Math.sqrt(size.x*size.y/18000))),w=Math.ceil(size.x/step),h=Math.ceil(size.y/step)
+   const size=map.getSize()
+   // Phones keep #map at display:none until the map sheet opens. createImageData
+   // throws on a 0×0 canvas and that abort used to stop initMap before the wind
+   // and haze layers were attached. The resize that follows invalidateSize redraws.
+   if(size.x<2||size.y<2)return
+   const step=Math.max(8,Math.ceil(Math.sqrt(size.x*size.y/18000))),w=Math.ceil(size.x/step),h=Math.ceil(size.y/step)
+   if(w<1||h<1)return
    this.canvas.width=size.x;this.canvas.height=size.y;L.DomUtil.setPosition(this.canvas,map.containerPointToLayerPoint([0,0]))
    const small=document.createElement('canvas');small.width=w;small.height=h;const ctx=small.getContext('2d'),img=ctx.createImageData(w,h)
    if(this.points.length)for(let y=0;y<h;y++)for(let x=0;x<w;x++){

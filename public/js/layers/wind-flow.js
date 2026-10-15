@@ -81,6 +81,8 @@ export function createWindFlowLayer() {
       const map = this.map
       const field = this.field
       if (!map || !this.arrows) return
+      const size = map.getSize()
+      if (size.x < 2 || size.y < 2) return
       const origin = this.place(this.arrows)
       this.place(this.parts)
       const ctx = this.arrows.getContext('2d')
@@ -126,9 +128,12 @@ export function createWindFlowLayer() {
         ctx.closePath()
         ctx.fill()
       }
+      this.kick()
     },
     kick() {
       if (this.raf || !this.map) return
+      const size = this.map.getSize()
+      if (size.x < 2 || size.y < 2) return
       this.last = 0
       const frame = (t) => {
         this.raf = requestAnimationFrame(frame)
@@ -146,6 +151,8 @@ export function createWindFlowLayer() {
       const field = this.field
       const canvas = this.parts
       if (!map || !canvas || !this.origin) return
+      const size = map.getSize()
+      if (size.x < 2 || size.y < 2) { this.halt(); return }
       const view = viewOf()
       const ctx = canvas.getContext('2d')
       if (!field?.available || view.budget === 0) {
