@@ -10,6 +10,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.84] — 2026-10-15 — the starvation guard had never once read the machine
+
+Ops-only; no file under `public/` changed, so the asset token stays at 2.4.83.
+
+**The watchdog's saturation check was fail-open, and had been since it was written.**
+
+- `sysctl` lives at `/usr/sbin/sysctl`. `com.airdash.watchdog.plist` sets `PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin` — **no `/usr/sbin`** — so a bare `sysctl` was never found. Both readings came back empty, `"" -ge 90` is false and `"" -ge 32` is false, and `host_starved()` answered **"not starved" for every host, always**.
+- That is the worst possible direction for this function. Its entire job is to tell a starved host apart from a dead one so the restart is *suppressed*. Instead it read an empty value, decided the machine was fine, and would **restart the server in the middle of the very starvation it exists to survive** — adding boot cost to a host that already could not keep up. The symptom was in the log all along: `ok: host not saturated (swap , load )`, visibly empty, every hour.
+- Now uses an absolute path, and says so when a reading comes back empty rather than reporting success about a check that did not happen.
+
+**A swap percentage is not a saturation signal, and restoring the readings exposed that.** With real numbers back, this host sat at **97.6% of swap used, 345 MB free, load 3.6, CPU 70% idle** — completely healthy. macOS keeps swapped pages around; that figure measures cold pages, not pressure. A threshold on it fires on a normal machine, every hour, forever, and an alert that cries wolf is worse than none because it teaches you to ignore the line that would have mattered.
+
+- The trigger is now the **rate of page-ins**, measured from `vm_stat`, because that is what thrashing means — plus CPU load at 5× core count, checked first so a busy host never waits for a sampling window it does not need.
+- **Two consecutive elevated windows are required.** A single window on this host is noise: measured rates in one afternoon ranged 61/s → 1109/s → 4685/s (~73 MB/s) at unchanged load, driven by whatever else was running. One lucky window cries wolf; one unlucky window misses a real stall.
+- The verdict is memoised, so the extra sampling costs a few seconds once per run rather than at each of its several call sites.
+
+**What the readings actually said at the time of writing:** the box *is* under genuine memory pressure — sustained 1,858–4,685 page-ins/s (29–73 MB/s) and a swap file that grew from 13.3 GB to 14.3 GB. The guard now reports that instead of reporting "ok" over an empty string. **That is a property of the host, not of the code; reducing it is an operator decision.**
+
+`scripts/test-host-starvation.mjs`, 31 checks. Beyond the alert behaviour it runs the **real** functions under the **real** launchd PATH — a stubbed predicate proves nothing about whether the real one can read the machine — and drives the decision logic with stubbed readings to pin properties that never fire on a well-behaved machine: the swap percentage is not a trigger, both windows must be elevated, and an unreadable load is announced. **Five planted bugs turn it red**, three of which passed the earlier, weaker version of this test.
+
+Three of my own test bugs are recorded in the file because they cost real time: `extractFns` prepended a no-op `log()` that shadowed the harness's and swallowed every warning under test; zsh runs `$(...)` in a subshell, so a variable incremented inside a stub is lost and every read returned the same element, making every scenario look calm; and that stub's cursor then ran one past the end of its series.
+
+## [2.4.83] — 2026-10-15 — three defects between a person and the advice
+
+Frontend only (`public/js/story.js`, `public/index.html`). Asset token `2.4.83`, SW cache `airdash-v105`.
+
+Found by reading the page rather than the code: what a person meets between landing and being told what to do.
+
+**1. The alert strip sent civilians to the operator console.** `href="/ops.html"` was hard-coded in the markup and never updated by the script, so a banner reading *"🔴 Hazardous air in some areas"* dropped the reader into Mission Control — ~2,000 live points, layer toggles, province rankings. That is the right page for an air detective and the wrong one for someone who has just been told the air is bad. The strip now goes to the advice chapter directly (`#ch-persona`) and says what it will give you: *"🔴 Hazardous air in some areas — what to do now"*. Mission Control is untouched and still linked, labelled in the act chapter for the audience it is actually for.
+
+**2. The subscribe block appeared twice.** The act chapter rendered LINE OA and Telegram once above the checklist and again below it under its own *"want a heads-up before the haze?"* heading — the same two destinations, two labels, seven lines apart. The copy above the checklist also carried an inline `margin-bottom:16px` that the block below did not, so the two were not even spaced the same. Only the second survives, because that is where the heading that introduces it lives; `#act-subscribe` — the anchor the alert strip's CTA jumps to — moved with it. Verified in the rendered DOM: one block, one LINE link, one Telegram link.
+
+**3. Screen readers were re-announced every 60 seconds.** `refresh()` re-runs the entire render on a 60-second timer, and three of the nodes it rewrites sit inside `aria-live="polite"`: the hero cigarette figure, the life-minutes figure and the new verdict. Assigning identical HTML is still a mutation, so a screen-reader user was told the current verdict **once a minute, indefinitely, through hours of unchanged air** — which trains people to ignore the region, defeating the point of having it. Writes now go through `setHtml`/`setText`, which no-op on identical content. This also removed a steady drip of pointless DOM churn.
+
+The guard is deliberately two-sided, because a write-guard that silences a real change is worse than the bug: identical renders write nothing, and a changed reading still writes exactly once. Both properties are asserted against a write-counting element in `scripts/test-frontend-ux.mjs`, and removing the equality check turns the suite red (**actual 3, expected 1**).
+
+**Six regression checks** now cover the verdict and the guard, all mutation-tested.
+
 ## [2.4.82] — 2026-10-15 — the page answers the question it was opened with
 
 Frontend only (`public/js/story.js`, `public/css/story.css`, `public/index.html`). Asset token `2.4.82`, SW cache `airdash-v104`.

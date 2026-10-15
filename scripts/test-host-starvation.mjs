@@ -122,6 +122,179 @@ if (block) {
   check('a healthy host is logged as ok', /ok: host not saturated/.test(quiet))
 }
 
+// ── The PATH trap that made every reading empty ──────────────────────────
+// The saturation checks above run against a STUBBED host_starved, which proves
+// the alerting behaviour but says nothing about whether the real one can read
+// the machine. It could not. These lift the real functions out so they can be
+// run under the real launchd PATH.
+function extractFns() {
+  const from = dog.indexOf('SYSCTL=/usr/sbin/sysctl')
+  if (from === -1) return null
+  // through the end of starve_detail()
+  const endMarker = 'starve_detail() {'
+  const s = dog.indexOf(endMarker, from)
+  if (s === -1) return null
+  const close = dog.indexOf('\n}', s)
+  if (close === -1) return null
+  // No log() stub here on purpose: a no-op one defined BEFORE the real block
+  // would shadow the harness log() and swallow every warning the test asserts on.
+  return dog.slice(from, close + 2)
+}
+
+const fns = extractFns()
+check('host_starved/starve_detail are extractable from health-watchdog.sh', fns !== null)
+
+if (fns) {
+  const probe = (PATH_VALUE) => {
+    const file = join(dir, 'probe.zsh')
+    // host_starved FIRST: it is what populates the page-in rate that
+    // starve_detail then reports. The other order prints "page-in ?p/s" and
+    // the reading under test is not the one being asserted on.
+    writeFileSync(file, [
+      `log() { print -r -- "LOG: $*" }`,
+      fns,
+      'if host_starved; then print -r -- "STARVED=yes"; else print -r -- "STARVED=no"; fi',
+      `print -r -- "DETAIL=$(starve_detail)"`,
+    ].join('\n'))
+    try {
+      return execFileSync('zsh', [file], {
+        encoding: 'utf8',
+        env: { PATH: PATH_VALUE },
+        stdio: 'pipe',
+      })
+    } catch (e) {
+      return `ERROR ${e.message}`
+    }
+  }
+
+  // Exactly what com.airdash.watchdog.plist sets.
+  const LAUNCHD_PATH = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'
+  const out = probe(LAUNCHD_PATH)
+  // The detail reports load, the page-in rate and swap — swap for CONTEXT only,
+  // since a percentage of swap on macOS measures cold pages, not pressure.
+  check('starve_detail reads real values under the launchd PATH',
+    /DETAIL=load [\d.]+ \(limit \d+\), page-in \d+p\/s/.test(out), out.trim().replace(/\n/g, ' | '))
+  check('the detail is NOT the empty "swap , load " failure',
+    !/DETAIL=swap ,/.test(out) && !/DETAIL= ,/.test(out), out.trim().replace(/\n/g, ' | '))
+  check('host_starved returns a verdict rather than erroring',
+    /STARVED=(yes|no)/.test(out), out.trim().replace(/\n/g, ' | '))
+
+  // And prove the trap: with sysctl NOT on PATH and no absolute path used,
+  // the old form really does produce nothing. If this ever stops failing, the
+  // regression note above is wrong.
+  const naive = (() => {
+    const file = join(dir, 'naive.zsh')
+    writeFileSync(file, `print -r -- "swap $(sysctl -n vm.swapusage 2>/dev/null | awk '{print $6}')"`)
+    try { return execFileSync('zsh', [file], { encoding: 'utf8', env: { PATH: LAUNCHD_PATH }, stdio: 'pipe' }).trim() }
+    catch { return '' }
+  })()
+  check('a bare `sysctl` under that PATH really is empty (the original bug)',
+    naive === '' || !/\d/.test(naive), `got "${naive}"`)
+
+  // The verdict must follow the two signals it is defined on — CPU load and a
+  // SUSTAINED page-in rate — and must NOT follow the swap percentage. Asserting
+  // against the observed reading rather than a fixed expectation, because this
+  // host's paging rate moves by an order of magnitude minute to minute and a
+  // test pinned to a number would fail for reasons that have nothing to do with
+  // the code. What must hold is the rule: starved iff (load >= limit) or
+  // (every sampled page-in window was at or over the limit).
+  const detail = /DETAIL=(.*)/.exec(out)?.[1] ?? ''
+  const load = Number(/load ([\d.]+)/.exec(detail)?.[1] ?? NaN)
+  const limit = Number(/limit (\d+)/.exec(detail)?.[1] ?? NaN)
+  const rate = Number(/page-in (\d+)p\/s/.exec(detail)?.[1] ?? NaN)
+  check('the reported load and limits are numeric',
+    Number.isFinite(load) && Number.isFinite(limit) && Number.isFinite(rate),
+    `load=${load} limit=${limit} rate=${rate} from "${detail}"`)
+  if (Number.isFinite(load) && Number.isFinite(rate)) {
+    const expected = load >= limit || rate >= 400
+    check('the verdict follows load-or-page-rate, never the swap percentage',
+      /STARVED=(yes|no)/.test(out) && (out.includes('STARVED=yes')) === expected,
+      `load=${load} (limit ${limit}) rate=${rate} -> ${out.includes('STARVED=yes') ? 'starved' : 'ok'}`)
+  }
+}
+
+// ── The decision logic, driven with STUBBED readings ─────────────────────
+// Everything above about the real host is observational. These pin the actual
+// rule, because the properties that matter — that the swap PERCENTAGE is not a
+// trigger, that BOTH sampling windows must be elevated, that an unreadable
+// reading is announced rather than treated as healthy — never fire on a
+// machine that happens to be well behaved, which is exactly why the earlier
+// version of this file let three mutations through unchallenged.
+function logic(loadValue, pageinSeries, extraLoad2 = loadValue) {
+  const file = join(dir, 'logic.zsh')
+  // host_starved reads pageins FOUR times for two windows (a,b then a,b), so
+  // the stub must advance through the series on each call — returning the same
+  // number every time makes every delta zero and every scenario look calm.
+  const arr = pageinSeries.join(' ')
+  writeFileSync(file, [
+    `log() { print -r -- "LOG: $*" >> "$LOGF" }`,
+    fns,
+    'sleep() { : }',                       // no real sampling delay in a test
+    `_pi=(${arr})`,
+    // Cursor starts at 0; _pageins bumps BEFORE printing, so the first read
+    // returns element 1. zsh runs $(...) in a SUBSHELL, so a plain variable
+    // incremented inside this stub would be discarded and every read would
+    // return the same element — making every delta zero and every scenario look
+    // calm. The cursor lives in a file to survive the fork. (The real _pageins
+    // shells out to vm_stat, so it has no such problem.)
+    'print -r -- 0 > "$PIFILE"',
+    '_pageins() { local i=$(cat "$PIFILE"); i=$(( i + 1 )); print -r -- $i > "$PIFILE"; print -r -- ${_pi[i]}; }',
+    `_sysctl() {`,
+    `  [ "$1" = vm.loadavg ] && { [ -n "${loadValue}" ] && print -r -- "{ ${loadValue} ${extraLoad2} ${extraLoad2} }"; return 0; }`,
+    '  [ "$1" = vm.swapusage ] && print -r -- "total = 14336.00M  used = 13990.56M  free = 345.44M  (encrypted)" && return 0',
+    '  [ "$1" = hw.ncpu ] && print -r -- 8 && return 0',
+    '  return 0',
+    '}',
+    'if host_starved; then print -r -- "V=starved"; else print -r -- "V=ok"; fi',
+  ].join('\n'))
+  try {
+    const out = execFileSync('zsh', [file], {
+      encoding: 'utf8',
+      env: { LOGF: join(dir, 'logic.log'), PIFILE: join(dir, 'pi.cursor'), PATH: process.env.PATH },
+      stdio: 'pipe',
+    })
+    let log = ''
+    try { log = readFileSync(join(dir, 'logic.log'), 'utf8') } catch {}
+    return { verdict: /V=(starved|ok)/.exec(out)?.[1], log }
+  } catch (e) {
+    return { verdict: 'ERROR', log: String(e.stderr ?? '') }
+  }
+}
+
+if (fns) {
+  try { rmSync(join(dir, 'logic.log')) } catch {}
+
+  // swap is stubbed at 97.6% used throughout, so ANY verdict of "ok" here
+  // proves the percentage is not being used as a trigger. Rates below are
+  // (delta / 6 s); 3000 pageins over 6 s = 500/s, comfortably over 400.
+  const calm = logic(3, ['0', '60', '60', '60'])
+  check('97.6% swap alone does NOT count as starved',
+    calm.verdict === 'ok', `got ${calm.verdict}`)
+
+  const cpuBound = logic(40, ['0', '0', '0', '0'])
+  check('load at 5x core count is starved without sampling windows',
+    cpuBound.verdict === 'starved', `got ${cpuBound.verdict}`)
+
+  const bothHigh = logic(3, ['0', '3000', '3000', '6000'])
+  check('every page-in window over the limit is starved',
+    bothHigh.verdict === 'starved', `got ${bothHigh.verdict}`)
+
+  const firstHighOnly = logic(3, ['0', '3000', '3000', '3000'])
+  check('one elevated window is NOT enough (high then calm)',
+    firstHighOnly.verdict === 'ok', `got ${firstHighOnly.verdict}`)
+
+  const secondHighOnly = logic(3, ['0', '100', '100', '3100'])
+  check('one elevated window is NOT enough (calm then high)',
+    secondHighOnly.verdict === 'ok', `got ${secondHighOnly.verdict}`)
+
+  const unreadable = logic('', ['0', '0', '0', '0'])
+  check('an unreadable load is announced, not silently treated as healthy',
+    /could not read vm\.loadavg/.test(unreadable.log),
+    `log was "${String(unreadable.log).trim()}"`)
+  check('an unreadable load does not declare starvation it cannot prove',
+    unreadable.verdict === 'ok', `got ${unreadable.verdict}`)
+}
+
 rmSync(dir, { recursive: true, force: true })
 
 console.log(`\n${pass} passed, ${fail} failed`)

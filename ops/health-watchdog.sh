@@ -95,17 +95,125 @@ describe_pid() {
 # fresh process hits the same wall, and the restart itself adds load. So
 # when a probe fails AND the host is starved, we log and hold instead of
 # killing — the Cloudflare edge cache covers users through the squeeze.
+# WHY AN ABSOLUTE PATH FOR sysctl.
+#
+# This script runs from a launchd agent whose PATH is
+# /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin — there is no /usr/sbin in it,
+# and sysctl lives at /usr/sbin/sysctl. A bare `sysctl` was therefore never
+# found, both readings came back EMPTY, and every comparison below ran against
+# an empty string: `"" -ge 90` is false and `"" -ge 32` is false, so
+# host_starved() answered "not starved" for every host, always.
+#
+# That made the watchdog fail OPEN, which is the worst direction for this
+# function: the whole point of it is to tell a starved host apart from a dead
+# one so the restart is SUPPRESSED. Instead it saw an empty reading, decided
+# the host was fine, and restarted the server in the middle of exactly the
+# starvation it was written to survive — adding boot cost to a machine that
+# already could not keep up. It also made the saturation alert blind: the
+# watchdog logged "host not saturated (swap , load )" every hour, visibly empty,
+# while the machine sat at 97% swap with 321 MB free.
+#
+# Absolute path, so it does not care how the script is invoked. The readings are
+# also logged as a warning when they come back empty, because a guard that
+# cannot read its input must not report success about it.
+SYSCTL=/usr/sbin/sysctl
+_sysctl() { [ -x "$SYSCTL" ] && "$SYSCTL" -n "$1" 2>/dev/null; }
+
+# WHY A RATE, NOT A SWAP PERCENTAGE.
+#
+# macOS keeps swapped pages around. This machine sat at 97% of swap used with
+# 321 MB free, at load 3.6 with the CPU 70% idle, and was completely healthy.
+# Swap PERCENTAGE is a measure of cold pages, not of pressure — so a threshold
+# on it fires on a normal machine, every hour, forever. An alert that cries wolf
+# is worse than no alert, because it teaches the operator to ignore the line
+# that would have mattered.
+#
+# What means thrashing is the RATE of page-ins, so sample vm_stat and measure
+# the delta. Real thrashing is orders of magnitude above this.
+#
+# TWO consecutive elevated windows, not one, because a single window on this
+# host is noise: measured page-in rates during one afternoon ranged from 61/s
+# to 1109/s to 3750/s (~60 MB/s at a 16 KB page) with no change in load — mostly
+# driven by whatever else on the box was working. One lucky window would have
+# cried wolf; one unlucky one would have missed a real stall. Requiring two in
+# a row makes both errors unlikely, and costs a second of sleep once per run
+# because the verdict is memoized.
+THRASH_WINDOW_S=6
+THRASH_WINDOWS=2
+THRASH_PAGES_PER_S=400
+
+_pageins() { /usr/bin/vm_stat 2>/dev/null | awk '/Pageins/ {gsub(/\./,"",$NF); print $NF}'; }
+
+# Measured once per run: host_starved() is consulted from several places, and
+# each call would otherwise sleep for a sampling window.
+_starve_verdict=""
+_starve_measured=0
+_pagein_rate=""
+
 host_starved() {
-  local swap_pct load ncpu
-  swap_pct=$(sysctl -n vm.swapusage 2>/dev/null | awk '{u=$6+0; t=$3+0; if (t>0) printf "%.0f", u*100/t; else print 0}')
-  load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{printf "%.0f", $2}')
-  ncpu=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
-  [ "${swap_pct:-0}" -ge 90 ] && return 0
-  [ "${load:-0}" -ge $(( ncpu * 4 )) ] && return 0
+  if [ "$_starve_measured" = 1 ]; then
+    [ "$_starve_verdict" = 1 ] && return 0
+    return 1
+  fi
+  _starve_measured=1
+
+  local load ncpu a b rate w elevated
+  load=$(_sysctl vm.loadavg | awk '{printf "%.0f", $2}')
+  ncpu=$("$SYSCTL" -n hw.ncpu 2>/dev/null || echo 8)
+
+  # CPU pressure: runnable threads well past core count. This is the cheap
+  # signal and it is checked first, so a busy host is never made to wait for a
+  # sampling window it does not need.
+  if [ -n "$load" ] && [ "$load" -ge $(( ncpu * 4 )) ]; then
+    _starve_verdict=1
+    _pagein_rate="skipped (CPU-bound)"
+    return 0
+  fi
+
+  # Unreadable input is not "healthy". Say so rather than reporting success
+  # about a check that did not happen.
+  if [ -z "$load" ]; then
+    log "warn: could not read vm.loadavg via $SYSCTL — host_starved() has no load data"
+    _starve_verdict=0
+    return 1
+  fi
+
+  elevated=0
+  w=1
+  while [ "$w" -le "$THRASH_WINDOWS" ]; do
+    a=$(_pageins)
+    if [ -z "$a" ]; then
+      log "warn: could not read vm_stat pageins (window $w) — page-in rate unavailable, load-only check"
+      _starve_verdict=0
+      return 1
+    fi
+    sleep "$THRASH_WINDOW_S"
+    b=$(_pageins)
+    if [ -z "$b" ]; then
+      log "warn: second vm_stat read empty (window $w) — page-in rate unavailable, load-only check"
+      _starve_verdict=0
+      return 1
+    fi
+    rate=$(( (b - a) / THRASH_WINDOW_S ))
+    [ "$w" = "$THRASH_WINDOWS" ] && _pagein_rate="$rate"
+    [ "$rate" -ge "$THRASH_PAGES_PER_S" ] && elevated=$(( elevated + 1 ))
+    w=$(( w + 1 ))
+  done
+
+  # Every window must be elevated, not an average: one burst inside an average
+  # is exactly the false signal this is guarding against.
+  if [ "$elevated" -eq "$THRASH_WINDOWS" ]; then
+    _starve_verdict=1
+    return 0
+  fi
+  _starve_verdict=0
   return 1
 }
+
 starve_detail() {
-  print -r -- "swap $(sysctl -n vm.swapusage 2>/dev/null | awk '{print $6"/"$3}'), load $(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}')"
+  # Swap percentage is reported for CONTEXT — it is not the trigger. A reader
+  # seeing "swap 97%" next to "not saturated" should be able to see why.
+  print -r -- "load $(_sysctl vm.loadavg | awk '{print $2}') (limit $(( $("$SYSCTL" -n hw.ncpu 2>/dev/null || echo 8) * 4 ))), page-in ${_pagein_rate:-?}p/s (limit ${THRASH_PAGES_PER_S} x${THRASH_WINDOWS}), swap $(_sysctl vm.swapusage | awk '{print $6"/"$3}')"
 }
 
 # Persistent state files (in logs/, dot-prefixed so log rotation never
