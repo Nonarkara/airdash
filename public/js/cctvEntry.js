@@ -23,24 +23,30 @@
 // "nothing found" is indistinguishable from one that is not running.
 // If the fetch fails the readout stays EMPTY: a missing measurement is
 // missing, not zero.
-import { openHazeEyes } from './layers/cctvWall.js?v=2.4.83'
-import { tr } from './i18n.js?v=2.4.83'
-import { on } from './state.js?v=2.4.83'
+import { openHazeEyes } from './layers/cctvWall.js?v=2.4.86'
+import { tr } from './i18n.js?v=2.4.86'
+import { on } from './state.js?v=2.4.86'
 
 const READOUT_MS = 5 * 60_000
 
-// "200 scored · 66 smoky" — what the vision actually did, in the fewest
-// words that stay true. Not a confidence score, not a coverage boast.
+// "200 scored · 12 possible haze" — what the vision actually did, in the
+// fewest words that stay true. Not a confidence score, not a coverage boast.
+//
+// The second half used to read "· none smoky", counted from an API `tint`
+// block whose two fields were permanently 0 because the pipeline stopped
+// writing tint_hint in 18444ed. That made the button assert it had looked and
+// found no smoke, when the truth was that it no longer looks at all. Say the
+// thing that is actually measured: how many frames were judged hazier than
+// their own reference.
 function readoutText(d) {
   const scored = Number.isFinite(d.scored) ? d.scored : null
   if (scored === null) return ''
-  const smoke = Number(d.tint?.smoke_like) || 0
-  const fog = Number(d.tint?.fog_like) || 0
-  const flagged = smoke + fog
+  const flagged = Number.isFinite(d.possible_haze) ? d.possible_haze : null
+  if (flagged === null) return `${scored} ${tr('ภาพ', 'scored')}`
   if (flagged > 0) {
-    return `${scored} ${tr('ภาพ', 'scored')} · ${flagged} ${tr('คล้ายควัน', 'smoky')}`
+    return `${scored} ${tr('ภาพ', 'scored')} · ${flagged} ${tr('อาจมีหมอกควัน', 'possible haze')}`
   }
-  return `${scored} ${tr('ภาพ', 'scored')} · ${tr('ไม่พบควัน', 'none smoky')}`
+  return `${scored} ${tr('ภาพ', 'scored')} · ${tr('ไม่พบภาพที่เปลี่ยนไปจากภาพอ้างอิง', 'none hazier than their reference')}`
 }
 
 // Reachable-over-total is the coverage figure the operator actually needs:

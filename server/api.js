@@ -430,10 +430,21 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       // readings has millions of rows. COUNT(*) is a full-table scan that
       // took ~8s here — and node:sqlite is synchronous, so it froze the whole
       // event loop on every health poll (watchdog + tunnel proxy), which
-      // stalled real traffic into 502s. MAX(id) is O(1) on the integer PK; as
-      // a health diagnostic an approximate total is fine (exact until the
-      // first retention prune, a harmless over-count after).
-      dbStats.readings = db.get('SELECT MAX(id) AS n FROM readings').n ?? 0
+      // stalled real traffic into 502s. MAX(id) is O(1) on the integer PK, so
+      // that stays — but it is NOT a row count and must not be named like one.
+      //
+      // WHY THE NAME CHANGED (2026-10-15). This was published as `readings`,
+      // inside a db block whose other six fields are all exact COUNT(*). Ids
+      // are never reused, so MAX(id) is a high-water mark: it reads 18,720,908
+      // while the table holds 4,777,758 rows, and it climbs forever even
+      // though retention holds the table flat at the 90-day window. The old
+      // comment called the over-count "harmless". It is not: the gap is 3.9x
+      // and it is exactly the number a reader uses to judge whether the hot
+      // tier needs attention — which is how this very field nearly had me
+      // approve a 5-minute-outage DB shrink that would have reclaimed 1.6 MB.
+      // An approximate total is fine; an approximate total wearing the name of
+      // an exact one next to exact ones is the defect.
+      dbStats.readings_max_id = db.get('SELECT MAX(id) AS n FROM readings').n ?? 0
       const dbSize = db.get(
         'SELECT page_count * page_size AS bytes FROM pragma_page_count(), pragma_page_size()').bytes
       const sources = scheduler.health()
@@ -2172,10 +2183,22 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
           samples: rows.length,
           scored: scored.length,
           withheld: rows.length - scored.length,
-          tint: {
-            smoke_like: rows.filter((r) => r.tint_hint === 'smoke-like').length,
-            fog_like: rows.filter((r) => r.tint_hint === 'fog-like').length,
-          },
+          // WHY NOT A `tint` BLOCK (2026-10-15 audit). This used to publish
+          // `tint: {smoke_like, fog_like}` counted from `tint_hint`. Commit
+          // 18444ed replaced the write with a literal `null` when it moved the
+          // verdict to a per-camera baseline, so both counts have been
+          // structurally zero ever since — while still being published as
+          // though they were measured. public/js/cctvEntry.js turned that zero
+          // into the sentence "N scored · none smoky" on the dashboard's
+          // camera button: a confident claim that no camera showed smoke,
+          // resting on a measurement the pipeline had retired. An always-zero
+          // field is worse than an absent one, because absent is honest.
+          // `possible_haze` is counted from the same rows as `scored` above,
+          // so the two numbers in one sentence describe the same window.
+          possible_haze: rows.filter((r) => r.haze_status === 'possible-haze').length,
+          // Stated so a reader knows the appearance split is not available at
+          // all, rather than inferring it from a missing field.
+          appearance_split: null,
           // The honest headline, not a number anyone can quote as a reading.
           calibrated: false,
           latest_cycle: safeMeta(db.kvGet('cctv_vision_cycle')),

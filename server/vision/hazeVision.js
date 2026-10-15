@@ -114,6 +114,22 @@ export default {
       if (signal.status === 'blank') blank++
       let preview = 0
       try { await savePreview(key, buf); preview = 1 } catch (e) { log('warn', 'camera preview unavailable', { camera: key, error: String(e) }) }
+      // tint_hint is written again (2026-10-15 audit). Commit 18444ed replaced
+      // it with a literal null at the same time it moved the VERDICT to a
+      // per-camera baseline — correct for the verdict, wrong for the record:
+      // it silently truncated the series mid-flight, so the research page's
+      // warm-bias/tint material stopped with no marker at the changeover and
+      // the 2,574 rows written before it became unreproducible.
+      //
+      // Scope, deliberately narrow: this restores the stored feature and
+      // nothing else. The verdict still comes from assessHaze, and
+      // describeVision still derives `look` from haze_status, so the retired
+      // absolute-threshold judgement stays out of the public readouts. The API
+      // no longer publishes a smoke/fog count at all
+      // (`appearance_split: null` says so plainly) — this value is evidence,
+      // not a headline. NB it is `r.tintHint` at the top level of the result,
+      // not `r.features.tintHint`; the feature is absent from `features`, so
+      // reading it there yields undefined and writes a bare null again.
       db.run(
         `INSERT INTO cctv_haze_frames
            (camera_key, camera_source, lat, lng, obs_time, haze_index, calibrated,
@@ -125,7 +141,7 @@ export default {
         key, cam.source, cam.lat, cam.lng, nowIso, index,
         r.features.corridorTail, r.features.contrast, r.features.edgeDensity,
         r.features.darkChannel, r.features.transmission, r.features.edgeDecay,
-        r.features.saturation, r.features.warmBias, r.features.meanLuma, null,
+        r.features.saturation, r.features.warmBias, r.features.meanLuma, r.tintHint,
         cam.air?.pm25 ?? null, cam.air?.station_key ?? null, cam.air?.km ?? null,
         signal.status, signal.contrastLoss, signal.baselineSamples, identity.hash,
         JSON.stringify(identity.signature), r.features.darkChannelNorm, preview,

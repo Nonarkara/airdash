@@ -10,6 +10,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.85] — 2026-10-15 — the camera button claimed it had found no smoke, and had stopped looking
+
+Asset token `2.4.85`. Result of an audit of the camera-wall computer-vision path.
+
+**The dashboard's camera button read "144 scored · none smoky", and that was a fiction with a number attached.**
+
+- `/api/haze-vision` published `tint: {smoke_like, fog_like}`, counted from the `tint_hint` column. Commit `18444ed` had replaced the `tint_hint` write with a literal `null` in the same change that moved the verdict onto a per-camera daylight baseline. So both counts had been **structurally zero ever since** — while still being published as though they were measured.
+- `public/js/cctvEntry.js` computed `flagged = smoke + fog`, which was therefore always `0`, and fell through to the string **"none smoky"**. The button was asserting, beside a live frame count, that it had looked at the cameras and found no smoke. It had stopped looking. The comment directly above that function said the goal was "the fewest words that stay true", so the code was contradicting its own stated contract.
+- This is the failure mode this project exists to avoid, in the one place a person reads it: a retired measurement published as a current one. An always-zero field is worse than an absent one, because absent is honest.
+
+Fixed in three parts, each narrower than it looks:
+
+1. **The claim is gone.** The button now reads `N scored · M possible haze`, where `M` is counted from the same rows as `N` (`haze_status = 'possible-haze'`), so both numbers describe the same window. When nothing is flagged it says *"none hazier than their reference"* — a statement about the comparison that was actually performed, rather than about smoke that was never looked for.
+2. **The dead block is not republished.** `/api/haze-vision` no longer emits `tint`. It emits `appearance_split: null` instead, so a consumer can see the split is *unavailable* rather than infer it from a missing field.
+3. **The stored evidence is back.** `hazeVision.js` writes `r.tintHint` again. This does **not** restore the retired judgement: the verdict still comes from `assessHaze`, and `describeVision` still derives `look` from `haze_status`, so the absolute-threshold tint stays out of every public readout. It only stops the stored series from being silently truncated at the changeover — 2,574 rows written before `18444ed` were unreproducible, and the research page's warm-bias material simply stopped with no marker.
+
+NB for the next reader: the value is `r.tintHint` at the **top level** of the `readFrame` result. There is no `features.tintHint`, so reading it there yields `undefined` and writes a bare `null` again — which passes every check except the one that looks.
+
+`scripts/test-cv-honesty.mjs` — 15 checks. It **executes** the real `readoutText` rather than grepping for strings, so a rewrite that keeps the claim but changes the wording is still caught. Three mutations caught: restoring the "none smoky" wording, republishing the `tint` block, and reading the absent `features.tintHint`.
+
+**Also in this release: `/api/health` reported a high-water mark wearing the name of a row count.**
+
+`db.readings` was `MAX(id)`, sitting in a block whose other six fields are all exact `COUNT(*)`. Ids are never reused, so it read **18,720,908 against an actual 4,777,758 rows** — a 3.9× over-count that climbs forever while retention holds the table flat. The old comment called that "a harmless over-count"; it was not harmless, because it is exactly the number a reader uses to judge whether the hot tier needs attention. It nearly had me approve a 5-minute-outage database shrink that would have reclaimed 1.6 MB (see below). Now published as `readings_max_id`, with `scripts/test-health-row-count.mjs` — 10 checks that run the real divergence in SQL (insert 10, prune 3–7, observe `MAX(id)=10 ≠ COUNT(*)=5`) so the reason for the name is demonstrated rather than asserted. 3 mutations caught.
+
+**Two documented remedies turned out to be wrong, and are recorded here rather than left to be re-derived.**
+
+- **The "1.2 GB hot tier over its ~1 GB cap" is not a problem.** `ops/inspect-db.mjs` shows retention working exactly as designed: every non-hot source starts at precisely 2026-07-17 (the 90-day `rawDays` cutoff) and `thaiwater_rain` holds exactly 14 days. The database is at its designed steady state, not over budget. `freelist_count` is 406 pages — **~1.6 MB** — so `ops/shrink-hot-db.mjs` would stop the server for ~5 minutes to reclaim essentially nothing. The remedy is worse than the condition.
+- **The camera wall's one lever on a verdict is nearly inert, and that is a property, not a bug.** `shouldFloorToWatch` is the only thing this pipeline can do to a risk band, and it requires a province at `widespread`. Replaying the real `provinceLevel()` over 30 days of recorded frames: **3 of 4,437 province-windows** (0.068%) ever reach it, because 72% of windows have fewer than the 2 judged cameras `MIN_VALID` requires. Loosening the threshold would convert an honest silence into false alarms, which is the worse failure. Recorded so nobody "fixes" it by lowering a number.
+
+**Audit hypotheses tested and refuted** (recorded so they are not re-chased): baseline contamination from hazy frames entering the reference pool — 0 of 207 cameras are majority-hazy, because the reference is the median of the *sharpest* third, which self-limits it; `province_code` coverage — 100% over 72h, the 33% overall figure was pre-version-6; `haze_index`/`contrast_loss` disagreement — 0 mismatches in 24h; METAR `HZ` misclassified as fog — `HZ` correctly maps to `aerosol` while only `FG`/`BR` map to `obscure`, so a haze report can never suppress its own camera evidence; the humidity lookup joining two namespaces — openmeteo `station_key` *is* the province code, 77 of 77.
+
+Two **latent** defects in the pixel math were demonstrated by execution but are deliberately **not** shipped here, because fixing either would invalidate every camera's 14-day baseline and force a mass re-baseline on a system about to meet real users. Both are recorded in full in `audit/`:
+
+- `hazeRead.js:374` `skyRef = skyLuma > 20 ? skyLuma : 180` has an **8.57× discontinuity** at one luma unit (measured `darkChannelNorm` 4.504 at skyLuma 21 vs 0.5255 at 20). No verdict flip was demonstrated — the view-signature guard catches those frames — but it sits under the feature the verdict hinges on.
+- `darkChannelNorm` is normalized by the frame's **own sky brightness**, so dimming only rows 0–49 by 10% — ground byte-for-byte identical, no haze at all — clears the `rise >= 0.05` gate on its own. The "second cue" is partly an exposure meter. A dark object does not raise it (a 120px black van *lowered* the value), so the exposure is entirely on the denominator.
+
+Also found and left alone: `pm25FromHaze` (`hazeRead.js:610`) returns **13.14 µg/m³** on a fit it labels `usable: false`. It has no caller and the product rule is that nothing in this pipeline may emit a concentration — but it is the one function that could, and the guard it ignores is its own. Flagged rather than deleted, since removing a calibration affordance is a product decision.
+
+---
+
 ## [2.4.84] — 2026-10-15 — the starvation guard had never once read the machine
 
 Ops-only; no file under `public/` changed, so the asset token stays at 2.4.83.
