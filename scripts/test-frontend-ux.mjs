@@ -94,4 +94,112 @@ await test('closing the Window during a failed request cannot update a removed d
   const p=vm.runInContext('openWindow()',s);vm.runInContext('closeWindow()',s);reject(Error('offline'));await p
   assert.equal(panel.innerHTML,'');assert.equal(dialog.removed,true)
 })
+// ── The hero verdict (story.js) ────────────────────────────────────────────
+// It answers "can I go outside?" above the fold, using the server's own
+// guidance sentence. Three properties are worth pinning, because each one
+// silently turns into a lie if it regresses:
+//   1. no reading → no advice (the page's standing rule);
+//   2. the headline IS the server sentence, so chapter 1 cannot disagree;
+//   3. a persona-specific sentence survives (asthma gets its own escalation).
+{
+  const science = {
+    generated_at: new Date(Date.now() - 3 * 60000).toISOString(),
+    national: { pm25: 20 },
+    provinces: [], profiles: {},
+  }
+  const guide = [
+    { maxPm25: 15, th: 'ดีมาก', en: 'Very good air' },
+    { maxPm25: 25, th: 'ปานกลาง', en: 'Outside is fine' },
+    { maxPm25: null, th: 'อันตราย', en: 'Hazardous' },
+  ]
+  science.profiles = { kid: { label_en: 'Child', guidance: guide },
+                      asthma: { label_en: 'Asthma', guidance: guide } }
+
+  const mk = () => {
+    const box = element()
+    const s = vm.createContext({
+      console, tr: (th, en) => en, escapeHtml: (x) => String(x ?? ''),
+      store: { lang: 'en' },
+      document: { createElement: element, addEventListener() {}, documentElement: { style: { setProperty() {} } } },
+      window: { matchMedia: () => ({ matches: false }) },
+      getJson: () => Promise.resolve(null), Math, Date, Number, Array, Object,
+      readPreference: () => null, writePreference() {}, removePreference() {},
+      setLang() {}, emit() {}, on() {},
+      pm25Level: (v) => (v <= 15 ? 1 : v <= 25 ? 2 : v <= 37.5 ? 3 : v <= 75 ? 4 : 5),
+      LEVEL_NAME: { 1: { th: 'ดี', en: 'Good' }, 5: { th: 'อันตราย', en: 'Hazardous' } },
+      fmtNum: (v) => String(v), bandColor: () => '',
+      navigator: {}, paintChrome() {}, initDataFreshness() {},
+      setInterval: () => 0, setTimeout: () => 0, clearInterval() {}, clearTimeout() {},
+      performance: { now: () => 0 }, requestAnimationFrame() {},
+      document_element: null,
+    })
+    s.document.getElementById = (id) => (id === 'verdict' ? box : null)
+    s.document.querySelector = (sel) => (sel === '#verdict' ? box : null)
+    vm.runInContext(source('public/js/story.js'), s)
+    // `science` and `persona` are module-scoped lets, so they can only be set
+    // from inside the context once the module body has run.
+    s.__SCIENCE__ = science
+    vm.runInContext('science = __SCIENCE__; persona = "kid"; province = null; offline = false', s)
+    return { s, box }
+  }
+
+  await test('verdict stays silent about advice when there is no reading', () => {
+    const { s, box } = mk()
+    vm.runInContext('renderVerdict(null)', s)
+    assert.equal(box.dataset.state, 'unknown')
+    // No guidance sentence may leak into the unknown state.
+    assert.ok(!box.innerHTML.includes('Outside is fine') && !box.innerHTML.includes('Very good air'))
+  })
+
+  await test('verdict headline is the server guidance sentence, not a local one', () => {
+    const { s, box } = mk()
+    vm.runInContext('renderVerdict(20)', s)
+    assert.equal(box.dataset.state, 'live')
+    assert.ok(box.innerHTML.includes('Outside is fine'), 'uses the server step verbatim')
+  })
+
+  await test('verdict keeps the persona escalation and names who it is for', () => {
+    const { s, box } = mk()
+    vm.runInContext('persona="asthma";renderVerdict(120)', s)
+    assert.ok(box.innerHTML.includes('Hazardous'), 'falls through to the open-ended step')
+    assert.ok(box.innerHTML.includes('Asthma'), 'names the persona it is answering for')
+  })
+
+  await test('verdict shows when the reading was taken', () => {
+    const { s, box } = mk()
+    vm.runInContext('renderVerdict(20)', s)
+    assert.ok(box.innerHTML.includes('as of'), 'a number carries its clock')
+  })
+
+  // Adding a persona to PERSONA_ORDER without adding it to
+  // PERSONA_FALLBACK_LABEL throws a TypeError on the SAME render — the chip
+  // builder and renderVerdict both destructure that map unguarded — so the
+  // chips and the verdict disappear together and nothing renders. That is not
+  // visible from either list alone, and nobody finds out until someone adds a
+  // persona in production. The two lists must carry the same keys.
+  await test('PERSONA_FALLBACK_LABEL covers every persona in PERSONA_ORDER', () => {
+    const { s } = mk()
+    // Spread into host-realm arrays: values that came out of a vm context have
+    // that realm's Array.prototype, and deepStrictEqual compares prototypes —
+    // so an unmapped-but-equal pair would fail here for a reason that has
+    // nothing to do with the labels.
+    const order = [...vm.runInContext('PERSONA_ORDER', s)]
+    const labels = [...vm.runInContext('Object.keys(PERSONA_FALLBACK_LABEL)', s)]
+    const missing = order.filter((k) => !labels.includes(k))
+    const extra = labels.filter((k) => !order.includes(k))
+    assert.deepEqual(missing, [], `personas with no fallback label: ${missing.join(', ')}`)
+    assert.deepEqual(extra, [], `fallback labels for personas that do not exist: ${extra.join(', ')}`)
+  })
+
+  // Both call sites destructure the same map; assert the destructuring is
+  // total for every real persona, which is the property above protects.
+  await test('every persona resolves to a non-empty fallback label pair', () => {
+    const { s } = mk()
+    const bad = [...vm.runInContext(
+      'PERSONA_ORDER.filter(id => { const p = PERSONA_FALLBACK_LABEL[id]; return !p || p.length !== 2 || !p[0] || !p[1] })',
+      s)]
+    assert.deepEqual(bad, [], `personas whose fallback label is not a [th, en] pair: ${bad.join(', ')}`)
+  })
+}
+
 console.log(`\n${passed} passed, 0 failed`)

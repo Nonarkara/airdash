@@ -1,4 +1,4 @@
-import { readPreference, writePreference } from './preferences.js?v=2.4.81'
+import { readPreference, writePreference } from './preferences.js?v=2.4.82'
 // ────────────────────────────────────────────────────────────────────────────
 // AIR STORY — the new front door. A scroll narrative about TODAY's air for
 // smart kids and curious adults. Not a dashboard: one question per chapter,
@@ -6,11 +6,11 @@ import { readPreference, writePreference } from './preferences.js?v=2.4.81'
 // back to /api/science. Unavailable readings stay unknown while the page
 // retries; reference formulas remain available for explanation.
 // ────────────────────────────────────────────────────────────────────────────
-import { store, on, setLang, emit } from './state.js?v=2.4.81'
-import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.81'
-import { getJson } from './cache.js?v=2.4.81'
-import { fmtNum, escapeHtml } from './fmt.js?v=2.4.81'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.81'
+import { store, on, setLang, emit } from './state.js?v=2.4.82'
+import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.82'
+import { getJson } from './cache.js?v=2.4.82'
+import { fmtNum, escapeHtml } from './fmt.js?v=2.4.82'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.82'
 
 const $ = (sel) => document.querySelector(sel)
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -137,6 +137,74 @@ function renderHero() {
       `ตอนนี้อากาศ: ${bandLabel(level)} · PM2.5 ${pm == null ? '—' : fmtNum(pm, 0)} µg/m³`,
       `Right now: ${bandLabel(level)} · PM2.5 ${pm == null ? '—' : fmtNum(pm, 0)} µg/m³`)
   }
+
+  renderVerdict(pm)
+}
+
+/**
+ * The one question a person actually opens this page with is "can I go
+ * outside?" — and until now the answer sat in chapter 1, below the fold.
+ *
+ * This deliberately adds NO advice of its own. The headline is the server's
+ * own guidance sentence for the selected persona at the selected PM2.5, so
+ * the hero and chapter 1 cannot disagree and a wording change in
+ * server/science.js moves both at once. An earlier version also drew a
+ * generic verb ladder ("go outside as normal" → "stay indoors") beside that
+ * sentence; the two said the same thing twice, and the server's sentence is
+ * the one that accounts for the persona — asthma at 100 µg/m³ gets an
+ * emergency plan and a hotline number, which no generic ladder can say.
+ *
+ * With no reading it says so rather than guessing, matching the page's
+ * standing rule that unmeasured is never rendered as zero.
+ */
+function renderVerdict(pm) {
+  const box = $('#verdict')
+  if (!box) return
+
+  if (pm == null) {
+    box.dataset.state = 'unknown'
+    box.innerHTML = `
+      <div class="v-head">${tr('ยังบอกไม่ได้ — ยังไม่มีค่าฝุ่นสด', 'Not answering yet — no live reading')}</div>
+      <div class="v-body">${tr(
+        'เราไม่เดาค่าฝุ่นให้คุณ ถ้าสถานีใกล้ที่สุดยังไม่ส่งค่ามา คำตอบนี้จะขึ้นเองทันทีที่มีข้อมูล',
+        'We will not invent a number for you. The moment the nearest station reports, this line answers on its own.'
+      )}</div>`
+    return
+  }
+
+  const prof = science?.profiles?.[persona]
+  const [fbTh, fbEn] = PERSONA_FALLBACK_LABEL[persona]
+  const who = store.lang === 'th' ? (prof?.label_th ?? fbTh) : (prof?.label_en ?? fbEn)
+
+  // Same selection the API uses: the first step whose ceiling this reading
+  // falls under, else the open-ended last step (the hazardous one).
+  const guide = prof?.guidance ?? []
+  const step = guide.find((g) => pm <= g.maxPm25)
+    ?? [...guide].reverse().find((g) => g.maxPm25 == null)
+  const answer = step ? (store.lang === 'th' ? (step.th ?? '') : (step.en ?? '')) : ''
+
+  // Colour comes from --breath-now on :root (the live band), so the verdict
+  // cannot read as a different severity than the breathing circle above it.
+  box.dataset.state = 'live'
+  box.innerHTML = `
+    <div class="v-eyebrow">${tr('สำหรับ', 'For')} <b>${escapeHtml(who)}</b></div>
+    <div class="v-head">${escapeHtml(answer || bandLabel(currentLevel()))}</div>
+    ${freshnessLine()}`
+}
+
+/** "as of 14:07 · 3 min ago" — a number nobody should trust without a clock. */
+function freshnessLine() {
+  const ts = Date.parse(science?.generated_at ?? '')
+  if (!Number.isFinite(ts)) return ''
+  const mins = Math.max(0, Math.round((Date.now() - ts) / 60000))
+  const clock = new Date(ts).toLocaleTimeString(store.lang === 'th' ? 'th-TH' : 'en-GB',
+    { hour: '2-digit', minute: '2-digit' })
+  // "updated 0 min ago" is true and reads like a bug. Under a minute is
+  // "just now" in both languages.
+  const ago = mins < 1
+    ? tr('อัปเดตเมื่อสักครู่', 'updated just now')
+    : (store.lang === 'th' ? `อัปเดต ${mins} นาทีที่แล้ว` : `updated ${mins} min ago`)
+  return `<div class="v-meta">${tr('ข้อมูล ณ', 'as of')} ${clock} · ${ago}</div>`
 }
 
 // ── Alert strip (under the hero) ─────────────────────────────────────────
@@ -188,6 +256,7 @@ function renderPersonaChips() {
       persona = id
       writePreference('ad_story_persona', id)
       renderPersonaChips()
+      renderVerdict(currentPm25())
       renderPersonal()
     })
     host.append(b)

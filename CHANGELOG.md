@@ -10,6 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.82] — 2026-10-15 — the page answers the question it was opened with
+
+Frontend only (`public/js/story.js`, `public/css/story.css`, `public/index.html`). Asset token `2.4.82`, SW cache `airdash-v104`.
+
+> This entry was rewritten on 2026-10-15. The original text was lost when a scripted CHANGELOG reorder overwrote the working file before the release was committed, and git held nothing to recover it from. The code was never at risk — only this note. It is reconstructed from the author's report and from reading the diff, so the wording is not the original wording.
+
+**The problem.** AIR STORY opens with a number — "your lungs smoked 0.7 cigarettes today" — and then scrolls through six chapters before reaching the only sentence anyone came for: chapter 1's *today's advice*. The hero answered a question nobody asked and buried the one everybody did. On a phone that is most of a screen before you learn whether to send the kid outside.
+
+**What it does now.** A verdict block sits directly under the breathing circle and answers, for the selected persona at the selected place, before anything scrolls. It carries the persona's own name, the sentence, and the clock the reading was taken at (`as of 09:36 · updated 3 min ago`) — because a number nobody can date is a number nobody should trust.
+
+**It adds no advice of its own.** The headline is the server's existing guidance sentence, selected by the same rule the API uses (first step whose ceiling the reading falls under, else the open-ended hazardous step). All seven personas share one ladder, so the hero and chapter 1 read from a single source and a wording change in `server/science.js` moves both at once.
+
+That was not the first attempt, and the first attempt was wrong. The block originally paired the server sentence with a generic verb ladder of its own ("go outside as normal" → "stay indoors"), and a screenshot showed the result saying the same thing twice in adjacent lines. The ladder was deleted. It also could not have been right: at 100 µg/m³ the asthma profile escalates to *follow your emergency plan — call 1669*, which no generic phrase can say, and the calmer local line would have sat beside a hazardous-band border. **The calmer line is the dangerous one.**
+
+**The border reads `--breath-now` from `:root`**, so the verdict cannot display a severity that disagrees with the circle above it.
+
+**The honesty path.** With no reading the block says so — "Not answering yet — no live reading / We will not invent a number for you", greyed — and a test asserts that no guidance sentence can leak into that state.
+
+**Four regression checks in `test-frontend-ux.mjs`**, mutation-tested: removing the unknown branch and swapping the server sentence for a local one both turn the suite red. Two further checks were added on 2026-10-15 to pin an invariant that had no test: `PERSONA_ORDER` and `PERSONA_FALLBACK_LABEL` must carry the same keys. Adding a persona to one and not the other throws on the *same* render — the chip builder and the verdict block both destructure that map unguarded — so the chips and the answer disappear together, and nothing catches it from either list alone.
+
+**Checked, not assumed:** the server sentence and the persona name both pass through `escapeHtml`, so a hostile label in the science payload cannot inject markup.
+
 ## [2.4.81] — 2026-10-15 — Keep research navigation clear of the charts
 
 Asset token 2.4.81. Browser verification of 2.4.80 found the sticky index covering section headings. Cap the index height, let its list scroll, and reserve more anchor clearance. Improve reference-label contrast. The automatic bumper now skips changelog numbers already consumed by operational releases; a disposable-checkout regression verifies this behavior without modifying production assets.

@@ -152,6 +152,58 @@ body.story {
   color: var(--ink); font-weight: 700; font-size: 14px;
 }
 .hero .bandchip .pip { width: 10px; height: 10px; background: var(--breath, var(--th-sage)); border-radius: 50% !important; }
+
+/* ── Verdict: the answer, above the fold ─────────────────────────────────────
+   The page opens with a number ("N cigarettes"), but the question a person
+   arrived with is "can I go outside?". That answer used to live in chapter 1,
+   below the fold. It is surfaced here instead, carrying the same band colour
+   as the breathing circle (--breath) so it can never read as a different
+   severity than the number above it. Sharp corners, hairline rule, no
+   shadow — same grammar as every other card on this page. */
+.verdict {
+  /* --breath-now is set on :root by renderHero, so the verdict inherits the
+     live band colour without renderVerdict having to set anything. */
+  --v-rule: var(--breath-now, var(--th-sage));
+  border: 1.5px solid var(--v-rule);
+  border-left-width: 5px;
+  background: var(--well);
+  padding: 14px 16px 13px;
+  margin: 4px 0 18px;
+  max-width: 46ch;
+}
+.verdict .v-eyebrow {
+  font-family: var(--font-num);
+  font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+  /* --ink-low was illegible here: 11px uppercase on the dark ground failed
+     to separate "for" from the persona name it introduces. */
+  color: var(--ink-mid);
+}
+.verdict .v-eyebrow b { color: var(--ink); font-weight: 700; }
+.verdict .v-head {
+  font-size: clamp(19px, 4.2vw, 25px);
+  font-weight: 800; line-height: 1.3;
+  color: var(--ink);
+  margin-top: 6px;
+  /* The verdict is the one line that must not wrap into a wall on a phone. */
+  text-wrap: balance;
+}
+.verdict .v-body {
+  font-size: 14.5px; line-height: 1.5;
+  color: var(--ink-mid);
+  margin-top: 7px;
+  max-width: 42ch;
+}
+.verdict .v-meta {
+  font-family: var(--font-num);
+  font-size: 11px; letter-spacing: 0.04em;
+  color: var(--ink-low);
+  margin-top: 9px; padding-top: 7px;
+  border-top: 1px solid var(--rule);
+}
+/* No reading yet: the box steps back so it does not compete with the
+   headline number while it is waiting. */
+.verdict[data-state="unknown"] { opacity: 0.72; border-color: var(--rule); }
+.verdict[data-state="unknown"] .v-head { font-size: clamp(17px, 3.6vw, 21px); }
 .scrollcue {
   position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
   color: var(--ink-low); font-family: var(--font-num); font-size: 11px; letter-spacing: 0.2em;
