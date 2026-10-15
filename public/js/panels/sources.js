@@ -1,10 +1,10 @@
 // Data-source catalog panel — every pipeline, JAXA satellite layer, and export
 // endpoint for researchers who want to reuse AirDash feeds.
-import { getJson } from '../cache.js?v=2.4.93'
-import { on, store } from '../state.js?v=2.4.93'
-import { tr } from '../i18n.js?v=2.4.93'
-import { el, fmtNum } from '../fmt.js?v=2.4.93'
-import { refreshSensorHealth } from '../sensorHealth.js?v=2.4.93'
+import { getJson } from '../cache.js?v=2.4.94'
+import { on, store } from '../state.js?v=2.4.94'
+import { tr } from '../i18n.js?v=2.4.94'
+import { el, fmtNum } from '../fmt.js?v=2.4.94'
+import { refreshSensorHealth } from '../sensorHealth.js?v=2.4.94'
 
 const KIND_LABEL = {
   pipeline: { th: 'ท่อข้อมูล', en: 'pipeline' },
@@ -165,6 +165,7 @@ function freshnessLine(sourceId) {
   if (!live) return null
   const lang = store.lang
   const intervalMs = live.intervalMs
+  if (live.unconfigured) return el('div', { class: 'src-fresh src-fresh--unknown' }, tr('ยังไม่ตั้งค่ากุญแจเข้าถึง · ไม่ใช่ข้อมูลสด', 'Access key not configured · no live feed'))
   const lastOkStr = live.lastOk
   if (!lastOkStr) {
     return el('div', { class: 'src-fresh src-fresh--unknown' },
@@ -176,7 +177,7 @@ function freshnessLine(sourceId) {
   const band = pipelineBand(ageSec, intervalMs)
   const failures = Number(live.failures ?? 0)
   const parts = []
-  parts.push(tr('อัปเดต', 'updated'))
+  parts.push(tr('ดึงข้อมูลสำเร็จ', 'last successful poll'))
   parts.push(ageText(ageSec, lang))
   if (failures > 0) {
     parts.push(tr(`ผิดพลาด ${failures} ครั้งล่าสุด`, `${failures} recent failure${failures > 1 ? 's' : ''}`))
@@ -219,6 +220,10 @@ function sourceCard(s) {
     // for this specific source, color-coded against the source's own
     // cadence. Remote / reference sources (no runtime status) skip it.
     freshnessLine(s.id),
+    catalog.observation_coverage?.sources?.[s.id] ? el('div', { class: 'src-note' },
+      tr('PM2.5 ภายใน 90 นาที', 'PM2.5 within 90 minutes'), ': ',
+      String(catalog.observation_coverage.sources[s.id].current), ' / ', String(catalog.observation_coverage.sources[s.id].total), ' · ', catalog.observation_coverage.checked_at, ' · ',
+      tr(' จุดรายงาน · เวลาตรวจวัดล่าสุด (UTC): ', ' reporting locations · newest observation (UTC): '), catalog.observation_coverage.sources[s.id].newest_at ?? '—') : null,
     el('div', { class: 'src-note' }, tr(s.note_th, s.note_en)),
     el('div', { class: 'src-links' },
       link(s.url, tr('แหล่งต้นทาง', 'upstream')),

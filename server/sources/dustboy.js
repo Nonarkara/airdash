@@ -192,7 +192,8 @@ export default {
   label_en: 'DustBoy (Chiang Mai University) — dense northern Thailand sensor network',
   intervalMs: CONFIG.intervals.dustboy ?? 60 * 60_000, // hourly, same as PCD
   enabled: true,
-  version: 1, // bump when the parser changes → runs at next boot
+  version: 2, // Reject missing observation times; expose missing credentials before a run
+  isConfigured: ({ db }) => Boolean(tokenFor(db)),
 
   async run({ db }) {
     const token = tokenFor(db)
@@ -208,8 +209,10 @@ export default {
     const { rows, skipped, fields } = normalizeDustboy(json)
     if (!rows.length) {
       log('warn', 'dustboy: payload produced no usable rows', { skipped, fields })
-      return { seen: 0, added: 0 }
+      throw new Error('DustBoy payload produced no usable station readings')
     }
+    const timedRows = rows.filter(r => r.obs_time)
+    if (!timedRows.length) throw new Error('DustBoy readings have no usable observation timestamps')
     // Log which field ladder resolved, once, so the permissive parser can be
     // replaced with a strict one against a real payload.
     log('info', 'dustboy: normalised', { stations: rows.length, skipped, fields: fields.join(',') })
@@ -217,7 +220,7 @@ export default {
     const fetched_at = new Date().toISOString()
     let added = 0
     db.tx(() => {
-      for (const r of rows) {
+      for (const r of timedRows) {
         const station = {
           source: 'dustboy',
           now: fetched_at,
@@ -230,10 +233,9 @@ export default {
           meta_json: JSON.stringify({ source: 'open-api.cmuccdc.org', network: 'dustboy' }),
         }
         db.upsertStation(station)
-        // obs_time is the upstream observation when DustBoy supplies one and
-        // the fetch time otherwise — never invent an observation time, and
-        // never back-date to a stale reading.
-        const obs = r.obs_time ?? fetched_at
+        // Only the provider observation time can establish freshness.
+        if (!r.obs_time) continue // Fetch time cannot establish measurement freshness.
+      const obs = r.obs_time
         if (db.insertReading({
           source: 'dustboy', station_key: r.station_key, metric: 'pm25',
           value: r.pm25, obs_time: obs, fetched_at,

@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.94] — 2026-10-15 — Catch staggered PCD reports and expose real coverage
+
+Asset token 2.4.94, SW airdash-v114. Live audit found 42 Thai PM readings within 90 minutes in AirDash while PCD already published 142 latest-hour station reports. Hourly polling repeatedly missed staggered publication; Air4Thai now checks every 15 minutes. Station reporting cadence stays hourly. No extra model calls or cooldown bypass.
+
+/api/health and /api/sources expose observation_coverage: per-source current/stale/invalid PM counts and newest observation, computed only from the small latest table. The Data panel distinguishes successful poll time from observation freshness and displays the coverage snapshot time. DustBoy is explicitly catalogued as optional community-sensor data.
+
+Optional source configuration is checked before a run and after restart, preventing an old zero-row success from making a missing-key DustBoy/IMERG feed look healthy. Missing-key runs no longer advance lastOk; health hides lastOk while unconfigured. DustBoy rejects empty payloads and readings without provider observation times instead of substituting retrieval time and manufacturing freshness. No new credential or external account was created.
+
+Behavioral regressions exercise coverage/timezones/nulls/futures, the PCD polling cadence, actual scheduler hydration/skip/recovery, and actual DustBoy ingestion with missing/valid timestamps. Full checks and measured production improvement are recorded in docs/OBSERVATION-RELIABILITY-2.4.94.md.
+
 ## [2.4.93] — 2026-10-15 — Compose the regional view around the map
 
 Asset token 2.4.93, SW airdash-v113. Applies Palette's object-first composition rather than only its colours: removed the editorial hero, moved working controls into a compact instrument rail, made the map occupy the opening viewport, and grouped country/source/method detail behind a reachable native disclosure. Shared AirDash identity and signal colours retained. Quantitative legend sits on the map clear of zoom controls and is hidden when the PM field is off. Wind direction markers use smaller glyphs and one representative per 1.5° display cell to reduce overlap; input directions and tooltips unchanged. Popups and map attribution follow shared theme ink.

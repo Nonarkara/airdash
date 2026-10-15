@@ -89,6 +89,7 @@ export default {
   label_en: 'GPM IMERG satellite rain',
   intervalMs: CONFIG.intervals.imerg,
   enabled: true,
+  isConfigured: ({ db }) => Boolean(db.kvGet('earthdata_token')),
 
   async run({ db, bus }) {
     const token = db.kvGet('earthdata_token')

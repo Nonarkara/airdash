@@ -137,8 +137,8 @@ export function createScheduler({ db, bus, alerts, sources }) {
       const durMs = Date.now() - t0
       s.failures = 0
       s.lastRun = startedAt
-      s.lastOk = startedAt
       s.unconfigured = !!result?.skipped_no_token
+      if (!s.unconfigured) s.lastOk = startedAt
       s.lastError = null
       s.parkedUntil = null  // any prior rate-limit park is lifted on a clean run
       if (s.source.version) db.kvSet(`src_version:${name}`, String(s.source.version))
@@ -246,15 +246,16 @@ export function createScheduler({ db, bus, alerts, sources }) {
   function health() {
     const out = {}
     for (const [name, s] of state) {
+      const unconfigured = typeof s.source.isConfigured === 'function' ? !s.source.isConfigured({ db }) : !!s.unconfigured
       out[name] = {
         label_th: s.source.label_th,
         label_en: s.source.label_en,
         intervalMs: s.source.intervalMs,
         failures: s.failures,
         lastRun: s.lastRun,
-        lastOk: s.lastOk,
+        lastOk: unconfigured ? null : s.lastOk,
         lastError: s.lastError,
-        unconfigured: !!s.unconfigured,
+        unconfigured,
         running: s.running,
         parkedUntil: s.parkedUntil ? new Date(s.parkedUntil).toISOString() : null,
       }

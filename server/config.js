@@ -41,7 +41,7 @@ export const CONFIG = {
     // Public RSS haze reports. 20 min: these are news feeds, and the value is
     // in catching a regional story while it is still breaking.
     citizen_social: 20 * MINUTE,
-    air4thai: 1 * HOUR,      // PCD publishes hourly
+    air4thai: 15 * MINUTE,   // Hourly station reports arrive at staggered times; catch late releases without a full-hour delay
     // Open-Meteo free tier has a daily request limit (10,000/day globally,
     // but smaller per-IP burst limits bite first). 6h = 4 calls/day per
     // source × 3 sources = 12 calls/day, well under any sensible limit,

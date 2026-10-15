@@ -11,8 +11,8 @@ export const SOURCES = [
     name_en: 'Air4Thai AQI / PM2.5 (PCD)',
     agency_th: 'กรมควบคุมมลพิษ (คพ.)',
     agency_en: 'Pollution Control Department (PCD)',
-    cadence_th: 'ทุก 1 ชม.',
-    cadence_en: 'hourly',
+    cadence_th: 'ค่ารายชั่วโมง ตรวจทุก 15 นาที',
+    cadence_en: 'hourly reports; checked every 15 minutes',
     url: 'https://air4thai.pcd.go.th/',
     api: '/api/snapshot · /api/series?source=air4thai',
     metrics: ['pm25', 'pm10', 'o3', 'co', 'no2', 'so2', 'aqi'],
@@ -119,6 +119,8 @@ export const SOURCES = [
   },
   { id: 'gistda_pm25', kind: 'pipeline', stored: true, name_th: 'GISTDA PM2.5 ดาวเทียมผสานสถานี', name_en: 'GISTDA PM2.5 satellite–ground fusion', agency_th: 'GISTDA', agency_en: 'GISTDA', cadence_th: 'รายชั่วโมง', cadence_en: 'hourly', url: 'https://pm25.gistda.or.th/', api: '/api/series?source=gistda_pm25', metrics: ['pm25', 'pm25_avg24h'], note_th: 'ค่าประมาณรายจังหวัด ใช้เมื่อไม่มีสถานีภาคพื้นสด ไม่ใช่เซ็นเซอร์อิสระเพราะผสานข้อมูลสถานี', note_en: 'Provincial estimate used when fresh ground PM is unavailable. Ground-station fusion means this is not independent sensor confirmation.' },
   { id: 'firms_regional', kind: 'pipeline', stored: true, name_th: 'NASA FIRMS จุดความร้อนภูมิภาค', name_en: 'NASA FIRMS regional fire detections', agency_th: 'NASA', agency_en: 'NASA', cadence_th: 'ทุก 6 ชั่วโมง', cadence_en: 'every 6 hours', url: 'https://firms.modaps.eosdis.nasa.gov/', api: '/api/smoke', metrics: ['frp'], note_th: 'จุดตรวจจับความร้อนและกำลังแผ่รังสีไฟ ไม่ใช่พื้นที่เผาหรือปริมาณฝุ่นที่สูดดม เมฆและเวลาผ่านทำให้ตรวจไม่พบได้', note_en: 'Thermal detections and fire radiative power, not burned area or inhaled PM. Clouds and overpass times can hide fires.' },
+
+  { id: 'dustboy', kind: 'pipeline', stored: true, name_th: 'DustBoy · เซ็นเซอร์ชุมชน มช.', name_en: 'DustBoy · CMU community sensors', agency_th: 'มหาวิทยาลัยเชียงใหม่', agency_en: 'Chiang Mai University', cadence_th: 'รายชั่วโมง เมื่อมี token', cadence_en: 'hourly when configured', url: 'https://open-api.cmuccdc.org/', api: '/api/series?source=dustboy', metrics: ['pm25'], note_th: 'ต้องตั้งค่า token ก่อนดึงข้อมูล เป็นเซ็นเซอร์ราคาประหยัด ไม่ใช่สถานีอ้างอิง ค่าที่ไม่มีเวลาตรวจวัดจะไม่ถูกใช้เป็นข้อมูลสด', note_en: 'Requires an operator token. Low-cost/community sensors, not reference-grade monitors. Readings without an observation time cannot establish fresh coverage.' },
 
   // ── Remote sensing (map layers — not stored in SQLite) ─────────────────────
   {

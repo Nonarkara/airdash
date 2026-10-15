@@ -1,3 +1,4 @@
+import { pmObservationCoverage } from './observationCoverage.js'
 import { allProvinces } from './provinces.js'
 import { pollutionOutlook } from './pollutionOutlook.js'
 import { COUNTRIES, REGIONAL_RESOURCES, readSingapore, thailandRows, observationStatus } from './region.js'
@@ -464,6 +465,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         watchdog: watchdogStatus(),
         sources,
         data_freshness,
+        observation_coverage: pmObservationCoverage(db),
         sse: bus.stats(),
         llm: rag.status(),
       })
@@ -1361,6 +1363,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       remote: SOURCES.filter((s) => s.kind !== 'pipeline'),
       export: EXPORT_INFO,
       data_chain: DATA_CHAIN,
+      observation_coverage: pmObservationCoverage(db),
       jaxa: {
         portal: 'https://earth.jaxa.jp/en/data/index.html',
         api: 'https://data.earth.jaxa.jp/',
