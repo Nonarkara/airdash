@@ -1,6 +1,6 @@
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.91'
-import { escapeHtml as esc } from './fmt.js?v=2.4.91'
-import { readPreference, writePreference } from './preferences.js?v=2.4.91'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.92'
+import { escapeHtml as esc } from './fmt.js?v=2.4.92'
+import { readPreference, writePreference } from './preferences.js?v=2.4.92'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]

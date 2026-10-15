@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.92] — 2026-10-15 — Preserve Palette control contrast
+
+Asset token 2.4.92, SW airdash-v112. Regional pale hover backgrounds explicitly retain normal ink; the shared token core otherwise supplies inverse hover ink intended for filled primary controls. This keeps country-row buttons and map controls readable in both light and dark modes. No data changes.
+
 ## [2.4.91] — 2026-10-15 — Bring Southeast Asia back to AirDash’s Palette core
 
 Asset token 2.4.91, SW airdash-v111. Regional page now imports the shared design tokens and brand assets: sky paper, teal ink, Manrope headings, Sarabun text and JetBrains Mono data. Removed the separate hardcoded dark theme, large rounded panels and repeated country-card grid. Coverage/source directories are compact ruled rows, map controls use shared colours and radii, and responsive rows stack on phones. Existing light/dark preference follows the same token core as the rest of AirDash. Data and transport semantics unchanged.
