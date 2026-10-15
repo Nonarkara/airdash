@@ -48,3 +48,7 @@ OpenAQ v3 credentials and provider coverage/license review would unlock the next
 ## Checks
 
 Regression fixtures cover country inventory, exact concentration field, null/zero, timestamp offsets, future/stale values, coalesced requests, cache expiry, failure cooldown and recovery. Full test/deployment evidence recorded below after completion.
+
+Release evidence: `npm test` exited 0 (`/tmp/airdash-region-tests-final.log`). The first run found the module-reachability gate's hardcoded entry-point list; repaired it to discover shipped HTML script entries and follow absolute `/js/` imports, preserving orphan detection. Focused graph test: 30 passed, 0 failed. Final navigation layout changes passed syntax, consistency and regional fixtures. Front-page regional link sits in its own row to avoid crowding the phone header.
+
+Production: commit e11db8e pushed. Deploy verified 2.4.89 on both domains, asset digest `95f7894cd77c`. Additional direct byte comparisons verified new region JS/CSS on both hosts; clean `/region` resolves correctly. Public `/api/region` returned 11 countries, 180 reporting locations (175 Thai + 5 Singapore), Singapore available and 305 existing fire grid cells. Fresh counts remain dynamic (not all 180 current). Native Chrome verified the public route, data counts, imagery selection, dated NASA AOD tiles and legend; screenshot `/tmp/airdash-southeast-asia-2.4.89.png`. Mobile layout is responsive in CSS but no complete physical-phone/device matrix is claimed.
