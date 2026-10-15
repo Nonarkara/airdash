@@ -511,6 +511,8 @@ export function ensureMapPanes(map) {
     ['satellite', 250],
     ['radar', 300],
     ['heatmap', 320], // above radar, below province boundaries/station data
+    ['flow', 340], // wind arrows and particles, under station marks
+    ['drift', 360], // short haze strokes, still under station marks
     ['vectors', 350],
     ['data', 450],
   ]
@@ -523,6 +525,16 @@ export function ensureMapPanes(map) {
 }
 
 export const LAYER_GROUPS = [
+  {
+    id: 'airmass',
+    th: 'อากาศ',
+    en: 'THE AIR',
+    layers: [
+      { id: 'heatmap', th: 'พื้นผิว PM2.5 (จากสถานี)', en: 'PM2.5 surface (from stations)', on: true, note_th: 'ถ่วงระยะทางผกผันจากค่าสถานีที่ยังไม่เกิน 90 นาที สีจางเมื่อห่างสถานี', note_en: 'Inverse-distance surface of station PM newer than 90 minutes. Colour fades away from stations.', what_th: 'ช่องว่างหมายถึงข้อมูลไม่พอที่จะประมาณ ไม่ใช่อากาศสะอาด และไม่ใช่ค่าที่วัดทุกจุด', what_en: 'A blank means there are not enough stations to estimate a value. It is not clean air, and it is not a measurement at every point.' },
+      { id: 'windFlow', th: 'ลมปัจจุบัน (Open-Meteo)', en: 'Current wind (Open-Meteo)', on: true, note_th: 'ลูกศรและจุดเคลื่อนที่จากลม 10 เมตรบนกริดฟรี ไม่ใช้คีย์', note_en: 'Arrows and particles from a keyless 10 m wind grid.', what_th: 'การเคลื่อนที่บอกทิศและความเร็วสัมพัทธ์ ไม่ใช่เวลาที่อากาศเคลื่อนที่จริง', what_en: 'Motion shows direction and relative speed, not air moving in real time. Open-Meteo, CC BY 4.0.' },
+      { id: 'hazeDrift', th: 'ลมพัดหมอกควันไปทางนี้ ไม่ใช่พยากรณ์', en: 'Wind carries haze this way, not a forecast', on: true, note_th: 'เส้นสั้นจากจุดความร้อนและสถานีที่ฝุ่นสูง ตามลมปัจจุบันประมาณ 6–12 ชม.', note_en: 'Short strokes from hotspots and high-PM stations, along the current wind for about 6–12 h.', what_th: 'ไม่ใช่เวลาที่ควันจะมาถึง ไม่มีการพยากรณ์การเดินทางของควันจนกว่าจะมีการตรวจย้อนหลัง', what_en: 'Not a smoke-arrival time. No transport forecast is claimed until forecasts are backtested.' },
+    ],
+  },
   {
     id: 'remote',
     th: 'ดาวเทียม · เรดาร์',
@@ -559,7 +571,6 @@ export const LAYER_GROUPS = [
       { id: 'visibility', th: 'ระยะมองสนามบิน (METAR — สัญญาณฝุ่นเร็วที่สุด ทุก 30 นาที)', en: 'Airport visibility (METAR — fastest dust signal, 30-min)', on: false, kind: 'visibility', note_th: 'ระยะมองสนามบิน (METAR ทุก 30 นาที)', note_en: 'วัดการลดทอดแสงโดยตรงตามทฤษฎี Koschmieder และเป็นสัญญาณฝุ่นที่เร็วที่สุดในระบบ — ระยะมองลดลงไม่เท่ากับมีฝุ่น เพราะฝนและหมอกก็ทำได้เช่นกัน การ์ดจะระบุสาเหตุให้ทุกครั้ง', what_th: 'Airport visibility every 30 minutes — a direct measurement of light extinction.', what_en: 'The fastest dust signal here, and NOT a dust measurement on its own: a 5 km reading means rain just as often as dust. The card names the cause, and records no aerosol figure unless the METAR itself does.' },
       { id: 'aeronet', th: 'สถานี AERONET (ภาคพื้นดิน — สอบเทียบ AOD ดาวเทียม)', en: 'AERONET stations (ground truth — satellite AOD calibration)', on: false, kind: 'aeronet', note_th: 'สถานี AERONET (ค่าอ้างอิงภาคพื้นดิน)', note_en: 'เครื่องวัด AOD ด้วยแสงอาทิตย์จากพื้นดิน ด้วยฟิสิกส์ชุดเดียวกับที่ดาวเทียมอนุมาน — นี่คือวิธีตรวจงานชั้นดาวเทียม', what_th: 'AERONET sunphotometers — ground-truth AOD.', what_en: 'The calibration reference for the satellite AOD layers. AERONET is sparse and clear-sky only: a blank reading is missing data, never a clean-air finding.' },
       { id: 'citizen', th: 'รายงานหมอกควันจากผู้ใช้และสื่อ (ผูกพิกัดอัตโนมัติ)', en: 'Citizen & press haze reports (auto-pinned)', on: false, kind: 'citizen', note_th: 'รายงานหมอกควันจากผู้ใช้และสื่อ', note_en: 'ผูกพิกัดอัตโนมัติจากชื่อสถานที่ในพาดหัว ทุกรายการระบุแหล่งที่มาและลิงก์ต้นฉบับ — มีประโยชน์เพราะข่าวเคลื่อนที่ก่อนเครื่องมือใด ๆ', what_th: 'Credited news and social haze reports, pinned by place name.', what_en: 'A report is not a measurement, and a province pin is a centroid rather than a reported location. Read the precision on each pin.' },
-      { id: 'heatmap', th: 'ฮีทแมป PM2.5', en: 'PM2.5 estimated surface', on: false, note_th: 'แผนที่ความร้อน PM2.5', note_en: 'แสดงรูปร่างของทั้งภูมิภาค ไม่ใช่ค่าที่วัด — สถานีข้างใต้คือข้อมูลจริง', what_th: 'PM2.5 interpolated into a surface.', what_en: 'Bounded interpolation of source PM, not a dispersion model or AQI forecast. Three points within 60 km and a point within 30 km required; unsupported areas remain blank.' },
       { id: 'rain', th: 'ฝนสะสม 24 ชม. (ล้างฝุ่น)', en: 'rain 24h (washout)', on: false, note_th: 'ฝน 24 ชั่วโมง', note_en: 'ฝนคือการล้างฝุ่น — ยิ่งฝนตกมาก ฝุ่นยิ่งถูกกวาดออก', what_th: '24-hour rain.', what_en: 'Rain now does not mean clean air later — re-entrainment and regional transport can bring it straight back.' },
       { id: 'newsfire', th: 'ข่าวไฟป่า/มลพิษ', en: 'fire & pollution news', on: true, note_th: 'ข่าวไฟไหม้และมลพิษใกล้คุณ', note_en: 'สิ่งที่คนรายงานว่าเกิดขึ้น ช่วยจับบริเวณที่เครื่องมือยังไม่ทัน', what_th: 'Fire and pollution headlines near you.', what_en: 'Reporting lags and over-reports. It is a prompt to look, not a finding.' },
       { id: 'cctv', th: 'กล้อง CCTV (ภาพสด · สีขอบ = PM2.5 สถานี · จุดมุม = ภาพดูควัน/หมอก)', en: 'CCTV (live · ring = station PM2.5 · corner = picture looks smoky/foggy)', on: false, note_th: 'กล้อง 1,369 ตัว (จับคู่กับสถานีใกล้สุด)', note_en: 'วงแหวนคือค่า PM2.5 ของสถานี เครื่องหมายมุมแปลว่าภาพเองดูมีควันหรือมีหมอก — คะแนนจากภาพเป็นเพียงตัวช่วยคัดกรอง ยังไม่ใช่ค่าความเข้มข้น', what_th: '1,369 cameras paired to their nearest station, each frame analysed for haze.', what_en: 'The RING is the station\'s PM2.5 — that is a measurement. The CORNER MARK and the picture score come from the image and are a triage aid only, never calibrated to µg/m³. Most cameras serve no readable frame at all; the wall says why on each card.' },

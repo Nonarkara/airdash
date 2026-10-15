@@ -4347,6 +4347,10 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .haze-wind-arrow {display:block; font-size:33px; line-height:36px; transform-origin:center;}
 .haze-wind-icon small {position:absolute;right:-9px;bottom:-2px;background:var(--well);color:var(--ink);border:1px solid var(--rule);padding:1px 3px; font-size:11px;}
 @media (max-width:360px) {.haze-plan-grid {grid-template-columns:1fr;}}
+.haze-drift-label,.air-copy{background:var(--well);color:var(--ink);border:1px solid var(--rule);font-size:11px;line-height:1.35;padding:6px 8px;max-width:min(320px,calc(100vw - 88px));pointer-events:none}
+.haze-drift-label span,.air-copy span{display:block}
+.air-copy{border:0;padding:6px 12px;max-width:none;background:transparent}
+.wind-arrow-canvas,.wind-flow-canvas{pointer-events:none}
 
 /* The source-to-action chain remains readable in narrow source panels. */
 .src-chain { padding: 14px; border: 1px solid var(--line, #435363); border-radius: 10px; margin-bottom: 16px; overflow-wrap: anywhere; }

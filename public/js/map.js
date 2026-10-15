@@ -1,24 +1,27 @@
-import { windTowards } from './panels/hazePlan.js?v=2.4.94'
-import { escapeHtml } from './fmt.js?v=2.4.94'
-import { moveMap } from './mapView.js?v=2.4.94'
-import { readPreference, writePreference } from './preferences.js?v=2.4.94'
+import { windTowards } from './panels/hazePlan.js?v=2.4.95'
+import { escapeHtml } from './fmt.js?v=2.4.95'
+import { moveMap } from './mapView.js?v=2.4.95'
+import { readPreference, writePreference } from './preferences.js?v=2.4.95'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.94'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.94'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.94'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.94'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.94'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.94'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.94'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.94'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.94'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.94'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.94'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.94'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.94'
-import { openWindow } from './witness.js?v=2.4.94'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.94'
+import { on, store } from './state.js?v=2.4.95'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.95'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.95'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.95'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.95'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.95'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.95'
+import { createWindFlowLayer } from './layers/wind-flow.js?v=2.4.95'
+import { createHazeDriftLayer } from './layers/haze-drift.js?v=2.4.95'
+import { AIR_COPY } from './layers/wind-math.js?v=2.4.95'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.95'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.95'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.95'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.95'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.95'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.95'
+import { openWindow } from './witness.js?v=2.4.95'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.95'
 
 const windToggle = {id:'hazeWind',th:'ลมพยากรณ์ + จุดตรวจไฟเหนือลม',en:'Forecast wind + upwind fire counts',on:false,
   note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where wind blows. Daily dominant forecast, not current wind.',
@@ -106,6 +109,8 @@ export function initMap() {
   layers.air = L.layerGroup([], { pane: 'data' })
   layers.rain = L.layerGroup([], { pane: 'data' })
   layers.heatmap = createPm25HeatmapLayer()
+  layers.windFlow = createWindFlowLayer()
+  layers.hazeDrift = createHazeDriftLayer()
   layers.hazeWind = L.layerGroup()
   layers.fireCells = L.layerGroup()
   layers.hazeRain = L.layerGroup()
@@ -185,6 +190,15 @@ export function initMap() {
 
   addLayerControl()
   addLegend()
+  const pullFires = () => {
+    if (document.hidden) return
+    fetch('/api/smoke').then((res) => res.ok ? res.json() : null).then((body) => {
+      if (body) layers.hazeDrift?.setFires(body.fire_cells ?? [])
+    }).catch(() => {})
+  }
+  pullFires()
+  setInterval(pullFires, 10 * 60 * 1000)
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pullFires() })
   // Expose for testing/devtools — never used by app code.
   window.__airdash = { map, layers, osmBuildingsApi }
 
@@ -208,6 +222,7 @@ function renderAll(snap) {
   renderAir(snap.air)
   paintRain(layers, snap.rain)
   layers.heatmap?.setData(snap.air)
+  layers.hazeDrift?.setStations(snap.air)
   newsFireApi?.setData(snap.news, snap.risk?.provinces)
 }
 
@@ -430,8 +445,19 @@ function addLegend() {
       <div class="lrow"><span class="lsw" style="background:var(--th-red)"></span>${tr('รอยเผาภาคเกษตร — สะสมทั้งฤดู ธ.ค.68–เม.ย.69 (ไม่ใช่ไฟวันนี้) เฉพาะภาคเหนือ+กลาง', 'agri burn scars — whole season Dec 25–Apr 26 (not today\'s fires), north+central only')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
       <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>
-      <div class="eyebrow" style="margin-top:6px">${tr('ฮีทแมป PM2.5', 'PM2.5 HEAT MAP')}</div>
-      <div class="lrow">${tr('สีของแต่ละจุด = ค่า PM2.5 จริงที่สถานีนั้น ไม่ใช่ความหนาแน่นจุด', 'blob colour = the actual PM2.5 at that station, not point density')}</div>
+      <div class="eyebrow" style="margin-top:6px">THE AIR · อากาศ · 空气</div>
+      <div class="lrow">${AIR_COPY.heat_en}</div>
+      <div class="lrow">${AIR_COPY.heat_th}</div>
+      <div class="lrow">${AIR_COPY.heat_zh}</div>
+      <div class="lrow">${AIR_COPY.wind_en}</div>
+      <div class="lrow">${AIR_COPY.wind_th}</div>
+      <div class="lrow">${AIR_COPY.wind_zh}</div>
+      <div class="lrow">${AIR_COPY.drift_en}</div>
+      <div class="lrow">${AIR_COPY.drift_th}</div>
+      <div class="lrow">${AIR_COPY.drift_zh}</div>
+      <div class="lrow">${AIR_COPY.credit_en}</div>
+      <div class="lrow">${AIR_COPY.credit_th}</div>
+      <div class="lrow">${AIR_COPY.credit_zh}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('กล้อง CCTV', 'CCTV')}</div>
       <div class="lrow">📹 ${tr('ภาพสดที่ตรวจแล้ว · สีขอบ = PM2.5 ที่สถานีใกล้ที่สุด', 'verified live · ring colour = PM2.5 at the nearest station')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ข่าวไฟป่า/มลพิษ', 'FIRE & POLLUTION NEWS')}</div>

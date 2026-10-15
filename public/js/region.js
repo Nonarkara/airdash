@@ -1,6 +1,9 @@
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.94'
-import { escapeHtml as esc } from './fmt.js?v=2.4.94'
-import { readPreference, writePreference } from './preferences.js?v=2.4.94'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.95'
+import { createWindFlowLayer } from './layers/wind-flow.js?v=2.4.95'
+import { createHazeDriftLayer } from './layers/haze-drift.js?v=2.4.95'
+import { AIR_COPY } from './layers/wind-math.js?v=2.4.95'
+import { escapeHtml as esc } from './fmt.js?v=2.4.95'
+import { readPreference, writePreference } from './preferences.js?v=2.4.95'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
@@ -8,7 +11,10 @@ const map=L.map('regional-map',{minZoom:3,maxZoom:12,preferCanvas:true}).fitBoun
 map.attributionControl.setPrefix(false)
 L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16,attribution:'Esri, HERE, Garmin · © OpenStreetMap'}).addTo(map)
 const pm=L.layerGroup().addTo(map),fire=L.layerGroup().addTo(map)
-const field=createPollutionField().addTo(map)
+if(!map.getPane('heatmap')){const pane=map.createPane('heatmap');pane.style.zIndex=320;pane.style.pointerEvents='none'}
+const field=createPollutionField({pane:'heatmap'}).addTo(map)
+const flow=createWindFlowLayer().addTo(map)
+const drift=createHazeDriftLayer().addTo(map)
 const wind=L.layerGroup().addTo(map)
 byWindInit()
 function byWindInit(){document.getElementById('wind').onchange=()=>document.getElementById('wind').checked?wind.addTo(map):map.removeLayer(wind)}
@@ -62,6 +68,8 @@ function paint(){
  if(!data)return
  paintField()
  pm.clearLayers();fire.clearLayers();wind.clearLayers()
+ drift.setStations((data.observations??[]).filter(r=>r.status!=='stale'&&Date.now()-Date.parse(r.observed_at)<=90*60000))
+ drift.setFires(data.fires?.available?data.fires.cells??[]:[])
  const windSeen=new Set()
  for(const r of data.wind??[]){
   const stamp=r.wind_updated_at,iso=/[zZ]|[+-]\d\d:\d\d$/.test(stamp??'')?stamp:`${stamp?.replace(' ','T')}+07:00`,age=Date.now()-Date.parse(iso)
@@ -89,6 +97,31 @@ async function load(){if(loading)return;loading=true;byId('refresh').disabled=tr
  finally{loading=false;byId('refresh').disabled=false}
 }
 byId('refresh').onclick=load
+function airToggle(id, th, en, layer){
+ const host=document.querySelector('.map-tools')
+ if(!host||document.getElementById(id))return
+ const label=document.createElement('label')
+ const input=document.createElement('input')
+ input.id=id;input.type='checkbox';input.checked=true
+ const span=document.createElement('span')
+ span.dataset.t=`${th}|${en}`
+ span.textContent=tr(th,en)
+ label.append(input,span)
+ input.onchange=()=>{input.checked?layer.addTo(map):map.removeLayer(layer)}
+ host.appendChild(label)
+}
+airToggle('wind-flow','ลมปัจจุบัน · กริด Open-Meteo','Current wind · Open-Meteo grid',flow)
+airToggle('haze-drift','ลมพัดหมอกควันไปทางนี้ ไม่ใช่พยากรณ์','Wind carries haze this way, not a forecast',drift)
+const stage=document.querySelector('.map-stage')
+if(stage&&!document.getElementById('air-legend')){
+ const note=document.createElement('p')
+ note.id='air-legend'
+ note.className='caption air-copy'
+ for(const text of [AIR_COPY.credit_en,AIR_COPY.credit_th,AIR_COPY.credit_zh]){
+  const line=document.createElement('span');line.textContent=text;note.appendChild(line)
+ }
+ stage.appendChild(note)
+}
 translate();load()
 // Only reclassify age between explicit refreshes; no background upstream loop.
 setInterval(()=>{if(data&&!document.hidden)paint()},60000)

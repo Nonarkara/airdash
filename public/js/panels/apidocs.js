@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.94'
-import { escapeHtml } from '../fmt.js?v=2.4.94'
+import { store, on } from '../state.js?v=2.4.95'
+import { escapeHtml } from '../fmt.js?v=2.4.95'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -198,6 +198,7 @@ function GROUPS() {
         { path: '/api/exports/latest', th: 'ไฟล์ส่งออกล่าสุด (รองรับ Range เพื่อดาวน์โหลดต่อ)', en: 'The latest export archive (Range requests honoured for resume).' },
         { path: '/api/exports/:filename', th: 'ไฟล์ส่งออกตามชื่อ', en: 'One export archive by name.' },
         { path: '/api/region', th: 'ภาพรวมเอเชียตะวันออกเฉียงใต้: PM ไทย/สิงคโปร์ จุดไฟที่มี และแหล่งอ้างอิงพร้อมช่องว่างข้อมูล', en: 'Partial Southeast Asia overview: Thai/Singapore PM, existing fire coverage and source/coverage directory.' },
+        { path: '/api/wind-field', th: 'ลมปัจจุบัน 10 เมตรบนกริดเอเชียตะวันออกเฉียงใต้จาก Open-Meteo (ไม่มีคีย์) แคชที่เซิร์ฟเวอร์และจำกัดจำนวนครั้งต่อวัน — ไม่ใช่เวลาที่ควันจะมาถึง', en: 'Current 10 m wind on a Southeast Asia grid from keyless Open-Meteo, cached on the server with a daily cap. Not a smoke-arrival time.' },
         { path: '/api/sources', th: 'แหล่งข้อมูลและ data_chain: ดิบ → ตรวจ → ปรุง → ใช้ พร้อมที่มา ข้อจำกัดและเงื่อนไข', en: 'Source catalogue and data_chain: raw → checked → interpreted → action, lineage, limitations and reuse terms.' },
         { path: '/api/reports', th: 'รายงานจากประชาชน (LINE) ที่ผ่านการตรวจแล้ว', en: 'Moderated citizen reports (LINE).', params: [['limit', false, tr('จำนวน', 'count')], ['since', false, tr('ISO time', 'ISO time')]] },
       ],

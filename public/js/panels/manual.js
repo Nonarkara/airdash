@@ -9,8 +9,8 @@
 // Rule for this file: every entry describes a control that ACTUALLY
 // EXISTS and was verified working. Delete a control, delete its row —
 // a manual that lists a phantom button sends people hunting for nothing.
-import { store, on } from '../state.js?v=2.4.94'
-import { escapeHtml } from '../fmt.js?v=2.4.94'
+import { store, on } from '../state.js?v=2.4.95'
+import { escapeHtml } from '../fmt.js?v=2.4.95'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -85,8 +85,8 @@ const ZONES = () => [
     where_th: 'มุมบนขวาของแผนที่', where_en: 'Top-right of the map',
     rows: [
       { key: '▦', name_th: 'ชั้นข้อมูล', name_en: 'Layers',
-        th: 'เปิด/ปิดสิ่งที่วาดบนแผนที่: พื้นแผนที่ (ถนน/ดาวเทียม/ภูมิประเทศ) · จากอวกาศ (หมอกควัน AOD, ฝนดาวเทียม GSMaP, เมฆ Himawari, ภาพจริง MODIS) · ภาคพื้น (สถานี Air4Thai, ฮีทแมป PM2.5, ฝนสะสม 24 ชม., ข่าวไฟป่า, ชั้นความเสี่ยงจังหวัด, อาคารเสี่ยง)',
-        en: 'Turn map layers on and off: basemaps (road / satellite / terrain), space layers (AOD haze, GSMaP rain, Himawari cloud, MODIS true colour) and ground layers (Air4Thai stations, PM2.5 heatmap, 24 h rain, wildfire news, province risk, at-risk buildings).' },
+        th: 'เปิด/ปิดสิ่งที่วาดบนแผนที่: พื้นผิว PM2.5, ลมปัจจุบัน, ทิศที่ลมพาหมอกควัน (ไม่ใช่พยากรณ์เวลาถึง) · พื้นแผนที่ · จากอวกาศ (AOD, GSMaP, Himawari, MODIS) · ภาคพื้น (สถานี Air4Thai, ฝน 24 ชม., ข่าวไฟป่า, ความเสี่ยงจังหวัด)',
+        en: 'Turn map layers on and off: PM2.5 surface, current wind, and where wind carries haze (not an arrival forecast); basemaps; space layers (AOD, GSMaP, Himawari, MODIS); ground layers (Air4Thai stations, 24 h rain, fire news, province risk).' },
       { key: 'หมอกควัน', name_th: 'ชั้นหมอกควัน (AOD)', name_en: 'Haze layer (AOD)',
         th: 'ความหนาของละอองลอยที่ดาวเทียมมองเห็นจากอวกาศ — เห็นหมอกควันข้ามพรมแดนที่สถานีภาคพื้นยังจับไม่ได้',
         en: 'Aerosol thickness as seen from orbit — it reveals cross-border haze before ground stations register it.' },

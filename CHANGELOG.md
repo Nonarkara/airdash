@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.95] — 2026-10-15 — Show the air on the map
+
+Asset token 2.4.95, SW airdash-v115. The operations map was still a field of station circles. Three layers now draw the air itself, in the existing Layers control. The PM2.5 surface and the current-wind layer are on by default. The map stays the object: strokes are thin, the surface fades out, and station marks stay above both.
+
+- PM2.5 surface: the existing inverse-distance field, using the concentration scale already on the map. It needs nearby fresh stations and fades before the support radius ends. Unsupported areas stay blank.
+- Current wind: one Open-Meteo 10 m grid, 100 points, no API key. The server caches it for 30 minutes, refuses a refresh inside 20 minutes, and stops at 36 upstream attempts per UTC day. The edge keeps one copy so visitors do not each open a tunnel. Arrows are static. Particles show direction and relative speed, not real-time motion. Phones cap the count; a hidden tab and reduced-motion stop the animation.
+- Haze drift: short strokes from hotspots and high-PM stations along that same wind, about 6 h solid and 12 h dashed, length capped. The label, in English, Thai and Chinese, is “wind carries haze this way, not a forecast.” No arrival time is claimed.
+
+Legends carry the same three languages and name Open-Meteo (CC BY 4.0), Air4Thai / PCD and NASA FIRMS. The Southeast Asia page uses the same wind and drift layers without rewriting the phone layout from the regional-map draft.
+
 ## [2.4.94] — 2026-10-15 — Catch staggered PCD reports and expose real coverage
 
 Asset token 2.4.94, SW airdash-v114. Live audit found 42 Thai PM readings within 90 minutes in AirDash while PCD already published 142 latest-hour station reports. Hourly polling repeatedly missed staggered publication; Air4Thai now checks every 15 minutes. Station reporting cadence stays hourly. No extra model calls or cooldown bypass.
