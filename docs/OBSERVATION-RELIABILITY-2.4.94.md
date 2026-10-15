@@ -25,3 +25,9 @@ Priorities:
 `test-observation-reliability.mjs` exercises actual source/scheduler behavior: ICT/UTC times, zero vs null, stale/future/invalid records, table-read constraint, polling cadence, boot hydration, missing-key skip, configured recovery, and DustBoy empty/missing-time/valid-time ingestion. Existing regional/field tests also remain in the complete suite.
 
 Post-release measurements and deployment evidence appended after completion. Any increase in current coverage is a timestamp-window measurement at that moment, not a permanent station count or accuracy claim.
+
+Production result: full `npm test` exited 0 (`/tmp/airdash-reliability-tests.log`). Commit `ff44f96` pushed. Activated the existing launchd service once; uptime confirmed restart. First Air4Thai run at 2026-10-15 22:51:58 ICT recovered 99 current PM readings: **42 → 141 of 175 stored locations**, 34 stale, 0 invalid. One provider latest-hour entry did not yield a usable PM reading, so provider row counts are not advertised as measured-PM coverage.
+
+Local and public `/api/health` verify 900000 ms Air4Thai polling, observation_coverage.air4thai current 141/stale 34, and sources_unconfigured containing both DustBoy and IMERG. Weather remains parked until 2026-10-16 00:05 UTC; no quota bypass. CAMS model calls unchanged. Deploy verified 2.4.94 on both domains, selected asset bytes and digest `ac55f858b28f`.
+
+Native Chrome production Data panel also verified “hourly reports; checked every 15 minutes,” “last successful poll,” time-stamped **141 / 175** PM coverage, and missing-key labeling. Screenshot `/tmp/airdash-observation-reliability-2.4.94.png`. Thus the result is visible to operators, not only exposed in an API.
