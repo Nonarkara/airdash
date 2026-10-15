@@ -43,7 +43,7 @@ export default {
   // `dataVersion` — server/scheduler.js reads s.source.version. A source that
   // declares `dataVersion` is silently ignored by the guard and deferred
   // forever, which is exactly what happened to the first run of this source.
-  version: 6, // 6: flood-wall panel + province_code
+  version: 7, // 7: restore the tint_hint write (see the INSERT below)
 
   async run({ db }) {
     // The registry's health overlay reads an in-process map that is only

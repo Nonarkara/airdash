@@ -10,9 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.4.85] — 2026-10-15 — the camera button claimed it had found no smoke, and had stopped looking
+## [2.4.86] — 2026-10-15 — the camera button claimed it had found no smoke, and had stopped looking
 
-Asset token `2.4.85`. Result of an audit of the camera-wall computer-vision path.
+Asset token `2.4.86`. Result of an audit of the camera-wall computer-vision path.
+
+> Numbered 2.4.86, not 2.4.85: the bumper skips versions already claimed by a
+> changelog heading, and 2.4.84 and 2.4.85 were both headings when this ran.
+> Nothing ever carried those tokens. The deploy guard caught the mismatch rather
+> than shipping assets against the wrong note, which is the second time this
+> month it has refused a release that the log did not describe.
 
 **The dashboard's camera button read "144 scored · none smoky", and that was a fiction with a number attached.**
 
