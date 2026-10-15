@@ -13,7 +13,8 @@ import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.95'
 import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.95'
 import { createWindFlowLayer } from './layers/wind-flow.js?v=2.4.95'
 import { createHazeDriftLayer } from './layers/haze-drift.js?v=2.4.95'
-import { AIR_COPY } from './layers/wind-math.js?v=2.4.95'
+import { currentWindField } from './layers/wind-client.js?v=2.4.95'
+import { AIR_COPY, pageLang, windAsOf } from './layers/wind-math.js?v=2.4.95'
 import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.95'
 import { createDroughtLayer } from './layers/drought.js?v=2.4.95'
 import { createCctvLayer } from './layers/cctv.js?v=2.4.95'
@@ -23,8 +24,8 @@ import { createVisibilityLayer } from './layers/visibility.js?v=2.4.95'
 import { openWindow } from './witness.js?v=2.4.95'
 import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.95'
 
-const windToggle = {id:'hazeWind',th:'ลมพยากรณ์ + จุดตรวจไฟเหนือลม',en:'Forecast wind + upwind fire counts',on:false,
-  note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where wind blows. Daily dominant forecast, not current wind.',
+const windToggle = {id:'hazeWind',th:'ลมพยากรณ์รายจังหวัด (รายวัน ไม่ใช่ลมตอนนี้)',en:'Province forecast wind (daily, not the live grid)',on:false,
+  note_th:'ลูกศรหนึ่งอันต่อจังหวัด จากทิศหลักรายวัน และจำนวนจุดไฟเหนือลม ไม่ใช่กริดลม 10 เมตรของชั้นลมปัจจุบัน',note_en:'One arrow per province from the daily dominant forecast, plus an upwind fire count. Not the live grid.',
   what_th:'ตัวเลขคือจำนวนจุดไฟในแนวเหนือลมของจังหวัด ไม่ใช่ตำแหน่งไฟหรือเวลาถึง',what_en:'Counts are detections upwind of the province, not fire positions or smoke arrival times.'}
 LAYER_GROUPS.unshift({id:'preparation',th:'เตรียมรับหมอกควัน',en:'HAZE PREPARATION',layers:[windToggle,{id:'hazeRain',th:'วงกลมฝนพยากรณ์วันนี้ · ใหญ่ = ปริมาณมาก',en:'Today’s model rain · larger = more mm',on:false},{id:'fireCells',th:'จุดความร้อน VIIRS 48 ชม. (รวมกริด)',en:'VIIRS detections 48h (grid cells)',on:false}]})
 let hazeWindRows = []
@@ -190,20 +191,28 @@ export function initMap() {
 
   addLayerControl()
   addLegend()
-  const pullFires = () => {
-    if (document.hidden) return
+  refreshHazeFires = () => {
+    if (document.hidden || !hazeDriftOn()) return
     fetch('/api/smoke').then((res) => res.ok ? res.json() : null).then((body) => {
-      if (body) layers.hazeDrift?.setFires(body.fire_cells ?? [])
+      if (body && hazeDriftOn()) layers.hazeDrift?.setFires(body.fire_cells ?? [])
     }).catch(() => {})
   }
-  pullFires()
-  setInterval(pullFires, 10 * 60 * 1000)
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) pullFires() })
+  refreshHazeFires()
+  setInterval(refreshHazeFires, 10 * 60 * 1000)
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshHazeFires() })
   // Expose for testing/devtools — never used by app code.
   window.__airdash = { map, layers, osmBuildingsApi }
 
   on('snapshot', renderAll)
-  on('lang', () => { paintHazeWind(); addLegend(); addLayerControl(); renderAll(store.snapshot) })
+  on('lang', () => {
+    document.documentElement.lang = store.lang === 'th' ? 'th' : 'en'
+    paintHazeWind()
+    addLegend()
+    addLayerControl()
+    layers.hazeDrift?.syncLang?.()
+    layers.windFlow?.syncLang?.()
+    renderAll(store.snapshot)
+  })
   // Drought risk is a separate (weekly) feed, not part of the snapshot
   // pipeline — fetch it once at boot and on every snapshot tick so a
   // long-running tab picks up next week's polygons without a manual
@@ -286,6 +295,11 @@ function updateRadarClock() {
 // ── Layer control (grouped toggles) ─────────────────────────────────────────
 let layerCtl, legendCtl, radarCtl
 
+let refreshHazeFires = () => {}
+function hazeDriftOn() {
+  return allLayerToggles().some((t) => t.id === 'hazeDrift' && t.on)
+}
+
 function toggleLayer(t) {
   t.on = !t.on
   const layer = layers[t.id]
@@ -295,6 +309,7 @@ function toggleLayer(t) {
     if (t.id === 'osmbuild') osmBuildingsApi.onAdd()
     if (t.id === 'cctv') cctvApi?.onAdd()
     if (t.id === 'citizen') citizenApi?.start()
+    if (t.id === 'hazeDrift') refreshHazeFires()
   } else {
     layer.remove()
     if (t.id === 'osmbuild') osmBuildingsApi.onRemove()
@@ -425,6 +440,8 @@ function addLegend() {
     // Thai AQI 2023 PM2.5 breakpoints — sample µg/m³ per level for swatch colour.
     const PM_SAMPLE = { 1: 10, 2: 20, 3: 30, 4: 50, 5: 90 }
     const PM_RANGE = { 1: '≤15', 2: '15–25', 3: '25–37.5', 4: '37.5–75', 5: '>75' }
+    const windField = currentWindField()
+    const windStamp = windField?.stale ? windAsOf(windField.fetched_at || windField.valid_time, pageLang()) : ''
     const lv = (n) => `<div class="lrow"><span class="lsw" style="background:${pm25Color(PM_SAMPLE[n])}"></span>${PM_RANGE[n]} ${tr('มคก./ลบ.ม.', 'µg/m³')} · ${LEVEL_NAME[n][store.lang]}</div>`
     body.innerHTML = `
       <div class="eyebrow">${tr('PM2.5 (AQI ไทย 2566)', 'PM2.5 (THAI AQI 2023)')}</div>
@@ -445,19 +462,12 @@ function addLegend() {
       <div class="lrow"><span class="lsw" style="background:var(--th-red)"></span>${tr('รอยเผาภาคเกษตร — สะสมทั้งฤดู ธ.ค.68–เม.ย.69 (ไม่ใช่ไฟวันนี้) เฉพาะภาคเหนือ+กลาง', 'agri burn scars — whole season Dec 25–Apr 26 (not today\'s fires), north+central only')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
       <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>
-      <div class="eyebrow" style="margin-top:6px">THE AIR · อากาศ · 空气</div>
-      <div class="lrow">${AIR_COPY.heat_en}</div>
-      <div class="lrow">${AIR_COPY.heat_th}</div>
-      <div class="lrow">${AIR_COPY.heat_zh}</div>
-      <div class="lrow">${AIR_COPY.wind_en}</div>
-      <div class="lrow">${AIR_COPY.wind_th}</div>
-      <div class="lrow">${AIR_COPY.wind_zh}</div>
-      <div class="lrow">${AIR_COPY.drift_en}</div>
-      <div class="lrow">${AIR_COPY.drift_th}</div>
-      <div class="lrow">${AIR_COPY.drift_zh}</div>
-      <div class="lrow">${AIR_COPY.credit_en}</div>
-      <div class="lrow">${AIR_COPY.credit_th}</div>
-      <div class="lrow">${AIR_COPY.credit_zh}</div>
+      <div class="eyebrow" style="margin-top:6px">${tr('อากาศ', 'THE AIR')}</div>
+      <div class="lrow">${tr(AIR_COPY.heat_th, AIR_COPY.heat_en)}</div>
+      <div class="lrow">${tr(AIR_COPY.wind_th, AIR_COPY.wind_en)}</div>
+      ${windStamp ? `<div class="lrow">${windStamp}</div>` : ''}
+      <div class="lrow">${tr(AIR_COPY.drift_th, AIR_COPY.drift_en)}</div>
+      <div class="lrow">${tr(AIR_COPY.credit_th, AIR_COPY.credit_en)}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('กล้อง CCTV', 'CCTV')}</div>
       <div class="lrow">📹 ${tr('ภาพสดที่ตรวจแล้ว · สีขอบ = PM2.5 ที่สถานีใกล้ที่สุด', 'verified live · ring colour = PM2.5 at the nearest station')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ข่าวไฟป่า/มลพิษ', 'FIRE & POLLUTION NEWS')}</div>

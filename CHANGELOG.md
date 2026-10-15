@@ -16,9 +16,9 @@ Asset token 2.4.95, SW airdash-v115. The operations map was still a field of sta
 
 - PM2.5 surface: the existing inverse-distance field, using the concentration scale already on the map. It needs nearby fresh stations and fades before the support radius ends. Unsupported areas stay blank.
 - Current wind: one Open-Meteo 10 m grid, 100 points, no API key. The server caches it for 30 minutes, refuses a refresh inside 20 minutes, and stops at 36 upstream attempts per UTC day. The edge keeps one copy so visitors do not each open a tunnel. Arrows are static. Particles show direction and relative speed, not real-time motion. Phones cap the count; a hidden tab and reduced-motion stop the animation. While the phone map is `display: none`, the surface skips the 0×0 canvas instead of aborting map setup, and the particle loop waits until the map has a size.
-- Haze drift: short strokes from hotspots and high-PM stations along that same wind, about 6 h solid and 12 h dashed, length capped. The label, in English, Thai and Chinese, is “wind carries haze this way, not a forecast.” No arrival time is claimed.
+- Haze drift: short strokes from hotspots and high-PM stations along that same wind, about 6 h solid and 12 h dashed, length capped. The on-map label follows the active language: “wind carries haze this way, not a forecast.” No arrival time is claimed.
 
-Legends carry the same three languages and name Open-Meteo (CC BY 4.0), Air4Thai / PCD and NASA FIRMS. The Southeast Asia page uses the same wind and drift layers without rewriting the phone layout from the regional-map draft.
+The legend follows the Thai/English switch and names Open-Meteo (CC BY 4.0), Air4Thai / PCD and NASA FIRMS in that language. Chinese copy remains in the phrase table. A stale grid is drawn dashed and dimmer, and labelled “wind as of HH:MM” in the active language. The particle loop stops when there is no wind field and starts again when one arrives. Fire-cell polling waits while the haze layer is off. The daily province forecast stays a separate toggle, labelled as not the live grid. The Southeast Asia page uses the same wind and drift layers without rewriting the phone layout from the regional-map draft.
 
 ## [2.4.94] — 2026-10-15 — Catch staggered PCD reports and expose real coverage
 

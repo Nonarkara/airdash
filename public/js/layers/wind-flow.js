@@ -3,7 +3,7 @@
 // A hidden tab draws nothing. A phone gets a hard particle cap. Reduced
 // motion keeps the arrow field and skips the animation.
 import { onWindField } from './wind-client.js?v=2.4.95'
-import { particleBudget, sampleWind } from './wind-math.js?v=2.4.95'
+import { pageLang, particleBudget, sampleWind, windAsOf } from './wind-math.js?v=2.4.95'
 
 const NARROW = '(max-width: 700px)'
 const REDUCE = '(prefers-reduced-motion: reduce)'
@@ -43,8 +43,17 @@ export function createWindFlowLayer() {
       this.last = 0
       this.redraw = () => this.drawArrows()
       map.on('moveend zoomend resize viewreset', this.redraw, this)
+      this.stamp = L.control({ position: 'bottomright' })
+      this.stamp.onAdd = () => {
+        this.stampEl = L.DomUtil.create('div', 'wind-asof')
+        this.stampEl.setAttribute('role', 'note')
+        this.stampEl.hidden = true
+        return this.stampEl
+      }
+      this.stamp.addTo(map)
       this.stopField = onWindField((field) => {
         this.field = field
+        this.paintStamp()
         this.drawArrows()
       })
       this.onVis = () => {
@@ -65,8 +74,27 @@ export function createWindFlowLayer() {
       map.off('moveend zoomend resize viewreset', this.redraw, this)
       this.arrows?.remove()
       this.parts?.remove()
+      this.stamp?.remove()
+      this.stamp = null
+      this.stampEl = null
       if (this.attr) map.attributionControl?.removeAttribution(this.attr)
       this.map = null
+    },
+    syncLang() {
+      this.paintStamp()
+    },
+    paintStamp() {
+      const el = this.stampEl
+      if (!el) return
+      const field = this.field
+      if (!field?.available || field.stale !== true) {
+        el.hidden = true
+        el.textContent = ''
+        return
+      }
+      const text = windAsOf(field.fetched_at || field.valid_time, pageLang())
+      el.hidden = !text
+      el.textContent = text || ''
     },
     place(canvas) {
       const size = this.map.getSize()
@@ -87,11 +115,16 @@ export function createWindFlowLayer() {
       this.place(this.parts)
       const ctx = this.arrows.getContext('2d')
       ctx.clearRect(0, 0, this.arrows.width, this.arrows.height)
-      if (!field?.available) return
+      if (!field?.available) {
+        this.halt()
+        return
+      }
+      const stale = field.stale === true
       const stride = viewOf().narrow ? 2 : 1
       ctx.lineWidth = 3
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+      ctx.strokeStyle = stale ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.85)'
       ctx.lineCap = 'butt'
+      ctx.setLineDash(stale ? [4, 4] : [])
       const shafts = []
       for (let i = 0; i < field.nlat; i += stride) {
         for (let j = 0; j < field.nlng; j += stride) {
@@ -116,9 +149,9 @@ export function createWindFlowLayer() {
           drawShaft(ctx, x1, y1, x2, y2)
         }
       }
-      ctx.lineWidth = 1.25
-      ctx.strokeStyle = 'rgba(14,74,94,0.8)'
-      ctx.fillStyle = 'rgba(14,74,94,0.8)'
+      ctx.lineWidth = stale ? 1 : 1.25
+      ctx.strokeStyle = stale ? 'rgba(14,74,94,0.4)' : 'rgba(14,74,94,0.8)'
+      ctx.fillStyle = stale ? 'rgba(14,74,94,0.4)' : 'rgba(14,74,94,0.8)'
       for (const [x1, y1, x2, y2, ux, uy] of shafts) {
         drawShaft(ctx, x1, y1, x2, y2)
         ctx.beginPath()
@@ -131,9 +164,10 @@ export function createWindFlowLayer() {
       this.kick()
     },
     kick() {
-      if (this.raf || !this.map) return
+      if (this.raf || !this.map || !this.field?.available) return
       const size = this.map.getSize()
       if (size.x < 2 || size.y < 2) return
+      if (viewOf().budget === 0) return
       this.last = 0
       const frame = (t) => {
         this.raf = requestAnimationFrame(frame)
@@ -157,15 +191,17 @@ export function createWindFlowLayer() {
       const ctx = canvas.getContext('2d')
       if (!field?.available || view.budget === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height)
-        if (view.hidden || view.reduce) this.halt()
+        this.halt()
         return
       }
       const dt = this.last ? Math.min(0.05, (t - this.last) / 1000) : 0.016
       this.last = t
       while (this.particles.length > view.budget) this.particles.pop()
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const stale = field.stale === true
       ctx.lineWidth = 1.4
-      ctx.strokeStyle = 'rgba(14,74,94,0.55)'
+      ctx.strokeStyle = stale ? 'rgba(14,74,94,0.28)' : 'rgba(14,74,94,0.55)'
+      ctx.setLineDash(stale ? [3, 4] : [])
       ctx.beginPath()
       const bounds = map.getBounds().pad(0.15)
       for (let n = this.particles.length; n < view.budget; n++) {

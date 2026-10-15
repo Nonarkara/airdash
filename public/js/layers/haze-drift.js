@@ -2,7 +2,7 @@
 // 10 m wind for about 6 h (solid) and 12 h (dashed). The length is capped.
 // This is where the wind is carrying haze, not a time of arrival.
 import { onWindField } from './wind-client.js?v=2.4.95'
-import { AIR_COPY, chevron, hazeSources } from './wind-math.js?v=2.4.95'
+import { AIR_COPY, chevron, hazeSources, pageLang } from './wind-math.js?v=2.4.95'
 
 function freshStation(row) {
   if (!Number.isFinite(row?.pm25)) return false
@@ -39,16 +39,18 @@ export function createHazeDriftLayer() {
       })
       this.label = L.control({ position: 'bottomleft' })
       this.label.onAdd = () => {
-        const div = L.DomUtil.create('div', 'haze-drift-label')
-        div.setAttribute('role', 'note')
-        for (const text of [AIR_COPY.drift_en, AIR_COPY.drift_th, AIR_COPY.drift_zh]) {
-          const line = L.DomUtil.create('span', '', div)
-          line.textContent = text
-        }
-        return div
+        this.note = L.DomUtil.create('div', 'haze-drift-label')
+        this.note.setAttribute('role', 'note')
+        this.syncLang()
+        return this.note
       }
       this.label.addTo(map)
       this.redraw()
+    },
+    syncLang() {
+      if (!this.note) return
+      const lang = pageLang()
+      this.note.textContent = AIR_COPY[`drift_${lang}`] || AIR_COPY.drift_en
     },
     onRemove() {
       this.stop?.()
@@ -56,6 +58,7 @@ export function createHazeDriftLayer() {
       this.lines.remove()
       this.label?.remove()
       this.label = null
+      this.note = null
       this.map = null
     },
     setStations(rows) {

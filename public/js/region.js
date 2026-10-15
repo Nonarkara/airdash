@@ -22,7 +22,8 @@ L.rectangle([[4,92],[29,110]],{weight:1,dashArray:'6 6',color:'#86551c',fill:fal
 let data=null,imagery=null,loading=false,lastError=false
 const byId=id=>document.getElementById(id)
 function clock(time){const date=new Date(time);return Number.isFinite(date.getTime())?date.toLocaleString(lang==='th'?'th-TH':'en-GB',{timeZone:'Asia/Bangkok',hour12:false})+' ICT':'—'}
-function translate(){document.documentElement.lang=lang;for(const n of document.querySelectorAll('[data-t]')){const [th,en]=n.dataset.t.split('|');n.textContent=tr(th,en)}byId('language').textContent=lang==='th'?'EN':'ไทย';paint();setImagery()}
+function translate(){document.documentElement.lang=lang;for(const n of document.querySelectorAll('[data-t]')){const [th,en]=n.dataset.t.split('|');n.textContent=tr(th,en)}byId('language').textContent=lang==='th'?'EN':'ไทย';flow.syncLang?.();drift.syncLang?.();paintAirCaption();paint();setImagery()}
+function paintAirCaption(){const note=document.getElementById('air-legend');if(note)note.textContent=tr(AIR_COPY.credit_th,AIR_COPY.credit_en)}
 byId('language').onclick=()=>{lang=lang==='th'?'en':'th';writePreference('ad_lang',lang);translate()}
 byId('reset-map').onclick=()=>map.fitBounds(whole)
 byId('open-directory').onclick=()=>{byId('country-directory').open=true}
@@ -117,11 +118,9 @@ if(stage&&!document.getElementById('air-legend')){
  const note=document.createElement('p')
  note.id='air-legend'
  note.className='caption air-copy'
- for(const text of [AIR_COPY.credit_en,AIR_COPY.credit_th,AIR_COPY.credit_zh]){
-  const line=document.createElement('span');line.textContent=text;note.appendChild(line)
- }
  stage.appendChild(note)
 }
+paintAirCaption()
 translate();load()
 // Only reclassify age between explicit refreshes; no background upstream loop.
 setInterval(()=>{if(data&&!document.hidden)paint()},60000)

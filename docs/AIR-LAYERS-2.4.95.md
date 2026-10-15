@@ -16,11 +16,13 @@ The existing inverse-distance field is now on by default. It still requires fres
 
 ## Haze drift
 
-Short strokes start at recent hotspots and at stations at or above 37.5 µg/m³. The first half is about 6 hours at the current wind; the dashed half extends that to about 12 hours. The drawn length is capped at 320 km. The on-map label is, together:
+Short strokes start at recent hotspots and at stations at or above 37.5 µg/m³. The first half is about 6 hours at the current wind; the dashed half extends that to about 12 hours. The drawn length is capped at 320 km. The on-map label follows the active language. The three phrases are:
 
 - Wind carries haze this way, not a forecast
 - ลมพัดหมอกควันไปทางนี้ ไม่ใช่พยากรณ์เวลาถึง
 - 风把霾往这边带，不是到达时间预报
+
+A stale server grid stays on the map, dashed and dimmer, with “wind as of HH:MM” (ลม ณ HH:MM, 风截至 HH:MM) in Bangkok time. The particle loop does not run until that grid exists. `/api/smoke` is not polled while haze drift is off. The older province arrows stay in the haze-preparation group and are labelled as the daily forecast, not this grid.
 
 Hotspots remain NASA FIRMS detections, not burned area. Wind credit is Open-Meteo, CC BY 4.0. PM credit is Air4Thai / PCD.
 

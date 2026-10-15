@@ -28,6 +28,32 @@ export const AIR_COPY = {
   credit_zh: '风：Open-Meteo（CC BY 4.0）· 颗粒物：Air4Thai / 污染控制局站点 · 热异常：NASA FIRMS，不是过火面积',
 }
 
+// The dashboard switch is Thai or English. Chinese stays available for the
+// same phrase; the legend prints only the active language.
+export function pageLang() {
+  const lang = typeof document !== 'undefined' ? document.documentElement?.lang : ''
+  if (lang === 'th' || lang === 'zh') return lang
+  return 'en'
+}
+
+// Bangkok clock. Shown only when the server marks the grid stale.
+export function windAsOf(iso, lang = 'en') {
+  if (!iso) return null
+  const raw = String(iso)
+  const normalized = /[zZ]|[+-]\d\d:?\d\d$/.test(raw) ? raw : `${raw}Z`
+  const t = Date.parse(normalized)
+  if (!Number.isFinite(t)) return null
+  const hm = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Bangkok',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(t))
+  if (lang === 'th') return `ลม ณ ${hm}`
+  if (lang === 'zh') return `风截至 ${hm}`
+  return `wind as of ${hm}`
+}
+
 export function pointsForGrid(grid = WIND_GRID) {
   const pts = []
   for (let i = 0; i < grid.nlat; i++) {

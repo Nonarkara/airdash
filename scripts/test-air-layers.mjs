@@ -5,6 +5,7 @@ import { interpolatePm } from '../public/js/layers/pollution-field.js'
 import {
   AIR_COPY, PARTICLE_CAP, PLUME_MAX_KM, WIND_GRID, advect, chevron, components,
   decodeCurrents, hazeSources, openMeteoUrl, particleBudget, plumeTrack, pointsForGrid, sampleWind,
+  windAsOf,
 } from '../public/js/layers/wind-math.js'
 import { createWindReader } from '../server/windField.js'
 
@@ -170,6 +171,33 @@ assert.match(edgeSrc, /__wind_field_v1__/)
 assert.equal(AIR_COPY.drift_en, 'Wind carries haze this way, not a forecast')
 assert.match(AIR_COPY.drift_th, /ไม่ใช่พยากรณ์/)
 assert.match(AIR_COPY.drift_zh, /不是到达时间预报/)
+assert.equal(windAsOf('2026-10-15T10:30:00Z', 'en'), 'wind as of 17:30')
+assert.equal(windAsOf('2026-10-15T10:30:00Z', 'th'), 'ลม ณ 17:30')
+assert.equal(windAsOf('2026-10-15T10:30:00Z', 'zh'), '风截至 17:30')
+assert.equal(windAsOf('not-a-time', 'en'), null)
+assert.match(mapSrc, /tr\(AIR_COPY\.heat_th,\s*AIR_COPY\.heat_en\)/)
+assert.match(mapSrc, /tr\(AIR_COPY\.wind_th,\s*AIR_COPY\.wind_en\)/)
+assert.match(mapSrc, /tr\(AIR_COPY\.drift_th,\s*AIR_COPY\.drift_en\)/)
+assert.doesNotMatch(mapSrc, /AIR_COPY\.heat_zh/)
+assert.match(mapSrc, /Province forecast wind \(daily, not the live grid\)/)
+assert.match(mapSrc, /Not the live grid/)
+assert.match(mapSrc, /if \(document\.hidden \|\| !hazeDriftOn\(\)\) return/)
+assert.match(mapSrc, /if \(t\.id === 'hazeDrift'\) refreshHazeFires\(\)/)
+const flowSrc = readFileSync(new URL('public/js/layers/wind-flow.js', root), 'utf8')
+const stepSrc = flowSrc.slice(flowSrc.indexOf('step(t)'), flowSrc.indexOf('spawn(bounds'))
+assert.match(stepSrc, /!field\?\.available/)
+assert.match(stepSrc, /this\.halt\(\)/)
+assert.match(flowSrc, /if \(this\.raf \|\| !this\.map \|\| !this\.field\?\.available\) return/)
+assert.match(flowSrc, /setLineDash\(stale \? \[4, 4\] : \[\]\)/)
+assert.match(flowSrc, /windAsOf\(/)
+const hazeSrc = readFileSync(new URL('public/js/layers/haze-drift.js', root), 'utf8')
+assert.match(hazeSrc, /syncLang/)
+assert.doesNotMatch(hazeSrc, /drift_en,\s*AIR_COPY\.drift_th/)
+assert.match(regionSrc, /paintAirCaption/)
+assert.doesNotMatch(regionSrc, /credit_zh/)
+const ci = readFileSync(new URL('.github/workflows/air-layers.yml', root), 'utf8')
+assert.match(ci, /node scripts\/test-air-layers\.mjs/)
+assert.match(readFileSync(new URL('package.json', root), 'utf8'), /test-air-layers\.mjs/)
 const freshFiles = ['public/js/layers/wind-math.js', 'public/js/layers/wind-flow.js', 'public/js/layers/haze-drift.js', 'public/js/layers/wind-client.js', 'server/windField.js']
 for (const file of freshFiles) {
   const text = readFileSync(new URL(file, root), 'utf8')
