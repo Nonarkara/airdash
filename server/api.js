@@ -7,7 +7,7 @@ import { WASHOUT_LABELS, reliefIfRainPct, washoutBand } from './washout.js'
 import { pm25Score } from './risk.js'
 import { classifyOni } from './sources/enso.js'
 import { FOCUS_AREAS, FOCUS_BY_ID } from './focus.js'
-import { SOURCES, EXPORT_INFO } from './sources-catalog.js'
+import { SOURCES, EXPORT_INFO, DATA_CHAIN } from './sources-catalog.js'
 import { profileFor, DUST_PROFILE_METHOD } from './dustProfile.js'
 import { listExportDays, buildDailyExport, dailyToCsv, buildFullExport, fullToCsv } from './export.js'
 import { listWeeklyExports, getExportPath, buildWeeklyExport as buildWeeklyExportJob, startWeeklyBuild, getBuildState } from './weeklyExport.js'
@@ -1341,6 +1341,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       pipelines: SOURCES.filter((s) => s.kind === 'pipeline'),
       remote: SOURCES.filter((s) => s.kind !== 'pipeline'),
       export: EXPORT_INFO,
+      data_chain: DATA_CHAIN,
       jaxa: {
         portal: 'https://earth.jaxa.jp/en/data/index.html',
         api: 'https://data.earth.jaxa.jp/',

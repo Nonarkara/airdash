@@ -1,10 +1,10 @@
 // Data-source catalog panel — every pipeline, JAXA satellite layer, and export
 // endpoint for researchers who want to reuse AirDash feeds.
-import { getJson } from '../cache.js?v=2.4.87'
-import { on, store } from '../state.js?v=2.4.87'
-import { tr } from '../i18n.js?v=2.4.87'
-import { el, fmtNum } from '../fmt.js?v=2.4.87'
-import { refreshSensorHealth } from '../sensorHealth.js?v=2.4.87'
+import { getJson } from '../cache.js?v=2.4.88'
+import { on, store } from '../state.js?v=2.4.88'
+import { tr } from '../i18n.js?v=2.4.88'
+import { el, fmtNum } from '../fmt.js?v=2.4.88'
+import { refreshSensorHealth } from '../sensorHealth.js?v=2.4.88'
 
 const KIND_LABEL = {
   pipeline: { th: 'ท่อข้อมูล', en: 'pipeline' },
@@ -54,6 +54,16 @@ function paint() {
   if (!box || !catalog) return
   box.replaceChildren()
 
+  if (catalog.data_chain) {
+    box.append(el('section', { class: 'src-chain', 'aria-label': tr('จากข้อมูลดิบสู่การเตรียมตัว', 'From raw data to preparation') },
+      el('h3', {}, tr('จากข้อมูลดิบ → หลักฐาน → การเตรียมตัว', 'Raw data → evidence → preparation')),
+      ...catalog.data_chain.stages.map(stage => el('article', {},
+        el('h4', {}, tr(stage.name_th, stage.name_en)),
+        el('p', {}, tr(stage.note_th, stage.note_en)),
+        link(stage.endpoint, tr('ตรวจที่มา / วิธีใช้', 'Inspect evidence / guidance')))),
+      el('p', {}, tr('หลายเว็บไซต์อาจเผยแพร่สถานีเดียวกัน ห้ามนับซ้ำหรือถือเป็นหลักฐานอิสระ ตรวจสิทธิ์การใช้รายแหล่ง', 'Different websites can mirror the same station: do not count them twice or treat them as independent confirmation. Check each provider’s reuse terms.'))))
+  }
+
   const health = store.sensorHealth
   if (health) {
     const s = health.summary ?? {}
@@ -91,7 +101,9 @@ function paint() {
 
   // Remote sensing
   box.append(sectionHead(tr('ชั้นภาพระยะไกล (ไม่เก็บในฐานข้อมูล)', 'REMOTE LAYERS (not stored)')))
-  for (const s of catalog.remote ?? []) box.append(sourceCard(s))
+  for (const s of catalog.remote ?? []) if (s.kind !== 'reference') box.append(sourceCard(s))
+  box.append(sectionHead(tr('แหล่งอ้างอิงและโอกาสเพิ่มข้อมูล (ยังไม่ดึงเข้า)', 'REFERENCES & CANDIDATES (not ingested)')))
+  for (const s of catalog.remote ?? []) if (s.kind === 'reference') box.append(sourceCard(s))
 
   // Export / historical download
   if (catalog.export) {
@@ -156,7 +168,7 @@ function freshnessLine(sourceId) {
   const lastOkStr = live.lastOk
   if (!lastOkStr) {
     return el('div', { class: 'src-fresh src-fresh--unknown' },
-      tr('ยังไม่เคยอัปเดต', 'never updated'))
+      tr('ยังไม่มีบันทึกอัปเดตในรอบการทำงานนี้', 'No successful refresh recorded in this runtime'))
   }
   const lastOk = new Date(lastOkStr)
   if (!Number.isFinite(lastOk.getTime())) return null
@@ -195,7 +207,7 @@ function sourceCard(s) {
       el('span', { class: `src-kind ${s.kind}` }, tr(kind.th, kind.en)),
       el('span', { class: 'src-stored' }, s.stored
         ? tr('● เก็บใน SQLite', '● stored in SQLite')
-        : tr('○ แสดงบนแผนที่เท่านั้น', '○ map overlay only')),
+        : s.kind === 'reference' ? tr('○ อ้างอิง ยังไม่ดึงเข้า', '○ reference; not ingested') : tr('○ ชั้นภาพระยะไกล', '○ remote layer')),
     ),
     el('div', { class: 'src-name th' }, tr(s.name_th, s.name_en)),
     el('div', { class: 'src-agency' }, tr(s.agency_th, s.agency_en)),

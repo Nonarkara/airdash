@@ -66,8 +66,8 @@ export const SOURCES = [
     url: 'https://www.thaiwater.net/',
     api: '/api/snapshot · /api/series?source=thaiwater_rain',
     metrics: ['rain_24h', 'rain_1h'],
-    note_th: 'สถานีฝน ~4,200 แห่ง — ยืนยันว่าฝนล้างฝุ่นเกิดขึ้นจริง',
-    note_en: '~4,200 rain gauges — observed verification that washout actually happened',
+    note_th: 'สถานีฝน ~4,200 แห่ง — ฝนที่ตรวจวัดได้ ต้องตรวจ PM ภายหลังเพื่อยืนยันว่าฝุ่นลดลง',
+    note_en: '~4,200 rain gauges — Observed rain; verify any clearing against subsequent PM measurements',
   },
   {
     id: 'imerg',
@@ -117,6 +117,9 @@ export const SOURCES = [
     note_th: 'กรองคำค้น ฝุ่น / PM2.5 / หมอกควัน',
     note_en: 'Keyword-filtered dust / PM2.5 / haze headlines',
   },
+  { id: 'gistda_pm25', kind: 'pipeline', stored: true, name_th: 'GISTDA PM2.5 ดาวเทียมผสานสถานี', name_en: 'GISTDA PM2.5 satellite–ground fusion', agency_th: 'GISTDA', agency_en: 'GISTDA', cadence_th: 'รายชั่วโมง', cadence_en: 'hourly', url: 'https://pm25.gistda.or.th/', api: '/api/series?source=gistda_pm25', metrics: ['pm25', 'pm25_avg24h'], note_th: 'ค่าประมาณรายจังหวัด ใช้เมื่อไม่มีสถานีภาคพื้นสด ไม่ใช่เซ็นเซอร์อิสระเพราะผสานข้อมูลสถานี', note_en: 'Provincial estimate used when fresh ground PM is unavailable. Ground-station fusion means this is not independent sensor confirmation.' },
+  { id: 'firms_regional', kind: 'pipeline', stored: true, name_th: 'NASA FIRMS จุดความร้อนภูมิภาค', name_en: 'NASA FIRMS regional fire detections', agency_th: 'NASA', agency_en: 'NASA', cadence_th: 'ทุก 6 ชั่วโมง', cadence_en: 'every 6 hours', url: 'https://firms.modaps.eosdis.nasa.gov/', api: '/api/smoke', metrics: ['frp'], note_th: 'จุดตรวจจับความร้อนและกำลังแผ่รังสีไฟ ไม่ใช่พื้นที่เผาหรือปริมาณฝุ่นที่สูดดม เมฆและเวลาผ่านทำให้ตรวจไม่พบได้', note_en: 'Thermal detections and fire radiative power, not burned area or inhaled PM. Clouds and overpass times can hide fires.' },
+
   // ── Remote sensing (map layers — not stored in SQLite) ─────────────────────
   {
     id: 'gsmap',
@@ -179,8 +182,8 @@ export const SOURCES = [
     url: 'https://gibs.earthdata.nasa.gov/',
     api: 'GIBS WMTS MODIS_Combined_Value_Added_AOD',
     metrics: [],
-    note_th: 'ปริมาณฝุ่นละอองทั้งคอลัมน์อากาศจากดาวเทียม — เห็นแนวหมอกควันจากไฟป่า/การเผาที่ลอยเข้ามาก่อนสถานีภาคพื้นดินปลายลมจะจับค่า PM2.5 ได้ · ชั้นหลักของฤดูเผา',
-    note_en: 'Column aerosol loading from space — a plume of smoke advecting in from upwind fires shows here before the downwind ground stations register the PM2.5 spike · the burning-season layer',
+    note_th: 'ละอองลอยทั้งคอลัมน์อากาศ ไม่ใช่ PM2.5 ผิวพื้น เมฆและเวลาผ่านของดาวเทียมทำให้ข้อมูลขาดได้ และฝุ่นอาจอยู่บนชั้นอากาศสูง',
+    note_en: 'Column aerosol retrieval, not surface PM2.5. Clouds and overpass timing leave gaps; elevated aerosol can remain aloft.',
   },
   {
     id: 'nightlights',
@@ -211,8 +214,8 @@ export const SOURCES = [
     url: 'https://www.rainviewer.com/',
     api: 'https://api.rainviewer.com/public/weather-maps.json',
     metrics: [],
-    note_th: 'เรดาร์ฝนเรียลไทม์ — ฝนที่กำลังตก = ฝุ่นกำลังถูกชะล้าง · ไม่เก็บลงฐานข้อมูล',
-    note_en: 'Live rain radar — rain falling now means washout in progress · not persisted',
+    note_th: 'เรดาร์ประมาณฝน ฝนตกไม่ได้รับรองว่าฝุ่นผิวพื้นลดลง · ไม่เก็บลงฐานข้อมูล',
+    note_en: 'Radar precipitation estimate; rain does not guarantee cleaner surface air · not persisted',
   },
   // ── Reference portals & alternate access (not polled) ─────────────────────
   {
@@ -244,8 +247,8 @@ export const SOURCES = [
     url: 'https://openaq.org/',
     api: 'https://docs.openaq.org/',
     metrics: [],
-    note_th: 'ช่องทางสำรองเข้าถึงข้อมูลสถานี คพ. ผ่าน API มาตรฐานเดียวทั่วโลก',
-    note_en: 'Alternate access to PCD station data through one standard global API',
+    note_th: 'อ้างอิงเท่านั้น: API v3 ต้องใช้กุญแจ ตรวจความครอบคลุมและรหัสสถานีต้นทางเพื่อไม่ให้นับข้อมูล คพ. ซ้ำ',
+    note_en: 'Reference only: API v3 requires a key; coverage varies. Preserve original provider/station identity to avoid counting mirrored PCD readings twice.',
   },
   {
     id: 'twin_flood',
@@ -292,14 +295,19 @@ export const SOURCES = [
     url: 'https://aqicn.org/',
     api: 'https://aqicn.org/data-platform/api/',
     metrics: [],
-    note_th: 'ช่องทางสำรอง AQI รายสถานีทั่วโลก (รวมสถานีไทย) — ใช้ตรวจทานค่า',
-    note_en: 'Alternate per-station AQI worldwide (incl. Thai stations) — cross-validation',
+    note_th: 'อ้างอิงเท่านั้น: ต้องใช้ token และระบุที่มา ห้ามแจกจ่ายข้อมูล API ที่แคชหรือเก็บถาวร ค่า AQI ไม่ใช่ µg/m³ และสถานีที่เผยแพร่ซ้ำไม่ใช่หลักฐานอิสระ',
+    note_en: 'Reference only: token and attribution required; API terms prohibit cached/archived redistribution. Pollutant AQI is not µg/m³; mirrored stations are not independent confirmation.',
   },
+  { id: 'pcd_history', kind: 'reference', stored: false, name_en: 'PCD historical open-data catalog', name_th: 'คลังข้อมูลย้อนหลัง คพ.', agency_en: 'PCD / GD Catalog', agency_th: 'PCD / GD Catalog', url: 'https://gdcatalog.go.th/organization/a87accea-8395-4e8c-a17a-17614794b803', api: 'https://gdcatalog.go.th/organization/a87accea-8395-4e8c-a17a-17614794b803', metrics: [], cadence_en: 'provider-dependent', cadence_th: 'ตามผู้ให้บริการ', note_en: 'Daily and annual station datasets. Check each resource, averaging period and license before importing; historical completeness is not guaranteed.', note_th: 'ข้อมูลรายวันและรายปี ตรวจทรัพยากร ช่วงเฉลี่ย และใบอนุญาตแต่ละชุดก่อนนำเข้า' },
+  { id: 'bma', kind: 'reference', stored: false, name_en: 'BMA local alerts and monitoring', name_th: 'กทม. แจ้งเตือนและตรวจวัด', agency_en: 'Bangkok Metropolitan Administration', agency_th: 'Bangkok Metropolitan Administration', url: 'https://greener.bangkok.go.th/en/pm2-5/', api: 'https://greener.bangkok.go.th/en/pm2-5/', metrics: [], cadence_en: 'provider-dependent', cadence_th: 'ตามผู้ให้บริการ', note_en: 'Local alerts and AirBKK links; reference portal, not an ingested sensor feed.', note_th: 'ประกาศท้องถิ่นและลิงก์ AirBKK เป็นแหล่งอ้างอิง ยังไม่ใช่ท่อข้อมูลที่ดึงเข้า' },
+  { id: 'airgradient', kind: 'reference', stored: false, name_en: 'AirGradient community sensors', name_th: 'เซ็นเซอร์ชุมชน AirGradient', agency_en: 'AirGradient', agency_th: 'AirGradient', url: 'https://www.airgradient.com/', api: 'https://www.airgradient.com/', metrics: [], cadence_en: 'provider-dependent', cadence_th: 'ตามผู้ให้บริการ', note_en: 'Candidate supplementary observations; require location, calibration, humidity and co-location checks. Not ingested or interchangeable with reference-grade stations.', note_th: 'ข้อมูลเสริมที่ต้องตรวจตำแหน่ง การสอบเทียบ ความชื้น และเทียบสถานีอ้างอิง ยังไม่ดึงเข้า' },
+  { id: 'era5', kind: 'reference', stored: false, name_en: 'ERA5 meteorological reanalysis', name_th: 'ERA5 วิเคราะห์อุตุนิยมวิทยาย้อนหลัง', agency_en: 'Copernicus / ECMWF', agency_th: 'Copernicus / ECMWF', url: 'https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels', api: 'https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels', metrics: [], cadence_en: 'provider-dependent', cadence_th: 'ตามผู้ให้บริการ', note_en: 'Historical wind and boundary-layer context, not a live pollution forecast. Not ingested; CDS account and dataset terms apply.', note_th: 'ใช้วิเคราะห์ลมและชั้นผสมย้อนหลัง ไม่ใช่พยากรณ์ฝุ่นสด ยังไม่ดึงเข้า ต้องมีบัญชี CDS และตรวจเงื่อนไข' },
+  { id: 'hysplit', kind: 'reference', stored: false, name_en: 'NOAA HYSPLIT transport model', name_th: 'NOAA HYSPLIT แบบจำลองการเคลื่อนที่', agency_en: 'NOAA ARL', agency_th: 'NOAA ARL', url: 'https://www.ready.noaa.gov/HYSPLIT.php', api: 'https://www.ready.noaa.gov/HYSPLIT.php', metrics: [], cadence_en: 'provider-dependent', cadence_th: 'ตามผู้ให้บริการ', note_en: 'Trajectory/dispersion tool; requires meteorology, release height and sensitivity analysis. Not running in AirDash; trajectories alone do not prove source contribution.', note_th: 'ต้องใช้ข้อมูลอากาศ ความสูงปล่อย และวิเคราะห์ความไว ยังไม่ทำงานใน AirDash เส้นทางลมอย่างเดียวพิสูจน์แหล่งกำเนิดไม่ได้' },
 ]
 
 export const EXPORT_INFO = {
-  method_th: 'ข้อมูลดิบ 90 วัน · รวมรายชั่วโมงถาวรหลังจากนั้น · ส่งออกรายวันต่อสถานี/ตัวชี้วัด (PM2.5 · PM10 · O3 · NO2 · SO2 · CO · AQI · ฝน · พยากรณ์)',
-  method_en: 'Raw readings kept 90 days · permanent hourly rollups thereafter · daily export per station/metric (PM2.5 · PM10 · O3 · NO2 · SO2 · CO · AQI · rain · forecasts)',
+  method_th: 'ค่าต้นทางที่จัดรูปแบบแล้ว 90 วัน (ไม่ใช่ payload ต้นฉบับ) · รวมรายชั่วโมงถาวรหลังจากนั้น · ส่งออกรายวันต่อสถานี/ตัวชี้วัด (PM2.5 · PM10 · O3 · NO2 · SO2 · CO · AQI · ฝน · พยากรณ์)',
+  method_en: 'Normalized source readings kept 90 days (not original vendor payloads) · permanent hourly rollups thereafter · daily export per station/metric (PM2.5 · PM10 · O3 · NO2 · SO2 · CO · AQI · rain · forecasts)',
   formats: ['json', 'csv'],
   endpoints: {
     catalog: 'GET /api/export/days',
@@ -308,4 +316,31 @@ export const EXPORT_INFO = {
     stations: 'GET /api/stations?q=…',
     series: 'GET /api/series?source&station&metric&hours',
   },
+}
+
+// A machine-readable lineage guide, not a claim that every source is ingested
+// or that retrospective station diagnostics filter every downstream product.
+export const DATA_CHAIN = {
+  version: 1,
+  stages: [
+    { id: 'source', name_th: '1 · ดิบ: ค่าที่แหล่งต้นทางรายงาน', name_en: '1 · Raw: source-reported values',
+      note_th: 'เก็บค่าที่จัดรูปแบบแล้วพร้อม source / station / metric / obs_time / fetched_at ไม่ใช่ไฟล์ต้นฉบับ ค่า AQI ต้องแยกจากความเข้มข้น และต้องระบุช่วงเฉลี่ย',
+      note_en: 'Stored readings are normalized, not original payloads: source / station / metric / obs_time / fetched_at. Keep AQI separate from concentration and retain averaging periods.', endpoint: '/api/series?source=air4thai&metric=pm25&hours=24' },
+    { id: 'checked', name_th: '2 · ตรวจ: อายุและข้อผิดปกติ', name_en: '2 · Checked: age and anomalies',
+      note_th: 'ระบบปฏิเสธเวลาผิดรูปแบบหรืออนาคต และตรวจสถานีเก่า ค่าค้าง ค่าผิดปกติ การกระโดด และความไม่สอดคล้อง คะแนนคุณภาพไม่ใช่ความแม่นยำ และธงตรวจย้อนหลังไม่ได้กรองทุกผลิตภัณฑ์',
+      note_en: 'Ingestion rejects invalid/future observation times. Station diagnostics flag stale, flatline, outlier, spike and mismatch patterns. Quality scores are not accuracy estimates; diagnostic flags do not filter every product.', endpoint: '/api/sensors/health?summary=1' },
+    { id: 'cooked', name_th: '3 · ปรุง: แปลงเป็นหลักฐานที่เข้าใจได้', name_en: '3 · Cooked: interpretable evidence',
+      note_th: 'แยกค่าตรวจวัด ค่าประมาณดาวเทียม พยากรณ์ และ heuristic ค่า PM สูงสุดรายจังหวัดไม่ใช่ค่าของทุกบ้าน จุดความร้อนไม่ใช่พื้นที่เผา AOD ไม่ใช่ PM ผิวพื้น ฝนไม่ได้รับรองว่าฝุ่นลด',
+      note_en: 'Separate measurements, satellite estimates, forecasts and heuristics. Provincial maximum PM is not every home’s exposure. Hotspots are not burned area; AOD is not surface PM; rain does not certify clearing.', endpoint: '/api/forecast' },
+    { id: 'action', name_th: '4 · ใช้: เตรียมตัวโดยรู้ข้อจำกัด', name_en: '4 · Act: prepare with the limits visible',
+      note_th: 'ตรวจสถานีใกล้ตัวและเวลา เตรียมห้องอากาศสะอาด ลดกิจกรรมกลางแจ้งเมื่อฝุ่นสูง ตรวจสภาพปลายทางก่อนย้าย ไม่ถือว่าข้อมูลขาดเท่ากับปลอดภัย',
+      note_en: 'Check nearby station times, prepare a cleaner-air room and reduce outdoor exposure when PM is elevated. Check destination conditions before moving. Missing evidence never means safe.', endpoint: 'https://www.epa.gov/wildfires/how-create-cleaner-air-room-home' },
+  ],
+  products: [
+    { id: 'province_pm', inputs: ['air4thai', 'gistda_pm25'], method: 'Fresh provincial maximum; satellite estimate used as fallback', limitation: 'Source class matters; not a population mean or personal exposure', endpoint: '/api/snapshot' },
+    { id: 'pm_outlook', inputs: ['openmeteo_aq', 'air4thai'], method: 'CAMS model outlook with local bias adjustment', limitation: 'Not an independent observation or validated street-level forecast', endpoint: '/api/forecast' },
+    { id: 'upwind_fire', inputs: ['firms_regional', 'openmeteo'], method: '48-hour fire detections within 500 km and ±45 degrees of daily upwind; detections within 15 km included regardless of direction', limitation: 'Screening heuristic; no plume rise, dispersion, arrival time or attributed concentration', endpoint: '/api/smoke' },
+    { id: 'rain_outlook', inputs: ['openmeteo', 'thaiwater_rain'], method: 'Forecast rain and observed gauges shown as separate evidence', limitation: 'Only subsequent PM observations can confirm surface clearing', endpoint: '/api/washout' },
+  ],
+  reuse: { deduplication: 'Match original provider + physical station + pollutant + observation time + averaging period before combining mirrored feeds.', licensing: 'Provider-specific terms apply; public access is not permission to archive or redistribute.', missing: 'Missing values remain unknown, never zero or a safety clearance.' },
 }

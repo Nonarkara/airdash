@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.88] — 2026-10-15 — Make raw-to-cooked evidence inspectable
+
+Asset token 2.4.88, SW airdash-v108. Data panel now shows a bilingual source → checked → cooked → action guide, also exposed as data_chain on /api/sources with product inputs, methods and limitations. Forecast cards expose source CAMS values beside the adjusted outlook and bias multiplier. These source values are model output, not raw sensor measurements.
+
+Reference portals are separated from map layers and explicitly marked not ingested. Added PCD historical catalog, BMA, AirGradient, ERA5 and HYSPLIT references plus existing GISTDA/FIRMS pipeline provenance. OpenAQ v3/key and mirror identity are explicit; WAQI caching/redistribution restrictions are surfaced. Corrected claims that observed rain proves washout or satellite AOD predicts a surface spike. Export descriptions now distinguish normalized stored rows from original payloads. No new upstream polling or quota use.
+
+Regression checks exercise the real source-panel renderer in Thai and English and verify every declared product input resolves to a catalog entry. Research/access limits and remaining ingestion work are recorded in docs/RAW-TO-COOKED-2.4.88.md.
+
 ## [2.4.87] — 2026-10-15 — Join fire, wind, rain and PM into preparation evidence
 
 Asset token 2.4.87, SW airdash-v107. Overview gains a bilingual province preparation selector: current PM/source, three daily CAMS model values, upwind VIIRS detections, rain amount/chance and protective actions. Missing evidence remains unknown; rain never clears measured pollution. No smoke arrival time or cleaner relocation destination is invented.
