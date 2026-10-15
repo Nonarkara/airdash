@@ -1,0 +1,30 @@
+# The air-layer checks are pure node. They do not boot the dashboard,
+# call Open-Meteo, or need the Mac host tools the full suite uses.
+name: Air layers
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  air-layers:
+    name: test-air-layers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Air layer checks
+        run: node scripts/test-air-layers.mjs

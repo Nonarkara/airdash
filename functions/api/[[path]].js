@@ -153,6 +153,14 @@ export async function onRequest(context) {
   const download = request.method === 'GET' && /^\/api\/(?:exports\/airdash-.*\.tar\.gz|export\/(?:full|daily)|sensors\/dead\.csv)$/.test(url.pathname)
   const snapshot = request.method === 'GET' && url.pathname === '/api/snapshot'
   const cache = context.cache ?? globalThis.caches?.default ?? null
+  // Wind grid is identical for every visitor. Serve the edge copy so the
+  // tunnel and Open-Meteo are not hit once per page view. Cloudflare has no
+  // spend cap; the origin also refuses extra upstream calls.
+  const windEdgeKey = new Request(new URL('/__wind_field_v1__', url.origin).toString())
+  if (cache && request.method === 'GET' && url.pathname === '/api/wind-field' && !url.search) {
+    const hit = await cache.match(windEdgeKey)
+    if (hit) return hit
+  }
   // Only canonical requests share the bounded pathname cache. Filtered series,
   // province or station requests must never overwrite or receive another
   // query's data during an outage.
@@ -265,6 +273,12 @@ export async function onRequest(context) {
     })
     if (!streaming && request.method === 'GET' && EDGE_CACHEABLE_PATHS.has(url.pathname)) {
       response.headers.set('cache-control', 'public, s-maxage=30, stale-while-revalidate=60')
+    }
+    if (cache && !streaming && request.method === 'GET' && url.pathname === '/api/wind-field' && !url.search && upstream?.ok && isAirdash(upstream)) {
+      response.headers.set('cache-control', 'public, max-age=600, s-maxage=1200')
+      const write = cache.put(windEdgeKey, response.clone()).catch(() => {})
+      if (context.waitUntil) context.waitUntil(write)
+      else await write
     }
     if (snapshot && upstream.ok) response.headers.set('x-airdash-data-mode', 'live')
     return response

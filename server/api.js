@@ -53,6 +53,7 @@ import { forecastBias } from './forecastBias.js'
 import { computeSmoke, SMOKE_METHOD } from './smoke.js'
 import { hazeEvidence } from './vision/hazeEvidence.js'
 import { CAMS_HOURLY_KEY } from './sources/openmeteo-aq.js'
+import { readWindField } from './windField.js'
 
 /** Fold Effective Harm onto each risk province row (Danger-style join). */
 function foldHarm(provinces, harmEngine) {
@@ -1342,6 +1343,13 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     },
 
     // Data-source catalog for integrators + JAXA / remote-sensing reference.
+    // Current 10 m wind on one 100-point grid. The reader caches Open-Meteo
+    // and refuses further upstream calls past the daily cap. Visitors share
+    // that one grid; the browser does not call Open-Meteo.
+    'GET /api/wind-field': async (req, res) => {
+      json(res, 200, await readWindField(db))
+    },
+
     'GET /api/region': async (req, res) => {
       const sg = await readSingapore()
       const observations = [...thailandRows(airStationsNow(db)), ...sg.readings.map(r => ({ ...r, status: observationStatus(r.observed_at) }))]
