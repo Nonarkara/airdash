@@ -1,6 +1,6 @@
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.92'
-import { escapeHtml as esc } from './fmt.js?v=2.4.92'
-import { readPreference, writePreference } from './preferences.js?v=2.4.92'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.93'
+import { escapeHtml as esc } from './fmt.js?v=2.4.93'
+import { readPreference, writePreference } from './preferences.js?v=2.4.93'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
@@ -19,6 +19,7 @@ function clock(time){const date=new Date(time);return Number.isFinite(date.getTi
 function translate(){document.documentElement.lang=lang;for(const n of document.querySelectorAll('[data-t]')){const [th,en]=n.dataset.t.split('|');n.textContent=tr(th,en)}byId('language').textContent=lang==='th'?'EN':'ไทย';paint();setImagery()}
 byId('language').onclick=()=>{lang=lang==='th'?'en':'th';writePreference('ad_lang',lang);translate()}
 byId('reset-map').onclick=()=>map.fitBounds(whole)
+byId('open-directory').onclick=()=>{byId('country-directory').open=true}
 byId('fires').onchange=()=>{byId('fires').checked?fire.addTo(map):map.removeLayer(fire)}
 function setImagery(){if(imagery)map.removeLayer(imagery);imagery=null
  const id=byId('imagery').value,date=new Date(Date.now()-86400000).toISOString().slice(0,10)
@@ -37,6 +38,7 @@ function setImagery(){if(imagery)map.removeLayer(imagery);imagery=null
 byId('imagery').onchange=()=>{if(byId('imagery').value!=='none'){byId('field-mode').value='off';paintField()}setImagery()}
 function paintField(){
  const mode=byId('field-mode').value,outlook=data?.pollution_outlook
+ document.querySelector('.pm-scale').hidden=mode==='off'
  byId('time-control').hidden=mode!=='model'
  let points=[],note=''
  if(mode==='observed'){
@@ -60,9 +62,13 @@ function paint(){
  if(!data)return
  paintField()
  pm.clearLayers();fire.clearLayers();wind.clearLayers()
+ const windSeen=new Set()
  for(const r of data.wind??[]){
   const stamp=r.wind_updated_at,iso=/[zZ]|[+-]\d\d:\d\d$/.test(stamp??'')?stamp:`${stamp?.replace(' ','T')}+07:00`,age=Date.now()-Date.parse(iso)
   if(!Number.isFinite(r.from_deg)||!Number.isFinite(r.lat)||!Number.isFinite(r.lng)||!Number.isFinite(age)||age< -300000||age>26*3600000)continue
+  const cell=`${Math.floor(r.lat/1.5)}:${Math.floor(r.lng/1.5)}`
+  if(windSeen.has(cell))continue
+  windSeen.add(cell)
   const to=(r.from_deg+180)%360
   L.marker([r.lat,r.lng],{icon:L.divIcon({className:'regional-wind',iconSize:[26,26],html:`<span style="transform:rotate(${to}deg)">↑</span>`})}).bindTooltip(esc(`${r.province_en} · ${tr('ทิศลมหลักรายวัน ไม่ใช่เส้นทางควัน','Daily dominant forecast, not smoke trajectory')} · ${r.wind_basis} · ${r.from_deg}° → ${to}° · ${clock(iso)}`)).addTo(wind)
  }

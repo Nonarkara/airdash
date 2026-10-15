@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.93] — 2026-10-15 — Compose the regional view around the map
+
+Asset token 2.4.93, SW airdash-v113. Applies Palette's object-first composition rather than only its colours: removed the editorial hero, moved working controls into a compact instrument rail, made the map occupy the opening viewport, and grouped country/source/method detail behind a reachable native disclosure. Shared AirDash identity and signal colours retained. Quantitative legend sits on the map clear of zoom controls and is hidden when the PM field is off. Wind direction markers use smaller glyphs and one representative per 1.5° display cell to reduce overlap; input directions and tooltips unchanged. Popups and map attribution follow shared theme ink.
+
+Native Chrome verified the opening composition and source-directory navigation. Syntax/consistency plus existing region and field fixtures passed. Responsive CSS stacks the rail below the map on phones; automated device viewport verification was blocked by the browser service's request-policy network dependency, so no complete mobile matrix or uninstructed human test is claimed.
+
 ## [2.4.92] — 2026-10-15 — Preserve Palette control contrast
 
 Asset token 2.4.92, SW airdash-v112. Regional pale hover backgrounds explicitly retain normal ink; the shared token core otherwise supplies inverse hover ink intended for filled primary controls. This keeps country-row buttons and map controls readable in both light and dark modes. No data changes.

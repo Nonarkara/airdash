@@ -35,9 +35,9 @@
 // the popup links the publisher's own URL. A report you cannot trace to its
 // source does not belong on a public-health map.
 
-import { tr } from '../i18n.js?v=2.4.92'
-import { escapeHtml } from '../fmt.js?v=2.4.92'
-import { pm25Color } from '../paint.js?v=2.4.92'
+import { tr } from '../i18n.js?v=2.4.93'
+import { escapeHtml } from '../fmt.js?v=2.4.93'
+import { pm25Color } from '../paint.js?v=2.4.93'
 
 const REFRESH_MS = 10 * 60_000
 const NO_PM25 = '#8C9AA5'
