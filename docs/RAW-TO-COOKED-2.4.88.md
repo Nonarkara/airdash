@@ -44,3 +44,5 @@ Current preparation is a transparent screening aid, not validated relocation rou
 ## Verification
 
 Focused lineage/render checks and full release suite recorded in `/tmp/airdash-data-chain-tests.log`. Final release/deployment evidence follows below.
+
+Release verification: full `npm test` exited 0; focused lineage/render and haze-planning tests passed. `npm run deploy` verified 2.4.88 on both canonical Pages and custom domain (HTML and selected asset bytes); deployment hash `0c215e81e2ce`. Backend activated through its existing launchd service; local and public `/api/sources` both expose four stages and four derived product contracts. A follow-up corrected the source inspection link to station discovery (series requires a selected station). Production native Chrome visibly rendered the English chain and the corrected link. Screenshot: `/tmp/airdash-raw-cooked-2.4.88.png`. Thai rendering verified by the actual-renderer regression fixture; no claim of a complete mobile/browser matrix in this release.
