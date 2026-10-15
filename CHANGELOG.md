@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.89] — 2026-10-15 — Open a transparent Southeast Asia overview
+
+Asset token 2.4.89, SW airdash-v109. Added /region with Thailand↔Southeast Asia navigation from the front page and operator map. Regional map shows existing Thai station PM, new official Singapore one-hour regional PM, the existing mainland-only fire archive, and selectable NASA GIBS AOD/true-colour/satellite rain context with dates, legends and limits. All 11 Southeast Asian countries have source/coverage cards, including Timor-Leste. Unconnected countries remain unknown; national indices are never blended or concentration-converted.
+
+/api/region reuses existing Thai data and fire aggregates. NEA/data.gov.sg is demand-cached/coalesced 15 minutes, with a five-minute failure cooldown; no new schedule. Observation ages are separate from retrieval times; readings older than 90 minutes are gray/stale, invalid/future times and nonnumeric values excluded. Singapore regions are not individual station positions. Cross-country averaging-window differences are disclosed.
+
+Regression checks cover real payload normalization, timezone/age, null and wrong-index rejection, concurrent coalescing and recovery/cooldown. Source audit and access limits: docs/SOUTHEAST-ASIA-2.4.89.md.
+
 ## [2.4.88] — 2026-10-15 — Make raw-to-cooked evidence inspectable
 
 Asset token 2.4.88, SW airdash-v108. Data panel now shows a bilingual source → checked → cooked → action guide, also exposed as data_chain on /api/sources with product inputs, methods and limitations. Forecast cards expose source CAMS values beside the adjusted outlook and bias multiplier. These source values are model output, not raw sensor measurements.

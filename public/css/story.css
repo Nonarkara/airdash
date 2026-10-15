@@ -400,3 +400,6 @@ body.story {
 .bandchip { border-radius: 999px; }
 .persona-chips button { border-radius: 999px; }
 .numcell .n { letter-spacing: -0.02em; }
+
+.region-entry{padding:10px 16px;text-align:center;border-bottom:1px solid var(--rule)}
+.region-entry a{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border:1px solid var(--rule);border-radius:8px;max-width:100%;overflow-wrap:anywhere;color:var(--ink);font-weight:600;text-decoration:none}

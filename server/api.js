@@ -1,3 +1,4 @@
+import { COUNTRIES, REGIONAL_RESOURCES, readSingapore, thailandRows, observationStatus } from './region.js'
 import { burnAreaPayload } from './burnArea.js'
 // JSON + SSE API surface consumed by the dashboard frontend.
 import { json, readBody, prebuild, sendPrebuilt, sendFile, SECURITY_HEADERS } from './http.js'
@@ -1336,6 +1337,19 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     },
 
     // Data-source catalog for integrators + JAXA / remote-sensing reference.
+    'GET /api/region': async (req, res) => {
+      const sg = await readSingapore()
+      const observations = [...thailandRows(airStationsNow(db)), ...sg.readings.map(r => ({ ...r, status: observationStatus(r.observed_at) }))]
+      const smoke = computeSmoke(db)
+      json(res, 200, {
+        generated_at: new Date().toISOString(), countries: COUNTRIES, resources: REGIONAL_RESOURCES,
+        observations, singapore: { available: sg.available, fetched_at: sg.fetched_at, error: sg.error },
+        fires: { available: smoke.available, checked_at: smoke.fire_source_checked_at ?? null,
+          cells: smoke.available ? smoke.fire_cells ?? [] : [], bounds: [4, 92, 29, 110], window_hours: 48, grid_degrees: 0.25 },
+        method: 'Partial regional overview, not a harmonized country ranking. Native averaging periods differ. Missing data is unknown. Stale means older than 90 minutes. No national indices are converted or blended.',
+      })
+    },
+
     'GET /api/sources': (req, res) => json(res, 200, {
       updated: new Date().toISOString(),
       pipelines: SOURCES.filter((s) => s.kind === 'pipeline'),

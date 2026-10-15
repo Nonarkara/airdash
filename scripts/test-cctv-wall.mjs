@@ -135,6 +135,7 @@ function importsOf(file) {
 // reports every module as an orphan — a failing test that says nothing
 // about the product.
 function resolve(spec, from) {
+  if (spec.startsWith('/js/')) { const absolute = 'public' + spec.split('?')[0]; return sources.has(absolute) ? absolute : null }
   if (!spec.startsWith('.')) return null
   // Every import in this project carries a `?v=2.4.45` cache token, so the
   // spec is './state.js?v=2.4.45' while the key on disk is 'public/js/
@@ -153,7 +154,11 @@ function resolve(spec, from) {
 }
 
 const seen = new Set()
-const queue = ['public/js/main.js', 'public/js/boot.js', 'public/js/story.js']
+// Discover actual HTML module entry points, including separate overview pages.
+// A hardcoded list incorrectly classified region.js as dead despite its script tag.
+const queue = readdirSync(new URL('public/', root)).filter(n => n.endsWith('.html')).flatMap(n =>
+  [...read(`public/${n}`).matchAll(/<script\b[^>]*src=["'](\/js\/[^"'?]+)(?:\?[^"']*)?["'][^>]*>/g)]
+    .map(m => `public${m[1]}`))
 while (queue.length) {
   const f = queue.pop()
   if (!f || seen.has(f) || !sources.has(f)) continue

@@ -1,24 +1,24 @@
-import { windTowards } from './panels/hazePlan.js?v=2.4.88'
-import { escapeHtml } from './fmt.js?v=2.4.88'
-import { moveMap } from './mapView.js?v=2.4.88'
-import { readPreference, writePreference } from './preferences.js?v=2.4.88'
+import { windTowards } from './panels/hazePlan.js?v=2.4.89'
+import { escapeHtml } from './fmt.js?v=2.4.89'
+import { moveMap } from './mapView.js?v=2.4.89'
+import { readPreference, writePreference } from './preferences.js?v=2.4.89'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.88'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.88'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.88'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.88'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.88'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.88'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.88'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.88'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.88'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.88'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.88'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.88'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.88'
-import { openWindow } from './witness.js?v=2.4.88'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.88'
+import { on, store } from './state.js?v=2.4.89'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.89'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.89'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.89'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.89'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.89'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.89'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.89'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.89'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.89'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.89'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.89'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.89'
+import { openWindow } from './witness.js?v=2.4.89'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.89'
 
 const windToggle = {id:'hazeWind',th:'ลมพยากรณ์ + จุดตรวจไฟเหนือลม',en:'Forecast wind + upwind fire counts',on:false,
   note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where wind blows. Daily dominant forecast, not current wind.',
@@ -62,6 +62,18 @@ export function initMap() {
     preferCanvas: true,
   }).fitBounds(TH_BOUNDS)
   map.attributionControl.setPrefix(false)
+  const regional = L.control({position:'topright'})
+  regional.onAdd = () => {
+    const box = L.DomUtil.create('div','leaflet-bar')
+    const link = L.DomUtil.create('a','',box)
+    link.href='/region';link.style.cssText='width:auto;min-height:44px;padding:0 12px;display:flex;align-items:center;color:#112f3b;background:#fff;font-size:13px;font-weight:700'
+    link.textContent='🌏 '+tr('เอเชียตะวันออกเฉียงใต้','Southeast Asia')
+    link.setAttribute('aria-label',tr('เปิดภาพรวมเอเชียตะวันออกเฉียงใต้','Open Southeast Asia overview'))
+    on('lang',()=>{link.textContent='🌏 '+tr('เอเชียตะวันออกเฉียงใต้','Southeast Asia')})
+    L.DomEvent.disableClickPropagation(box)
+    return box
+  }
+  regional.addTo(map)
   ensureMapPanes(map)
 
   basemaps = createBasemaps()
