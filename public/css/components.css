@@ -2335,6 +2335,161 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
   padding: 6px 8px 0;
   text-align: left;
 }
+/* Academic figure label for the chart figures in §10 — same treatment as
+   the photo variant so every figure in the paper reads as a figure. */
+.rp-fig-cap {
+  display: block;
+  font-family: var(--font-num);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  color: var(--ink-mid);
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--rule);
+  text-align: left;
+}
+
+/* ── Research paper: sticky contents index ───────────────────────────────
+   The paper is flat and long; without an index nobody finds §9 again.
+   Sticks inside the .research-scroll scroller, so it needs an opaque
+   background and a scroll margin on the sections it jumps to — measured
+   into --rp-toc-h by research.js, because the index wraps to two lines
+   in Thai and one in English. */
+.rp-toc {
+  max-height: 120px;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--well);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--th-navy);
+  padding: 10px 14px;
+  margin-bottom: 22px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.06);
+}
+.rp-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.rp-toc-list a {
+  display: inline-block;
+  font-family: var(--font-num);
+  font-size: 11.5px;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  color: var(--ink-mid);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.rp-toc-list a:hover { color: var(--th-navy); border-bottom-color: var(--rule); }
+.rp-toc-list a.active {
+  color: var(--th-navy);
+  font-weight: 700;
+  border-bottom-color: var(--th-navy);
+}
+/* Anchor jumps land clear of the sticky index; the height is measured into
+   --rp-toc-h by research.js rather than guessed, because the index wraps. */
+.rp-section { scroll-margin-top: calc(var(--rp-toc-h, 0px) + 44px); }
+/* ── Research paper §10: computer-vision evidence ────────────────────────── */
+.rp-chip {
+  display: inline-block;
+  font-family: var(--font-num);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--ink-mid);
+  background: var(--well);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.rp-chip--ok { color: var(--th-deep); border-color: var(--th-sage); }
+.rp-chip--muted { color: var(--ink-low); border-style: dashed; }
+.rp-chip--warn { color: var(--ink); border-color: var(--band-elevated); }
+
+.rp-cv-live { margin: 18px 0; }
+.rp-cv-status { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.rp-cv-headline {
+  font-weight: 700;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--th-deep);
+  margin: 12px 0 6px;
+}
+.rp-cv-note { font-size: 13px; line-height: 1.6; color: var(--ink-mid); }
+.rp-cv-sub {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 20px 0 8px;
+}
+.rp-cv-empty {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-mid);
+  padding: 14px 16px;
+  background: var(--well-dim);
+  border: 1px dashed var(--rule);
+  margin: 12px 0;
+}
+.rp-cv-loading { font-size: 13px; color: var(--ink-mid); }
+
+.rp-cv-feats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+  margin: 12px 0 4px;
+}
+.rp-cv-feat {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  background: var(--well-dim);
+  border: 1px solid var(--rule);
+}
+.rp-cv-feat code {
+  font-family: var(--font-num);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--th-deep);
+}
+.rp-cv-feat-name { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.rp-cv-feat-why { font-size: 12px; line-height: 1.55; color: var(--ink-mid); }
+
+.cv-scatter { max-width: 720px; }
+.rp-cv-table td, .rp-cv-table th { font-size: 12px; }
+.rp-cv-frames {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.rp-cv-frame { margin: 0; padding: 6px; background: var(--well-dim); border: 1px solid var(--rule); }
+.rp-cv-frame img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--rule);
+  background: var(--well);
+}
+.rp-cv-frame figcaption {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+  font-family: var(--font-num);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--ink-mid);
+}
+.rp-cv-frame figcaption code { font-size: 10.5px; color: var(--ink); }
+.rp-api-inline { font-family: var(--font-num); font-size: 11.5px; color: var(--ink-low); }
 
 /* ── Research paper: Section 1 (Why AirDash Exists) — the design contract.
    Same visual language as the About pane's personal section, but a touch
@@ -4168,3 +4323,9 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 
 .burn-brief-open { min-height:44px; padding:6px 10px; border:1px solid var(--rule); color:var(--ink); background:var(--paper); font:inherit; cursor:pointer; }
 .burn-brief-open:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+
+/* Keep chart labels readable on phones; each figure scrolls independently. */
+@media (max-width: 600px) {
+  #rp-rec-diurnal, #rp-rec-regions, #rp-rec-alerts, #rp-rec-network { overflow-x: auto; }
+  #rp-rec-diurnal > svg, #rp-rec-regions > svg, #rp-rec-alerts > svg, #rp-rec-network > svg { min-width: 600px; }
+}

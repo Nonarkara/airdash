@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.74'
-import { escapeHtml } from '../fmt.js?v=2.4.74'
+import { store, on } from '../state.js?v=2.4.81'
+import { escapeHtml } from '../fmt.js?v=2.4.81'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -121,8 +121,9 @@ function GROUPS() {
         { path: '/api/tap/recent', th: 'เหตุการณ์ล่าสุดของสตรีม สำหรับเติมหน้าจอก่อนเปิด SSE', en: 'The most recent stream events, to backfill a screen before opening the SSE.',
           params: [['limit', false, tr('จำนวน', 'count')]] },
         { path: '/api/alerts', th: 'การแจ้งเตือนที่ระบบยกขึ้นล่าสุด', en: 'The alerts the system has raised most recently.', params: [['limit', false, tr('จำนวน', 'count')]] },
+        { path: '/api/alerts/summary', th: 'สรุปการแจ้งเตือนทั้งหมดแยกตามกฎและระดับความรุนแรง สำหรับเอกสารวิจัย', en: 'Aggregated alert counts by rule and severity — the ledger the research paper plots.' },
         { path: '/api/news', th: 'ข่าวคุณภาพอากาศที่ดึงมาและจัดประเภทแล้ว', en: 'Fetched and classified air-quality news.', params: [['limit', false, tr('จำนวน', 'count')]] },
-        { path: '/api/sensors/health', th: 'สุขภาพของสถานี: สถานีที่เงียบ ค่านิ่ง หรือค่ากระโดด — สำหรับรายงาน คพ.', en: 'Station health: silent, flat-lined or spiking sensors — for reporting to PCD.' },
+        { path: '/api/sensors/health', th: 'สุขภาพของสถานี: สถานีที่เงียบ ค่านิ่ง หรือค่ากระโดด — สำหรับรายงาน คพ.', en: 'Station health: silent, flat-lined or spiking sensors — for reporting to PCD.', params: [['summary', false, tr('ส่ง 1 เพื่อเอาเฉพาะค่าสรุป', 'send 1 for the roll-up only')]] },
         { path: '/api/sensors/dead.csv', th: 'รายชื่อสถานีที่เงียบเป็น CSV', en: 'Silent stations as CSV.' },
       ],
     },

@@ -34,3 +34,8 @@ data/.archive-receipt.json*
 # Stray empty git repo created in the project root by an editor, 2026-09-29
 Untitled/
 data/cctv-frames/
+# Third-party research datasets (Tableau Public pulls, 57 MB, 2026-10-14).
+# Untracked on purpose: someone else's data is not ours to redistribute, and
+# the provenance + column dictionary lives in knowledge/tableau-datasets.md,
+# which IS committed. Re-download with the session trick in that file.
+data/research/

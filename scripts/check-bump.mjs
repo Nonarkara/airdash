@@ -33,16 +33,48 @@ if (!token) { console.error('✗ no ?v= token found in public/js/boot.js'); proc
 // "## [3.3.1] — 2026-09-20 · token 2.4.33" — while recent ones are headed by
 // the token itself. A guard that only understood one of them would block a
 // correctly documented release, which is its own kind of wrong.
+//
+// BUT A MATCHING HEADING IS NOT ENOUGH, and on 2026-10-14 it was not. The
+// CHANGELOG used "## [2.4.75]" for the R2 cost guard — an ops-only release that
+// says in its own body "asset token stays at 2.4.74". A later 2.4.75 ASSET
+// deploy therefore satisfied this check on the strength of a heading that
+// describes different work and explicitly disclaims carrying the token. The
+// check passed; nothing was documented. So each candidate section is now read,
+// and a section that disclaims a DIFFERENT token is rejected rather than
+// counted as documentation.
 const changelog = readFileSync('CHANGELOG.md', 'utf8')
 const esc = token.replace(/\./g, '\\.')
-const documented =
-  new RegExp(`^## \\[${esc}\\]`, 'm').test(changelog) ||
-  new RegExp(`^## \\[[^\\]]+\\][^\\n]*\\btoken ${esc}\\b`, 'm').test(changelog)
+
+/** The body of the changelog section introduced by `headingRe`, or null. */
+function sectionFor(headingRe) {
+  const m = headingRe.exec(changelog)
+  if (!m) return null
+  const rest = changelog.slice(m.index + m[0].length)
+  const next = rest.search(/^## /m)
+  return { heading: m[0], body: next === -1 ? rest : rest.slice(0, next) }
+}
+
+// "asset token stays at 2.4.74" / "stays at ?v=2.4.74" — a section saying it
+// did NOT carry the token.
+const DISCLAIMS = /\b(?:token\s+)?stays?\s+at\s+\??v?=?\s*(\d+\.\d+\.\d+)/i
+
+const candidates = [
+  sectionFor(new RegExp(`^## \\[${esc}\\][^\\n]*`, 'm')),
+  sectionFor(new RegExp(`^## \\[[^\\]]+\\][^\\n]*\\btoken ${esc}\\b[^\\n]*`, 'm')),
+].filter(Boolean)
+
+const documented = candidates.some(({ body }) => {
+  const d = DISCLAIMS.exec(body)
+  return !d || d[1] === token
+})
+
 if (!documented) {
   console.error(
     `✗ the asset token is ?v=${token} but CHANGELOG.md documents no release carrying it.\n` +
-    `  Accepted forms: a "## [${token}]" heading, or any heading naming "token ${token}".\n` +
-    `  Assets deployed without a release note have shipped three times (2.4.67, 2.4.69, 2.4.72).\n` +
+    `  Accepted forms: a "## [${token}]" heading that does not disclaim it, or any\n` +
+    `  heading naming "token ${token}" in a release that does not disclaim it.\n` +
+    `  Assets deployed without a release note have shipped three times (2.4.67, 2.4.69, 2.4.72),\n` +
+    `  and a matching heading for an ops-only release can silently stand in for one.\n` +
     `  Add the entry describing what this release changed, then deploy again.`)
   process.exit(1)
 }

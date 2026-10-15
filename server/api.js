@@ -107,6 +107,12 @@ const TWIN_TTL_MS = 30_000
 let insightsCache = null // { at, payload }
 const INSIGHTS_TTL_MS = 60_000
 
+// Alert-ledger roll-up for the research paper. The GROUP BY scans the whole
+// alerts table, so it is cached like the daily aggregates rather than run
+// per request.
+let alertSummaryCache = null // { at, body }
+const ALERT_SUMMARY_TTL_MS = 10 * 60_000
+
 
 // airStationsNow moved to its own module (server/airStationsNow.js) so the
 // haze-vision scheduler source can pair frames to stations without importing
@@ -308,8 +314,19 @@ function summarizeDataFreshness(sources) {
 
 export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, harm, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }) {
   return {
-    'GET /api/sensors/health': (req, res) => {
-      json(res, 200, sensorHealth(db))
+    'GET /api/sensors/health': (req, res, url) => {
+      const h = sensorHealth(db)
+      // The full payload carries every flagged station in every province
+      // (~400 KB). The research paper only needs the roll-up, so `?summary=1`
+      // returns the counts and the overall score without the lists.
+      if (url.searchParams.get('summary') === '1') {
+        return json(res, 200, {
+          updated: new Date().toISOString(),
+          quality_score: h.quality_score,
+          summary: h.summary,
+        })
+      }
+      json(res, 200, h)
     },
 
     // CSV export of suspect stations for field crews to print and
@@ -1571,6 +1588,27 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       json(res, 200, { alerts: db.all(minSev > 0
         ? 'SELECT * FROM alerts INDEXED BY idx_alerts_sev WHERE severity >= ? ORDER BY id DESC LIMIT ?'
         : 'SELECT * FROM alerts WHERE severity >= ? ORDER BY id DESC LIMIT ?', minSev, limit) })
+    },
+
+    // Aggregated alert ledger — the research paper plots the full history,
+    // which /api/alerts cannot serve (it returns the newest N rows only).
+    // GROUP BY on ~45k rows is cheap, but it is still a table scan, so the
+    // result is cached in-memory with a TTL like the daily aggregates above.
+    'GET /api/alerts/summary': (req, res) => {
+      if (alertSummaryCache && Date.now() - alertSummaryCache.at < ALERT_SUMMARY_TTL_MS) {
+        return json(res, 200, alertSummaryCache.body)
+      }
+      const byRule = db.all(
+        'SELECT rule, COUNT(*) AS n, MIN(ts) AS first_ts, MAX(ts) AS last_ts FROM alerts GROUP BY rule ORDER BY n DESC')
+      const bySeverity = db.all('SELECT severity, COUNT(*) AS n FROM alerts GROUP BY severity ORDER BY severity')
+      const body = {
+        updated: new Date().toISOString(),
+        total: byRule.reduce((a, r) => a + r.n, 0),
+        by_rule: byRule,
+        by_severity: bySeverity,
+      }
+      alertSummaryCache = { at: Date.now(), body }
+      json(res, 200, body)
     },
 
     'GET /api/news': (req, res, url) => {

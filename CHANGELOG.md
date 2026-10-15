@@ -10,6 +10,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.81] — 2026-10-15 — Keep research navigation clear of the charts
+
+Asset token 2.4.81. Browser verification of 2.4.80 found the sticky index covering section headings. Cap the index height, let its list scroll, and reserve more anchor clearance. Improve reference-label contrast. The automatic bumper now skips changelog numbers already consumed by operational releases; a disposable-checkout regression verifies this behavior without modifying production assets.
+
+## [2.4.80] — 2026-10-15 — Audit the research figures against their inputs
+
+Asset token 2.4.80. Preserves the overnight research/CV feature work and its endpoint additions.
+
+Corrects the diurnal reference to Thailand's 37.5 µg/m³ 24-hour value, explicitly not an hourly compliance test; uses a zero-based axis. Profiles combine Air4Thai and historical CAMS model rows, not exclusively observed measurements or independent samples. Removes the unsupported hot-tier-only description. Alert share and sensor fault counts now come from payloads. Zero-valued charts retain finite geometry and zero-width bars; missing/invalid network counts stay unknown. Monthly lines use calendar spacing and a separate legend; exact values have tooltips. Peak shading follows the actual three-hour window across midnight. Superseded language renders cannot overwrite new record figures.
+
+Regression coverage: scripts/test-research-charts.mjs, included in npm test. Prior 2.4.79 narrative claims about 15 µg/m³ and observed-only data are superseded by this correction.
+
+## [2.4.79] — 2026-10-14 — the research paper now shows the data it has been collecting
+
+Frontend + two new read endpoints. Asset token `2.4.79`, SW cache `airdash-v96`.
+
+The research tab was, until now, a paper *about* a system — architecture, formulas, citations — with almost no numbers drawn from the database the system has actually been filling since mid-July. This release makes the accumulated record visible, and it makes the camera-haze pipeline legible as a research artefact.
+
+**§10, "What the Record Shows" (new).** Four figures pulled from live aggregates, not from prose:
+
+- **The diurnal cycle.** National mean PM2.5 by hour of day, from **611,835** observations in `readings_hourly`. The peak window (21:00–00:00) is shaded and the PCD 24-hour standard (15 µg/m³) is drawn as a dashed reference. The y-axis deliberately does **not** start at zero — the caption says so, because the swing is ~11.5–13.9 µg/m³ and a zero-based axis would flatten the cycle to a straight line.
+- **Monthly means by region.** Five regions, April–October. This is the chart that justifies the section: the North runs **42.6 µg/m³ in April** and collapses to 8.2 by August — the burning season and the monsoon, drawn from observed values rather than satellite estimates.
+- **The alert ledger.** Every rule the system has ever raised. `washout_rain` accounts for **45,119 of 45,892 alerts (~98%)** and is deliberately left off the bars — on a true-count axis it would flatten every other rule to invisibility — so it is reported as a number in the caption instead. The axis is linear, not logarithmic, and the caption says both.
+- **The sensor network.** **5,746** stations across every ingested source, **1,305** silent beyond the staleness window, overall health **70/100**. Point-in-time, and labelled as such.
+
+**§11 (was §10), Computer Vision.** The camera-haze pipeline was written but never shown. Now rendered: the per-feature glossary (contrast loss, dark channel, edge decay, saturation, warm bias, mean luma), a live box fed by `/api/haze-vision` and `/api/haze-evidence`, a haze-index-vs-PM2.5 scatter with **no trend line fitted** (there is no statistical basis for one yet — the caption says this), the per-province evidence table, and three sample frames. The pipeline reports `calibrated: false`, so the UI leads with that and with the withheld-sample count; a frame without a baseline reads `baseline-needed`, never as a zero.
+
+**A sticky contents index** for the paper, built from the rendered `<h2>`s so it cannot drift from the body. Smooth scroll honours `prefers-reduced-motion`; the active section is tracked by `IntersectionObserver`; the measured height drives a `scroll-margin` so the index never covers the heading it jumps to.
+
+**Two new endpoints**, both required because the data was not otherwise reachable:
+
+- `GET /api/alerts/summary` — the full alert history aggregated by rule and severity. `/api/alerts` returns only the newest N rows, which cannot support a ledger. The `GROUP BY` scans the whole table, so the result is cached in-memory for 10 minutes, off the hot path.
+- `GET /api/sensors/health?summary=1` — the roll-up only. The full payload carries every flagged station in every province (~400 KB); the paper needs the counts and the score, not the list.
+
+**Six third-party Tableau workbooks** catalogued in `knowledge/tableau-datasets.md`, kept on disk at `data/research/tableau/` (gitignored). Four non-Thai workbooks — China, Taiwan, Utah, Puget Sound — were downloaded, verified against their coordinates and date ranges, and deleted. `AirQualityinThailand_OverallMonthly` is retained but flagged: its column headers are coded (`50t`, `35t`, `F3`–`F7`) and undocumented, so no conclusion should be drawn from it until they are decoded.
+
+**1150+ checks, 0 failures.**
+
 ## [2.4.77] — 2026-10-12 — the camera probe: what was measured, and what is still true
 
 Backend-only; no file under `public/` changed, so the asset token stays at 2.4.74.

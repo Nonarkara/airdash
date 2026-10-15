@@ -40,7 +40,10 @@ if (!curToken) { console.error('FATAL: no ?v=X.Y.Z token found in public/ops.htm
 
 const nextToken = explicit ?? (() => {
   const [maj, min, pat] = curToken.split('.').map(Number)
-  return `${maj}.${min}.${pat + 1}`
+  const used = new Set([...read(join(ROOT, 'CHANGELOG.md')).matchAll(/^## \[(\d+\.\d+\.\d+)\]/gm)].map(m => m[1]))
+  let patch = pat + 1
+  while (used.has(`${maj}.${min}.${patch}`)) patch++
+  return `${maj}.${min}.${patch}`
 })()
 if (nextToken === curToken && !explicit) {
   console.error('FATAL: computed the same token; pass an explicit one'); process.exit(1)

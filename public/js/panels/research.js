@@ -1,9 +1,9 @@
 // Research Paper panel — renders the full bilingual academic paper inside
 // the About overlay's "Research Paper" tab, with custom SVG infographics,
 // the complete source catalog, citations, and CSV dataset download.
-import { on, store } from '../state.js?v=2.4.74'
-import { getJson } from '../cache.js?v=2.4.74'
-import { escapeHtml } from '../fmt.js?v=2.4.74'
+import { on, store } from '../state.js?v=2.4.81'
+import { getJson } from '../cache.js?v=2.4.81'
+import { escapeHtml } from '../fmt.js?v=2.4.81'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -224,6 +224,151 @@ function svgRetention() {
   svg += `<defs><marker id="arrR" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><polygon points="0,0 5,2.5 0,5" fill="var(--th-navy)"/></marker></defs>`
   svg += `</svg>`
   return svg
+}
+
+// ── §10 figures — what the accumulated record actually shows ────────────────
+// Three charts drawn from live aggregates, not from prose. Each one exists
+// because the raw table behind it is too large to eyeball: 611k observations,
+// 45k alerts, 5.7k stations. Axis choices are stated in the caption wherever
+// they are not the obvious one (the diurnal axis does not start at zero).
+
+function svgDiurnal(hourly, peak) {
+  const pts = (Array.isArray(hourly) ? hourly : [])
+    .filter((h) => Number.isFinite(h.hour) && Number.isFinite(h.avg))
+    .sort((a, b) => a.hour - b.hour)
+  if (pts.length < 8) return ''
+  const w = 760, h = 250, ml = 54, mr = 16, mt = 18, mb = 44
+  const lo = 0
+  const hi = Math.max(Math.ceil(Math.max(...pts.map((p) => p.avg)) + 1), 40)
+  const X = (hr) => ml + (hr / 23) * (w - ml - mr)
+  const Y = (v) => h - mb - ((v - lo) / (hi - lo)) * (h - mt - mb)
+  let s = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${tr(
+    'กราฟเส้น: ค่าเฉลี่ย PM2.5 รายชั่วโมงของประเทศ',
+    'Line chart: national mean PM2.5 by hour of day'
+  )}">`
+  // The 24-hour standard (PCD 2023) sits above the national mean every hour;
+  // drawing it is the honest way to show the mean alone never crosses it.
+  const std = 37.5
+  if (std >= lo && std <= hi) {
+    s += `<line x1="${ml}" y1="${Y(std)}" x2="${w - mr}" y2="${Y(std)}" stroke="var(--band-watch)" stroke-width="1.2" stroke-dasharray="4,3"/>`
+    s += `<text x="${w - mr}" y="${Y(std) - 6}" text-anchor="end" font-family="var(--font-num)" font-size="9.5" fill="var(--ink)">${tr('อ้างอิง 24 ชม. ไทย 37.5 µg/m³', 'Thai 24-h reference 37.5 µg/m³')}</text>`
+  }
+  // Shade exactly the API's three-hour window, including midnight wrap.
+  if (peak && Number.isInteger(peak.start) && peak.start >= 0 && peak.start < 24) {
+    for (let i = 0; i < 3; i++) {
+      const hr = (peak.start + i) % 24
+      const left = X(Math.max(0, hr - 0.5)), right = X(Math.min(23, hr + 0.5))
+      s += `<rect x="${left}" y="${mt}" width="${right-left}" height="${h-mt-mb}" fill="var(--well-dim)" opacity="0.85"/>`
+    }
+  }
+  for (let v = lo; v <= hi; v += Math.max(5, Math.ceil(hi / 8 / 5) * 5)) {
+    s += `<line x1="${ml}" y1="${Y(v)}" x2="${w - mr}" y2="${Y(v)}" stroke="var(--rule)" stroke-width="1"/>`
+    s += `<text x="${ml - 8}" y="${Y(v) + 3}" text-anchor="end" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${v}</text>`
+  }
+  for (let hr = 0; hr <= 23; hr += 3) {
+    s += `<text x="${X(hr)}" y="${h - mb + 16}" text-anchor="middle" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${String(hr).padStart(2, '0')}</text>`
+  }
+  s += `<polyline fill="none" stroke="var(--th-navy)" stroke-width="2" points="${pts.map((p) => `${X(p.hour)},${Y(p.avg)}`).join(' ')}"/>`
+  for (const p of pts) {
+    s += `<circle cx="${X(p.hour)}" cy="${Y(p.avg)}" r="2.6" fill="var(--th-navy)"><title>${String(p.hour).padStart(2, '0')}:00 · ${p.avg} µg/m³</title></circle>`
+  }
+  s += `<text x="${(ml + w - mr) / 2}" y="${h - 8}" text-anchor="middle" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${tr('ชั่วโมง (เวลาไทย)', 'hour (ICT)')}</text>`
+  s += `<text x="14" y="${(mt + h - mb) / 2}" text-anchor="middle" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)" transform="rotate(-90 14 ${(mt + h - mb) / 2})">PM2.5 µg/m³</text>`
+  s += `</svg>`
+  return s
+}
+
+function svgRegionMonths(regions) {
+  const rows = (Array.isArray(regions) ? regions : [])
+    .map((r) => ({
+      label: r.label_en ?? r.region,
+      pts: (Array.isArray(r.monthly) ? r.monthly : [])
+        .filter((m) => Number.isFinite(m.month) && Number.isFinite(m.avg))
+        .sort((a, b) => a.month - b.month),
+    }))
+    .filter((r) => r.pts.length >= 2)
+  if (!rows.length) return ''
+  const months = [...new Set(rows.flatMap((r) => r.pts.map((p) => p.month)))].sort((a, b) => a - b)
+  const maxV = Math.max(...rows.flatMap((r) => r.pts.map((p) => p.avg)))
+  const hi = Math.max(10, Math.ceil(maxV / 10) * 10)
+  const w = 760, h = 330, ml = 50, mr = 30, mt = 16, mb = 82
+  const X = (m) => ml + ((m - months[0]) / Math.max(1, months[months.length - 1] - months[0])) * (w - ml - mr)
+  const Y = (v) => h - mb - (v / hi) * (h - mt - mb)
+  const ink = ['var(--th-red)', 'var(--band-elevated)', 'var(--rain)', 'var(--band-watch)', 'var(--dam)', 'var(--aqi)']
+  let s = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${tr(
+    'กราฟเส้นหลายเส้น: ค่าเฉลี่ย PM2.5 รายเดือนของแต่ละภาค',
+    'Multi-line chart: monthly mean PM2.5 by region'
+  )}">`
+  for (let v = 0; v <= hi; v += 10) {
+    s += `<line x1="${ml}" y1="${Y(v)}" x2="${w - mr}" y2="${Y(v)}" stroke="var(--rule)" stroke-width="1"/>`
+    s += `<text x="${ml - 8}" y="${Y(v) + 3}" text-anchor="end" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${v}</text>`
+  }
+  for (const m of months) {
+    s += `<text x="${X(m)}" y="${h - mb + 16}" text-anchor="middle" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${m}</text>`
+  }
+  rows.forEach((r, i) => {
+    const c = ink[i % ink.length]
+    s += `<polyline fill="none" stroke="${c}" stroke-width="1.8" points="${r.pts.map((p) => `${X(p.month)},${Y(p.avg)}`).join(' ')}"/>`
+    for (const p of r.pts) s += `<circle cx="${X(p.month)}" cy="${Y(p.avg)}" r="2.4" fill="${c}"><title>${escapeHtml(String(r.label))} · ${p.month} · ${p.avg} µg/m³</title></circle>`
+    const lx = ml + (i % 3) * 225, ly = h - 28 + Math.floor(i / 3) * 17
+    s += `<line x1="${lx}" y1="${ly-3}" x2="${lx+18}" y2="${ly-3}" stroke="${c}" stroke-width="3"/>`
+    s += `<text x="${lx+24}" y="${ly}" font-family="var(--font-num)" font-size="11" fill="var(--ink)">${escapeHtml(String(r.label))}</text>`
+  })
+  s += `<text x="${(ml + w - mr) / 2}" y="${h - mb + 36}" text-anchor="middle" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${tr('เดือน', 'month')}</text>`
+  s += `<text x="14" y="${(mt + h - mb) / 2}" text-anchor="middle" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)" transform="rotate(-90 14 ${(mt + h - mb) / 2})">PM2.5 µg/m³</text>`
+  s += `</svg>`
+  return s
+}
+
+function svgAlertLedger(byRule) {
+  // washout_rain is ${rainPct} of every alert the system has ever raised. Plotting
+  // it on the same axis as the rest would flatten them to nothing, so it is
+  // left off the bars and named in the caption instead.
+  const rows = (Array.isArray(byRule) ? byRule : [])
+    .filter((r) => r.rule !== 'washout_rain' && Number.isFinite(r.n))
+    .sort((a, b) => b.n - a.n)
+  if (!rows.length) return ''
+  const max = Math.max(1, ...rows.map((r) => r.n))
+  const w = 760, rowH = 34, ml = 210, mr = 90
+  const h = rows.length * rowH + 34
+  const barW = w - ml - mr
+  let s = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${tr(
+    'กราฟแท่งแนวนอน: จำนวนการแจ้งเตือนตามกฎ',
+    'Horizontal bar chart: alert counts by rule'
+  )}">`
+  const ink = ['var(--th-navy)', 'var(--rain)', 'var(--band-watch)', 'var(--band-elevated)', 'var(--dam)', 'var(--ink-mid)']
+  rows.forEach((r, i) => {
+    const y = 10 + i * rowH
+    const bw = (r.n / max) * barW
+    const c = ink[i % ink.length]
+    s += `<text x="${ml - 10}" y="${y + 15}" text-anchor="end" font-family="var(--font-num)" font-size="11" font-weight="700" fill="var(--ink)">${escapeHtml(r.rule)}</text>`
+    s += `<rect x="${ml}" y="${y + 4}" width="${bw}" height="17" fill="${c}" opacity="0.85"/>`
+    s += `<text x="${ml + bw + 8}" y="${y + 17}" font-family="var(--font-num)" font-size="11" font-weight="700" fill="var(--ink)">${r.n.toLocaleString('en-US')}</text>`
+  })
+  s += `</svg>`
+  return s
+}
+
+function svgNetwork(summary) {
+  const total = summary?.total_stations
+  const stale = summary?.stale
+  if (!Number.isFinite(total) || total <= 0 || !Number.isFinite(stale) || stale < 0 || stale > total) return ''
+  const ok = Math.max(0, total - (Number.isFinite(stale) ? stale : 0))
+  const w = 760, h = 78, ml = 10, mr = 10
+  const barW = w - ml - mr
+  const okW = (ok / total) * barW
+  let s = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${tr(
+    'แถบสแต็ก: สัดส่วนสถานีที่ยังรายงานเทียบกับสถานีที่เงียบ',
+    'Stacked bar: reporting stations against silent ones'
+  )}">`
+  s += `<rect x="${ml}" y="10" width="${okW}" height="30" fill="var(--band-normal)" opacity="0.85"/>`
+  s += `<rect x="${ml + okW}" y="10" width="${barW - okW}" height="30" fill="var(--dam)" opacity="0.55"/>`
+  s += `<text x="${ml + 10}" y="30" font-family="var(--font-num)" font-size="11" font-weight="700" fill="var(--ink-inv)">${tr('ยังรายงาน', 'reporting')} ${ok.toLocaleString('en-US')}</text>`
+  s += `<text x="${w - mr - 10}" y="30" text-anchor="end" font-family="var(--font-num)" font-size="11" font-weight="700" fill="var(--ink)">${tr('เงียบ', 'silent')} ${stale.toLocaleString('en-US')}</text>`
+  s += `<text x="${ml}" y="58" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${tr('ทั้งหมด', 'total')} ${total.toLocaleString('en-US')}</text>`
+  s += `<text x="${w - mr}" y="58" text-anchor="end" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${tr('คงที่ / ค่าผิดปกติ / ไม่ตรงกัน', 'flatline / outlier / mismatch')} ${['flatline', 'outlier', 'mismatch'].map(k => Number.isFinite(summary[k]) ? summary[k].toLocaleString('en-US') : '—').join(' · ')}</text>`
+  s += `</svg>`
+  return s
 }
 
 // ── Content sections ────────────────────────────────────────────────────────
@@ -759,8 +904,8 @@ function sectionRetention() {
         )}
       </p>
 
-      <h3 data-th="7.1 คลังข้อมูลระยะยาว — บันทึกงานวิจัยถาวร" data-en="7.1 The long-term archive — a permanent research record">
-        ${tr('7.1 คลังข้อมูลระยะยาว — บันทึกงานวิจัยถาวร', '7.1 The long-term archive — a permanent research record')}
+      <h3 data-th="8.1 คลังข้อมูลระยะยาว — บันทึกงานวิจัยถาวร" data-en="8.1 The long-term archive — a permanent research record">
+        ${tr('8.1 คลังข้อมูลระยะยาว — บันทึกงานวิจัยถาวร', '8.1 The long-term archive — a permanent research record')}
       </h3>
       <p data-th="การลบข้อมูลดิบหลัง 90 วันทำให้รายละเอียดระดับต่ำกว่าชั่วโมงและประวัติการทำงานทั้งหมดหายไปเป็นหน้าต่างเลื่อน คำถามที่มีค่าจริงหลังผ่านไปหนึ่งหรือสองปีต้องใช้รายละเอียดนั้น จึงมีกระบวนการแยกต่างหาก (archive-longterm.mjs) คัดลอกสตรีมข้อมูลแบบเพิ่มต่อท้ายทั้งหมด — readings, alerts, events, ingest_runs, ข่าว, คุณภาพน้ำ, การยกระดับ — ออกไปยังฐานข้อมูลแยกบนไดรฟ์ 8 TB ก่อนที่นโยบายลบจะทำลาย ไม่มีการลบใด ๆ ในคลังนี้ ทั้ง AirDash และ FloodDash เขียนลงฐานเดียวกัน ทำให้เชื่อมโยงข้อมูลข้ามระบบได้ (เช่น ฝนกับ PM2.5)" data-en="Deleting raw rows after 90 days means sub-hourly detail and the entire operational history evaporate on a rolling window. The questions that are actually worth asking after a year or two need exactly that detail. A separate process (archive-longterm.mjs) therefore copies every append-only stream — readings, alerts, events, ingest_runs, news, water quality, escalations — out to a standalone database on an 8 TB drive before retention destroys it. Nothing is ever deleted from the archive. Both AirDash and FloodDash write to the same database, which is what makes cross-system joins (rain vs PM2.5) possible at all.">
         ${tr(
@@ -798,6 +943,123 @@ function sectionLimitations() {
     </section>`
 }
 
+// ── §10 What the Record Shows ───────────────────────────────────────────────
+// Everything above describes the system. This section describes the data the
+// system has already collected — drawn from live aggregates, not from prose.
+// Each figure states the population it summarises, because "we have been
+// collecting for a while" is only an argument once the reader can see how
+// much and over what window.
+
+function sectionRecord() {
+  return `
+    <section class="rp-section rp-section-record">
+      <h2 data-th="10. สิ่งที่ข้อมูลที่เก็บมาบอกแล้ว" data-en="10. What the Record Shows">
+        ${tr('10. สิ่งที่ข้อมูลที่เก็บมาบอกแล้ว', '10. What the Record Shows')}
+      </h2>
+      <p data-th="ระบบนี้เก็บข้อมูลต่อเนื่องมาตั้งแต่กลางเดือนกรกฎาคม 2026 — ข้อมูลดิบหลายล้านแถว ตารางสรุปรายชั่วโมง การแจ้งเตือน 45,000 รายการ และสถานีวัด 5,700 แห่ง สามแผนภูมิด้านล่างดึงจากค่า aggregate สดของฐานข้อมูลproduction ไม่ได้มาจากตัวเลขที่เขียนไว้ล่วงหน้า ทุกแผนภูมิบอกหน่วยวัดและขนาดตัวอย่างของตัวเอง" data-en="This system has been recording continuously since mid-July 2026 — millions of raw rows, permanent hourly rollups, roughly 45,000 alerts and 5,700 sensor sites. The three charts below are drawn from live aggregates of the production database, not from numbers written in advance. Each states its population and sample size.">
+        ${tr(
+          'ระบบนี้เก็บข้อมูลต่อเนื่องตั้งแต่กลางกรกฎาคม 2026 — ข้อมูลดิบหลายล้านแถว ตารางสรุปรายชั่วโมงถาวร การแจ้งเตือนราว 45,000 รายการ และสถานีวัด 5,700 แห่ง',
+          'Recording continuously since mid-July 2026 — millions of raw rows, permanent hourly rollups, roughly 45,000 alerts and 5,700 sensor sites.'
+        )}
+      </p>
+
+      <h3 data-th="10.1 รูปแบบรายวัน — PM2.5 ทั้งประเทศตามชั่วโมง" data-en="10.1 The diurnal cycle — national PM2.5 by hour">
+        ${tr('10.1 รูปแบบรายวัน — PM2.5 ทั้งประเทศตามชั่วโมง', '10.1 The diurnal cycle — national PM2.5 by hour')}
+      </h3>
+      <figure class="rp-figure" id="rp-rec-diurnal">
+        <p class="rp-cv-loading">${tr('กำลังโหลด…', 'Loading…')}</p>
+      </figure>
+
+      <h3 data-th="10.2 รายเดือนแยกตามภาค — ฤดูเผา vs ฤดูฝน" data-en="10.2 Monthly by region — burning season against monsoon">
+        ${tr('10.2 รายเดือนแยกตามภาค — ฤดูเผา vs ฤดูฝน', '10.2 Monthly by region — burning season against monsoon')}
+      </h3>
+      <figure class="rp-figure" id="rp-rec-regions">
+        <p class="rp-cv-loading">${tr('กำลังโหลด…', 'Loading…')}</p>
+      </figure>
+
+      <h3 data-th="10.3 บันทึกการแจ้งเตือน — ระบบแจ้งเตือนอะไรไปบ้าง" data-en="10.3 The alert ledger — what the system has actually flagged">
+        ${tr('10.3 บันทึกการแจ้งเตือน — ระบบแจ้งเตือนอะไรไปบ้าง', '10.3 The alert ledger — what the system has actually flagged')}
+      </h3>
+      <figure class="rp-figure" id="rp-rec-alerts">
+        <p class="rp-cv-loading">${tr('กำลังโหลด…', 'Loading…')}</p>
+      </figure>
+
+      <h3 data-th="10.4 เครือข่ายเซ็นเซอร์ — สถานีไหนยังทำงาน" data-en="10.4 The sensor network — which stations are still talking">
+        ${tr('10.4 เครือข่ายเซ็นเซอร์ — สถานีไหนยังทำงาน', '10.4 The sensor network — which stations are still talking')}
+      </h3>
+      <figure class="rp-figure" id="rp-rec-network">
+        <p class="rp-cv-loading">${tr('กำลังโหลด…', 'Loading…')}</p>
+      </figure>
+
+      <p class="rp-note">${tr(
+        'ข้อจำกัด: ค่าเฉลี่ยรวมข้อมูลสถานี Air4Thai กับแบบจำลอง CAMS ในอดีต ทั้งข้อมูลดิบและข้อมูลรวมรายชั่วโมง จำนวนแถวไม่ใช่จำนวนตัวอย่างอิสระ และไม่ใช่ค่าเฉลี่ยถ่วงน้ำหนักประชากร รายเดือนรวมตามเดือนปฏิทิน ไม่ใช่การพิสูจน์สาเหตุของฤดูเผา เครือข่ายรวมทุกแหล่งข้อมูล ไม่ใช่เฉพาะ PM2.5',
+        'Limits: profiles combine Air4Thai station readings and historical CAMS model values, using raw and hourly aggregate rows. Row counts are not independent samples or population weights. Monthly values group calendar months and do not establish burning as a cause. The network includes all sources, not only PM2.5 monitors.'
+      )}</p>
+      <p class="rp-api-inline">
+        <code>GET /api/patterns</code> ·
+        <code>GET /api/alerts/summary</code> ·
+        <code>GET /api/sensors/health?summary=1</code>
+      </p>
+    </section>`
+}
+
+// ── §11 Computer Vision ─────────────────────────────────────────────────────
+// The camera-haze pipeline, shown as a research artefact rather than a
+// product feature. Everything here is deliberately framed as evidence and
+// never as a reading: the API itself returns `calibrated: false` and the
+// count of withheld samples, and the UI is required to lead with both.
+
+const CV_FEATURES = [
+  { key: 'contrast_loss', th: 'ความคมชัดลดลง', en: 'Contrast loss %', why_th: 'ภาพขุ่นลงเท่าไรเมื่อเทียบกับภาพวันอากาศใสของกล้องเดียวกัน — สัญญาณหลัก', why_en: 'How much hazier the frame is than this camera\'s own clear-day reference — the primary signal.' },
+  { key: 'dark_channel', th: 'Dark channel', en: 'Dark channel', why_th: 'ค่าความสว่างต่ำสุดในบล็อกเล็ก ๆ ทั่วภาพ หมอกควันทำให้ค่านี้สูงขึ้น', why_en: 'Minimum brightness in small patches across the frame; aerosol haze raises it.' },
+  { key: 'edge_decay', th: 'ขอบจางลง', en: 'Edge decay', why_th: 'ขอบอาคาร/ต้นไม้ระยะไกลจางลงแค่ไหน — ระยะทางที่มองเห็นได้จริง', why_en: 'How quickly distant edges fade — an optical proxy for visibility range.' },
+  { key: 'saturation', th: 'ความอิ่มตัวของสี', en: 'Saturation', why_th: 'หมอกควันทำให้สีซีดลง ฝนและหมอกก็เช่นกัน จึงต้องใช้ร่วมกับตัวอื่น', why_en: 'Haze desaturates colour — but so do rain and fog, so it never stands alone.' },
+  { key: 'warm_bias', th: 'โน้มอุ่น', en: 'Warm bias', why_th: 'ควันไฟมักอมแดง/เหลืองกว่าหมอกที่อมฟ้า ใช้แยก tint ได้ระดับหนึ่ง', why_en: 'Smoke tends to bias warmer than blue-white fog; used only to hint at tint.' },
+  { key: 'mean_luma', th: 'ความสว่างเฉลี่ย', en: 'Mean luma', why_th: 'ใช้คัดภาพมืดออก — ตอนกลางคืนทุกอย่างดูเหมือนหมอกควัน', why_en: 'Used to withhold low-light frames: at night everything looks like haze.' },
+]
+
+function sectionVision() {
+  const feats = CV_FEATURES.map((f) => `
+    <div class="rp-cv-feat">
+      <code>${f.key}</code>
+      <span class="rp-cv-feat-name" data-th="${f.th}" data-en="${f.en}">${tr(f.th, f.en)}</span>
+      <span class="rp-cv-feat-why" data-th="${f.why_th}" data-en="${f.why_en}">${tr(f.why_th, f.why_en)}</span>
+    </div>`).join('')
+  return `
+    <section class="rp-section rp-section-vision">
+      <h2 data-th="11. คอมพิวเตอร์วิชั่น — กล้องที่มองเห็นหมอกควัน" data-en="11. Computer Vision — Cameras That See Haze">
+        ${tr('11. คอมพิวเตอร์วิชั่น — กล้องที่มองเห็นหมอกควัน', '11. Computer Vision — Cameras That See Haze')}
+      </h2>
+      <p data-th="สถานีวัดมีไม่ถึงร้อยละหนึ่งของพื้นที่ที่คนอยู่ แต่กล้อง CCTV มีอยู่ทั่วประเทศ ระบบนี้หยิบภาพจากกล้องที่เข้าถึงได้ แล้วเทียบกับภาพวันอากาศใสของกล้องเดียวกันในช่วงเวลาใกล้กัน ถ้าความคมชัดลดลงและ dark channel สูงขึ้นพร้อมกัน กล้องนั้นถูกจัดว่า possible-haze ผลรวมระดับจังหวัดคือหลักฐานประกอบคำตัดสิน ไม่ใช่ค่า PM2.5" data-en="Ground stations do not cover a fraction of where people live; cameras do. This pipeline takes frames from every camera it can reach and compares each one against that same camera's own clear-day reference at a similar hour. When contrast falls and the dark channel rises together, the camera is flagged possible-haze; the per-province roll-up corroborates the verdict. It never produces a µg/m³ number.">
+        ${tr(
+          'สถานีวัดมีไม่ถึงร้อยละหนึ่งของพื้นที่ที่คนอยู่ แต่กล้อง CCTV มีทั่วประเทศ — ระบบนี้เทียบภาพแต่ละกล้องกับภาพวันอากาศใสของกล้องเดียวกัน แล้วสรุปเป็นหลักฐานประกอบ ไม่ใช่ค่า PM2.5',
+          'Ground stations do not cover a fraction of where people live; cameras do. Each frame is compared against that camera\'s own clear-day reference and rolled up as corroborating evidence — never a µg/m³ number.'
+        )}
+      </p>
+
+      <h3 data-th="11.1 ตัวชี้วัดที่วัดจากภาพ" data-en="11.1 What is measured from a frame">
+        ${tr('11.1 ตัวชี้วัดที่วัดจากภาพ', '11.1 What is measured from a frame')}
+      </h3>
+      <div class="rp-cv-feats">${feats}</div>
+
+      <div class="rp-cv-live" id="rp-cv-live" aria-live="polite">
+        <p class="rp-cv-loading" data-th="กำลังโหลดหลักฐานจากกล้อง…" data-en="Loading camera evidence…">${tr('กำลังโหลดหลักฐานจากกล้อง…', 'Loading camera evidence…')}</p>
+      </div>
+
+      <p class="rp-note" data-th="ข้อจำกัดของวิธีนี้: หมอก ฝน และเลนส์สกปรก ให้ผลคล้ายหมอกควันได้ ภาพมืด ภาพว่าง ภาพค้าง และมุมกล้องที่เปลี่ยน ถูกตัดออกทั้งหมด และต้องมีภาพอ้างอิงอย่างน้อย 3 ภาพก่อนที่กล้องจะถูกตัดสิน กล้องที่ยังไม่มี baseline จะขึ้นเป็น baseline-needed ไม่ใช่ค่าศูนย์" data-en="Method limits: fog, rain and a dirty lens all look like haze. Low-light, blank, frozen and changed views are withheld outright, and a camera needs at least three comparable daylight samples before it can be judged. A camera without a baseline is reported as baseline-needed — never as a zero.">
+        ${tr(
+          'ข้อจำกัด: หมอก ฝน และเลนส์สกปรก ให้ผลคล้ายหมอกควันได้ ภาพมืด/ว่าง/ค้างถูกตัดออก และต้องมีภาพอ้างอิงอย่างน้อย 3 ภาพ — กล้องที่ยังไม่มี baseline ขึ้นเป็น baseline-needed ไม่ใช่ค่าศูนย์',
+          'Method limits: fog, rain and a dirty lens all look like haze. Low-light, blank, frozen and changed views are withheld, and a camera needs at least three comparable daylight samples — without a baseline it is baseline-needed, never a zero.'
+        )}
+      </p>
+      <p class="rp-api-inline">
+        <code>GET /api/haze-vision</code> ·
+        <code>GET /api/haze-evidence</code> ·
+        <code>GET /api/cctv/frame?camera=&lt;key&gt;</code>
+      </p>
+    </section>`
+}
+
 function sectionResearchDirections() {
   // Concrete, answerable research questions the long-term archive + the
   // satellite AOD layer make possible. Each pairs a question with the
@@ -811,27 +1073,27 @@ function sectionResearchDirections() {
     </li>`
   return `
     <section class="rp-section rp-section-rq">
-      <h2 data-th="10. ทิศทางการวิจัย — สิ่งที่ข้อมูลชุดนี้ตอบได้" data-en="10. Research Directions — What This Data Can Answer">
-        ${tr('9. ทิศทางการวิจัย — สิ่งที่ข้อมูลชุดนี้ตอบได้', '9. Research Directions — What This Data Can Answer')}
+      <h2 data-th="12. ทิศทางการวิจัย — สิ่งที่ข้อมูลชุดนี้ตอบได้" data-en="12. Research Directions — What This Data Can Answer">
+        ${tr('12. ทิศทางการวิจัย — สิ่งที่ข้อมูลชุดนี้ตอบได้', '12. Research Directions — What This Data Can Answer')}
       </h2>
-      <p data-th="เมื่อคลังข้อมูลระยะยาวสะสมไปหลายฤดูกาล คำถามเชิงนโยบายที่ตอบไม่ได้ด้วยข้อมูลชั่วขณะจะเริ่มตอบได้ ต่อไปนี้คือคำถามที่มีข้อมูลพร้อมตอบอยู่แล้ว — แต่ละข้อระบุว่าใช้ตารางหรือชั้นข้อมูลใด" data-en="As the long-term archive accumulates across seasons, policy questions that a snapshot cannot answer become answerable. These are questions the data on hand can already address — each names the table or layer that answers it. This is an open invitation: the full dataset is downloadable (§12).">
+      <p data-th="เมื่อคลังข้อมูลระยะยาวสะสมไปหลายฤดูกาล คำถามเชิงนโยบายที่ตอบไม่ได้ด้วยข้อมูลชั่วขณะจะเริ่มตอบได้ ต่อไปนี้คือคำถามที่มีข้อมูลพร้อมตอบอยู่แล้ว — แต่ละข้อระบุว่าใช้ตารางหรือชั้นข้อมูลใด" data-en="As the long-term archive accumulates across seasons, policy questions that a snapshot cannot answer become answerable. These are questions the data on hand can already address — each names the table or layer that answers it. This is an open invitation: the full dataset is downloadable (§14), and third-party historical sets are catalogued in the research notes.">
         ${tr(
-          'เมื่อคลังข้อมูลสะสมหลายฤดูกาล คำถามเชิงนโยบายจะเริ่มตอบได้ — ดาวน์โหลดชุดข้อมูลเต็มได้ในข้อ 12',
-          'As the archive accumulates across seasons, policy questions become answerable — the full dataset is downloadable (§12).'
+          'เมื่อคลังข้อมูลระยะยาวสะสมไปหลายฤดูกาล คำถามเชิงนโยบายที่ตอบไม่ได้ด้วยข้อมูลชั่วขณะจะเริ่มตอบได้ ต่อไปนี้คือคำถามที่มีข้อมูลพร้อมตอบอยู่แล้ว — แต่ละข้อระบุว่าใช้ตารางหรือชั้นข้อมูลใด เป็นคำเชิญเปิด: ชุดข้อมูลเต็มดาวน์โหลดได้ที่ §14 และชุดข้อมูลประวัติภายนอกมีบันทึกไว้ในเอกสารวิจัย',
+          'As the archive accumulates across seasons, policy questions become answerable — the full dataset is downloadable (§14), and third-party historical sets are catalogued in the research notes.'
         )}
       </p>
       <ul class="rp-rq-list">
         ${q(
           'ฝนล้างฝุ่นได้จริงเท่าที่โมเดลบอกไหม?',
           'Does rain actually clear the air by as much as the model predicts?',
-          'เชื่อมค่า PM2.5 รายชั่วโมงกับปริมาณฝนรายชั่วโมงในคลังข้อมูลเดียวกัน (ทั้งสองระบบอยู่ฐานเดียว) แล้วเทียบการลดลงที่วัดได้จริงกับสัมประสิทธิ์ wet-deposition ในข้อ 4',
-          'Join hourly PM2.5 to hourly rainfall in the shared archive (both systems, one database) and compare the measured drop against the wet-deposition coefficients in §4.',
+          'เชื่อมค่า PM2.5 รายชั่วโมงกับปริมาณฝนรายชั่วโมงในคลังข้อมูลเดียวกัน (ทั้งสองระบบอยู่ฐานเดียว) แล้วเทียบการลดลงที่วัดได้จริงกับสัมประสิทธิ์ wet-deposition ในข้อ 6',
+          'Join hourly PM2.5 to hourly rainfall in the shared archive (both systems, one database) and compare the measured drop against the wet-deposition coefficients in §6.',
         )}
         ${q(
           'ฤดูเผาปีนี้แย่กว่าหรือดีกว่าปีที่แล้ว?',
           'Is this burning season worse or better than last year?',
-          'เทียบค่าเฉลี่ยรายชั่วโมงรายจังหวัดในคลังข้อมูลข้ามปี พร้อมบริบท ENSO (ข้อ 6) เพื่อแยกผลของสภาพอากาศออกจากผลของการเผา',
-          'Compare per-province hourly means across years in the archive, with ENSO context (§6) to separate the weather signal from the burning signal.',
+          'เทียบค่าเฉลี่ยรายชั่วโมงรายจังหวัดในคลังข้อมูลข้ามปี พร้อมบริบท ENSO (ข้อ 7) เพื่อแยกผลของสภาพอากาศออกจากผลของการเผา',
+          'Compare per-province hourly means across years in the archive, with ENSO context (§7) to separate the weather signal from the burning signal.',
         )}
         ${q(
           'หมอกควันข้ามแดนมาถึงก่อนสถานีภาคพื้นดินจับได้กี่ชั่วโมง?',
@@ -850,6 +1112,12 @@ function sectionResearchDirections() {
           'Do risk escalations cluster at night, when nobody is watching?',
           'ตาราง escalations (FloodDash) และ alerts ติดธงเหตุการณ์ช่วง 22:00–06:00 — วิเคราะห์ว่าช่วงเวลาใดต้องการการแจ้งเตือนอัตโนมัติมากที่สุด',
           'The escalations (FloodDash) and alerts tables flag events in the 22:00–06:00 window — analyse which hours most need automated push, precisely because a human operator is least likely to catch them.',
+        )}
+        ${q(
+          'การเผาแบบไหนผลัก PM2.5 ขึ้น — ป่าสงวน ริมถนน หรือเกษตร?',
+          'Which kind of fire actually pushes PM2.5 — forest reserve, roadside, or agriculture?',
+          'ชุดข้อมูลภายนอกที่สำรองไว้ (บันทึกงานวิจัย tableau-datasets) มีจุดร้อนรายวันแยกตามการใช้ที่ดิน — ป่าสงวน / ริมทางหลวง / เกษตร — ของ 5 จังหวัดชายแดนแม่น้ำโขง ปี 2020–2024 ควบคู่กับค่า PM2.5 รายวัน',
+          'The backed-up external sets (research note tableau-datasets) carry daily hotspots split by land use — forest reserve / roadside / agriculture — for five Mekong-border provinces 2020–2024, alongside daily PM2.5.',
         )}
       </ul>
     </section>`
@@ -887,11 +1155,15 @@ function sectionCitations() {
     'JAXA GSMaP / Himawari: earth.jaxa.jp · eorc.jaxa.jp/ptree',
     'NASA GIBS: gibs.earthdata.nasa.gov',
     'data.go.th — Open Government Data of Thailand (146 air-quality + 19 noise-pollution datasets indexed)',
+    // Computer-vision evidence (Section 10) and the third-party historical
+    // sets catalogued in knowledge/tableau-datasets.md (2026-10-14).
+    'AirDash camera haze pipeline — per-camera clear-day baseline, contrast loss + dark channel (server/vision/hazeVision.js, hazeEvidence.js); GET /api/haze-vision, GET /api/haze-evidence',
+    'Third-party Thai PM2.5 workbooks from Tableau Public, 2018–2026 — district-level 2024–26, station-level 2018–21, land-use-classified hotspots 2020–24; provenance and column dictionary in knowledge/tableau-datasets.md',
   ]
   const list = cites.map((c) => `<li>${c}</li>`).join('')
   return `
     <section class="rp-section">
-      <h2 data-th="11. อ้างอิงและเอกสารที่เกี่ยวข้อง" data-en="11. Citations & References">${tr('11. อ้างอิงและเอกสารที่เกี่ยวข้อง', '11. Citations & References')}</h2>
+      <h2 data-th="13. อ้างอิงและเอกสารที่เกี่ยวข้อง" data-en="13. Citations & References">${tr('13. อ้างอิงและเอกสารที่เกี่ยวข้อง', '13. Citations & References')}</h2>
       <ul class="rp-citations">${list}</ul>
     </section>`
 }
@@ -899,11 +1171,11 @@ function sectionCitations() {
 function sectionDownload() {
   return `
     <section class="rp-section rp-download-section">
-      <h2 data-th="12. ดาวน์โหลดชุดข้อมูล" data-en="12. Download the Dataset">${tr('12. ดาวน์โหลดชุดข้อมูล', '12. Download the Dataset')}</h2>
-      <p class="rp-lead" data-th="ข้อมูลทุกค่าที่ AirDash เก็บถาวร (hourly aggregates) พร้อมข้อมูล metadata ของสถานี สามารถดาวน์โหลดเป็น CSV เพื่อวิเคราะห์ต่อได้ทันที" data-en="Every permanent hourly aggregate AirDash has stored, with full station metadata, downloadable as CSV for offline analysis.">
+      <h2 data-th="14. ดาวน์โหลดชุดข้อมูล" data-en="14. Download the Dataset">${tr('14. ดาวน์โหลดชุดข้อมูล', '14. Download the Dataset')}</h2>
+      <p class="rp-lead" data-th="ข้อมูลทุกค่าที่ AirDash เก็บถาวร (hourly aggregates) พร้อมข้อมูล metadata ของสถานี สามารถดาวน์โหลดเป็น CSV เพื่อวิเคราะห์ต่อได้ทันที สำหรับข้อมูลย้อนหลังก่อนที่ AirDash จะเริ่มเก็บ ดูบันทึกงานวิจัย knowledge/tableau-datasets.md" data-en="Every permanent hourly aggregate AirDash has stored, with full station metadata, downloadable as CSV for offline analysis. For pre-AirDash history, see the research note knowledge/tableau-datasets.md.">
         ${tr(
-          'ข้อมูลทุกค่าที่ AirDash เก็บถาวร พร้อม metadata ของสถานี ดาวน์โหลดเป็น CSV ได้ทันที',
-          'Every permanent hourly aggregate AirDash has stored, with full station metadata, downloadable as CSV.'
+          'ข้อมูลทุกค่าที่ AirDash เก็บถาวร พร้อม metadata ของสถานี ดาวน์โหลดเป็น CSV ได้ทันที — ประวัติก่อนหน้าดูได้ในบันทึกงานวิจัย knowledge/tableau-datasets.md',
+          'Every permanent hourly aggregate AirDash has stored, with full station metadata, downloadable as CSV — for earlier history see the research note knowledge/tableau-datasets.md.'
         )}
       </p>
       <div class="rp-download-actions">
@@ -967,6 +1239,318 @@ function sectionFooter() {
 
 // ── Render ──────────────────────────────────────────────────────────────────
 
+// ── Live camera evidence (§11) ─────────────────────────────────────────────
+// Renders /api/haze-vision + /api/haze-evidence into the section's live box.
+// The rule this block exists to enforce: a withheld sample must be visible as
+// a withheld sample. `calibrated` is false and stays false until the pipeline
+// earns it, so the badge, the withheld count and the per-reason quality chips
+// are rendered from the API's own numbers, never from an inference.
+
+const cvNum = (n, d = 0) => (Number.isFinite(n) ? Number(n).toFixed(d) : '—')
+const cvPct = (n) => (Number.isFinite(n) ? `${Math.round(n)}%` : '—')
+
+// /api/haze-evidence identifies provinces by numeric code only, so names come
+// from the shared gazetteer rather than being guessed from the code.
+let cvProvinceNames = null
+async function cvProvinceName(code) {
+  if (!cvProvinceNames) {
+    try {
+      const list = await getJson('/geo/provinces.json', 3600_000)
+      cvProvinceNames = new Map(list.map((p) => [String(p.provinceCode), p]))
+    } catch { cvProvinceNames = new Map() }
+  }
+  const p = cvProvinceNames.get(String(code))
+  return p ? tr(p.provinceNameTh, p.provinceNameEn) : String(code ?? '—')
+}
+
+function cvScatter(rows) {
+  // haze_index (x, 0–100) against the nearest ground station's PM2.5 (y).
+  // A comparison plot, not a calibration: the pipeline never fits a curve
+  // here, and the axis is labelled with what it actually is.
+  const pts = rows.filter((r) => Number.isFinite(r.haze_index) && Number.isFinite(r.pm25))
+  if (pts.length < 3) return ''
+  const w = 720, h = 280, ml = 48, mr = 14, mt = 14, mb = 38
+  const yMax = Math.max(25, Math.ceil(Math.max(...pts.map((p) => p.pm25)) / 10) * 10)
+  const X = (v) => ml + (Math.min(v, 100) / 100) * (w - ml - mr)
+  const Y = (v) => h - mb - (Math.min(v, yMax) / yMax) * (h - mt - mb)
+  let s = `<svg viewBox="0 0 ${w} ${h}" class="research-svg cv-scatter" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${tr(
+    'แผนภูมิกระเจิง: ดัชนีความหมอกจากกล้องเทียบกับ PM2.5 จากสถานีภาคพื้นดิน',
+    'Scatter plot: camera haze index against ground-station PM2.5'
+  )}">`
+  for (let v = 0; v <= 100; v += 25) {
+    s += `<line x1="${X(v)}" y1="${mt}" x2="${X(v)}" y2="${h - mb}" stroke="var(--rule)" stroke-width="1"/>`
+    s += `<text x="${X(v)}" y="${h - mb + 16}" text-anchor="middle" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${v}</text>`
+  }
+  for (let v = 0; v <= yMax; v += Math.max(5, Math.round(yMax / 5 / 5) * 5)) {
+    s += `<line x1="${ml}" y1="${Y(v)}" x2="${w - mr}" y2="${Y(v)}" stroke="var(--rule)" stroke-width="1"/>`
+    s += `<text x="${ml - 8}" y="${Y(v) + 3}" text-anchor="end" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${v}</text>`
+  }
+  for (const p of pts) {
+    s += `<circle cx="${X(p.haze_index)}" cy="${Y(p.pm25)}" r="3.2" fill="var(--th-navy)" opacity="0.45"/>`
+  }
+  s += `<text x="${(ml + w - mr) / 2}" y="${h - 6}" text-anchor="middle" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)">${tr('haze index (กล้อง 0–100)', 'haze index (camera, 0–100)')}</text>`
+  s += `<text x="14" y="${(mt + h - mb) / 2}" text-anchor="middle" font-family="var(--font-num)" font-size="10" fill="var(--ink-mid)" transform="rotate(-90 14 ${(mt + h - mb) / 2})">PM2.5 µg/m³</text>`
+  s += `</svg>`
+  return s
+}
+
+// ── Live record figures (§10) ───────────────────────────────────────────────
+// Pulls three independent aggregates — diurnal + regional means, the alert
+// ledger, the network health roll-up — and draws them into the four figures
+// of §10. Each is fetched on its own so one failing endpoint leaves the other
+// charts intact rather than blanking the section.
+
+const recFailed = (id, label) => {
+  const el = document.getElementById(id)
+  if (el) el.innerHTML = `<p class="rp-cv-empty">${tr(
+    `ดึงข้อมูล ${label} ไม่ได้ในขณะนี้`,
+    `Could not fetch ${label} right now`
+  )}</p>`
+}
+
+let recordGeneration = 0
+async function paintRecordLive() {
+  const generation = ++recordGeneration
+  // 10.1 + 10.2 — /api/patterns (diurnal + regional monthly)
+  const patBox = document.getElementById('rp-rec-diurnal')
+  const regBox = document.getElementById('rp-rec-regions')
+  if (patBox && regBox) {
+    try {
+      const p = await getJson('/api/patterns', 300_000)
+      if (generation !== recordGeneration || document.getElementById('rp-rec-diurnal') !== patBox) return // tab re-painted
+      const diurnal = svgDiurnal(p?.hourly, p?.peak_hours)
+      const nObs = Number(p?.n_observations)
+      patBox.innerHTML = diurnal ? `
+        ${diurnal}
+        <figcaption class="rp-fig-cap">${tr(
+          `ค่าเฉลี่ยตามชั่วโมงจาก ${Number.isFinite(nObs) ? nObs.toLocaleString('en-US') : '—'} แถวข้อมูล รวมสถานี Air4Thai และแบบจำลอง CAMS ในอดีต ไม่ใช่การตรวจวัดทั้งหมด เส้นประ 37.5 µg/m³ เป็นค่าอ้างอิง 24 ชั่วโมงของไทย ไม่ใช่เกณฑ์รายชั่วโมง แกนเริ่มที่ศูนย์`,
+          `Hourly profile from ${Number.isFinite(nObs) ? nObs.toLocaleString('en-US') : '—'} input rows combining Air4Thai monitors and historical CAMS model values. These are not all measured observations. Dashed line: Thailand’s 37.5 µg/m³ 24-hour reference, not an hourly compliance test. Zero-based axis.`
+        )}</figcaption>`
+        : `<p class="rp-cv-empty">${tr('ยังไม่มีข้อมูลเพียงพอสำหรับวงจรรายวัน', 'Not enough data for the diurnal cycle yet')}</p>`
+      regBox.innerHTML = svgRegionMonths(p?.regions) || `<p class="rp-cv-empty">${tr('ยังไม่มีข้อมูลรายเดือนรายภาค', 'No regional monthly data yet')}</p>`
+    } catch {
+      if (generation !== recordGeneration) return
+      recFailed('rp-rec-diurnal', 'patterns')
+      if (generation !== recordGeneration) return
+      recFailed('rp-rec-regions', 'patterns')
+    }
+  }
+
+  // 10.3 — /api/alerts/summary
+  const alertBox = document.getElementById('rp-rec-alerts')
+  if (alertBox) {
+    try {
+      const a = await getJson('/api/alerts/summary', 300_000)
+      if (generation !== recordGeneration || document.getElementById('rp-rec-alerts') !== alertBox) return
+      const rain = (a?.by_rule ?? []).find((r) => r.rule === 'washout_rain')
+      const total = a?.total
+      const rainN = Number.isFinite(rain?.n) ? rain.n : 0
+      const rainPct = Number.isFinite(total) && total > 0 ? (100 * rainN / total).toFixed(1) + '%' : '—'
+      alertBox.innerHTML = `
+        ${svgAlertLedger(a?.by_rule)}
+        <figcaption class="rp-fig-cap" data-th="จำนวนการแจ้งเตือนทั้งหมด ${Number.isFinite(total) ? total.toLocaleString('en-US') : '—'} รายการในฐานข้อมูลปัจจุบัน กฎ washout_rain ซึ่งคิดเป็น ${rainN.toLocaleString('en-US')} รายการ (${rainPct}) ถูกตัดออกจากแท่ง เพราะถ้ารวมแท่งเดียวจะแบนแท่งอื่นจนอ่านไม่ออก — แสดงเป็นตัวเลขแทน แกนเป็นจำนวนจริง ไม่ได้ใช้ลอการิทึม" data-en="Alerts retained in the current database: ${Number.isFinite(total) ? total.toLocaleString('en-US') : '—'}. The washout_rain rule accounts for ${rainN.toLocaleString('en-US')} of them (${rainPct}) and is deliberately left off the bars — including it would flatten every other rule to invisibility — so it is reported as a number instead. The axis is a true count, not logarithmic.">
+          ${tr(
+            `การแจ้งเตือนทั้งหมด ${Number.isFinite(total) ? total.toLocaleString('en-US') : '—'} รายการ — washout_rain (${rainN.toLocaleString('en-US')} รายการ, ${rainPct}) ถูกตัดออกจากแท่งเพื่อให้แท่งอื่นอ่านออก แกนเป็นจำนวนจริง ไม่ใช่ลอการิทึม`,
+            `${Number.isFinite(total) ? total.toLocaleString('en-US') : '—'} alerts in total — washout_rain (${rainN.toLocaleString('en-US')}, ${rainPct}) is excluded so the rest stay legible; the axis is a true count`
+          )}
+        </figcaption>`
+    } catch {
+      if (generation !== recordGeneration) return
+      recFailed('rp-rec-alerts', 'the alert ledger')
+    }
+  }
+
+  // 10.4 — /api/sensors/health?summary=1
+  const netBox = document.getElementById('rp-rec-network')
+  if (netBox) {
+    try {
+      const s = await getJson('/api/sensors/health?summary=1', 300_000)
+      if (generation !== recordGeneration || document.getElementById('rp-rec-network') !== netBox) return
+      const qs = s?.quality_score
+      const stale = s?.summary?.stale
+      const total = s?.summary?.total_stations
+      netBox.innerHTML = `
+        ${svgNetwork(s?.summary)}
+        <figcaption class="rp-fig-cap" data-th="เครือข่ายที่รายงาน ${Number.isFinite(total) ? total.toLocaleString('en-US') : '—'} สถานี จากทุก source ที่ระบบดึงเข้ามา ไม่ใช่เฉพาะสถานี PM2.5 ของ คพ. สถานี ${Number.isFinite(stale) ? stale.toLocaleString('en-US') : '—'} แห่งเงียบเกินกว่าช่วงเฝ้าระวัง คุณภาพเซ็นเซอร์โดยรวม ${Number.isFinite(qs) ? qs : '—'}/100 การนับนี้เป็นภาพ ณ ขณะหนึ่ง ไม่ใช่ค่าเฉลี่ยรายเดือน" data-en="Network reporting: ${Number.isFinite(total) ? total.toLocaleString('en-US') : '—'} stations across every source the system ingests, not only PCD PM2.5 monitors. ${Number.isFinite(stale) ? stale.toLocaleString('en-US') : '—'} are silent beyond the staleness window; overall sensor health ${Number.isFinite(qs) ? qs : '—'}/100. This is a point-in-time count, not a monthly mean.">
+          ${tr(
+            `เครือข่าย ${Number.isFinite(total) ? total.toLocaleString('en-US') : '—'} สถานีจากทุก source — ${Number.isFinite(stale) ? stale.toLocaleString('en-US') : '—'} แห่งเงียบ คุณภาพโดยรวม ${Number.isFinite(qs) ? qs : '—'}/100 นับ ณ ขณะนี้ ไม่ใช่ค่าเฉลี่ย`,
+            `${Number.isFinite(total) ? total.toLocaleString('en-US') : '—'} stations across every source — ${Number.isFinite(stale) ? stale.toLocaleString('en-US') : '—'} silent, overall health ${Number.isFinite(qs) ? qs : '—'}/100; a point-in-time count`
+          )}
+        </figcaption>`
+    } catch {
+      if (generation !== recordGeneration) return
+      recFailed('rp-rec-network', 'network health')
+    }
+  }
+}
+
+async function paintVisionLive() {
+  const box = document.getElementById('rp-cv-live')
+  if (!box) return
+  let vis = null, ev = null
+  try { vis = await getJson('/api/haze-vision?hours=48&limit=500', 60_000) } catch { /* optional */ }
+  try { ev = await getJson('/api/haze-evidence', 60_000) } catch { /* optional */ }
+  if (!document.getElementById('rp-cv-live')) return // tab was re-painted
+  if (!vis && !ev) {
+    box.innerHTML = `<p class="rp-cv-empty">${tr(
+      'ดึงข้อมูลกล้องไม่ได้ในขณะนี้ — ลองใหม่ภายหลัง หรืออ่าน /api/haze-vision โดยตรง',
+      'Camera evidence could not be fetched right now — try again later, or read /api/haze-vision directly.'
+    )}</p>`
+    return
+  }
+
+  const rows = Array.isArray(vis?.samples_rows) ? vis.samples_rows : []
+  const scored = rows.filter((r) => Number.isFinite(r.haze_index))
+  const cycle = vis?.latest_cycle ?? null
+  const quality = cycle?.quality ?? {}
+  const withheldWhy = Object.entries(quality)
+    .map(([k, n]) => `<span class="rp-chip rp-chip--warn">${k} · ${n}</span>`)
+    .join('')
+
+  const status = `
+    <div class="rp-cv-status">
+      <span class="rp-chip ${vis?.calibrated ? 'rp-chip--ok' : 'rp-chip--muted'}">${vis?.calibrated ? tr('calibrated', 'calibrated') : tr('ยังไม่ calibrated', 'not calibrated')}</span>
+      <span class="rp-chip">${vis?.method ?? '—'} · ${vis?.score_basis ?? '—'}</span>
+      <span class="rp-chip">${tr('ตัดสินแล้ว', 'scored')} ${vis?.scored ?? 0} / ${vis?.samples ?? 0}</span>
+      <span class="rp-chip">${tr('ครอบคลุมกล้อง', 'camera coverage')} ${cvPct(cycle?.coverage_pct)}</span>
+      ${withheldWhy}
+    </div>`
+
+  const headline = `
+    <p class="rp-cv-headline">${
+      vis?.calibrated
+        ? tr('ระบบนี้ผ่านการปรับเทียบแล้ว', 'This pipeline is calibrated.')
+        : tr(
+            'ยังไม่ calibrated — ตัวเลขด้านล่างเป็นสัญญาณเชิงเปรียบเทียบ ไม่ใช่การวัด ห้ามนำไปคำนวณค่าฝุ่น',
+            'Not calibrated — the numbers below are comparative signals, not measurements. Do not compute PM2.5 from them.'
+          )
+    }</p>
+    <p class="rp-cv-note" data-th="${vis?.note_th ?? ''}" data-en="${vis?.note_en ?? ''}">${tr(vis?.note_th ?? '', vis?.note_en ?? '')}</p>`
+
+  const scatter = cvScatter(scored)
+  const scatterBlock = scatter ? `
+    <figure class="rp-figure">
+      ${scatter}
+      <figcaption data-th="จุด = 1 เฟรมกล้องที่ถูกตัดสินในช่วง 48 ชม. ที่ผ่านมา เทียบกับสถานีภาคพื้นดินที่ใกล้ที่สุด ไม่มีเส้นแนวโน้ม เพราะยังไม่มีเหตุผลทางสถิติที่จะฟิต — ความสัมพันธ์ที่เห็นได้ คือสิ่งที่ต้องทดสอบ ไม่ใช่ข้อสรุป" data-en="One point = one judged camera frame in the last 48 h, plotted against its nearest ground station. No trend line is fitted, because there is no statistical basis for one yet — any relationship here is a hypothesis to test, not a result.">
+        ${tr(
+          'จุด = 1 เฟรมกล้องที่ถูกตัดสินใน 48 ชม. ล่าสุด เทียบกับสถานีภาคพื้นดินที่ใกล้ที่สุด — ไม่มีเส้นแนวโน้ม เพราะยังไม่มีเหตุผลทางสถิติที่จะฟิต',
+          'One point = one judged camera frame in the last 48 h, against its nearest ground station — no trend line is fitted, because there is no basis for one yet.'
+        )}
+      </figcaption>
+    </figure>` : `
+    <p class="rp-cv-empty">${tr(
+      'ยังไม่มีเฟรมที่ถูกตัดสินในช่วง 48 ชม. ที่ผ่านมา (ส่วนใหญ่เป็นภาพมืด/ว่าง/ค้าง) — กล้องจะถูกตัดสินเฉพาะช่วงกลางวันเท่านั้น',
+      'No judged frames in the last 48 h (most were low-light, blank or frozen) — cameras are only scored in daylight.'
+    )}</p>`
+
+  const provs = (ev?.provinces ?? []).slice(0, 8).filter((p) => (p.cams_judged ?? 0) > 0)
+  const provCells = await Promise.all(provs.map(async (p) => `
+    <tr>
+      <td>${escapeHtml(await cvProvinceName(p.code))}</td>
+      <td>${cvNum(p.cams_judged)}</td>
+      <td>${cvNum(p.cams_hazy)}</td>
+      <td>${escapeHtml(p.level ?? '—')}</td>
+      <td>${cvPct(p.humidity_pct)}</td>
+      <td>${p.fog_likely ? tr('น่าจะเป็นหมอก', 'fog likelier') : '—'}</td>
+      <td>${p.metar ? `${cvNum(p.metar.vis_km, 1)} km${p.metar.cause ? ` · ${escapeHtml(p.metar.cause)}` : ''}` : '—'}</td>
+    </tr>`))
+  const provRows = provCells.join('')
+  const provBlock = provRows ? `
+    <h4 class="rp-cv-sub">${tr('หลักฐานระดับจังหวัด (จาก /api/haze-evidence)', 'Province-level evidence (from /api/haze-evidence)')}</h4>
+    <table class="rp-dict-table rp-cv-table">
+      <thead><tr>
+        <th data-th="จังหวัด" data-en="Province">${tr('จังหวัด', 'Province')}</th>
+        <th>${tr('กล้องที่ตัดสิน', 'Judged')}</th>
+        <th>${tr('ดูเหมือนหมอก', 'Hazy')}</th>
+        <th>${tr('ระดับ', 'Level')}</th>
+        <th>${tr('ความชื้น', 'RH')}</th>
+        <th>${tr('หมอก?', 'Fog?')}</th>
+        <th>${tr('METAR', 'METAR')}</th>
+      </tr></thead>
+      <tbody>${provRows}</tbody>
+    </table>` : `
+    <p class="rp-cv-empty">${tr(
+      'ยังไม่มีหลักฐานระดับจังหวัดในช่วง 2 ชม. ที่ผ่านมา — ต้องมีกล้องที่ถูกตัดสินอย่างน้อย 2 ตัวต่อจังหวัด',
+      'No province-level evidence in the last 2 h — at least two judged cameras per province are required.'
+    )}</p>`
+
+  const frames = scored.filter((r) => r.has_preview).slice(0, 3)
+  const frameBlock = frames.map((r) => `
+    <figure class="rp-cv-frame">
+      <img src="/api/cctv/frame?camera=${encodeURIComponent(r.camera_key)}" alt="${tr('ภาพตัวอย่างจากกล้อง', 'Sample camera frame')}"
+           loading="lazy" width="320" height="180"
+           data-sampled="${escapeHtml(r.obs_time ?? '')}">
+      <figcaption>
+        <code>${escapeHtml(r.camera_key)}</code>
+        <span>haze ${cvNum(r.haze_index)} · Δ${cvNum(r.contrast_loss)}% · PM2.5 ${cvNum(r.pm25, 1)}</span>
+      </figcaption>
+    </figure>`).join('')
+
+  box.innerHTML = `
+    ${status}
+    ${headline}
+    ${scatterBlock}
+    ${provBlock}
+    ${frameBlock ? `<h4 class="rp-cv-sub">${tr('เฟรมตัวอย่างที่ใช้ตัดสิน', 'Sample frames that were judged')}</h4><div class="rp-cv-frames">${frameBlock}</div>` : ''}
+  `
+}
+
+// ── Paper contents (sticky section index) ───────────────────────────────────
+// The paper is ~1,100 lines of flat sections; without an index nobody finds
+// §9 again. Built from the rendered h2s so it can never drift from the body.
+
+let tocSeq = 0
+let tocObserver = null
+let tocResize = null
+
+function buildToc(container) {
+  if (tocObserver) { tocObserver.disconnect(); tocObserver = null }
+  if (tocResize) { tocResize.disconnect(); tocResize = null }
+  const heads = [...container.querySelectorAll('.rp-section > h2')]
+  if (heads.length < 5) return
+  const nav = document.createElement('nav')
+  nav.className = 'rp-toc'
+  nav.setAttribute('aria-label', tr('สารบัญเอกสารวิจัย', 'Research paper contents'))
+  const list = document.createElement('ol')
+  list.className = 'rp-toc-list'
+  const links = []
+  for (const h of heads) {
+    const sec = h.closest('.rp-section')
+    if (!sec.id) sec.id = `rp-sec-${++tocSeq}`
+    const li = document.createElement('li')
+    const a = document.createElement('a')
+    a.href = `#${sec.id}`
+    a.textContent = h.textContent.trim()
+    a.addEventListener('click', (e) => {
+      e.preventDefault()
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+      sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+      history.replaceState(null, '', `#${sec.id}`)
+    })
+    li.appendChild(a); list.appendChild(li)
+    links.push({ a, sec })
+  }
+  nav.appendChild(list)
+  const hero = container.querySelector('.rp-hero')
+  if (hero) hero.insertAdjacentElement('afterend', nav)
+  else container.insertBefore(nav, container.firstChild)
+
+  // The sticky index must not cover the first line of the section it jumps
+  // to, so the measured height drives a scroll margin rather than a guess.
+  const setOffset = () => container.style.setProperty('--rp-toc-h', `${nav.offsetHeight}px`)
+  setOffset()
+  if ('ResizeObserver' in window) { tocResize = new ResizeObserver(setOffset); tocResize.observe(nav) }
+
+  if (!('IntersectionObserver' in window)) return
+  tocObserver = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      const hit = links.find((l) => l.sec === e.target)
+      if (hit) hit.a.classList.toggle('active', e.isIntersecting)
+    }
+  }, { root: container, rootMargin: '-12% 0px -72% 0px', threshold: 0 })
+  for (const { sec } of links) tocObserver.observe(sec)
+}
+
 let catalogCache = null
 let rendered = false
 
@@ -996,6 +1580,8 @@ function paint() {
     sectionEnso(),
     sectionRetention(),
     sectionLimitations(),
+    sectionRecord(),
+    sectionVision(),
     sectionResearchDirections(),
     sectionCitations(),
     sectionDownload(),
@@ -1007,6 +1593,10 @@ function paint() {
   for (const node of container.querySelectorAll('[data-th][data-en]')) {
     node.textContent = tr(node.dataset.th, node.dataset.en)
   }
+
+  buildToc(container)
+  paintRecordLive()
+  paintVisionLive()
 
   // Wire download button
   const dlBtn = document.getElementById('rp-download-full')
