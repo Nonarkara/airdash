@@ -1,3 +1,5 @@
+import { allProvinces } from './provinces.js'
+import { pollutionOutlook } from './pollutionOutlook.js'
 import { COUNTRIES, REGIONAL_RESOURCES, readSingapore, thailandRows, observationStatus } from './region.js'
 import { burnAreaPayload } from './burnArea.js'
 // JSON + SSE API surface consumed by the dashboard frontend.
@@ -261,6 +263,7 @@ function pivotLatest(db, source, metrics, { maxAgeH = null } = {}) {
       byStation.set(r.station_key, st)
     }
     st[r.metric] = r.value
+    if (r.metric === 'pm25') st.pm25_time = r.obs_time
     if (r.obs_time > st.obs_time) st.obs_time = r.obs_time
   }
   return [...byStation.values()]
@@ -1343,6 +1346,8 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       const smoke = computeSmoke(db)
       json(res, 200, {
         generated_at: new Date().toISOString(), countries: COUNTRIES, resources: REGIONAL_RESOURCES,
+        pollution_outlook: pollutionOutlook(db, forecastBias(db)),
+        wind: (smoke.provinces ?? []).map(p => { const location = allProvinces().find(l => l.province_code === p.code); return { ...p, lat: location?.lat, lng: location?.lng } }),
         observations, singapore: { available: sg.available, fetched_at: sg.fetched_at, error: sg.error },
         fires: { available: smoke.available, checked_at: smoke.fire_source_checked_at ?? null,
           cells: smoke.available ? smoke.fire_cells ?? [] : [], bounds: [4, 92, 29, 110], window_hours: 48, grid_degrees: 0.25 },

@@ -1,24 +1,24 @@
-import { windTowards } from './panels/hazePlan.js?v=2.4.89'
-import { escapeHtml } from './fmt.js?v=2.4.89'
-import { moveMap } from './mapView.js?v=2.4.89'
-import { readPreference, writePreference } from './preferences.js?v=2.4.89'
+import { windTowards } from './panels/hazePlan.js?v=2.4.90'
+import { escapeHtml } from './fmt.js?v=2.4.90'
+import { moveMap } from './mapView.js?v=2.4.90'
+import { readPreference, writePreference } from './preferences.js?v=2.4.90'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.89'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.89'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.89'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.89'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.89'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.89'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.89'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.89'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.89'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.89'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.89'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.89'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.89'
-import { openWindow } from './witness.js?v=2.4.89'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.89'
+import { on, store } from './state.js?v=2.4.90'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.90'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.90'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.90'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.90'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.90'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.90'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.90'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.90'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.90'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.90'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.90'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.90'
+import { openWindow } from './witness.js?v=2.4.90'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.90'
 
 const windToggle = {id:'hazeWind',th:'ลมพยากรณ์ + จุดตรวจไฟเหนือลม',en:'Forecast wind + upwind fire counts',on:false,
   note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where wind blows. Daily dominant forecast, not current wind.',
@@ -414,6 +414,7 @@ function addLegend() {
     body.innerHTML = `
       <div class="eyebrow">${tr('PM2.5 (AQI ไทย 2566)', 'PM2.5 (THAI AQI 2023)')}</div>
       ${[5, 4, 3, 2, 1].map(lv).join('')}
+      <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#2c97ae,#68b9a0,#cbd75c,#f0ad36,#cf4b35,#813e83,#472656)"></span>${tr('พื้นผิวประมาณ PM2.5: 0 · 15 · 25 · 37.5 · 75 · 150 · 300 µg/m³ ไม่ใช่ AQI ช่องว่าง = ข้อมูลไม่พอ','Estimated PM surface: 0 · 15 · 25 · 37.5 · 75 · 150 · 300 µg/m³, not AQI. Blank = unsupported.')}</div>
       <div class="lrow" style="margin-top:4px"><span class="lsw round" style="background:#0039A6;opacity:.5"></span>${tr('ฝนสะสม 24 ชม. (ช่วยล้างฝุ่น)', 'rain 24h (washout)')}</div>
       <div class="lrow"><span class="lsw round" style="background:#1565C0;opacity:.5"></span>${tr('GPM IMERG ฝนดาวเทียม', 'GPM IMERG satellite rain')}</div>
       <div class="lrow"><span class="lsw" style="background:#5C6BC0;opacity:.6"></span>${tr('Himawari-9 IR เมฆ', 'Himawari-9 IR clouds')}</div>

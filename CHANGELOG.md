@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.90] — 2026-10-15 — Show pollution as a bounded field and real model timeline
+
+Asset token 2.4.90, SW airdash-v110. Replaced additive colour blobs with numerical inverse-distance PM interpolation, blending up to four nearby points. Observed fields require three reports within 60 km and a report within 30 km; unsupported areas are transparent. Palette represents PM2.5 concentration, not AQI. Snapshot now retains the PM-specific observation time so a newer gas reading cannot make old PM look fresh; operator surface uses a 90-minute gate.
+
+Regional view gains a continuous reported-PM surface, an hourly Thailand CAMS timeline from already-stored model output, and daily forecast wind arrows pointing towards flow. Model interpolation uses province centroids (three within 160 km and one within 80 km), explicitly not a native model grid. Source age >13 hours disables the model rather than inventing future frames. Wind is daily direction, not particle speed, trajectory or smoke arrival prediction. Satellite imagery and concentration surfaces are mutually exclusive to avoid mixing colour meanings. No extra upstream model calls.
+
+Tests exercise scalar interpolation (including unsupported gaps), palette, actual hourly time indexing, bias adjustment/nulls and stale rejection. Remaining science/data requirements for smoke ETA and predicted exposure are documented in docs/POLLUTION-FIELD-2.4.90.md.
+
 ## [2.4.89] — 2026-10-15 — Open a transparent Southeast Asia overview
 
 Asset token 2.4.89, SW airdash-v109. Added /region with Thailand↔Southeast Asia navigation from the front page and operator map. Regional map shows existing Thai station PM, new official Singapore one-hour regional PM, the existing mainland-only fire archive, and selectable NASA GIBS AOD/true-colour/satellite rain context with dates, legends and limits. All 11 Southeast Asian countries have source/coverage cards, including Timor-Leste. Unconnected countries remain unknown; national indices are never blended or concentration-converted.

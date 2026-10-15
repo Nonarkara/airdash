@@ -1,5 +1,6 @@
-import { escapeHtml as esc } from './fmt.js?v=2.4.89'
-import { readPreference, writePreference } from './preferences.js?v=2.4.89'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.90'
+import { escapeHtml as esc } from './fmt.js?v=2.4.90'
+import { readPreference, writePreference } from './preferences.js?v=2.4.90'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
@@ -7,6 +8,10 @@ const map=L.map('regional-map',{minZoom:3,maxZoom:12,preferCanvas:true}).fitBoun
 map.attributionControl.setPrefix(false)
 L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16,attribution:'Esri, HERE, Garmin · © OpenStreetMap'}).addTo(map)
 const pm=L.layerGroup().addTo(map),fire=L.layerGroup().addTo(map)
+const field=createPollutionField().addTo(map)
+const wind=L.layerGroup().addTo(map)
+byWindInit()
+function byWindInit(){document.getElementById('wind').onchange=()=>document.getElementById('wind').checked?wind.addTo(map):map.removeLayer(wind)}
 L.rectangle([[4,92],[29,110]],{weight:1,dashArray:'6 6',color:'#86551c',fill:false,interactive:false}).addTo(map)
 let data=null,imagery=null,loading=false,lastError=false
 const byId=id=>document.getElementById(id)
@@ -29,10 +34,38 @@ function setImagery(){if(imagery)map.removeLayer(imagery);imagery=null
  imagery=L.tileLayer(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${product}/default/${date}/GoogleMapsCompatible_Level${zoom}/{z}/{y}/{x}.png`,{maxNativeZoom:zoom,maxZoom:12,opacity:.72,attribution:'NASA GIBS'}).addTo(map)
  imagery.on('tileerror',()=>{byId('layer-note').textContent=`${date} UTC · ${tr('ภาพบางส่วนโหลดไม่ได้ ข้อมูลขาดไม่ใช่อากาศสะอาด','Some imagery unavailable; a gap does not mean clean air')}`})
 }
-byId('imagery').onchange=setImagery
+byId('imagery').onchange=()=>{if(byId('imagery').value!=='none'){byId('field-mode').value='off';paintField()}setImagery()}
+function paintField(){
+ const mode=byId('field-mode').value,outlook=data?.pollution_outlook
+ byId('time-control').hidden=mode!=='model'
+ let points=[],note=''
+ if(mode==='observed'){
+  points=(data?.observations??[]).filter(r=>r.status==='current'&&Date.now()-Date.parse(r.observed_at)<=90*60000)
+  note=tr('ค่าระหว่างจุดเป็นการประมาณ ไม่ใช่ค่าตรวจวัด: ต้องมีอย่างน้อย 3 จุดใน 60 กม. และห่างจุดใกล้สุดไม่เกิน 30 กม. ช่องว่างไม่ใช่อากาศสะอาด ช่วงเฉลี่ยไทย/สิงคโปร์ต่างกัน','Estimated between reports, not measured everywhere: at least 3 points within 60 km and a point within 30 km. Blank means unsupported, not clean. Thai/Singapore averaging periods differ.')
+ }else if(mode==='model'){
+  const fresh=outlook?.available&&Date.now()-Date.parse(outlook.issued_at)<=13*3600000
+  byId('field-time').disabled=!fresh
+  byId('field-time').max=Math.max(0,(outlook?.frames?.length??0)-1)
+  const frame=outlook?.frames?.[Number(byId('field-time').value)]
+  if(fresh&&frame){points=outlook.points.map(p=>({...p,pm25:p.values[frame.index]})).filter(p=>Number.isFinite(p.pm25));byId('field-clock').textContent=clock(frame.time)}else byId('field-clock').textContent='—'
+  note=fresh?tr('แบบจำลอง CAMS ปรับด้วยสถานี เฉพาะประเทศไทย ปรุงเป็นพื้นผิวจากจุดกึ่งกลางจังหวัด ไม่ใช่กริดต้นฉบับหรือเวลาควันมาถึง','Station-adjusted CAMS, Thailand only. Surface estimated from province centroids, not the native model grid or smoke arrival time.')+' · '+tr('ดึงโมเดล','Model retrieved')+' '+clock(outlook.issued_at):tr('โมเดลรายชั่วโมงไม่พร้อมหรือเก่า ไม่สร้างภาพอนาคตขึ้นเอง','Hourly model unavailable or stale; no future field invented.')
+  note+=' · '+tr('หมุดคือค่ารายงานปัจจุบัน ไม่ใช่ค่าในเวลาพยากรณ์','Pins remain current reports, not observations at the forecast time.')
+ }else note=tr('ซ่อนพื้นผิว แสดงหมุดต้นทาง','Field hidden; source pins remain visible.')
+ field.setData(points,mode==='model'?{radiusKm:160,nearestKm:80,minPoints:3}:{radiusKm:60,nearestKm:30,minPoints:3})
+ byId('field-note').textContent=note
+}
+byId('field-mode').onchange=()=>{if(byId('field-mode').value!=='off'){byId('imagery').value='none';setImagery()}paintField()}
+byId('field-time').oninput=paintField
 function paint(){
  if(!data)return
- pm.clearLayers();fire.clearLayers()
+ paintField()
+ pm.clearLayers();fire.clearLayers();wind.clearLayers()
+ for(const r of data.wind??[]){
+  const stamp=r.wind_updated_at,iso=/[zZ]|[+-]\d\d:\d\d$/.test(stamp??'')?stamp:`${stamp?.replace(' ','T')}+07:00`,age=Date.now()-Date.parse(iso)
+  if(!Number.isFinite(r.from_deg)||!Number.isFinite(r.lat)||!Number.isFinite(r.lng)||!Number.isFinite(age)||age< -300000||age>26*3600000)continue
+  const to=(r.from_deg+180)%360
+  L.marker([r.lat,r.lng],{icon:L.divIcon({className:'regional-wind',iconSize:[26,26],html:`<span style="transform:rotate(${to}deg)">↑</span>`})}).bindTooltip(esc(`${r.province_en} · ${tr('ทิศลมหลักรายวัน ไม่ใช่เส้นทางควัน','Daily dominant forecast, not smoke trajectory')} · ${r.wind_basis} · ${r.from_deg}° → ${to}° · ${clock(iso)}`)).addTo(wind)
+ }
  const now=Date.now(),obs=data.observations.map(r=>({...r,status:now-Date.parse(r.observed_at)>90*60000?'stale':r.status}))
  for(const r of obs){const stale=r.status!=='current';L.circleMarker([r.lat,r.lng],{radius:r.country==='SG'?9:5,color:stale?'#636e75':'#086a8c',weight:2,fillOpacity:stale?.25:.7})
  .bindPopup(`<strong>${esc(r.name)} · ${esc(r.country)}</strong><br>${r.pm25} µg/m³ PM2.5<br>${esc(r.averaging_period)}<br>${esc(r.source)} · ${esc(r.source_type)}<br>${esc(clock(r.observed_at))}<br>${esc(stale?tr('ข้อมูลเก่า ไม่ใช่สภาพปัจจุบัน','Stale; not current conditions'):tr('ค่ารายงานล่าสุด ไม่ใช่การรับรองความแม่นยำ','Recent report; not a certification of accuracy'))}`).addTo(pm)}
