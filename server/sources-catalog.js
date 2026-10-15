@@ -325,7 +325,7 @@ export const DATA_CHAIN = {
   stages: [
     { id: 'source', name_th: '1 · ดิบ: ค่าที่แหล่งต้นทางรายงาน', name_en: '1 · Raw: source-reported values',
       note_th: 'เก็บค่าที่จัดรูปแบบแล้วพร้อม source / station / metric / obs_time / fetched_at ไม่ใช่ไฟล์ต้นฉบับ ค่า AQI ต้องแยกจากความเข้มข้น และต้องระบุช่วงเฉลี่ย',
-      note_en: 'Stored readings are normalized, not original payloads: source / station / metric / obs_time / fetched_at. Keep AQI separate from concentration and retain averaging periods.', endpoint: '/api/series?source=air4thai&metric=pm25&hours=24' },
+      note_en: 'Stored readings are normalized, not original payloads: source / station / metric / obs_time / fetched_at. Keep AQI separate from concentration and retain averaging periods.', endpoint: '/api/stations?source=air4thai' },
     { id: 'checked', name_th: '2 · ตรวจ: อายุและข้อผิดปกติ', name_en: '2 · Checked: age and anomalies',
       note_th: 'ระบบปฏิเสธเวลาผิดรูปแบบหรืออนาคต และตรวจสถานีเก่า ค่าค้าง ค่าผิดปกติ การกระโดด และความไม่สอดคล้อง คะแนนคุณภาพไม่ใช่ความแม่นยำ และธงตรวจย้อนหลังไม่ได้กรองทุกผลิตภัณฑ์',
       note_en: 'Ingestion rejects invalid/future observation times. Station diagnostics flag stale, flatline, outlier, spike and mismatch patterns. Quality scores are not accuracy estimates; diagnostic flags do not filter every product.', endpoint: '/api/sensors/health?summary=1' },
