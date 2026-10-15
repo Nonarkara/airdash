@@ -1,6 +1,6 @@
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.93'
-import { escapeHtml as esc } from './fmt.js?v=2.4.93'
-import { readPreference, writePreference } from './preferences.js?v=2.4.93'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.94'
+import { escapeHtml as esc } from './fmt.js?v=2.4.94'
+import { readPreference, writePreference } from './preferences.js?v=2.4.94'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
@@ -19,7 +19,13 @@ function clock(time){const date=new Date(time);return Number.isFinite(date.getTi
 function translate(){document.documentElement.lang=lang;for(const n of document.querySelectorAll('[data-t]')){const [th,en]=n.dataset.t.split('|');n.textContent=tr(th,en)}byId('language').textContent=lang==='th'?'EN':'ไทย';paint();setImagery()}
 byId('language').onclick=()=>{lang=lang==='th'?'en':'th';writePreference('ad_lang',lang);translate()}
 byId('reset-map').onclick=()=>map.fitBounds(whole)
-byId('open-directory').onclick=()=>{byId('country-directory').open=true}
+for(const n of document.querySelectorAll('#open-directory,.open-directory'))n.addEventListener('click',(event)=>{event.preventDefault();byId('country-directory').open=true})
+const instrumentSheet=byId('instrument-sheet')
+const phoneRail=matchMedia('(max-width:650px)')
+const syncRail=()=>{instrumentSheet.open=!phoneRail.matches;map.invalidateSize()}
+phoneRail.addEventListener('change',syncRail)
+instrumentSheet.addEventListener('toggle',()=>map.invalidateSize())
+syncRail()
 byId('fires').onchange=()=>{byId('fires').checked?fire.addTo(map):map.removeLayer(fire)}
 function setImagery(){if(imagery)map.removeLayer(imagery);imagery=null
  const id=byId('imagery').value,date=new Date(Date.now()-86400000).toISOString().slice(0,10)

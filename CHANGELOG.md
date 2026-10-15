@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.94] — 2026-10-15 — Give the regional map the phone screen
+
+Asset token 2.4.94, SW airdash-v114. A phone check of `/region` on an iPhone 14 and a 360px Android measured the map at about 54% of the screen: 60px of header plus 110px of title and status, with the instrument aside laid out at its full content height (about 805px) so roughly 200px of it peeked into the first viewport. Zoom controls were 30×30 and some targets 20×20. The brand badge read 3.0 while the assets were `?v=2.4.93`.
+
+- On viewports ≤650px the map fills the space between a one-line header, a one-line title/status, and a 44px sheet summary. The instrument rail starts collapsed and opens as an overlay sheet, so it no longer lengthens the page. The country directory opens as its own full-screen sheet. Desktop keeps the rail open beside the map.
+- Leaflet zoom controls and the rail checkboxes are 44×44 on phones.
+- The AIR·DASH badge shows the asset token, currently 2.4.94, instead of the product-generation label 3.0.
+
+No source ingestion, model calculation, quota, or scoring changes.
+
 ## [2.4.93] — 2026-10-15 — Compose the regional view around the map
 
 Asset token 2.4.93, SW airdash-v113. Applies Palette's object-first composition rather than only its colours: removed the editorial hero, moved working controls into a compact instrument rail, made the map occupy the opening viewport, and grouped country/source/method detail behind a reachable native disclosure. Shared AirDash identity and signal colours retained. Quantitative legend sits on the map clear of zoom controls and is hidden when the PM field is off. Wind direction markers use smaller glyphs and one representative per 1.5° display cell to reduce overlap; input directions and tooltips unchanged. Popups and map attribution follow shared theme ink.
