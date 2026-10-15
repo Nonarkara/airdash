@@ -1,4 +1,4 @@
-import { moveMap } from '../mapView.js?v=2.4.86'
+import { moveMap } from '../mapView.js?v=2.4.87'
 // Focus switcher — populates the (optional) header dropdown from the
 // /api/focus manifest. Selecting an area flies the map and (when it names
 // a province) scopes the ranking rail to that province's stations. The
@@ -11,9 +11,9 @@ import { moveMap } from '../mapView.js?v=2.4.86'
 // like /?city=chiangmai loads that city on first paint; selections
 // update the URL via history.replaceState (no full reload, no
 // back-button clutter).
-import { getJson } from '../cache.js?v=2.4.86'
-import { store, on, emit } from '../state.js?v=2.4.86'
-import { showProvinceDetail, hideDetail } from './detail.js?v=2.4.86'
+import { getJson } from '../cache.js?v=2.4.87'
+import { store, on, emit } from '../state.js?v=2.4.87'
+import { showProvinceDetail, hideDetail } from './detail.js?v=2.4.87'
 
 let areas = []
 let initialised = false

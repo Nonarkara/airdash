@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.87] — 2026-10-15 — Join fire, wind, rain and PM into preparation evidence
+
+Asset token 2.4.87, SW airdash-v107. Overview gains a bilingual province preparation selector: current PM/source, three daily CAMS model values, upwind VIIRS detections, rain amount/chance and protective actions. Missing evidence remains unknown; rain never clears measured pollution. No smoke arrival time or cleaner relocation destination is invented.
+
+Map presets show pollution/stations, gridded VIIRS detections plus forecast wind arrows, or rain radar. Wind arrows point towards flow (meteorological from + 180°); counts are upwind detections at province markers. Fire markers are 0.25° grid centroids, not burn footprints. Radar timestamps distinguish observed frames and nowcasts. Research explains the evidence chain and limits of AOD, hot spots and daily wind.
+
+/api/smoke now includes fire_cells and fire_grid_degrees, reusing its existing aggregate without extra upstream requests. Its calendar-day query was incorrectly called 48 hours; acquisition date+time now enforce a rolling 48-hour window and exclude future detections. The preparation fetch cache has a strict five-minute expiry and does not silently reuse old evidence after refresh failures.
+
+Tests cover wind reversal, preparation rules, missing inputs and the actual SQLite fire time-window/grid counts. CNX's hourly two-height trajectory model was inspected but not copied onto AirDash's daily dominant wind inputs. Browser verification currently blocked by the browser tool's request-policy network service; do not claim a completed visual audit.
+
 ## [2.4.86] — 2026-10-15 — the camera button claimed it had found no smoke, and had stopped looking
 
 Asset token `2.4.86`. Result of an audit of the camera-wall computer-vision path.

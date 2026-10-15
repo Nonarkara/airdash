@@ -1,9 +1,9 @@
 // Research Paper panel — renders the full bilingual academic paper inside
 // the About overlay's "Research Paper" tab, with custom SVG infographics,
 // the complete source catalog, citations, and CSV dataset download.
-import { on, store } from '../state.js?v=2.4.86'
-import { getJson } from '../cache.js?v=2.4.86'
-import { escapeHtml } from '../fmt.js?v=2.4.86'
+import { on, store } from '../state.js?v=2.4.87'
+import { getJson } from '../cache.js?v=2.4.87'
+import { escapeHtml } from '../fmt.js?v=2.4.87'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -963,6 +963,9 @@ function sectionRecord() {
         )}
       </p>
 
+      <div class="rp-note"><h3>${tr('จากข้อมูลดิบสู่การเตรียมตัว','From raw evidence to preparation')}</h3>
+      <p>${tr('เริ่มจากค่าฝุ่นที่พื้นและเวลาตรวจวัด → ดูจุดความร้อนย้อนหลัง (ไม่ใช่พื้นที่เผา) → ตรวจทิศลมและแบบจำลอง PM2.5 → ดูฝนจริงกับฝนคาดการณ์แยกกัน → เตรียมห้องอากาศสะอาดและตรวจปลายทางก่อนเดินทาง แผง Haze preparation ในภาพรวมเชื่อมหลักฐานเหล่านี้ให้รายจังหวัด', 'Start with surface PM and observation time → inspect recent heat detections (not burned area) → check wind and the PM model → distinguish observed rain from forecast rain → prepare cleaner indoor air and check destination conditions before travel. The Haze preparation panel in Overview joins these signals by province.')}</p>
+      <p>${tr('ลมรายวันเป็นเพียงเบาะแสว่าควันอาจพัดมาจากไหน ไม่ใช่เวลาถึงหรือความเข้มข้น ฝุ่น AOD จากดาวเทียมอยู่ทั้งเสาบรรยากาศ ไม่ใช่เรดาร์ค่าฝุ่นที่พื้น ฝนไม่ได้รับประกันว่าฝุ่นลด ต้องตรวจวัดซ้ำ', 'Daily wind indicates where smoke may come from, not arrival time or concentration. Satellite AOD is a column measurement, not surface pollution radar. Rain does not guarantee a drop in PM; recheck the monitors.')}</p></div>
       <h3 data-th="10.1 รูปแบบรายวัน — PM2.5 ทั้งประเทศตามชั่วโมง" data-en="10.1 The diurnal cycle — national PM2.5 by hour">
         ${tr('10.1 รูปแบบรายวัน — PM2.5 ทั้งประเทศตามชั่วโมง', '10.1 The diurnal cycle — national PM2.5 by hour')}
       </h3>

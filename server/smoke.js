@@ -101,7 +101,8 @@ export function computeSmoke(db) {
       cache.set(db, { at: Date.now(), value }); return value
     }
     const fires = db.all(
-      `SELECT lat, lng, frp, in_thailand FROM regional_hotspots WHERE acq_date >= date('now', ?)`,
+      `SELECT lat, lng, frp, in_thailand FROM regional_hotspots WHERE datetime(acq_date || ' ' || substr(printf('%04d',CAST(acq_time AS INTEGER)),1,2) || ':' || substr(printf('%04d',CAST(acq_time AS INTEGER)),3,2)) BETWEEN datetime('now', ?) AND datetime('now', '+5 minutes')
+         AND length(acq_time) BETWEEN 1 AND 4 AND acq_time NOT GLOB '*[^0-9]*'`,
       `-${LOOKBACK_DAYS} days`)
     const cells = gridFires(fires)
     const wind = db.all(
@@ -126,7 +127,7 @@ export function computeSmoke(db) {
         wind_updated_at: Number.isFinite(p.wind_dir_d1) ? p.wind_dir_d1_updated_at : p.wind_dir_d0_updated_at })
     }
     provinces.sort((a, b) => b.upwind_frp_mw - a.upwind_frp_mw)
-    value = { available: true, fire_source_checked_at: fireRun.started_at, fires_48h: fires.length, provinces, computed_at: new Date().toISOString() }
+    value = { available: true, fire_source_checked_at: fireRun.started_at, fires_48h: fires.length, fire_cells: cells.map(c=>({lat:c.lat,lng:c.lng,detections:c.n})), fire_grid_degrees: GRID_DEG, provinces, computed_at: new Date().toISOString() }
   } catch (err) {
     value = { available: false, fires_48h: null, provinces: [], error: String(err?.message ?? err), computed_at: new Date().toISOString() }
   }

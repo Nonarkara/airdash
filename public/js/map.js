@@ -1,23 +1,42 @@
-import { moveMap } from './mapView.js?v=2.4.86'
-import { readPreference, writePreference } from './preferences.js?v=2.4.86'
+import { windTowards } from './panels/hazePlan.js?v=2.4.87'
+import { escapeHtml } from './fmt.js?v=2.4.87'
+import { moveMap } from './mapView.js?v=2.4.87'
+import { readPreference, writePreference } from './preferences.js?v=2.4.87'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.86'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.86'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.86'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.86'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.86'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.86'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.86'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.86'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.86'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.86'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.86'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.86'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.86'
-import { openWindow } from './witness.js?v=2.4.86'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.86'
+import { on, store } from './state.js?v=2.4.87'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.87'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.87'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.87'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.87'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.87'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.87'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.87'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.87'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.87'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.87'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.87'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.87'
+import { openWindow } from './witness.js?v=2.4.87'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.87'
 
+const windToggle = {id:'hazeWind',th:'ลมพยากรณ์ + จุดตรวจไฟเหนือลม',en:'Forecast wind + upwind fire counts',on:false,
+  note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where wind blows. Daily dominant forecast, not current wind.',
+  what_th:'ตัวเลขคือจำนวนจุดไฟในแนวเหนือลมของจังหวัด ไม่ใช่ตำแหน่งไฟหรือเวลาถึง',what_en:'Counts are detections upwind of the province, not fire positions or smoke arrival times.'}
+LAYER_GROUPS.unshift({id:'preparation',th:'เตรียมรับหมอกควัน',en:'HAZE PREPARATION',layers:[windToggle,{id:'hazeRain',th:'วงกลมฝนพยากรณ์วันนี้ · ใหญ่ = ปริมาณมาก',en:'Today’s model rain · larger = more mm',on:false},{id:'fireCells',th:'จุดความร้อน VIIRS 48 ชม. (รวมกริด)',en:'VIIRS detections 48h (grid cells)',on:false}]})
+let hazeWindRows = []
+function paintHazeWind() {
+  if (!layers.hazeWind) return
+  layers.hazeWind.clearLayers()
+  for (const row of hazeWindRows) {
+    const to = windTowards(row.from_deg)
+    if (to === null || !Number.isFinite(row.lat) || !Number.isFinite(row.lng)) continue
+    const name = store.lang === 'th' ? row.province_th : row.province_en
+    L.marker([row.lat,row.lng],{pane:'vectors',icon:L.divIcon({className:'haze-wind-icon',iconSize:[48,48],iconAnchor:[24,24],
+      html:`<span class="haze-wind-arrow" style="transform:rotate(${to}deg)">↑</span><small>${Number.isFinite(row.upwind_fires)?row.upwind_fires:'—'}</small>`})})
+      .bindTooltip(escapeHtml(`${name} · ${tr('ลมจาก','wind from')} ${row.from_deg}° → ${to}° · ${row.upwind_fires} ${tr('จุดไฟเหนือลม','upwind detections')} · ${row.wind_basis} · ${row.wind_updated_at} ICT`)).addTo(layers.hazeWind)
+  }
+}
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
 let map
 const layers = {}
@@ -75,6 +94,26 @@ export function initMap() {
   layers.air = L.layerGroup([], { pane: 'data' })
   layers.rain = L.layerGroup([], { pane: 'data' })
   layers.heatmap = createPm25HeatmapLayer()
+  layers.hazeWind = L.layerGroup()
+  layers.fireCells = L.layerGroup()
+  layers.hazeRain = L.layerGroup()
+  window.addEventListener('airdash:haze-wind', e => {hazeWindRows = e.detail.wind;paintHazeWind();layers.fireCells.clearLayers();layers.hazeRain.clearLayers();
+    for (const r of e.detail.rain) {
+      L.circleMarker([r.lat,r.lng],{pane:'vectors',radius:4+Math.min(40,Math.max(0,r.mm))/4,color:'#257caa',weight:1,fillColor:'#257caa',fillOpacity:0.25+Math.min(100,Math.max(0,r.prob))/200}).bindTooltip(escapeHtml(`${r.name} · ${tr('พยากรณ์ฝนวันนี้','Today’s model rain')} ${r.mm} mm / ${r.prob}% · ${tr('ไม่ใช่ฝนตรวจวัด','not observed rain')}`)).addTo(layers.hazeRain)
+    }
+    for (const c of e.detail.fireCells) {
+      if (!Number.isFinite(c.lat)||!Number.isFinite(c.lng)) continue
+      L.circleMarker([c.lat,c.lng],{pane:'vectors',radius:5,color:'#a32f20',weight:1,fillOpacity:0.8}).bindTooltip(escapeHtml(`${c.detections} VIIRS detections / 48h · 0.25° cell centroid, not burned area`)).addTo(layers.fireCells)
+    }})
+  window.addEventListener('airdash:haze-view', e => {
+    const view=e.detail.view
+    for (const t of allLayerToggles()) {
+      const wanted = ['air','boundaries'].includes(t.id) || (view==='pollution' && t.id==='heatmap') || (view==='transport' && ['hazeWind','fireCells'].includes(t.id)) || (view==='rain' && ['radar','hazeRain'].includes(t.id))
+      if (Boolean(t.on)!==wanted && layers[t.id]) toggleLayer(t)
+    }
+    if (Number.isFinite(e.detail.lat)&&Number.isFinite(e.detail.lng)) moveMap(map,[e.detail.lat,e.detail.lng],7)
+    addLayerControl();addLegend()
+  })
   newsFireApi = createNewsFireLayer()
   layers.newsfire = newsFireApi.group
   // Isolated in its own try/catch: drought is one optional overlay among
@@ -138,7 +177,7 @@ export function initMap() {
   window.__airdash = { map, layers, osmBuildingsApi }
 
   on('snapshot', renderAll)
-  on('lang', () => { addLegend(); addLayerControl(); renderAll(store.snapshot) })
+  on('lang', () => { paintHazeWind(); addLegend(); addLayerControl(); renderAll(store.snapshot) })
   // Drought risk is a separate (weekly) feed, not part of the snapshot
   // pipeline — fetch it once at boot and on every snapshot tick so a
   // long-running tab picks up next week's polygons without a manual
@@ -192,8 +231,8 @@ async function refreshRadarFrames() {
   try {
     const res = await fetch('https://api.rainviewer.com/public/weather-maps.json')
     const j = await res.json()
-    radar.frames = [...(j.radar?.past ?? []).slice(-7), ...(j.radar?.nowcast ?? [])]
-      .map((f) => ({ time: f.time, url: `${j.host}${f.path}/256/{z}/{x}/{y}/2/1_1.png` }))
+    radar.frames = [...(j.radar?.past ?? []).slice(-7).map(f=>({...f,kind:'observed'})), ...(j.radar?.nowcast ?? []).map(f=>({...f,kind:'nowcast'}))]
+      .map((f) => ({ time: f.time, kind:f.kind, url: `${j.host}${f.path}/256/{z}/{x}/{y}/2/1_1.png` }))
     if (radar.frames.length && !radar.timer) startRadarLoop()
   } catch { /* radar is optional */ }
 }
@@ -212,8 +251,8 @@ function updateRadarClock() {
   const elClock = document.getElementById('radar-time')
   const f = radar.frames[radar.idx]
   if (elClock && f) {
-    elClock.textContent = new Date(f.time * 1000).toLocaleTimeString('en-GB',
-      { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })
+    elClock.textContent = (f.kind==='nowcast' ? tr('คาดระยะสั้น ', 'nowcast ') : tr('ตรวจพบ ', 'observed ')) + new Date(f.time * 1000).toLocaleString('en-GB',
+      { day:'2-digit', month:'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })
   }
 }
 

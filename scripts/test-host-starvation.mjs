@@ -173,7 +173,7 @@ if (fns) {
   // The detail reports load, the page-in rate and swap — swap for CONTEXT only,
   // since a percentage of swap on macOS measures cold pages, not pressure.
   check('starve_detail reads real values under the launchd PATH',
-    /DETAIL=load [\d.]+ \(limit \d+\), page-in \d+p\/s/.test(out), out.trim().replace(/\n/g, ' | '))
+    /DETAIL=load [\d.]+ \(limit \d+\), page-in (?:\d+|skipped \(CPU-bound\))p\/s/.test(out), out.trim().replace(/\n/g, ' | '))
   check('the detail is NOT the empty "swap , load " failure',
     !/DETAIL=swap ,/.test(out) && !/DETAIL= ,/.test(out), out.trim().replace(/\n/g, ' | '))
   check('host_starved returns a verdict rather than erroring',
@@ -202,10 +202,11 @@ if (fns) {
   const load = Number(/load ([\d.]+)/.exec(detail)?.[1] ?? NaN)
   const limit = Number(/limit (\d+)/.exec(detail)?.[1] ?? NaN)
   const rate = Number(/page-in (\d+)p\/s/.exec(detail)?.[1] ?? NaN)
-  check('the reported load and limits are numeric',
-    Number.isFinite(load) && Number.isFinite(limit) && Number.isFinite(rate),
+  const cpuSkipped = /page-in skipped \(CPU-bound\)/.test(detail)
+  check('the reported load and limits are numeric; sampling skipped only for proven CPU pressure',
+    Number.isFinite(load) && Number.isFinite(limit) && (Number.isFinite(rate) || (cpuSkipped && load >= limit && out.includes('STARVED=yes'))),
     `load=${load} limit=${limit} rate=${rate} from "${detail}"`)
-  if (Number.isFinite(load) && Number.isFinite(rate)) {
+  if (Number.isFinite(load) && (Number.isFinite(rate) || cpuSkipped)) {
     const expected = load >= limit || rate >= 400
     check('the verdict follows load-or-page-rate, never the swap percentage',
       /STARVED=(yes|no)/.test(out) && (out.includes('STARVED=yes')) === expected,

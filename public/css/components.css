@@ -4329,3 +4329,21 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
   #rp-rec-diurnal, #rp-rec-regions, #rp-rec-alerts, #rp-rec-network { overflow-x: auto; }
   #rp-rec-diurnal > svg, #rp-rec-regions > svg, #rp-rec-alerts > svg, #rp-rec-network > svg { min-width: 600px; }
 }
+
+.haze-plan {padding:14px; margin:12px 0; background:var(--well); border:1px solid var(--rule); border-left:3px solid var(--th-navy);}
+.haze-plan h3 {font-size:16px; margin:0 0 12px;}
+.haze-plan select {display:block; width:100%; min-height:44px; font-size:16px; margin:6px 0 12px; background:var(--well); color:var(--ink);}
+.haze-plan p {font-size:12px; line-height:1.6; overflow-wrap:anywhere;}
+.haze-plan-verdict {font-weight:700; border-bottom:1px solid var(--rule); padding-bottom:10px;}
+.haze-plan-verdict[data-state="protect"], .haze-plan-verdict[data-state="prepare"] {color:var(--th-red);}
+.haze-plan-grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
+.haze-plan-grid article {padding:10px; background:var(--well-dim); min-width:0;}
+.haze-plan h4 {font-size:12px; margin:0 0 8px;}
+.haze-plan strong {font-size:17px; font-variant-numeric:tabular-nums;}
+.haze-plan-maps {display:flex; flex-wrap:wrap; gap:6px; margin:12px 0;}
+.haze-plan-maps button {min-height:44px; padding:8px; background:var(--well); color:var(--ink); border:1px solid var(--rule); cursor:pointer;}
+.haze-plan summary {cursor:pointer; min-height:44px; padding:10px 0; font-size:12px;}
+.haze-wind-icon {background:var(--well); border:1px solid var(--th-navy); border-radius:50%; color:var(--th-navy); text-align:center; box-shadow:0 1px 4px #0003;}
+.haze-wind-arrow {display:block; font-size:33px; line-height:36px; transform-origin:center;}
+.haze-wind-icon small {position:absolute;right:-9px;bottom:-2px;background:var(--well);color:var(--ink);border:1px solid var(--rule);padding:1px 3px; font-size:11px;}
+@media (max-width:360px) {.haze-plan-grid {grid-template-columns:1fr;}}
