@@ -1,7 +1,7 @@
 // Operational context beside historical agricultural scars. A wind/fire
 // indicator never becomes a measured PM concentration or a terrain simulation.
-import { store } from '../state.js?v=2.4.90'
-import { escapeHtml } from '../fmt.js?v=2.4.90'
+import { store } from '../state.js?v=2.4.91'
+import { escapeHtml } from '../fmt.js?v=2.4.91'
 const tr = (th, en) => store.lang === 'th' ? th : en
 const esc = escapeHtml
 const n = value => Number.isFinite(value) ? value.toLocaleString(store.lang === 'th' ? 'th-TH' : 'en-GB', { maximumFractionDigits: 1 }) : '—'

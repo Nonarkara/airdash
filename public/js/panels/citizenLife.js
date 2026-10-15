@@ -1,4 +1,4 @@
-import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.90'
+import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.91'
 // LIFE-SAVING ADDITIONS FOR THE CITIZEN PANEL
 // =============================================
 // This module extends the citizen (EASY) panel with four action-oriented
@@ -41,10 +41,10 @@ import { readPreference, writePreference, removePreference } from '../preference
 // 7-year-old the panel is meant to help has an even shorter attention
 // span. The English side uses a registered-nurse register: warm,
 // direct, never preachy. "Don't" is reserved for emergencies.
-import { store } from '../state.js?v=2.4.90'
-import { tr } from '../i18n.js?v=2.4.90'
-import { el } from '../fmt.js?v=2.4.90'
-import { getJson } from '../cache.js?v=2.4.90'
+import { store } from '../state.js?v=2.4.91'
+import { tr } from '../i18n.js?v=2.4.91'
+import { el } from '../fmt.js?v=2.4.91'
+import { getJson } from '../cache.js?v=2.4.91'
 
 // ── 1. PERSONA SELECTOR + SPECIFIC ADVICE ─────────────────────────────────
 

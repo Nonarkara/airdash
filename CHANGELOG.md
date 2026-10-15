@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.91] — 2026-10-15 — Bring Southeast Asia back to AirDash’s Palette core
+
+Asset token 2.4.91, SW airdash-v111. Regional page now imports the shared design tokens and brand assets: sky paper, teal ink, Manrope headings, Sarabun text and JetBrains Mono data. Removed the separate hardcoded dark theme, large rounded panels and repeated country-card grid. Coverage/source directories are compact ruled rows, map controls use shared colours and radii, and responsive rows stack on phones. Existing light/dark preference follows the same token core as the rest of AirDash. Data and transport semantics unchanged.
+
+Validated frontend syntax, consistency, regional normalization/navigation and pollution-field model/interpolation fixtures. Release follows 2.4.90’s full passing suite; only presentation and asset tokens changed here.
+
 ## [2.4.90] — 2026-10-15 — Show pollution as a bounded field and real model timeline
 
 Asset token 2.4.90, SW airdash-v110. Replaced additive colour blobs with numerical inverse-distance PM interpolation, blending up to four nearby points. Observed fields require three reports within 60 km and a report within 30 km; unsupported areas are transparent. Palette represents PM2.5 concentration, not AQI. Snapshot now retains the PM-specific observation time so a newer gas reading cannot make old PM look fresh; operator surface uses a 90-minute gate.
