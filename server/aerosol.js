@@ -179,6 +179,35 @@ export function guidanceFor(profile) {
   return m ? MODE_GUIDANCE[m] : null
 }
 
+/**
+ * The national aerosol picture, for engines that need one mode rather than
+ * five stations. AERONET has no per-province coverage, so this is explicitly a
+ * NATIONAL signal and callers must treat it as such — it is not a per-province
+ * measurement and must never be presented as one.
+ *
+ * Picks the station reporting the most aerosol, which in a dust episode is the
+ * one the episode actually reached. Returns `{ mode: null, ... }` when nothing
+ * usable is stored, so callers fall back to their conservative default rather
+ * than reading a mode that was never measured.
+ */
+export function dominantAerosol(db, { days = 7 } = {}) {
+  const since = new Date(Date.now() - days * 86400_000).toISOString()
+  const rows = db.all(
+    `SELECT station, ts, aod_440, aod_500, aod_675, aod_870, aod_1020
+       FROM aeronet_readings WHERE ts >= ? ORDER BY station, ts DESC`, since)
+  const latest = new Map()
+  for (const r of rows) if (!latest.has(r.station)) latest.set(r.station, r)
+  let best = null
+  for (const r of latest.values()) {
+    const p = aerosolProfile(r)
+    if (p.mode == null || p.load == null) continue
+    if (!best || p.load > best.load) best = { station: r.station, load: p.load, mode: p.mode, alpha: p.alpha }
+  }
+  if (!best) return { mode: null, alpha: null, load: null, station: null, age_h: null, reason: 'no usable aerosol reading in the window' }
+  const newest = rows.reduce((m, r) => (r.ts > m ? r.ts : m), '')
+  return { ...best, age_h: newest ? Math.round((Date.now() - Date.parse(newest)) / 3600_000) : null }
+}
+
 export const AEROSOL_METHOD = {
   th: 'ขนาดอนุภาคเชิงคุณภาพจากรูปร่างสเปกตรัม AERONET (Ångström exponent α) — ฝุ่นหยาบต่ำกว่า 0.8, ผสม 0.8–1.5, ฝุ่นละเอียดสูงกว่า 1.5 · ไม่ใช่ค่าความเข้มข้น µg/m³',
   en: 'Qualitative particle size from the AERONET spectral shape (Ångström exponent α): coarse below 0.8, mixed 0.8–1.5, fine above 1.5. Not a µg/m³ concentration — the ground stations give the concentration.',

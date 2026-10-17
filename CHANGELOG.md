@@ -12,6 +12,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.97] — 2026-10-17 — rain clears dust better than the curve said, because the curve only knew about PM2.5
+
+Ops + API only; no file under `public/` changed, so the asset token stays at 2.4.96.
+
+**The washout engine was sized for exactly one kind of particle, and AirDash now knows which kind it is.**
+
+`server/washout-curve.js` is a published, cited curve for **accumulation-mode PM2.5**. That is the *worst* size for below-cloud removal. The **Greenfield gap** spans roughly 200–2000 nm, which is most of PM2.5, and capture efficiency inside it is low. Coarse particles sit outside that gap and are removed by inertial impaction and interception, which do not have the weakness:
+
+- **ACP 23, 7521 (2023)**: below-cloud mechanisms are size-dependent; "weak below-cloud wet scavenging in the 200–2000 nm size range, which is the so-called Greenfield gap"; for coarse-mode aerosols, inertial impaction and interception are the **main** removal mechanism.
+- **ACP 21, 16797 (2021)**: the scavenging coefficient "varies strongly with aerosol particle size, with the lowest values for aerosols in the accumulation mode".
+- **Seoul, ~7 years of disdrometer data**: "PM2.5−10 is more effectively scavenged than PM2.5".
+- **Zhang & Vet (2006)**, via Tellus B: the size influence on wet deposition "can reach up to several orders of magnitude".
+
+So the 40% ceiling was **understating relief during a dust episode** — in exactly the season when relief is the whole question, and the season when a resident most wants to know whether the rain will clear the air.
+
+**What changed, and what deliberately did not.**
+
+- `reliefPct(mm, mode)` takes an optional aerosol size mode. With no mode it returns the published curve **byte-identically** — verified at 20 sampled inputs including `null`, `undefined`, `NaN`, `-5` and `Infinity`, and against an independently written copy of the old function. Every existing caller (`danger.js`, `/api/danger`, `/api/forecast`, `/api/whatif`) omits the mode and is numerically untouched. A guard that only counted checks would not have caught a drift here; this one runs both curves side by side.
+- Only a **confident coarse** reading switches curves. `mixed`, `fine`, `null` and any unrecognised value all stay on the conservative published curve — an unknown particle size must never move a published number.
+- Every washout entry now carries `aerosol_mode`, `curve_basis`, `relief_ceiling_pct`, `aerosol_alpha` and `aerosol_age_h`, so no reader has to guess which curve produced the number beside it.
+
+**An honesty note, and it is not optional.** Unlike the fine curve, `COARSE_ASCENT = 60` is **not** a locally calibrated coefficient — AirDash has no PM10 instrument to fit against. It is an order-of-magnitude-informed, deliberately conservative adjustment of the same shape, and the source says so in capitals next to the constant. It must not be tightened without a real coarse-fraction measurement to fit.
+
+**Two wiring defects the guard caught, both of which were mine.**
+
+- The size was being resolved **once per province** — 77 SQL queries per cycle for one national reading, and one reading interpreted 77 separate ways. Hoisted to once per compute.
+- The first lazy-resolution check was a **source pattern**, and the mutation it exists for satisfied it while still freezing the read at construction: the line was still there, the behaviour was gone. Replaced with an execution check — construct the engine with a counting resolver, assert it has been read **zero** times, then assert the first compute reads it exactly once.
+
+`scripts/test-washout-size.mjs` — 32 checks. Six mutations caught: moving the published fine asymptote (6 failures), letting an unknown size fall through to coarse, freezing the read at construction, deleting the uncalibrated caveat, dropping the published ceiling, and returning to per-province resolution.
+
+**Nothing changes today.** The national reading is `fine` (Bangkok α = 1.71, 28 h old), so the coarse branch is dormant and every published washout number is identical to 2.4.96. The test asserts that explicitly — a size-aware model that silently moved the live numbers on day one would be a regression, not a feature.
+
+---
+---
+
 ## [2.4.96] — 2026-10-15 — what the particles actually are, so the advice is the right advice
 
 Asset token `2.4.96`. Adds an aerosol-size signal to the haze preparation plan,

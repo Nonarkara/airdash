@@ -8,6 +8,7 @@ import { createAlerts } from './alerts.js'
 import { createScheduler } from './scheduler.js'
 import { createRisk } from './risk.js'
 import { createWashout } from './washout.js'
+import { dominantAerosol } from './aerosol.js'
 import { createDanger } from './danger.js'
 import { createHarm } from './harm.js'
 import { createScience } from './science.js'
@@ -56,7 +57,9 @@ const line = createLine(db)
 const telegram = createTelegram(db)
 const telegramBroadcaster = createTelegramBroadcaster(db)
 const alerts = createAlerts(db, bus, { line, telegramBroadcaster })
-const washout = createWashout(db)
+// Lazily resolved: the washout engine is built before any AERONET reading
+// exists, so the aerosol size is re-read on each of its 5-minute computes.
+const washout = createWashout(db, { aerosol: () => dominantAerosol(db) })
 const riskEngine = createRisk(db, washout)
 const danger = createDanger(db, { riskEngine, washout })
 const harm = createHarm({ riskEngine })

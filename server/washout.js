@@ -18,7 +18,7 @@
 import { readTmdWeather } from './sources/tmd-relay.js'
 import { num } from './util.js'
 import { forecastBias } from './forecastBias.js'
-import { reliefPct } from './washout-curve.js'
+import { reliefPct, reliefCurveBasis, reliefCeilingPct } from './washout-curve.js'
 import { isThaiProvinceCode } from './provinces.js'
 
 const FRESH_PM_HOURS = 6
@@ -87,9 +87,29 @@ function localCutoff(hoursAgo) {
   return new Date(Date.now() + 7 * 3600_000 - hoursAgo * 3600_000).toISOString().slice(0, 16)
 }
 
-export function createWashout(db) {
+/**
+ * @param db
+ * @param aerosol  Optional `{ mode, alpha, age_h }` from server/aerosol.js.
+ *   The published relief curve is accumulation-mode PM2.5; coarse particles
+ *   wash out markedly better because they sit outside the Greenfield gap. So
+ *   when the aerosol reading says the air is coarse, the curve is evaluated on
+ *   the coarse variant and the entry says so. OMITTING this argument keeps the
+ *   published curve EXACTLY as before — a missing or unknown size must never
+ *   move a published number, so the default is the conservative published one.
+ */
+export function createWashout(db, { aerosol = null } = {}) {
   let cache = null
   let cacheAt = 0
+  // Resolved LAZILY, inside compute() — this engine is constructed at module
+  // load, long before any AERONET reading exists, so capturing the mode here
+  // would freeze it at null forever. Pass a function and it is re-read on each
+  // (5-minute) compute; pass a plain object and it is fixed.
+  const readAerosol = () => (typeof aerosol === 'function' ? aerosol() : aerosol)
+  const modeOf = () => {
+    const a = readAerosol()
+    const mode = a?.mode === 'coarse' ? 'coarse' : null
+    return { mode, basis: reliefCurveBasis(mode), ceiling: reliefCeilingPct(mode), alpha: a?.alpha ?? null, age_h: a?.age_h ?? null }
+  }
 
   function latestByProvince(source, metrics, cutoff) {
     const placeholders = metrics.map(() => '?').join(',')
@@ -185,8 +205,23 @@ export function createWashout(db) {
       if (v !== null && (e.rain_obs_24 === null || v > e.rain_obs_24)) e.rain_obs_24 = v
     }
 
+    // Resolved ONCE per compute, not once per province: dominantAerosol runs
+    // a query, and calling it 77 times per cycle both wastes work and lets a
+    // single national reading be interpreted 77 separate ways.
+    const { mode: aerosolMode, basis: aerosolBasis, ceiling: aerosolCeiling,
+      alpha: aerosolAlpha, age_h: aerosolAgeH } = modeOf()
+
     for (const e of out.values()) {
-      e.relief_if_rain_pct = reliefIfRainPct(e.rain_fc_24)
+      // Size-aware: coarse aerosol is removed more efficiently than
+      // accumulation-mode PM2.5, so the same rain clears more of it. The basis
+      // is published on every entry so no reader has to guess which curve
+      // produced the number beside it.
+            e.aerosol_mode = aerosolMode
+      e.curve_basis = aerosolBasis
+      e.relief_ceiling_pct = aerosolCeiling
+      e.aerosol_alpha = aerosolAlpha
+      e.aerosol_age_h = aerosolAgeH
+      e.relief_if_rain_pct = reliefPct(e.rain_fc_24, aerosolMode)
       e.expected_relief_pct = Math.round(e.relief_if_rain_pct * (e.prob24 ?? 0)) / 100
       e.band = washoutBand(e.rain_fc_24, e.prob24)
       e.forecast_available = e.band !== 'unknown'
