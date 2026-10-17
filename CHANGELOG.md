@@ -12,6 +12,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.98] — 2026-10-17 — the risk payload published a wind speed and no direction
+
+Ops + API only; no file under `public/` changed, so the asset token stays at 2.4.96.
+
+**A wind speed with no bearing answers none of the questions people actually ask about wind.**
+
+`/api/risk` fetched `wind_fc_kmh` for all 77 provinces and never asked Open-Meteo for `wind_dir_d0` / `wind_dir_d1` — columns AirDash already ingests, for all 77 provinces, in a valid 0–360 range, 4 hours stale at most. Meanwhile `/api/smoke` was already reading those same columns and publishing a labelled "from" bearing. So two endpoints answered the same question with one of them silent, and the silent one is the one the map and every consumer read.
+
+In the dry season this is the difference between "wind 12 km/h" and "wind from the north-east, carrying air off the northern plain". The second is the actionable one.
+
+**One compass, not two.** `server/smoke.js` kept its own private compass table. Copying that table into the risk engine would have been the same duplicate-partial-copy mistake already paid for in 2.4.74, so the table, the bearing maths and the labelling now live in `server/wind.js` and both engines import them. `smoke.js` had **no imports at all** before this, so the refactor is what let the shared module be used at all.
+
+**What the payload gained,** per province: `wind_dir_deg`, `wind_from_th`, `wind_from_en`, `wind_towards_deg`, `wind_basis` and `wind_updated_at`. Tomorrow's bearing wins when present, because tomorrow is the day a reader is preparing for — and when it is absent the payload **says so** (`today-forecast`) rather than quietly falling back. Verified live: **77 of 77 provinces** carry a bearing, and **77 of 77 agree with `/api/smoke`** on the compass label, with zero disagreements.
+
+**An absent wind reads as absent.** `describeWind` returns *every* field null for a missing, non-numeric, negative or >360 bearing, rather than defaulting to north. A missing wind that renders as "N" is a fabricated direction, and north is the one bearing a Thai reader would act on hardest. `pickWindDir` also treats a garbage tomorrow bearing as absent and falls back to today instead of rendering north.
+
+The private per-province temporaries (`_wind_d0`, `_wind_d1`, …) are deleted before publishing, and a test asserts no `_wind*` key reaches the API.
+
+`scripts/test-wind-direction.mjs` — 32 checks, including a live coherence check that compares `/api/risk` against `/api/smoke` province by province. Five mutations caught: removing the out-of-range guard (9 failures), defaulting a missing bearing to north (9), preferring today's forecast over tomorrow's (1), leaking the `_wind` temporaries (1), and re-introducing a private compass copy into `smoke.js` (2).
+
+Full suite: **1405 passed, 0 failed** across 59 groups.
+
+---
+---
+
 ## [2.4.97] — 2026-10-17 — rain clears dust better than the curve said, because the curve only knew about PM2.5
 
 Ops + API only; no file under `public/` changed, so the asset token stays at 2.4.96.

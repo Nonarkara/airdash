@@ -16,6 +16,7 @@ import { hazeEvidence, shouldFloorToWatch } from './vision/hazeEvidence.js'
 import { nationalVerdict, provinceVerdict } from './verdict.js'
 import { isThaiProvinceCode } from './provinces.js'
 import { readTwinFlood, floodByCode } from './sources/twin-flood.js'
+import { pickWindDir } from './wind.js'
 
 const FRESH_PM_HOURS = 6
 const FRESH_FC_HOURS = 13
@@ -173,7 +174,10 @@ export function createRisk(db, washout) {
     const air = freshRows('air4thai',
       ['pm25', 'pm10', 'o3', 'no2', 'so2', 'co', 'aqi'], localCutoff(FRESH_PM_HOURS))
     const fc = freshRows('openmeteo_aq', ['pm25_fc_24h', 'pm25_fc_48h', 'pm25_fc_72h', 'dust_fc_24h'], localCutoff(FRESH_FC_HOURS))
-    const wx = freshRows('openmeteo', ['wind_fc_kmh', 'precip_prob_24h', 'precip_fc_d0'], localCutoff(FRESH_FC_HOURS))
+    // wind_dir_d0/d1 are already ingested and already used by server/smoke.js for the
+    // same 77 provinces; asking for them here is what stops /api/risk publishing a wind
+    // SPEED with no idea which way the air is moving.
+    const wx = freshRows('openmeteo', ['wind_fc_kmh', 'wind_dir_d0', 'wind_dir_d1', 'precip_prob_24h', 'precip_fc_d0'], localCutoff(FRESH_FC_HOURS))
     const rain = freshRows('thaiwater_rain', ['rain_24h'], localCutoff(FRESH_RAIN_HOURS))
     const sat = freshRows('gistda_pm25', ['pm25', 'pm25_avg24h'], localCutoff(CONFIG.science.gistdaFreshHours))
     const riseByProvince = riseRateByProvince()
@@ -201,6 +205,10 @@ export function createRisk(db, washout) {
           aq_stations: 0, rain_stations: 0,
           pm25_fc_24h: null, pm25_fc_48h: null, pm25_fc_72h: null, dust_fc_24h: null,
           wind_fc_kmh: null, precip_prob_24h: null, precip_fc_24h: null,
+          // Direction: which way the air is coming FROM, plus where it is going.
+          wind_dir_deg: null, wind_from_th: null, wind_from_en: null,
+          wind_towards_deg: null, wind_basis: null, wind_updated_at: null,
+          _wind_d0: null, _wind_d1: null, _wind_d0_at: null, _wind_d1_at: null,
           rain_obs_24h: null,
           top_stations: [],
         }
@@ -289,6 +297,8 @@ export function createRisk(db, washout) {
       const p = prov(row)
       if (!p) continue
       if (row.metric === 'wind_fc_kmh') p.wind_fc_kmh = row.value
+      else if (row.metric === 'wind_dir_d0') { p._wind_d0 = row.value; p._wind_d0_at = row.obs_time }
+      else if (row.metric === 'wind_dir_d1') { p._wind_d1 = row.value; p._wind_d1_at = row.obs_time }
       else if (row.metric === 'precip_prob_24h') p.precip_prob_24h = row.value
       else if (row.metric === 'precip_fc_d0') p.precip_fc_24h = row.value
     }
@@ -312,6 +322,14 @@ export function createRisk(db, washout) {
       p.stagnation_comp = stagnationScore({
         wind: p.wind_fc_kmh, prob24: p.precip_prob_24h, rainObs24: p.rain_obs_24h,
       })
+
+      // Wind DIRECTION, resolved through the shared helper so this and
+      // /api/smoke cannot disagree about what "NE" means. Tomorrow's bearing
+      // wins when present, because tomorrow is the day a reader is preparing
+      // for. Every field is null when there is no usable direction — an absent
+      // wind must read as absent, never as a default "N".
+      Object.assign(p, pickWindDir(p._wind_d0, p._wind_d1, p._wind_d1_at, p._wind_d0_at))
+      delete p._wind_d0; delete p._wind_d1; delete p._wind_d0_at; delete p._wind_d1_at
 
       const w = p.province_code ? washoutAll.get(p.province_code) : null
       p.washout_band = w?.band ?? null

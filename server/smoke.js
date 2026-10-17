@@ -11,6 +11,10 @@
 // It is a transport INDICATOR, not a concentration forecast: it says where
 // smoke can come from, not how much PM2.5 will arrive. The CAMS forecast
 // (bias-corrected) carries the "how much". Labels say so.
+// (The compass table and the from-bearing labelling live in ./wind.js now, so
+// this engine and the risk engine cannot drift apart on what "NE" means.)
+import { COMPASS_TH, COMPASS_EN, compassIndex } from './wind.js'
+
 const RADIUS_KM = 500
 const SECTOR_HALF_DEG = 45        // upwind = within ±45° of the wind-from bearing
 const DECAY_KM = 150              // weight = 1 / (1 + d / DECAY_KM)
@@ -23,8 +27,6 @@ const LEVELS = [                  // weighted MW → level (first match wins)
   { min: 0, level: 'none' },
 ]
 const TTL_MS = 10 * 60_000
-const COMPASS_TH = ['เหนือ', 'ตะวันออกเฉียงเหนือ', 'ตะวันออก', 'ตะวันออกเฉียงใต้', 'ใต้', 'ตะวันตกเฉียงใต้', 'ตะวันตก', 'ตะวันตกเฉียงเหนือ']
-const COMPASS_EN = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
 const rad = (d) => (d * Math.PI) / 180
 export function distanceKm(lat1, lng1, lat2, lng2) {
@@ -39,7 +41,6 @@ export function bearingDeg(lat1, lng1, lat2, lng2) {
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360
 }
 const angleDiff = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d }
-const compass = (deg) => Math.round(deg / 45) % 8
 
 /** Pure: fires → grid cells { lat, lng, frp, n, inThailand }. */
 export function gridFires(fires) {
@@ -72,7 +73,7 @@ export function smokeFor(province, cells, windFromDeg) {
     if (nearest === null || d < nearest) nearest = d
   }
   const level = LEVELS.find((l) => weighted >= l.min).level
-  const k = compass(windFromDeg)
+  const k = compassIndex(windFromDeg)
   return {
     level,
     upwind_frp_mw: Math.round(weighted),
