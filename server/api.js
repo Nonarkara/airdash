@@ -52,6 +52,7 @@ import { futureRejects, badObsRejects, SERIES_INDEX } from './db.js'
 import { forecastBias } from './forecastBias.js'
 import { computeSmoke, SMOKE_METHOD } from './smoke.js'
 import { hazeEvidence } from './vision/hazeEvidence.js'
+import { aerosolProfile, guidanceFor, AEROSOL_METHOD } from './aerosol.js'
 import { CAMS_HOURLY_KEY } from './sources/openmeteo-aq.js'
 
 /** Fold Effective Harm onto each risk province row (Danger-style join). */
@@ -1380,7 +1381,15 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     // ground-truth pins on the map and to flag where the satellite
     // AOD layers disagree with the ground measurement.
     'GET /api/aeronet': (req, res, url) => {
-      const days = clamp(url.searchParams.get('days'), 1, 30, 1)
+      // Default 7 days, NOT 1. AERONET publishes daily aggregates that arrive
+      // one to two days late, so a 1-day window was empty for most of the day:
+      // measured on 2026-10-17 the newest stored reading was 27 h old and
+      // `days=1` returned zero rows while `days=7` returned five stations. An
+      // endpoint whose default view is blank is indistinguishable from one
+      // that is broken. The window bounds the query only — `latest` is still
+      // one row per station — and the age of that row is published below so a
+      // reader can judge it rather than assume it is current.
+      const days = clamp(url.searchParams.get('days'), 1, 30, 7)
       const since = new Date(Date.now() - days * 86400_000).toISOString()
       const rows = db.all(
         `SELECT station, ts, aod_440, aod_500, aod_675, aod_870, aod_1020, precipitable_water_cm
@@ -1394,11 +1403,42 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       for (const r of rows) {
         if (!latest[r.station]) latest[r.station] = r
       }
+      // The size reading. AERONET gives optical depth at seven wavelengths and
+      // we stored all seven without ever deriving the one summary that matters
+      // for a public: whether the particles are coarse (dust) or fine (smoke),
+      // because those need different precautions. Stated as qualitative —
+      // `calibrated` is pinned false and no concentration is derived from it.
+      const aerosol = {}
+      for (const [station, r] of Object.entries(latest)) {
+        aerosol[station] = { ...aerosolProfile(r), guidance: guidanceFor(aerosolProfile(r)), observed_at: r.ts }
+      }
+      // National read: the station reporting the most aerosol, which in a
+      // dust episode is the one the episode actually reached.
+      let dominant = null
+      for (const [station, p] of Object.entries(aerosol)) {
+        if (p.mode == null || p.load == null) continue
+        if (!dominant || p.load > dominant.load) dominant = { station, load: p.load, mode: p.mode, alpha: p.alpha }
+      }
+      // Freshness, stated rather than assumed. AERONET is a daily-aggregate
+      // ground truth source, so "today" is never the right claim here; this is
+      // how old the newest reading actually is.
+      const newest = rows.reduce((m, r) => (r.ts > m ? r.ts : m), '')
+      const ageH = newest ? Math.round((Date.now() - Date.parse(newest)) / 3600_000) : null
       json(res, 200, {
         updated: new Date().toISOString(),
         window_days: days,
         stations: AERONET_STATIONS,
         latest,
+        aerosol,
+        dominant,
+        aerosol_method: AEROSOL_METHOD,
+        newest_reading_at: newest || null,
+        reading_age_h: ageH,
+        // Say the quiet part out loud instead of returning an empty object.
+        empty_note: rows.length ? null :
+          (ageH === null
+            ? 'AERONET has not returned any reading for this window.'
+            : `No AERONET reading in the last ${days} days; the newest stored reading is ${ageH} h old.`),
         count: rows.length,
       })
     },

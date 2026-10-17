@@ -33,6 +33,7 @@
 // Six stations is enough work that this would matter if it were hourly,
 // so daily is the right answer.
 import { CONFIG } from '../config.js'
+import { PRECIPITABLE_WATER_MAX_CM } from '../aerosol.js'
 
 const BASE = 'https://aeronet.gsfc.nasa.gov/cgi-bin/print_web_data_v3'
 
@@ -112,10 +113,22 @@ function parseCsv(text) {
   const iPW    = idx('Precipitable_Water(cm)')
   if (iDate < 0 || iTime < 0) return { rows: [], columns: head }
 
-  const numOrNull = (v) => {
-    if (v === undefined || v === null || v === '' || v === 'N/A' || v === '-999.0') return null
+  // Validated by PHYSICAL RANGE, not by matching sentinel spellings.
+  //
+  // This used to test for the literal string '-999.0' and nothing else, so the
+  // numeric '-999' that AERONET actually writes sailed through and 158 rows
+  // were stored with a negative optical depth — 154 of them on the 1020 nm
+  // band, 4 on 500 nm. Negative optical depth is not a rounding matter: it
+  // makes the Ångström log-ratio undefined and inverts the particle-size
+  // reading, which is the whole basis of the aerosol advice. Enumerating
+  // spellings would have fixed today's sentinel and missed the next one;
+  // optical depth is dimensionless and cannot be below zero, so that is the
+  // rule. See server/aerosol.js validAod for the upper bound.
+  const numOrNull = (v, max = 5) => {
+    if (v === undefined || v === null || v === '' || v === 'N/A') return null
     const n = Number(v)
-    return Number.isFinite(n) ? n : null
+    if (!Number.isFinite(n) || n < 0 || n > max) return null
+    return n
   }
 
   const rows = []
@@ -137,7 +150,7 @@ function parseCsv(text) {
       aod_675: numOrNull(c[iA675]),
       aod_870: numOrNull(c[iA870]),
       aod_1020: numOrNull(c[iA1020]),
-      precipitable_water_cm: numOrNull(c[iPW]),
+      precipitable_water_cm: numOrNull(c[iPW], PRECIPITABLE_WATER_MAX_CM),
     })
   }
   return { rows, columns: head }

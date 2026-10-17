@@ -10,6 +10,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+---
+
+## [2.4.96] — 2026-10-15 — what the particles actually are, so the advice is the right advice
+
+Asset token `2.4.96`. Adds an aerosol-size signal to the haze preparation plan,
+and fixes a data bug that made the underlying measurement unsafe to use.
+
+**The preparation advice was PM2.5 advice, applied to dust.**
+
+`public/js/panels/hazePlan.js` is a good panel: pollution now, model outlook, upwind fire and wind, rain relief, and a cleaner-air room. But every precaution it gives is a **fine**-particle precaution — HEPA, a well-fitting N95/FFP2, close the windows. In the dry season the air is loaded with **coarse** mineral dust, and against dust those instructions are close to useless: coarse particles do not stay in the lungs, they irritate eyes, throat and nose, and **a PM2.5 respirator does not filter them**. A reader following the panel through a dust episode would have done the wrong things and skipped the right ones — laundry left outside, car windows open, watering cans in the street.
+
+PM2.5 cannot resolve this. The same 80 µg/m³ can be mostly fine smoke or largely coarse dust, and the number looks identical either way.
+
+**What was already there and never used.** AirDash ingests AERONET aerosol optical depth at **seven wavelengths** and stored all seven. It never derived the one summary that decides this: the **Ångström exponent**, the aerosol-size indicator since 1929. Low α means coarse. The data was sitting in the database.
+
+`server/aerosol.js` now derives it, with bands taken from the literature rather than invented: coarse ≤ 0.8 (Gkikas et al. 2021a use AE(440–870) ≤ 0.75 for near-pure dust), mixed 0.8–1.5, fine > 1.5 (Eck et al. 1999 and NASA Deep Blue put the coarse/fine crossover at 1; Bond et al. 2013 associates ~1.5+ with biomass burning). The 440/675 baseline is preferred over 440/500 because it is **3.3× less sensitive** to error in the blue band — not because it reads higher, which is a common misconception this release had to get right.
+
+Live today: Bangkok α = 1.71 (fine), Chiang Dao 1.53 (fine), Chiang Mai 1.43, Ubon 1.34, Silpakorn 1.30 (mixed). Consistent with October — combustion and biomass, before the dust season.
+
+**A sign error worth recording, because it was silent.** The exponent is `−ln(τ₁/τ₂) / ln(λ₁/λ₂)`. Written with `ln(λ₂/λ₁)` in the denominator it returns a **negative** α for every real aerosol, and a negative α sorts into *coarse* — so the one visible sign slip in this file would have told Thailand it was breathing dust when it was breathing smoke. It is caught by a check that asserts only that **blue scatters more than red, so α must be positive**, which needs no reference data. `sizeMode` also refuses a negative α outright instead of bucketing it.
+
+**158 stored rows carried a NEGATIVE optical depth.** `server/sources/aeronet.js` tested for the literal string `'-999.0'` and nothing else, so the numeric `-999` AERONET actually writes was stored as a measurement — 154 on the 1020 nm band, 4 on 500 nm. Optical depth is dimensionless and cannot be negative, which makes the Ångström log-ratio undefined and inverts the size reading: the entire basis of the new advice. The reader now validates **physical range** rather than enumerating sentinel spellings, which fixes today's sentinel and the next one. `ops/repair-aeronet-sentinels.mjs` cleaned the 159 affected cells in one transaction, reporting the corrupted shapes first; all 2,547 rows were retained, since each had one bad band and a valid spectrum.
+
+**The endpoint's default view was usually empty.** `days` defaulted to **1**, and AERONET publishes daily aggregates one to two days late — measured on 2026-10-17 the newest stored reading was 27 h old, so `days=1` returned **zero rows** while `days=7` returned five stations. An endpoint whose default is blank is indistinguishable from a broken one. The default is now 7, and the response publishes `reading_age_h` plus an `empty_note`, so an absent reading explains itself instead of looking like good news.
+
+**What the strip may claim, enforced by tests.** A qualitative particle size, never a concentration — `calibrated` is pinned false and the strip says so in the reader's language. It names the instruments it read, states the reading's age (and explains the lag past 48 h), and says it is a national signal from a few instruments, not a per-province measurement. Below the AOD floor it **withholds with a reason** rather than reporting a noisy α. It loads in its own cache and fills its slot *after* paint, so a slow or empty AERONET can never delay or blank the province plan above it, and an empty block renders a visible explanation rather than vanishing.
+
+Two guards, both mutation-tested:
+
+- `scripts/test-aerosol-size.mjs` — 45 checks. Executes the real functions. 4 mutations caught, including **planting the sign error above** (7 failures).
+- `scripts/test-aerosol-strip.mjs` — 31 checks. Evaluates the whole panel in a `vm` with stubbed imports so the real `aerosolStrip` runs unmodified. 4 mutations caught.
+
+Both guards earned their keep during construction rather than after. The strip test caught a real bug in the panel it tests: `tr(...[g?.act_en])` passed **one** argument to `tr(th, en)`, so with English selected the line rendered `undefined`. And the first version of the empty-state check could not fail — adding `hidden` to the unavailable block left every text assertion green, because they only ever read text. A guard that cannot fail is worse than none; there is now an assertion that the empty state stays visible.
+
+**Not fixed, recorded:** `pm25FromHaze` (`hazeRead.js:610`) still returns 13.14 µg/m³ on a fit it labels `usable: false`. It has no caller and the product rule is that nothing in this pipeline emits a concentration, but it is the one function that could and it ignores the flag in its own return. Flagged, not deleted — removing a calibration affordance is a product decision. Full detail in `audit/camera-wall-vision.md`.
+
+---
+
 ## [2.4.94] — 2026-10-15 — Catch staggered PCD reports and expose real coverage
 
 Asset token 2.4.94, SW airdash-v114. Live audit found 42 Thai PM readings within 90 minutes in AirDash while PCD already published 142 latest-hour station reports. Hourly polling repeatedly missed staggered publication; Air4Thai now checks every 15 minutes. Station reporting cadence stays hourly. No extra model calls or cooldown bypass.
