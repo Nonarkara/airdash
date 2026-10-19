@@ -1,9 +1,9 @@
 // Research Paper panel — renders the full bilingual academic paper inside
 // the About overlay's "Research Paper" tab, with custom SVG infographics,
 // the complete source catalog, citations, and CSV dataset download.
-import { on, store } from '../state.js?v=2.4.99'
-import { getJson } from '../cache.js?v=2.4.99'
-import { escapeHtml } from '../fmt.js?v=2.4.99'
+import { on, store } from '../state.js?v=2.4.100'
+import { getJson } from '../cache.js?v=2.4.100'
+import { escapeHtml } from '../fmt.js?v=2.4.100'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
