@@ -15,6 +15,10 @@ export const COUNTRIES = [
 ].map(([code,name_en,name_th,lat,lng,agency,url,integration,note_en])=>({code,name_en,name_th,lat,lng,agency,url,integration,note_en}))
 
 export const REGIONAL_RESOURCES = [
+  {name:'GDACS flood episodes',url:'https://www.gdacs.org/',role:'Connected: 14-day reported flood episodes, refreshed every 30 minutes. Centroids are not flood footprints. Alert colour describes humanitarian impact, not street-level danger.'},
+  {name:'FloodDash Thailand',url:'https://flood.nonarkara.org/',role:'Thailand river, rainfall and flood assessments. Separate operational system; regional GDACS reports do not replace its gauges or local warnings.'},
+  {name:'Mekong River Commission',url:'https://www.mrcmekong.org/',role:'Reference: Lower Mekong river monitoring and forecasting. Not an automated feed in this regional view.'},
+  {name:'AHA Centre / ADINet',url:'https://adinet.ahacentre.org/',role:'Reference: ASEAN disaster reports. Reporting delays and uneven coverage; not a live inundation layer.'},
   {name:'ASMC haze, fires, wind and rain',url:'https://asmc.asean.org/asmc-gis-portal/',role:'Official regional context portal; linked, not scraped. Hotspots can be missed under cloud. Maps carry use restrictions.'},
   {name:'ASEAN transboundary haze coordination',url:'https://asean.org/speechandstatement/information-on-fire-and-haze/',role:'Policy and coordination reference, not an operational PM feed.'},
   {name:'OpenAQ v3',url:'https://docs.openaq.org/',role:'Candidate multi-country station access; key required, coverage and original provider identities must be checked. Not connected here.'},

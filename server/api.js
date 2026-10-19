@@ -1,3 +1,4 @@
+import { regionalFlood } from './regionalFlood.js'
 import { regionalFires } from './regionalFires.js'
 import { pmObservationCoverage } from './observationCoverage.js'
 import { allProvinces } from './provinces.js'
@@ -1354,6 +1355,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         wind: (smoke.provinces ?? []).map(p => { const location = allProvinces().find(l => l.province_code === p.code); return { ...p, lat: location?.lat, lng: location?.lng } }),
         observations, singapore: { available: sg.available, fetched_at: sg.fetched_at, error: sg.error },
         fires: regionalFires(db),
+        flood: regionalFlood(db),
         method: 'Partial regional overview, not a harmonized country ranking. Native averaging periods differ. Missing data is unknown. Stale means older than 90 minutes. No national indices are converted or blended.',
       })
     },

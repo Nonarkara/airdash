@@ -1,3 +1,4 @@
+@import url('/fonts/region-faces.css');
 .rank-row {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 12px;
@@ -2267,20 +2268,25 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
   overflow-y: auto; max-height: calc(100vh - var(--header-h));
 }
 
+#about-overlay {
+  --font-ui: 'Jost', 'Prompt', sans-serif;
+  --font-display: var(--font-ui); --font-num: var(--font-ui);
+  font-family: var(--font-ui);
+}
 /* ── Research paper panel ─────────────────────────────────────────────────── */
 .research-svg { width: 100%; height: auto; max-width: 760px; display: block; margin: 0 auto; }
 
 .rp-hero {
-  text-align: center; padding: 24px 0 32px;
-  border-bottom: 1px solid var(--rule); margin-bottom: 28px;
+  text-align: left; padding: 16px 0 24px;
+  margin-bottom: 24px;
 }
 .rp-hero-eyebrow {
-  font-family: var(--font-num); font-size: 10px; font-weight: 500;
-  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-low);
+  font-family: var(--font-num); font-size: 13px; font-weight: 500;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-low);
   margin-bottom: 12px;
 }
 .rp-hero-title {
-  font-size: clamp(20px, 3vw, 28px); font-weight: 700; color: var(--th-navy);
+  font-size: clamp(28px, 4vw, 36px); font-weight: 600; color: var(--ink);
   line-height: 1.25; margin-bottom: 16px;
 }
 .rp-hero-meta {
@@ -2288,29 +2294,27 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
 }
 .rp-hero-meta code { font-family: var(--font-num); font-size: 12px; }
 .rp-abstract {
-  margin-top: 20px; padding: 16px 20px; background: var(--well-dim);
-  border-left: 3px solid var(--th-navy); text-align: left;
+  margin-top: 20px; padding: 0; text-align: left;
 }
-.rp-abstract p { font-size: 13.5px; line-height: 1.6; color: var(--ink); }
+.rp-abstract p { max-width: 65ch; font-size: 15px; line-height: 1.6; color: var(--ink); }
 
 .rp-section {
   margin-bottom: 32px;
 }
 .rp-section h2 {
-  font-size: 18px; font-weight: 700; color: var(--th-navy);
-  margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--rule);
+  font-size: 26px; font-weight: 600; color: var(--ink);
+  margin-bottom: 16px;
 }
 .rp-section h3 {
-  font-size: 14px; font-weight: 600; color: var(--ink); margin: 16px 0 8px;
+  font-size: 20px; font-weight: 600; color: var(--ink); margin: 20px 0 10px;
 }
 .rp-section p {
-  font-size: 14px; line-height: 1.65; color: var(--ink); margin: 10px 0;
+  max-width: 65ch; font-size: 15px; line-height: 1.65; color: var(--ink); margin: 12px 0;
 }
 .rp-lead { font-size: 14.5px; color: var(--ink-mid); }
 
 .rp-figure {
-  margin: 16px 0; padding: 12px; background: var(--well-dim);
-  border: 1px solid var(--rule); overflow-x: auto;
+  margin: 20px 0; padding: 0; overflow-x: auto;
 }
 /* Photo variant of the figure — same paper-figure treatment but a
    photograph (often landscape) with a figcaption that reads as a
@@ -2357,35 +2361,16 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
    into --rp-toc-h by research.js, because the index wraps to two lines
    in Thai and one in English. */
 .rp-toc {
-  max-height: 120px;
-  overflow-y: auto;
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: var(--well);
-  border: 1px solid var(--rule);
-  border-left: 3px solid var(--th-navy);
-  padding: 10px 14px;
-  margin-bottom: 22px;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.06);
+  position: sticky; top: 0; z-index: 3;
+  background: var(--paper); padding: 0; margin-bottom: 24px;
 }
-.rp-toc-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-}
+.rp-toc summary { cursor: pointer; min-height: 44px; padding: 10px 0; font-size: 15px; font-weight: 600; }
+.rp-toc details[open] { max-height: 60dvh; overflow-y: auto; }
+.rp-toc-list { list-style: none; margin: 0; padding: 0; }
 .rp-toc-list a {
-  display: inline-block;
-  font-family: var(--font-num);
-  font-size: 11.5px;
-  line-height: 1.7;
-  letter-spacing: 0.01em;
-  color: var(--ink-mid);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
+  display: flex; align-items: center; min-height: 44px; padding: 8px 0;
+  font-family: var(--font-ui); font-size: 14px; line-height: 1.5;
+  color: var(--ink); text-decoration: none; border-bottom: 1px solid transparent;
 }
 .rp-toc-list a:hover { color: var(--th-navy); border-bottom-color: var(--rule); }
 .rp-toc-list a.active {
@@ -2652,17 +2637,14 @@ html[lang="en"] #boot .boot-explainer.en { display: block; }
 /* Research directions (§9) — each question is a card: the question in the
    section accent, the "how to answer it with our data" in body ink. */
 .rp-note {
-  font-size: 12.5px; color: var(--ink-mid); line-height: 1.55;
-  border-left: 3px solid var(--rule-strong); padding-left: 12px; margin-top: 10px;
-  font-style: italic;
+  max-width: 65ch; font-size: 15px; color: var(--ink); line-height: 1.6; margin-top: 16px;
 }
 .rp-rq-list { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 12px; }
 .rp-rq {
-  border: 1px solid var(--rule); border-left: 4px solid var(--th-deep);
-  border-radius: var(--r-card, 10px); padding: 12px 16px; background: var(--well);
+  padding: 12px 0;
 }
-.rp-rq-q { font-weight: 700; font-size: 14.5px; color: var(--th-deep); line-height: 1.4; }
-.rp-rq-how { font-size: 13px; color: var(--ink-mid); line-height: 1.6; margin-top: 6px; }
+.rp-rq-q { font-weight: 600; font-size: 18px; color: var(--ink); line-height: 1.4; }
+.rp-rq-how { max-width: 65ch; font-size: 15px; color: var(--ink-mid); line-height: 1.6; margin-top: 6px; }
 
 /* Citations */
 .rp-citations { padding-left: 20px; }

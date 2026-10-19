@@ -1,15 +1,15 @@
-import { hazePlanBlock } from './hazePlan.js?v=2.4.100'
+import { hazePlanBlock } from './hazePlan.js?v=2.4.101'
 // National analytics panel — the one-screen operator view.
 // Three KPI cards · three top-5 lists · one 14-day PM2.5 bar chart · one
 // rain (washout) chart · one regional donut. Same shape as the GISTDA
 // สรุปสถานการณ์ panel but pulled from our richer pipeline (real-time PM2.5,
 // rain, forecast, washout) and bilingual.
-import { on, emit, store } from '../state.js?v=2.4.100'
-import { tr } from '../i18n.js?v=2.4.100'
-import { fmtNum } from '../fmt.js?v=2.4.100'
-import { getJson } from '../cache.js?v=2.4.100'
-import { drawBarChart, drawDonut } from '../chart.js?v=2.4.100'
-import { nationalPatternsBlock } from './patterns-ui.js?v=2.4.100'
+import { on, emit, store } from '../state.js?v=2.4.101'
+import { tr } from '../i18n.js?v=2.4.101'
+import { fmtNum } from '../fmt.js?v=2.4.101'
+import { getJson } from '../cache.js?v=2.4.101'
+import { drawBarChart, drawDonut } from '../chart.js?v=2.4.101'
+import { nationalPatternsBlock } from './patterns-ui.js?v=2.4.101'
 
 const BAND_LABEL_TH = {
   normal: 'ปกติ', watch: 'เฝ้าระวัง', elevated: 'เสี่ยงสูง', high: 'วิกฤต',

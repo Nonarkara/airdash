@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.101] — 2026-10-19 — Southeast Asia air and flood watch
+
+Added GDACS flood-episode collection and map locations across the 11 Southeast Asian countries. Explicitly requests all alert levels (omitting the filter excluded Green reports in live tests), bounds pagination and preserves event periods. Thirty-minute collection, six-hour retrieval freshness and rolling 14-day reports; empty or stale coverage never means safe. FL symbols represent event locations, not inundation footprints or depths. Thailand warnings reuse the existing FloodDash cache and require both source and retrieval timestamps within one hour, preserving prepare/protect/evacuate distinctions. Air and flood scores are not blended.
+
+Updated the regional evidence directory, source/data-chain catalog, API documentation and bilingual research section. Removed hard-coded sensor/alert totals from the research introduction. Reused the Palette/Jost/Prompt layout with functional controls and disclosures, no new cards or decorative severity badges. Research contents now use a compact native disclosure; prose and figures use readable measures and the shared Jost/Prompt typography.
+
 ## [2.4.100] — 2026-10-19 — remove regional interface clutter
 
 Replaced the regional page's layered CSS overrides with one coherent layout. Jost and Prompt replace the mixed microtype; body labels, captions and source status are readable at14–16px. Navigation and reset use content-sized links instead of empty button boxes. The PM legend sits beside its explanation below the map, leaving geography unobstructed. Method and wind limitations are grouped under named disclosures; reporting-location counts no longer masquerade as headline KPIs. Palette colours and map/data semantics remain consistent with AirDash.

@@ -1,6 +1,6 @@
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.100'
-import { escapeHtml as esc } from './fmt.js?v=2.4.100'
-import { readPreference, writePreference } from './preferences.js?v=2.4.100'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.101'
+import { escapeHtml as esc } from './fmt.js?v=2.4.101'
+import { readPreference, writePreference } from './preferences.js?v=2.4.101'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
@@ -10,6 +10,7 @@ L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World
 const pm=L.layerGroup().addTo(map),fire=L.layerGroup().addTo(map)
 const field=createPollutionField().addTo(map)
 const wind=L.layerGroup().addTo(map)
+const floods=L.layerGroup().addTo(map)
 byWindInit()
 function byWindInit(){document.getElementById('wind').onchange=()=>document.getElementById('wind').checked?wind.addTo(map):map.removeLayer(wind)}
 const fireBounds=L.rectangle([[4,92],[29,110]],{weight:1,dashArray:'6 6',color:'#86551c',fill:false,interactive:false}).addTo(map)
@@ -24,6 +25,7 @@ function fitWatchArea(){map.fitBounds(watchAreas[byId('watch-area').value]??whol
 byId('watch-area').onchange=fitWatchArea
 map.on('resize',()=>requestAnimationFrame(fitWatchArea))
 byId('open-directory').onclick=()=>{byId('country-directory').open=true}
+byId('floods').onchange=()=>byId('floods').checked?floods.addTo(map):map.removeLayer(floods)
 byId('fires').onchange=()=>{byId('fires').checked?fire.addTo(map):map.removeLayer(fire)}
 function setImagery(){if(imagery)map.removeLayer(imagery);imagery=null
  const id=byId('imagery').value,date=new Date(Date.now()-86400000).toISOString().slice(0,10)
@@ -67,7 +69,7 @@ function paint(){
  const bounds=data.fires?.bounds
  if(Array.isArray(bounds)&&bounds.length===4)fireBounds.setBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]])
  paintField()
- pm.clearLayers();fire.clearLayers();wind.clearLayers()
+ pm.clearLayers();fire.clearLayers();wind.clearLayers();paintFlood()
  const windSeen=new Set()
  for(const r of data.wind??[]){
   const stamp=r.wind_updated_at,iso=/[zZ]|[+-]\d\d:\d\d$/.test(stamp??'')?stamp:`${stamp?.replace(' ','T')}+07:00`,age=Date.now()-Date.parse(iso)
@@ -88,6 +90,21 @@ function paint(){
  byId('countries').innerHTML=data.countries.map(c=>{const rows=obs.filter(r=>r.country===c.code);return `<article><button data-country="${c.code}">${esc(lang==='th'?c.name_th:c.name_en)}</button><p class="status-label">${rows.length?`${rows.filter(r=>r.status==='current').length} ${tr('จุดสด','current')} / ${rows.length} ${tr('จุดรายงาน','reporting locations')}`:tr('ยังไม่เชื่อมต่อค่าตัวเลข','Numeric feed not connected')}</p><p>${esc(c.note_en)}</p><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.agency)} ↗</a></article>`}).join('')
  for(const b of document.querySelectorAll('[data-country]'))b.onclick=()=>{const c=data.countries.find(c=>c.code===b.dataset.country);map.setView([c.lat,c.lng],c.code==='SG'?10:c.code==='ID'?4:6);byId('regional-map').scrollIntoView({block:'center',behavior:'instant'})}
  byId('resources').innerHTML=data.resources.map(r=>`<article><h3><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)} ↗</a></h3><p>${esc(r.role)}</p></article>`).join('')
+}
+function paintFlood(){
+ floods.clearLayers()
+ const f=data?.flood,age=Date.now()-Date.parse(f?.checked_at),fresh=f?.available&&Number.isFinite(age)&&age>=-300000&&age<=6*3600000
+ const events=fresh?(f.events??[]).filter(e=>Date.parse(e.period_end)>=Date.now()-14*86400000):[]
+ byId('flood-status').textContent=fresh?`${events.length} ${tr('รายงาน / 14 วัน · ตรวจแหล่ง','reports / 14 days · Source checked')} ${clock(f.checked_at)}${(f.pagination_complete??f.complete)&&f.rejected===0?'':' · '+tr('ข้อมูลไม่ครบ','Partial coverage')}`:tr('รายงานน้ำท่วมไม่พร้อมหรือเก่า ไม่ใช่สถานการณ์ปกติ','Flood reports unavailable or stale; this does not mean normal conditions.')
+ const detail=e=>`<strong>${esc(e.name)}</strong><br>${esc(e.countries.join(' / '))}<br>${tr('ระดับผลกระทบมนุษยธรรม GDACS','GDACS humanitarian impact alert')}: ${esc(e.alert)}<br>${tr('ช่วงรายงาน','Reported period')}: ${esc(clock(e.period_start))} → ${esc(clock(e.period_end))}<br>${tr('แก้ไขรายงาน','Report updated')}: ${esc(clock(e.updated_at))}<br>${tr('จุดอ้างอิง ไม่ใช่พื้นที่น้ำท่วม','Event location, not inundation extent')}<br><a href="${esc(e.url)}" target="_blank" rel="noopener">GDACS ↗</a>`
+ for(const e of events){
+  const marker=L.marker([e.lat,e.lng],{title:e.name,icon:L.divIcon({className:'regional-flood',iconSize:[26,22],iconAnchor:[13,11],html:'<span>FL</span>'})}).bindPopup(detail(e)).addTo(floods)
+  marker.getElement?.()?.setAttribute('aria-label',tr('รายงานน้ำท่วม: ','Flood report: ')+e.name)
+ }
+ byId('flood-events').innerHTML=events.map(e=>`<p>${detail(e)}</p>`).join('')||`<p>${tr('ไม่มีรายงานที่แสดงได้ ตรวจคำเตือนของหน่วยงานท้องถิ่น','No displayable reports. Check local agency warnings.')}</p>`
+ const th=f?.thailand,thAge=Date.now()-Date.parse(th?.updated_at),thFresh=th?.available&&Number.isFinite(thAge)&&thAge>=-300000&&thAge<=3600000
+ const levelLabels={prepare:tr('เตรียมพร้อม','Prepare'),protect:tr('ป้องกัน','Protect'),evacuate:tr('อพยพ','Evacuate')}
+ byId('thai-flood').innerHTML=thFresh?`${esc(tr('FloodDash ประเทศไทย · ปรับปรุง ','Thailand FloodDash · Updated ')+clock(th.updated_at))}${(th.warnings??[]).map(w=>`<br>${esc((lang==='th'?w.name_th:w.name_en)||w.code)} — <strong>${esc(levelLabels[w.level]??w.level)}</strong>`).join('')}`:esc(tr('การประเมิน FloodDash ประเทศไทยไม่พร้อมหรือเก่า เปิดระบบต้นทางเพื่อตรวจสถานี','Thailand FloodDash assessment unavailable or stale. Open the source system to check gauges.'))
 }
 async function load(){if(loading)return;loading=true;byId('refresh').disabled=true
  try{const res=await fetch('/api/region',{signal:AbortSignal.timeout(20000),cache:'no-store'});if(!res.ok)throw Error();data=await res.json();lastError=false;paint()}

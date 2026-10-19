@@ -96,3 +96,7 @@ footer{display:flex;flex-wrap:wrap;gap:12px;padding:16px 20px;font-size:14px;bor
 .map-key .pm-scale{margin:0;max-width:100%;width:auto}.map-key .caption{margin:0 0 8px;max-width:65ch}
 .map-key #imagery-legend{margin:8px 0;max-width:100%}
 @media(max-width:900px){.map-key{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px}.map-key .pm-scale{width:360px;max-width:100%}}
+/* Flood reports have their own source/period and a distinct geographic symbol. */
+.flood-watch{margin:28px 0}.flood-watch h2{margin-bottom:12px}.flood-option{display:flex;align-items:flex-start;gap:10px;font-size:15px;min-height:44px}.flood-watch details{font-size:14px}.flood-watch p{max-width:65ch;line-height:1.6}
+.regional-flood span{display:block;width:26px;height:22px;background:#163b50;color:#fff;border:1px solid #fff;font:600 12px/20px var(--font-ui);text-align:center}
+#flood-events>p{margin:0 0 20px}

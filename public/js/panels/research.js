@@ -1,9 +1,9 @@
 // Research Paper panel — renders the full bilingual academic paper inside
 // the About overlay's "Research Paper" tab, with custom SVG infographics,
 // the complete source catalog, citations, and CSV dataset download.
-import { on, store } from '../state.js?v=2.4.100'
-import { getJson } from '../cache.js?v=2.4.100'
-import { escapeHtml } from '../fmt.js?v=2.4.100'
+import { on, store } from '../state.js?v=2.4.101'
+import { getJson } from '../cache.js?v=2.4.101'
+import { escapeHtml } from '../fmt.js?v=2.4.101'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -956,16 +956,15 @@ function sectionRecord() {
       <h2 data-th="10. สิ่งที่ข้อมูลที่เก็บมาบอกแล้ว" data-en="10. What the Record Shows">
         ${tr('10. สิ่งที่ข้อมูลที่เก็บมาบอกแล้ว', '10. What the Record Shows')}
       </h2>
-      <p data-th="ระบบนี้เก็บข้อมูลต่อเนื่องมาตั้งแต่กลางเดือนกรกฎาคม 2026 — ข้อมูลดิบหลายล้านแถว ตารางสรุปรายชั่วโมง การแจ้งเตือน 45,000 รายการ และสถานีวัด 5,700 แห่ง สามแผนภูมิด้านล่างดึงจากค่า aggregate สดของฐานข้อมูลproduction ไม่ได้มาจากตัวเลขที่เขียนไว้ล่วงหน้า ทุกแผนภูมิบอกหน่วยวัดและขนาดตัวอย่างของตัวเอง" data-en="This system has been recording continuously since mid-July 2026 — millions of raw rows, permanent hourly rollups, roughly 45,000 alerts and 5,700 sensor sites. The three charts below are drawn from live aggregates of the production database, not from numbers written in advance. Each states its population and sample size.">
-        ${tr(
-          'ระบบนี้เก็บข้อมูลต่อเนื่องตั้งแต่กลางกรกฎาคม 2026 — ข้อมูลดิบหลายล้านแถว ตารางสรุปรายชั่วโมงถาวร การแจ้งเตือนราว 45,000 รายการ และสถานีวัด 5,700 แห่ง',
-          'Recording continuously since mid-July 2026 — millions of raw rows, permanent hourly rollups, roughly 45,000 alerts and 5,700 sensor sites.'
-        )}
-      </p>
+      <p>${tr('แผนภูมิต่อไปนี้ดึงจากตารางสรุปสดของฐานข้อมูล ทุกภาพระบุหน่วย ช่วงเวลา และขนาดตัวอย่างของตัวเอง ไม่ใช้จำนวนสถานีหรือจำนวนการแจ้งเตือนที่เขียนไว้ล่วงหน้าแทนหลักฐาน', 'The following figures use live database aggregates. Each states its units, period and sample size; hard-coded station or alert totals are not substitutes for evidence.')}</p>
 
       <div class="rp-note"><h3>${tr('จากข้อมูลดิบสู่การเตรียมตัว','From raw evidence to preparation')}</h3>
       <p>${tr('เริ่มจากค่าฝุ่นที่พื้นและเวลาตรวจวัด → ดูจุดความร้อนย้อนหลัง (ไม่ใช่พื้นที่เผา) → ตรวจทิศลมและแบบจำลอง PM2.5 → ดูฝนจริงกับฝนคาดการณ์แยกกัน → เตรียมห้องอากาศสะอาดและตรวจปลายทางก่อนเดินทาง แผง Haze preparation ในภาพรวมเชื่อมหลักฐานเหล่านี้ให้รายจังหวัด', 'Start with surface PM and observation time → inspect recent heat detections (not burned area) → check wind and the PM model → distinguish observed rain from forecast rain → prepare cleaner indoor air and check destination conditions before travel. The Haze preparation panel in Overview joins these signals by province.')}</p>
       <p>${tr('ลมรายวันเป็นเพียงเบาะแสว่าควันอาจพัดมาจากไหน ไม่ใช่เวลาถึงหรือความเข้มข้น ฝุ่น AOD จากดาวเทียมอยู่ทั้งเสาบรรยากาศ ไม่ใช่เรดาร์ค่าฝุ่นที่พื้น ฝนไม่ได้รับประกันว่าฝุ่นลด ต้องตรวจวัดซ้ำ', 'Daily wind indicates where smoke may come from, not arrival time or concentration. Satellite AOD is a column measurement, not surface pollution radar. Rain does not guarantee a drop in PM; recheck the monitors.')}</p></div>
+      <h3>${tr('เฝ้าระวังอากาศและน้ำในภูมิภาค','Regional air and flood watch')}</h3>
+      <p>${tr('มุมมองเอเชียตะวันออกเฉียงใต้เพิ่มรายงานน้ำท่วม GDACS ย้อนหลัง 14 วัน ควบคู่จุดไฟและค่าฝุ่น กรองประเทศและเวลา ตรวจความสดของการดึงข้อมูลทุก 30 นาที ข้อมูลเกิน 6 ชั่วโมงไม่ใช้บนแผนที่ จุด FL เป็นจุดอ้างอิงเหตุการณ์ ไม่ใช่ขอบเขตน้ำท่วมหรือเวลาที่น้ำจะถึง', 'The Southeast Asia view joins 14-day GDACS flood reports with fire and air evidence. Country and time checks precede mapping; collection runs every 30 minutes and reports are withheld after six hours without a successful retrieval. FL locations are event centroids, not inundation boundaries or flood-arrival estimates.')}</p>
+      <p>${tr('สีเตือน GDACS บอกผลกระทบด้านมนุษยธรรม ไม่ใช่ความลึกหรือความปลอดภัยบนถนน ไม่มีรายงานไม่เท่ากับไม่มีน้ำท่วม FloodDash ให้การประเมินเฉพาะไทย โดยตรวจทั้งเวลาต้นทางและเวลารับข้อมูล ฝนที่อาจล้างฝุ่นอาจเพิ่มความเสี่ยงน้ำท่วม จึงแยกหลักฐานอากาศและน้ำ ไม่ผสมเป็นคะแนนเดียว', 'GDACS alert colours describe humanitarian impact, not water depth or road safety; no report is not an all-clear. Thailand assessments reuse FloodDash with both source and retrieval freshness checks. Rain that may reduce dust may also raise flood risk: air and water evidence remain separate, without a blended score.')}</p>
+      <p><a href="/region">${tr('เปิดเฝ้าระวังภูมิภาค','Open regional watch')}</a> · <a href="https://www.gdacs.org/Documents/2025/GDACS_API_quickstart_v2.pdf" target="_blank" rel="noopener">GDACS API / methodology</a> · <a href="https://flood.nonarkara.org/" target="_blank" rel="noopener">FloodDash Thailand</a></p>
       <h3 data-th="10.1 รูปแบบรายวัน — PM2.5 ทั้งประเทศตามชั่วโมง" data-en="10.1 The diurnal cycle — national PM2.5 by hour">
         ${tr('10.1 รูปแบบรายวัน — PM2.5 ทั้งประเทศตามชั่วโมง', '10.1 The diurnal cycle — national PM2.5 by hour')}
       </h3>
@@ -1514,6 +1513,10 @@ function buildToc(container) {
   const nav = document.createElement('nav')
   nav.className = 'rp-toc'
   nav.setAttribute('aria-label', tr('สารบัญเอกสารวิจัย', 'Research paper contents'))
+  const menu = document.createElement('details')
+  const summary = document.createElement('summary')
+  summary.textContent = tr('สารบัญเอกสารวิจัย', 'Research contents')
+  menu.appendChild(summary)
   const list = document.createElement('ol')
   list.className = 'rp-toc-list'
   const links = []
@@ -1526,6 +1529,8 @@ function buildToc(container) {
     a.textContent = h.textContent.trim()
     a.addEventListener('click', (e) => {
       e.preventDefault()
+      menu.open = false
+      container.style.setProperty('--rp-toc-h', `${nav.offsetHeight}px`)
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
       sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
       history.replaceState(null, '', `#${sec.id}`)
@@ -1533,7 +1538,8 @@ function buildToc(container) {
     li.appendChild(a); list.appendChild(li)
     links.push({ a, sec })
   }
-  nav.appendChild(list)
+  menu.appendChild(list)
+  nav.appendChild(menu)
   const hero = container.querySelector('.rp-hero')
   if (hero) hero.insertAdjacentElement('afterend', nav)
   else container.insertBefore(nav, container.firstChild)

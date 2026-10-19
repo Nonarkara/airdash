@@ -253,6 +253,15 @@ export const SOURCES = [
     note_en: 'Reference only: API v3 requires a key; coverage varies. Preserve original provider/station identity to avoid counting mirrored PCD readings twice.',
   },
   {
+    id: 'gdacs_flood', kind: 'pipeline', stored: true,
+    name_th: 'GDACS — รายงานน้ำท่วมภูมิภาค', name_en: 'GDACS regional flood reports',
+    agency_th: 'GDACS / European Commission JRC / UN OCHA', agency_en: 'GDACS / European Commission JRC / UN OCHA',
+    cadence_th: 'ทุก 30 นาที', cadence_en: 'every 30 minutes',
+    url: 'https://www.gdacs.org/', api: '/api/region', metrics: ['flood_event', 'alertlevel', 'event_period'],
+    note_th: 'รายงานเหตุการณ์ ไม่ใช่ขอบเขตน้ำท่วมหรือความลึก ไม่มีรายงานไม่ได้แปลว่าปลอดภัย',
+    note_en: 'Reported flood episodes; centroids are not inundation boundaries or water depth. Absence of reports is not an all-clear.',
+  },
+  {
     id: 'twin_flood',
     kind: 'pipeline',
     stored: true,
@@ -339,6 +348,7 @@ export const DATA_CHAIN = {
       note_en: 'Check nearby station times, prepare a cleaner-air room and reduce outdoor exposure when PM is elevated. Check destination conditions before moving. Missing evidence never means safe.', endpoint: 'https://www.epa.gov/wildfires/how-create-cleaner-air-room-home' },
   ],
   products: [
+    { id: 'regional_flood', inputs: ['gdacs_flood', 'twin_flood'], method: '14-day regional flood episode locations, with separate Thailand assessments and per-source freshness gates', limitation: 'Not inundation extent, water depth or a unified hazard score. No report is not an all-clear', endpoint: '/api/region' },
     { id: 'province_pm', inputs: ['air4thai', 'gistda_pm25'], method: 'Fresh provincial maximum; satellite estimate used as fallback', limitation: 'Source class matters; not a population mean or personal exposure', endpoint: '/api/snapshot' },
     { id: 'pm_outlook', inputs: ['openmeteo_aq', 'air4thai'], method: 'CAMS model outlook with local bias adjustment', limitation: 'Not an independent observation or validated street-level forecast', endpoint: '/api/forecast' },
     { id: 'upwind_fire', inputs: ['firms_regional', 'openmeteo'], method: '48-hour fire detections within 500 km and ±45 degrees of daily upwind; detections within 15 km included regardless of direction', limitation: 'Screening heuristic; no plume rise, dispersion, arrival time or attributed concentration', endpoint: '/api/smoke' },
