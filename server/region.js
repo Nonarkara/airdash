@@ -20,7 +20,7 @@ export const REGIONAL_RESOURCES = [
   {name:'OpenAQ v3',url:'https://docs.openaq.org/',role:'Candidate multi-country station access; key required, coverage and original provider identities must be checked. Not connected here.'},
   {name:'WHO annual city concentrations',url:'https://www.who.int/data/gho/data/themes/air-pollution/who-air-quality-database',role:'Historical city annual means, not live data. WHO cautions against country comparisons and city rankings.'},
   {name:'Copernicus CAMS',url:'https://atmosphere.copernicus.eu/global-forecast-plots',role:'Regional model context; this page does not run regional dispersion or trajectory forecasts.'},
-  {name:'NASA FIRMS',url:'https://firms.modaps.eosdis.nasa.gov/',role:'Existing AirDash detection archive covers 4–29°N, 92–110°E only. Not all Southeast Asia; repeated satellite detections are not unique fires or burned area.'},
+  {name:'NASA FIRMS',url:'https://firms.modaps.eosdis.nasa.gov/',role:'AirDash detection archive covers 11°S–29°N, 92–142°E, including Myanmar and Indonesia; repeated satellite detections are not unique fires or burned area.'},
   {name:'ADB regional air-quality assessment',url:'https://www.adb.org/sites/default/files/publication/1136306/air-quality-southeast-asia.pdf',role:'Monitoring and metadata assessment; not a live feed.'},
   {name:'AirGradient public networks',url:'https://www.airgradient.com/',role:'Supplementary low-cost sensors need explicit calibration, indoor/outdoor and license labels. Not connected here.'},
   {name:'WAQI / AQICN',url:'https://aqicn.org/api/',role:'Reference only: national/index systems differ; API terms prohibit cached or archived redistribution. No mirrored values ingested.'},

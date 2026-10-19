@@ -1,5 +1,5 @@
 // Smoke-upwind geometry: a fire counts only if the wind blows FROM it.
-import { bearingDeg, distanceKm, gridFires, smokeFor } from '../server/smoke.js'
+import { computeSmoke, bearingDeg, distanceKm, gridFires, smokeFor } from '../server/smoke.js'
 
 let pass = 0, fail = 0
 const check = (name, cond, why = '') => { cond ? pass++ : fail++; console.log(`${cond ? 'PASS' : 'FAIL'} ${name}${cond ? '' : ` — ${why}`}`) }
@@ -22,6 +22,16 @@ check('fire beyond 500 km ignored', smokeFor(chiangMai, far, 270).upwind_frp_mw 
 const local = gridFires([{ lat: 18.80, lng: 98.99, frp: 100, in_thailand: 1 }])
 check('fire in the province counts whatever the wind', smokeFor(chiangMai, local, 90).upwind_frp_mw > 0)
 check('no wind direction → no claim', smokeFor(chiangMai, west, null) === null)
+
+// A provider outage must not leave smoke publishing wind after risk withholds it.
+let windCutoff = null
+computeSmoke({all(sql, ...args) {
+  if (sql.includes('ingest_runs')) return [{started_at:new Date().toISOString()}]
+  if (sql.includes('FROM latest')) windCutoff=args[0]
+  return []
+}})
+const cutoffUtc = Date.parse(windCutoff?.replace(' ', 'T') + '+07:00')
+check('wind withholding matches risk at 13 hours, not 26', Math.abs((Date.now()-cutoffUtc)/3600000-13)<0.02)
 
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

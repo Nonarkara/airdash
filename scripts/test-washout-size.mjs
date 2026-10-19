@@ -83,8 +83,18 @@ check('the engine resolves the size lazily, not at construction',
 // The source pattern above is NOT sufficient on its own: freezing the read
 // while keeping that line satisfied every assertion while breaking the
 // behaviour. So prove it by execution instead.
+// Behaviour must survive a provider outage: deterministic input, not today's
+// live forecast availability. A null rain forecast is correct during outages.
+const engineDb = {
+  all(sql, source) {
+    if (!sql.includes('FROM latest l')) return []
+    const values = source === 'openmeteo' ? [['precip_fc_d0', 10], ['precip_prob_24h', 80]] : source === 'air4thai' ? [['pm25', 40]] : []
+    return values.map(([metric,value]) => ({metric,value,province_code:'10',province_th:'กรุงเทพมหานคร',province_en:'Bangkok'}))
+  },
+  kvGet() { return null },
+}
 let reads = 0
-const counting = createWashout(db, { aerosol: () => { reads++; return { mode: 'coarse', alpha: 0.4, age_h: 12 } } })
+const counting = createWashout(engineDb, { aerosol: () => { reads++; return { mode: 'coarse', alpha: 0.4, age_h: 12 } } })
 check('constructing the engine does NOT read the aerosol size', reads === 0,
   `the size was read ${reads} time(s) during construction — it would be frozen`)
 const coarseEntries = [...counting.all().values()]
@@ -93,13 +103,13 @@ check('a coarse resolver actually switches the published curve',
   coarseEntries.length > 0 && coarseEntries.every((e) => e.curve_basis === 'coarse-elevated'
     && e.relief_ceiling_pct === 60 && e.aerosol_alpha === 0.4 && e.aerosol_age_h === 12),
   `sample: ${JSON.stringify(coarseEntries[0] && { b: coarseEntries[0].curve_basis, c: coarseEntries[0].relief_ceiling_pct })}`)
-const noMode = [...createWashout(db).all().values()]
+const noMode = [...createWashout(engineDb).all().values()]
 check('with no aerosol argument the engine stays on the published curve',
   noMode.length > 0 && noMode.every((e) => e.curve_basis === 'fine-published'
     && e.relief_ceiling_pct === 40 && e.aerosol_mode === null))
 check('an unknown size leaves the published numbers numerically untouched', (() => {
   const a = [...counting.all().values()].find((e) => e.rain_fc_24 != null)
-  const b = [...createWashout(db).all().values()].find((e) => e.rain_fc_24 != null)
+  const b = [...createWashout(engineDb).all().values()].find((e) => e.rain_fc_24 != null)
   return a && b && a.rain_fc_24 === b.rain_fc_24
     && b.relief_if_rain_pct === PUBLISHED(b.rain_fc_24)
 })(), 'the default path must reproduce the published curve exactly')
@@ -128,8 +138,7 @@ check('mode is one of the three, or null', dom.mode === null || ['coarse', 'mixe
 check('a null mode never claims a size', dom.mode === null ? dom.alpha === null : Number.isFinite(dom.alpha))
 // It must agree with what /api/aeronet already published, or the two
 // features are telling the user different stories.
-const fineToday = dom.mode === null || dom.mode !== 'coarse'
-check('today is NOT coarse, so the published washout numbers are unchanged', fineToday, `mode=${dom.mode}`)
+check('live resolver mode is reported without assuming today is fine', dom.mode === null || ['coarse', 'mixed', 'fine'].includes(dom.mode), `mode=${dom.mode}`)
 try { db.close?.() } catch { /* wrapper has no close; the process is ending anyway */ }
 
 console.log(`\n${pass} passed, ${fail} failed`)

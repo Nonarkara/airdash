@@ -154,13 +154,28 @@ import('./weeklyExport.js').then(({ startWeeklyBuild }) => {
 // working set resident makes every load warm-fast.
 {
   const base = `http://127.0.0.1:${CONFIG.port}`
-  const warm = (path) => fetch(`${base}${path}`).then((r) => r.arrayBuffer()).catch(() => {})
+  // One warm request at a time: concurrent cold analytics requests serialize
+  // on synchronous SQLite anyway, starving real traffic and piling up on each
+  // 45-second tick. Coalesce the hot snapshot tick with the full pass too.
+  let warming = false, warmingAll = false
+  const warm = async (path, inPass = false) => {
+    if (warming || (warmingAll && !inPass)) return
+    warming = true
+    try { const response = await fetch(`${base}${path}`, { signal: AbortSignal.timeout(20000) }); await response.arrayBuffer() }
+    catch { /* warming is optional; live requests still report their own errors */ }
+    finally { warming = false }
+  }
   const PATHS = [
     '/api/snapshot', '/api/series/daily?days=14', '/api/washout',
     '/api/insights', '/api/export/days?limit=14', '/api/tap/recent?limit=200',
     '/api/library/toc?lang=th',
   ]
-  const warmAll = () => { for (const p of PATHS) warm(p) }
+  const warmAll = async () => {
+    if (warmingAll || warming) return
+    warmingAll = true
+    try { for (const p of PATHS) await warm(p, true) }
+    finally { warmingAll = false }
+  }
   setTimeout(warmAll, 12_000)                    // pre-pay the cold cost once, at boot
   setInterval(() => warm('/api/snapshot'), 8_000).unref() // snapshot TTL is short
   setInterval(warmAll, 45_000).unref()           // keep the rest of the working set resident

@@ -1,6 +1,6 @@
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.96'
-import { escapeHtml as esc } from './fmt.js?v=2.4.96'
-import { readPreference, writePreference } from './preferences.js?v=2.4.96'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.99'
+import { escapeHtml as esc } from './fmt.js?v=2.4.99'
+import { readPreference, writePreference } from './preferences.js?v=2.4.99'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
@@ -12,13 +12,17 @@ const field=createPollutionField().addTo(map)
 const wind=L.layerGroup().addTo(map)
 byWindInit()
 function byWindInit(){document.getElementById('wind').onchange=()=>document.getElementById('wind').checked?wind.addTo(map):map.removeLayer(wind)}
-L.rectangle([[4,92],[29,110]],{weight:1,dashArray:'6 6',color:'#86551c',fill:false,interactive:false}).addTo(map)
+const fireBounds=L.rectangle([[4,92],[29,110]],{weight:1,dashArray:'6 6',color:'#86551c',fill:false,interactive:false}).addTo(map)
 let data=null,imagery=null,loading=false,lastError=false
 const byId=id=>document.getElementById(id)
-function clock(time){const date=new Date(time);return Number.isFinite(date.getTime())?date.toLocaleString(lang==='th'?'th-TH':'en-GB',{timeZone:'Asia/Bangkok',hour12:false})+' ICT':'—'}
+function clock(time){if(!time)return '—';const date=new Date(time);return Number.isFinite(date.getTime())?date.toLocaleString(lang==='th'?'th-TH':'en-GB',{timeZone:'Asia/Bangkok',hour12:false})+' ICT':'—'}
 function translate(){document.documentElement.lang=lang;for(const n of document.querySelectorAll('[data-t]')){const [th,en]=n.dataset.t.split('|');n.textContent=tr(th,en)}byId('language').textContent=lang==='th'?'EN':'ไทย';paint();setImagery()}
 byId('language').onclick=()=>{lang=lang==='th'?'en':'th';writePreference('ad_lang',lang);translate()}
-byId('reset-map').onclick=()=>map.fitBounds(whole)
+byId('reset-map').onclick=()=>{byId('watch-area').value='region';map.fitBounds(whole)}
+const watchAreas={region:whole,mainland:[[4,92],[29,110]],myanmar:[[9,92],[29,102]],indonesia:[[-11,95],[6,142]]}
+function fitWatchArea(){map.fitBounds(watchAreas[byId('watch-area').value]??whole,{animate:false})}
+byId('watch-area').onchange=fitWatchArea
+map.on('resize',()=>requestAnimationFrame(fitWatchArea))
 byId('open-directory').onclick=()=>{byId('country-directory').open=true}
 byId('fires').onchange=()=>{byId('fires').checked?fire.addTo(map):map.removeLayer(fire)}
 function setImagery(){if(imagery)map.removeLayer(imagery);imagery=null
@@ -60,12 +64,14 @@ byId('field-mode').onchange=()=>{if(byId('field-mode').value!=='off'){byId('imag
 byId('field-time').oninput=paintField
 function paint(){
  if(!data)return
+ const bounds=data.fires?.bounds
+ if(Array.isArray(bounds)&&bounds.length===4)fireBounds.setBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]])
  paintField()
  pm.clearLayers();fire.clearLayers();wind.clearLayers()
  const windSeen=new Set()
  for(const r of data.wind??[]){
   const stamp=r.wind_updated_at,iso=/[zZ]|[+-]\d\d:\d\d$/.test(stamp??'')?stamp:`${stamp?.replace(' ','T')}+07:00`,age=Date.now()-Date.parse(iso)
-  if(!Number.isFinite(r.from_deg)||!Number.isFinite(r.lat)||!Number.isFinite(r.lng)||!Number.isFinite(age)||age< -300000||age>26*3600000)continue
+  if(!Number.isFinite(r.from_deg)||!Number.isFinite(r.lat)||!Number.isFinite(r.lng)||!Number.isFinite(age)||age< -300000||age>13*3600000)continue
   const cell=`${Math.floor(r.lat/1.5)}:${Math.floor(r.lng/1.5)}`
   if(windSeen.has(cell))continue
   windSeen.add(cell)
@@ -75,10 +81,10 @@ function paint(){
  const now=Date.now(),obs=data.observations.map(r=>({...r,status:now-Date.parse(r.observed_at)>90*60000?'stale':r.status}))
  for(const r of obs){const stale=r.status!=='current';L.circleMarker([r.lat,r.lng],{radius:r.country==='SG'?9:5,color:stale?'#636e75':'#086a8c',weight:2,fillOpacity:stale?.25:.7})
  .bindPopup(`<strong>${esc(r.name)} · ${esc(r.country)}</strong><br>${r.pm25} µg/m³ PM2.5<br>${esc(r.averaging_period)}<br>${esc(r.source)} · ${esc(r.source_type)}<br>${esc(clock(r.observed_at))}<br>${esc(stale?tr('ข้อมูลเก่า ไม่ใช่สภาพปัจจุบัน','Stale; not current conditions'):tr('ค่ารายงานล่าสุด ไม่ใช่การรับรองความแม่นยำ','Recent report; not a certification of accuracy'))}`).addTo(pm)}
- for(const c of data.fires?.cells??[]){L.circleMarker([c.lat,c.lng],{radius:3+Math.min(6,Math.sqrt(c.detections)),color:'#a44216',weight:1,fillOpacity:.6}).bindPopup(`${c.detections} ${tr('จุดตรวจจับ / 48 ชม. · จุดกลางกริด 0.25° ไม่ใช่พื้นที่เผา','detections / 48h · 0.25° cell centroid, not burned area')}`).addTo(fire)}
+ for(const c of data.fires?.cells??[]){L.rectangle([[c.lat-.125,c.lng-.125],[c.lat+.125,c.lng+.125]],{color:'#a44216',weight:0,fillOpacity:Math.min(.85,.25+Math.log2(1+c.detections)/10)}).bindPopup(`${c.detections} ${tr('จุดตรวจจับ / 48 ชม. · จุดกลางกริด 0.25° ไม่ใช่พื้นที่เผา','detections / 48h · 0.25° cell centroid, not burned area')}<br>${esc(clock(c.first_observed_at))} → ${esc(clock(c.last_observed_at))}`).addTo(fire)}
  const current=obs.filter(r=>r.status==='current')
  byId('status').textContent=lastError?tr('โหลดใหม่ไม่สำเร็จ แสดงข้อมูลครั้งก่อนพร้อมเวลาเดิม','Refresh failed; showing previous evidence with its original times'):`${tr('ข้อมูล PM สดเชื่อมต่อ','Current PM feeds connected')}: ${new Set(current.map(r=>r.country)).size} / ${data.countries.length} ${tr('ประเทศ','countries')} · ${tr('สร้างภาพรวม','Overview generated')} ${clock(data.generated_at)}`
- byId('coverage').innerHTML=['TH','SG'].map(code=>{const rows=obs.filter(r=>r.country===code),fresh=rows.filter(r=>r.status==='current');return `<div class="reading"><h3>${code==='TH'?tr('ประเทศไทย','Thailand'):tr('สิงคโปร์','Singapore')}</h3><strong>${fresh.length}</strong> ${tr('จุดรายงานสด','current reporting locations')} / ${rows.length}<p>${code==='SG'?tr('PM2.5 เฉลี่ย 1 ชั่วโมง / 5 ภูมิภาค ไม่ใช่ตำแหน่งเซ็นเซอร์','One-hour PM2.5 / five regions, not individual monitor locations'):tr('ค่าตรวจวัด Air4Thai ช่วงเฉลี่ยไม่ถูกเก็บในตารางปัจจุบัน','Air4Thai reported values; averaging window not retained in our normalized table')}</p>${code==='SG'&&!data.singapore.available?`<p class="stale">${tr('แหล่งสิงคโปร์ไม่พร้อม','Singapore feed unavailable')}</p>`:''}</div>`}).join('')+`<p>${tr('ตรวจแหล่งไฟ','Fire source checked')}: ${esc(clock(data.fires?.checked_at))} · ${data.fires?.available?tr('มีข้อมูลเฉพาะขอบเขตเส้นประ','Available inside dashed coverage box only'):tr('ไม่พร้อมหรือเก่า','Unavailable or stale')}</p><details><summary>${tr('ค่ารายภูมิภาคของสิงคโปร์','Singapore regional readings')}</summary>${obs.filter(r=>r.country==='SG').map(r=>`<p>${esc(r.name)}: <strong>${r.pm25} µg/m³</strong><br>${esc(clock(r.observed_at))} · ${esc(r.status)}</p>`).join('')||tr('ไม่มีข้อมูล','No readings')}</details>`
+ byId('coverage').innerHTML=['TH','SG'].map(code=>{const rows=obs.filter(r=>r.country===code),fresh=rows.filter(r=>r.status==='current');return `<div class="reading"><h3>${code==='TH'?tr('ประเทศไทย','Thailand'):tr('สิงคโปร์','Singapore')}</h3><strong>${fresh.length}</strong> ${tr('จุดรายงานสด','current reporting locations')} / ${rows.length}<p>${code==='SG'?tr('PM2.5 เฉลี่ย 1 ชั่วโมง / 5 ภูมิภาค ไม่ใช่ตำแหน่งเซ็นเซอร์','One-hour PM2.5 / five regions, not individual monitor locations'):tr('ค่าตรวจวัด Air4Thai ช่วงเฉลี่ยไม่ถูกเก็บในตารางปัจจุบัน','Air4Thai reported values; averaging window not retained in our normalized table')}</p>${code==='SG'&&!data.singapore.available?`<p class="stale">${tr('แหล่งสิงคโปร์ไม่พร้อม','Singapore feed unavailable')}</p>`:''}</div>`}).join('')+`<p>${tr('ตรวจแหล่งไฟ','Fire source checked')}: ${esc(clock(data.fires?.checked_at))} · ${data.fires?.available?Number.isFinite(data.fires.feeds_ok)?`${data.fires.feeds_ok} / ${data.fires.feeds_expected} ${tr('ดาวเทียมโหลดสำเร็จ · มีช่องว่างจากเมฆและรอบโคจร','satellite feeds fetched · cloud and overpass gaps remain')}`:tr('ข้อมูลเก่าเฉพาะแผ่นดินใหญ่ รอเชื่อมต่อส่วนทะเล','Legacy mainland archive; maritime coverage not yet collected'):tr('ไม่พร้อมหรือเก่า','Unavailable or stale')}</p><details><summary>${tr('ค่ารายภูมิภาคของสิงคโปร์','Singapore regional readings')}</summary>${obs.filter(r=>r.country==='SG').map(r=>`<p>${esc(r.name)}: <strong>${r.pm25} µg/m³</strong><br>${esc(clock(r.observed_at))} · ${esc(r.status)}</p>`).join('')||tr('ไม่มีข้อมูล','No readings')}</details>`
  byId('countries').innerHTML=data.countries.map(c=>{const rows=obs.filter(r=>r.country===c.code);return `<article><button data-country="${c.code}">${esc(lang==='th'?c.name_th:c.name_en)}</button><p class="status-label">${rows.length?`${rows.filter(r=>r.status==='current').length} ${tr('จุดสด','current')} / ${rows.length} ${tr('จุดรายงาน','reporting locations')}`:tr('ยังไม่เชื่อมต่อค่าตัวเลข','Numeric feed not connected')}</p><p>${esc(c.note_en)}</p><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.agency)} ↗</a></article>`}).join('')
  for(const b of document.querySelectorAll('[data-country]'))b.onclick=()=>{const c=data.countries.find(c=>c.code===b.dataset.country);map.setView([c.lat,c.lng],c.code==='SG'?10:c.code==='ID'?4:6);byId('regional-map').scrollIntoView({block:'center',behavior:'instant'})}
  byId('resources').innerHTML=data.resources.map(r=>`<article><h3><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)} ↗</a></h3><p>${esc(r.role)}</p></article>`).join('')

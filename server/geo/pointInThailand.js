@@ -35,6 +35,14 @@ function loadProvinces() {
       ? [f.geometry.coordinates]
       : f.geometry.coordinates,
   }))
+  for (const p of provinces) {
+    const bounds = [Infinity, Infinity, -Infinity, -Infinity]
+    for (const rings of p.polygons) for (const [lng,lat] of rings[0]) {
+      bounds[0] = Math.min(bounds[0],lng); bounds[1] = Math.min(bounds[1],lat)
+      bounds[2] = Math.max(bounds[2],lng); bounds[3] = Math.max(bounds[3],lat)
+    }
+    p.bounds = bounds
+  }
   return provinces
 }
 
@@ -68,7 +76,12 @@ function pointInPolygons(lng, lat, polygons) {
  * @returns {{ inThailand: boolean, province_th: string|null, province_en: string|null }}
  */
 export function pointInThailand(lat, lng) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { inThailand: false, province_th: null, province_en: null }
   for (const p of loadProvinces()) {
+    // Exact polygon still decides membership. Derived bounds only reject
+    // impossible candidates; maritime detections never walk all Thai edges.
+    const [west,south,east,north] = p.bounds
+    if (lng < west || lng > east || lat < south || lat > north) continue
     if (pointInPolygons(lng, lat, p.polygons)) {
       return { inThailand: true, province_th: p.province_th, province_en: p.province_en }
     }

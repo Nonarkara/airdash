@@ -103,6 +103,7 @@ export function computeSmoke(db) {
     }
     const fires = db.all(
       `SELECT lat, lng, frp, in_thailand FROM regional_hotspots WHERE datetime(acq_date || ' ' || substr(printf('%04d',CAST(acq_time AS INTEGER)),1,2) || ':' || substr(printf('%04d',CAST(acq_time AS INTEGER)),3,2)) BETWEEN datetime('now', ?) AND datetime('now', '+5 minutes')
+         AND lat BETWEEN 4 AND 29 AND lng BETWEEN 92 AND 110
          AND length(acq_time) BETWEEN 1 AND 4 AND acq_time NOT GLOB '*[^0-9]*'`,
       `-${LOOKBACK_DAYS} days`)
     const cells = gridFires(fires)
@@ -111,7 +112,7 @@ export function computeSmoke(db) {
          FROM latest l JOIN stations s ON s.source = l.source AND s.station_key = l.station_key
         WHERE l.source = 'openmeteo' AND l.metric IN ('wind_dir_d0', 'wind_dir_d1')
           AND l.obs_time >= ?`,
-      new Date(Date.now() + 7 * 3600_000 - 26 * 3600_000).toISOString().slice(0, 16))
+      new Date(Date.now() + 7 * 3600_000 - 13 * 3600_000).toISOString().slice(0, 16))
     const byCode = new Map()
     for (const r of wind) {
       const p = byCode.get(r.code) ?? { code: r.code, lat: r.lat, lng: r.lng, province_th: r.province_th, province_en: r.province_en }

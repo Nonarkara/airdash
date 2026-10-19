@@ -1,4 +1,4 @@
-// NASA FIRMS — regional (mainland Southeast Asia) VIIRS active-fire
+// NASA FIRMS — regional (Southeast Asia) VIIRS active-fire
 // detections, used ONLY to answer one question the domestic hotspot
 // feeds cannot: how much of the smoke is home-grown versus blowing in
 // from across the border. HRDI/GISTDA's hotspot data (see burn-area.js,
@@ -28,30 +28,33 @@ const FIRMS_FEEDS = [
   'https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-21-viirs-c2/csv/J2_VIIRS_C2_Global_24h.csv',
 ]
 
-// Mainland Southeast Asia: Thailand, Myanmar, Laos, Cambodia, Vietnam,
-// and Yunnan (China) — wide enough to catch fires that could plausibly
-// be a source of transported haze over Thailand, narrow enough that the
-// filter is doing real work (not just re-downloading the planet).
-const BBOX = { latMin: 4, latMax: 29, lngMin: 92, lngMax: 110 }
+// Retain mainland AND maritime Southeast Asia, including Myanmar, Sumatra,
+// Kalimantan and Papua. Same three global downloads; no added upstream calls.
+// Legacy mainland comparisons explicitly retain their original bounds.
+export const REGIONAL_FIRE_BOUNDS = [-11, 92, 29, 142]
+const BBOX = { latMin: -11, latMax: 29, lngMin: 92, lngMax: 142 }
 
-function parseCsv(text) {
+export function parseCsv(text) {
   const lines = text.split('\n')
-  if (lines.length < 2) return []
   const head = lines[0].split(',')
   const idx = (name) => head.indexOf(name)
   const iLat = idx('latitude'), iLng = idx('longitude')
   const iDate = idx('acq_date'), iTime = idx('acq_time')
   const iSat = idx('satellite'), iConf = idx('confidence'), iFrp = idx('frp')
-  if (iLat < 0 || iLng < 0) return []
+  if ([iLat, iLng, iDate, iTime, iSat].some(i => i < 0)) throw new Error('FIRMS CSV missing required columns')
 
   const rows = []
-  for (const line of lines) {
+  for (const line of lines.slice(1)) {
     if (!line.trim()) continue
     const c = line.split(',')
     if (c.length !== head.length) continue
+    if (!c[iLat]?.trim() || !c[iLng]?.trim()) continue
     const lat = Number(c[iLat]), lng = Number(c[iLng])
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue
     if (lat < BBOX.latMin || lat > BBOX.latMax || lng < BBOX.lngMin || lng > BBOX.lngMax) continue
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(c[iDate]) || !/^\d{1,4}$/.test(c[iTime])) continue
+    const hhmm = c[iTime].padStart(4, '0')
+    if (+hhmm.slice(0, 2) > 23 || +hhmm.slice(2) > 59) continue
     rows.push({
       lat, lng,
       acq_date: c[iDate] ?? null,
@@ -66,7 +69,7 @@ function parseCsv(text) {
 
 export default {
   name: 'firms_regional',
-  version: 2, // bump when the fetch/parse logic changes → runs at next boot
+  version: 3, // bump when the fetch/parse logic changes → runs at next boot
   label_th: 'จุดความร้อนภูมิภาค (NASA FIRMS — ข้ามพรมแดน)',
   label_en: 'Regional hotspots (NASA FIRMS — cross-border)',
   // Bulk 24h files, refreshed several times daily upstream. Every 6 h: the
@@ -93,29 +96,36 @@ export default {
 
     let added = 0
     const now = new Date().toISOString()
-    db.tx(() => {
-      for (const row of rows) {
-        // Round to ~1 km so the key is stable even though FIRMS assigns
-        // no persistent detection ID of its own.
-        const key = `${row.satellite}:${row.acq_date}:${row.acq_time}:${row.lat.toFixed(2)}:${row.lng.toFixed(2)}`
-        const { inThailand, province_th, province_en } = pointInThailand(row.lat, row.lng)
-        const res = db.run(
-          `INSERT OR IGNORE INTO regional_hotspots
-             (detection_key, lat, lng, acq_date, acq_time, satellite,
-              confidence, frp, in_thailand, province_th, province_en, fetched_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-          key, row.lat, row.lng, row.acq_date, row.acq_time, row.satellite,
-          row.confidence, row.frp, inThailand ? 1 : 0, province_th, province_en, now,
-        )
-        added += res?.changes ?? 0
-      }
-      // Retention: this table exists for a rolling "last few days" cross-
-      // border share, not a long-term archive — burn-area.js and the
-      // HRDI/DNP knowledge notes already own the long-term Thai record.
-      // 14 days keeps roughly two burning-season weeks of context without
-      // growing forever.
-      db.run(`DELETE FROM regional_hotspots WHERE acq_date < date('now', '-14 days')`)
-    })
+    // Commit bounded batches and yield between them. A regional fire episode
+    // can contain tens of thousands of detections; ingestion shares the HTTP
+    // event loop, so one giant transaction would stall health and map traffic.
+    for (let offset = 0; offset < rows.length; offset += 500) {
+      db.tx(() => {
+        for (const row of rows.slice(offset, offset + 500)) {
+          // Round to ~1 km so the key is stable even though FIRMS assigns
+          // no persistent detection ID of its own.
+          const key = `${row.satellite}:${row.acq_date}:${row.acq_time}:${row.lat.toFixed(2)}:${row.lng.toFixed(2)}`
+          const { inThailand, province_th, province_en } = pointInThailand(row.lat, row.lng)
+          const res = db.run(
+            `INSERT OR IGNORE INTO regional_hotspots
+               (detection_key, lat, lng, acq_date, acq_time, satellite,
+                confidence, frp, in_thailand, province_th, province_en, fetched_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+            key, row.lat, row.lng, row.acq_date, row.acq_time, row.satellite,
+            row.confidence, row.frp, inThailand ? 1 : 0, province_th, province_en, now,
+          )
+          added += res?.changes ?? 0
+        }
+      })
+      await new Promise(setImmediate)
+    }
+    // Retention: this table exists for a rolling "last few days" cross-
+    // border share, not a long-term archive — burn-area.js and the
+    // HRDI/DNP knowledge notes already own the long-term Thai record.
+    // 14 days keeps roughly two burning-season weeks of context without
+    // growing forever.
+    db.run(`DELETE FROM regional_hotspots WHERE acq_date < date('now', '-14 days')`)
+    db.kvSet('firms_regional:coverage', JSON.stringify({ bounds: REGIONAL_FIRE_BOUNDS, fetched_at: now, feeds_ok: FIRMS_FEEDS.length - failures.length, feeds_expected: FIRMS_FEEDS.length }))
     return { seen: rows.length, added }
   },
 }

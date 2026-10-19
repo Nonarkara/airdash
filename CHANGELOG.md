@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.99] — 2026-10-19 — retain maritime fire evidence alongside the mainland
+
+The regional map now retains VIIRS detections across 11°S–29°N, 92–142°E, including Myanmar and Indonesia, from the same three global downloads. Added watch-area navigation and first/last acquisition times per 0.25° cell. Fire evidence uses geographically sized density cells rather than oversized overlapping circles. Ingestion yields between 500-row transactions and polygon-derived bounding boxes reject impossible Thai matches. Cache warming is serialized/coalesced to reduce cold-start contention. Mainland Thailand comparisons keep their original bounds; maritime detections cannot alter their denominator. Fresh regional coverage requires a successful expanded collector run, and publishes how many satellite feeds succeeded. Malformed/empty successful HTTP responses cannot certify coverage.
+
+Daily Thailand winds remain labelled as daily forecasts, not regional smoke trajectories or arrival predictions. ASMC's operational regional interpretation is linked; its image endpoint is not represented as a wind-vector API. Hotspots do not establish farming, ignition time, burned area or causation. Added SQLite/parser tests and removed live-weather dependence from the washout behaviour test.
+
 ## [2.4.98] — 2026-10-17 — the risk payload published a wind speed and no direction
 
 Ops + API only; no file under `public/` changed, so the asset token stays at 2.4.96.

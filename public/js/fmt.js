@@ -1,5 +1,5 @@
 // Formatting: numbers, clocks, relative time — bilingual.
-import { store } from './state.js?v=2.4.96'
+import { store } from './state.js?v=2.4.99'
 
 export function fmtNum(v, digits = 1) {
   if (v === null || v === undefined || Number.isNaN(v)) return '—'

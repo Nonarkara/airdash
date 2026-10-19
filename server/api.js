@@ -1,3 +1,4 @@
+import { regionalFires } from './regionalFires.js'
 import { pmObservationCoverage } from './observationCoverage.js'
 import { allProvinces } from './provinces.js'
 import { pollutionOutlook } from './pollutionOutlook.js'
@@ -1117,7 +1118,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10)
       const rows = db.all(
         `SELECT in_thailand, COUNT(*) n FROM regional_hotspots
-         WHERE acq_date >= ? GROUP BY in_thailand`, since)
+         WHERE acq_date >= ? AND lat BETWEEN 4 AND 29 AND lng BETWEEN 92 AND 110 GROUP BY in_thailand`, since)
       const inTh = rows.find((r) => r.in_thailand)?.n ?? 0
       const outTh = rows.find((r) => !r.in_thailand)?.n ?? 0
       const total = inTh + outTh
@@ -1128,8 +1129,8 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         thailand: { count: inTh, pct: total ? Math.round((inTh / total) * 1000) / 10 : null },
         outsideThailand: { count: outTh, pct: total ? Math.round((outTh / total) * 1000) / 10 : null },
         source: {
-          name_en: 'NASA FIRMS — VIIRS (Suomi NPP), global 24h NRT bulk file, filtered to mainland Southeast Asia',
-          name_th: 'NASA FIRMS — VIIRS (Suomi NPP) ข้อมูลดิบ 24 ชม. ทั่วโลก กรองเฉพาะแผ่นดินใหญ่เอเชียตะวันออกเฉียงใต้',
+          name_en: 'NASA FIRMS — VIIRS (Suomi NPP, NOAA-20, NOAA-21), global 24h NRT bulk file, filtered to mainland Southeast Asia',
+          name_th: 'NASA FIRMS — VIIRS (Suomi NPP, NOAA-20, NOAA-21) ข้อมูลดิบ 24 ชม. ทั่วโลก กรองเฉพาะแผ่นดินใหญ่เอเชียตะวันออกเฉียงใต้',
           method_en: 'in/out classified by point-in-polygon against real Thai province boundaries, not a bounding box',
           method_th: 'จำแนกในไทย/นอกไทยด้วยการทดสอบจุดในรูปหลายเหลี่ยมของขอบเขตจังหวัดจริง ไม่ใช่กรอบสี่เหลี่ยม',
           url: 'https://firms.modaps.eosdis.nasa.gov/',
@@ -1352,8 +1353,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         pollution_outlook: pollutionOutlook(db, forecastBias(db)),
         wind: (smoke.provinces ?? []).map(p => { const location = allProvinces().find(l => l.province_code === p.code); return { ...p, lat: location?.lat, lng: location?.lng } }),
         observations, singapore: { available: sg.available, fetched_at: sg.fetched_at, error: sg.error },
-        fires: { available: smoke.available, checked_at: smoke.fire_source_checked_at ?? null,
-          cells: smoke.available ? smoke.fire_cells ?? [] : [], bounds: [4, 92, 29, 110], window_hours: 48, grid_degrees: 0.25 },
+        fires: regionalFires(db),
         method: 'Partial regional overview, not a harmonized country ranking. Native averaging periods differ. Missing data is unknown. Stale means older than 90 minutes. No national indices are converted or blended.',
       })
     },
