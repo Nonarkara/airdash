@@ -1,9 +1,9 @@
 // Research Paper panel — renders the full bilingual academic paper inside
 // the About overlay's "Research Paper" tab, with custom SVG infographics,
 // the complete source catalog, citations, and CSV dataset download.
-import { on, store, setLang } from '../state.js?v=2.4.106'
-import { getJson } from '../cache.js?v=2.4.106'
-import { escapeHtml } from '../fmt.js?v=2.4.106'
+import { on, store, setLang } from '../state.js?v=2.4.107'
+import { getJson } from '../cache.js?v=2.4.107'
+import { escapeHtml } from '../fmt.js?v=2.4.107'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -376,10 +376,17 @@ function svgNetwork(summary) {
 function sectionHero() {
   return `
     <div class="rp-hero">
-      <div class="rp-hero-eyebrow">RESEARCH & METHODS · 2026-10-20</div>
-      <h1 class="rp-hero-title" data-th="AirDash 3.0 — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย" data-en="AirDash 3.0 — A Real-Time, Open-Source Air Quality Watch for Thailand">
-        ${tr('AirDash 3.0 — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย', 'AirDash 3.0 — A Real-Time, Open-Source Air Quality Watch for Thailand')}
-      </h1>
+      <div class="rp-hero-eyebrow">RESEARCH & METHODS · 2026-10-21</div>
+      <h1 class="rp-hero-title">${tr('จากข้อมูลดิบ สู่การเฝ้าระวัง', 'From raw data to public watch')}</h1>
+      <p class="rp-deck">${tr('AirDash 3.0 · หลักฐาน วิธีคำนวณ และข้อจำกัด', 'AirDash 3.0 · Evidence, methods and limits')}</p>
+      <figure class="rp-evidence-flow">
+        <figcaption>${tr('อ่านข้อมูลอย่างไร ก่อนตัดสินใจ', 'How evidence informs a decision')}</figcaption>
+        <ol>
+          <li><strong>${tr('01 · รับข้อมูล', '01 · Observe')}</strong><span>${tr('สถานีวัดฝุ่น · จุดความร้อนดาวเทียม · ลม · ฝน', 'PM stations · satellite hotspots · wind · rain')}</span><small>${tr('ค่าตรวจวัดและค่าพยากรณ์เป็นคนละหลักฐาน', 'Measurements and forecasts are different evidence')}</small></li>
+          <li><strong>${tr('02 · ตรวจและตีความ', '02 · Check & interpret')}</strong><span>${tr('เวลา · พิกัด · ความครบถ้วน · แบบจำลอง', 'Time · location · coverage · models')}</span><small>${tr('การพัดพาเป็นแนวโน้ม ไม่ใช่เวลาเดินทางที่แน่นอน', 'Transport indicates a tendency, not an exact arrival time')}</small></li>
+          <li><strong>${tr('03 · ใช้เฝ้าระวัง', '03 · Keep watch')}</strong><span>${tr('สภาพปัจจุบัน · แนวโน้ม · พื้นที่ควรติดตาม', 'Current conditions · outlook · areas to watch')}</span><small>${tr('คะแนนวิจัยไม่ใช่ค่าความเข้มข้นหรือดัชนีทางคลินิก', 'Research scores are not concentrations or clinical indices')}</small></li>
+        </ol>
+      </figure>
       <div class="rp-hero-meta">
         <div><strong>Dr Non Arkaraprasertkul</strong> · ดร.นน อัครประเสริฐกุล</div>
         <div>Senior Expert, Smart City Promotion Department · depa</div>

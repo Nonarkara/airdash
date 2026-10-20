@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.107] — 2026-10-21 — research visual hierarchy
+
+Gave Research a concise opening, warm editorial heading accent and a responsive evidence-flow diagram: observations, checks/interpretation, public watch. The diagram explains measured versus forecast evidence, transport uncertainty and research-score limits. Prose remains neutral and readable; diagrams carry meaning rather than decoration. Preserved chapter navigation, source detail and scientific qualifiers.
+
 ## [2.4.106] — 2026-10-20 — research reading desk
 
 Rebuilt Research as an aligned chapter index and a measured reading column, with collapsible phone contents, stable bilingual anchors and contained charts/tables. Removed decorative card nesting and folded legacy version history. Replaced the miniature score formula with wrapping text. Corrected stale source counts, gauge/radar terminology, source credential assumptions and rain-relief explanations; the fine-mode chart now follows backend thresholds. Preserved measured-PM floors and unknown states in the explanation. Added chart/engine parity checks.

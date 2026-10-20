@@ -117,3 +117,34 @@
 #research-content .rp-formula { margin: 20px 0; }
 #research-content .rp-formula p { margin: 8px 0; }
 #research-content .rp-formula code { font-size: 16px; line-height: 1.7; white-space: normal; }
+
+/* One warm editorial accent separates methods from operational AQI colours. */
+#research-content { --rp-accent: #985020; }
+@media (prefers-color-scheme: dark) { #research-content { --rp-accent: #E5A04A; } }
+#research-content .rp-hero-title { color: var(--rp-accent); margin-bottom: 8px; }
+#research-content .rp-deck { font-size: 18px; line-height: 1.5; margin: 0 0 20px; color: var(--ink); }
+#research-content .rp-section h2 { color: var(--rp-accent); }
+#research-content .rp-section h3 { color: var(--ink); }
+#research-content .rp-hero-eyebrow { color: var(--ink-mid); }
+#research-content .rp-hero-meta { margin-top: 20px; }
+#research-content .rp-evidence-flow { margin: 20px 0; }
+#research-content .rp-evidence-flow figcaption { font-size: 18px; font-weight: 600; margin-bottom: 12px; color: var(--ink); }
+#research-content .rp-evidence-flow ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; list-style: none; padding: 0; margin: 0; }
+#research-content .rp-evidence-flow li { position: relative; min-width: 0; }
+#research-content .rp-evidence-flow li + li::before { content: '→'; position: absolute; left: -20px; top: 0; color: var(--ink-mid); }
+#research-content .rp-evidence-flow strong { display: block; font-size: 18px; line-height: 1.5; color: var(--rp-accent); margin-bottom: 8px; }
+#research-content .rp-evidence-flow span { display: block; font-size: 16px; line-height: 1.6; color: var(--ink); }
+#research-content .rp-evidence-flow small { display: block; font-size: 13px; line-height: 1.6; color: var(--ink-mid); margin-top: 8px; }
+#research-content .rp-toc-list a.active { color: var(--rp-accent); }
+@media (max-width: 999px) {
+  #research-content .rp-index-head h2 { font-size: 16px; }
+  #research-content .rp-toc summary { padding: 4px 0; min-height: 44px; }
+  #research-content .rp-hero { margin-bottom: 24px; }
+}
+@media (max-width: 560px) {
+  #research-content .rp-evidence-flow ol { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  #research-content .rp-evidence-flow li { padding-left: 24px; }
+  #research-content .rp-evidence-flow li + li::before { content: '↓'; left: 0; top: 0; }
+  #research-content .rp-evidence-flow strong { margin-bottom: 4px; }
+  #research-content .rp-evidence-flow small { margin-top: 4px; }
+}

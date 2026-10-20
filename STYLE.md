@@ -15,3 +15,5 @@ Utilitarian information design, with Bauhaus grid discipline and Palette typogra
 Reference vocabulary: UX Planet, “50 Design Styles Every Designer Should Know for Better Prompting”, sections38(Utilitarian) and22(Bauhaus). Composition and implementation rules: Dr Non’s Non-Slop and Palette. This direction does not protect existing unrelated legacy clutter from future repair.
 
 Research uses a300px chapter index beside a maximum72ch reading column at1000px and above. Below that, contents collapse above the article. Each pane scrolls for its own task; charts/tables may scroll locally, formulas wrap at readable text size. History is secondary and collapsed. Do not stretch article columns to consume empty space.
+
+Research headings use one warm editorial accent (#985020 on light paper, #E5A04A on dark). It identifies method/navigation hierarchy, not air-quality severity. Explanatory artifacts must show real evidence relationships and preserve uncertainty; no ornamental charts.

@@ -1,7 +1,7 @@
 // A bounded numerical interpolation, replacing additive colour blobs.
 // Fresh source points only; no inferred values beyond 30 km of a point or
 // where fewer than three points lie within 60 km. Gaps remain transparent.
-import { createPollutionField } from './pollution-field.js?v=2.4.106'
+import { createPollutionField } from './pollution-field.js?v=2.4.107'
 export function createPm25HeatmapLayer(){
  const layer=createPollutionField({pane:'heatmap'})
  const set=layer.setData.bind(layer)
