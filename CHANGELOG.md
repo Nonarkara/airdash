@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.104] — 2026-10-20 — compact province comparison list
+
+Replaced spread-out province tiles with five aligned columns: province, PM2.5/effective harm, Watch, Social and research Index. Removed repeated badge boxes, duplicated English province names, clean-row fading and unnecessary multi-row spacing. Labels and units are shared above the list; complete source notes and action guidance remain in native-button disclosures. Unknown values remain unknown, including missing effective harm when that sort is selected. Moved the below-viewport footer into About so focusing list controls cannot scroll the entire fixed dashboard and hide its header. Direction follows the supplied UX Planet article’s Utilitarian/Bauhaus vocabulary, applied through Palette typography and semantic air-quality colours.
+
 ## [2.4.103] — 2026-10-20 — Palette instrument header
 
 Replaced the permanent multi-row toolbar with one aligned52px status/score/location row and44px Find/Menu actions. Search and secondary tools open explicit drawers with Escape/outside-click dismissal and focus return. Preserved language, view mode, camera, compare, home, FloodDash and About controls. Removed ornamental header plates, duplicated translations, emoji icons and rounded boxes. Shared UI typography now uses the existing Jost/Prompt families. Air-quality colours retain their data meaning.

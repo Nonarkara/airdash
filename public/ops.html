@@ -16,18 +16,18 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/apple-touch-icon.png">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/css/tokens.css?v=2.4.103">
-<link rel="stylesheet" href="/css/layout.css?v=2.4.103">
-<link rel="stylesheet" href="/css/components.css?v=2.4.103">
-<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.103">
-<link rel="stylesheet" href="/css/witness.css?v=2.4.103">
+<link rel="stylesheet" href="/css/tokens.css?v=2.4.104">
+<link rel="stylesheet" href="/css/layout.css?v=2.4.104">
+<link rel="stylesheet" href="/css/components.css?v=2.4.104">
+<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.104">
+<link rel="stylesheet" href="/css/witness.css?v=2.4.104">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebSite","name":"AirDash","url":"https://air.nonarkara.org/","description":"Live Thailand air quality and dust watch — PM2.5, local risk and rain-washout outlook."}
 </script>
-<link rel="stylesheet" href="/css/brand.css?v=2.4.103">
-<link rel="stylesheet" href="/css/instrument-header.css?v=2.4.103">
+<link rel="stylesheet" href="/css/brand.css?v=2.4.104">
+<link rel="stylesheet" href="/css/instrument-header.css?v=2.4.104">
 </head>
 <body>
 
@@ -451,27 +451,7 @@
 
 </div>
 
-<!-- Fine-print footer. Three short lines:
-     1) real-time disclaimer (data may have reception issues, use judgement)
-     2) system standards (sources, freshness, station count, no mock data)
-     3) the project's core idea (best-effort computations to map out
-        possibilities of saving lives). Lives below the ticker so it never
-        steals height from the live map. -->
-<footer id="appfooter" class="appfooter">
-  <div class="airdash-webapp"><picture class="airdash-mark"><source media="(prefers-color-scheme: dark)" srcset="/img/brand/airdash-signal-white.png"><img src="/img/brand/airdash-signal-black.png" width="32" height="20" alt="AirDash"></picture><a href="/install.html">Available on Android &amp; iPhone · Web app <span lang="th">· เพิ่มบนหน้าจอโฮม</span></a><button type="button" id="burn-brief-open" class="burn-brief-open" data-i18n="สรุปไฟและรอยเผา|Fire & burning briefing">สรุปไฟและรอยเผา</button></div>
-  <div class="appfooter-line appfooter-disclaimer">
-    <span class="th" data-th="เรียลไทม์เท่าที่ระบบจะทำได้ — ข้อมูลอาจมีข้อผิดพลาดจากระบบรับสัญญาณ โปรดใช้วิจารณญาณในการตัดสินใจ เราพยายามอย่างสุดความสามารถเพื่อคำนวณจากข้อมูลที่ดีที่สุดที่มีอยู่ ณ ขณะนั้น">เรียลไทม์เท่าที่ระบบจะทำได้ — ข้อมูลอาจมีข้อผิดพลาดจากระบบรับสัญญาณ โปรดใช้วิจารณญาณในการตัดสินใจ เราพยายามอย่างสุดความสามารถเพื่อคำนวณจากข้อมูลที่ดีที่สุดที่มีอยู่ ณ ขณะนั้น</span>
-    <span class="en" data-en="Real-time as the system allows. Data may have reception issues, so use judgement in any decision. We work as hard as we can to compute from the best data available at the moment.">Real-time as the system allows. Data may have reception issues, so use judgement in any decision. We work as hard as we can to compute from the best data available at the moment.</span>
-  </div>
-  <div class="appfooter-line appfooter-standards">
-    <span class="th" data-th="มาตรฐานระบบ · 7 แหล่งข้อมูลสด · ดึงทุก 10 นาที–3 ชม. · สถานีฝุ่น ~170 + เกจฝน ~1,900 ที่รายงานสด (ลงทะเบียน 5,300+) · 0 ข้อมูลจำลอง · ทุกค่าถูกบันทึกลง SQLite เพื่อตรวจสอบย้อนหลัง">มาตรฐานระบบ · 7 แหล่งข้อมูลสด · ดึงทุก 10 นาที–3 ชม. · สถานีฝุ่น ~170 + เกจฝน ~1,900 ที่รายงานสด (ลงทะเบียน 5,300+) · 0 ข้อมูลจำลอง · ทุกค่าถูกบันทึกลง SQLite เพื่อตรวจสอบย้อนหลัง</span>
-    <span class="en" data-en="System standards · 7 live data sources · refreshed every 10 min–3 h · ~170 air-quality stations + ~1,900 rain gauges live (5,300+ registered) · 0 mock data · every reading persisted to SQLite for full audit trail">System standards · 7 live data sources · refreshed every 10 min–3 h · ~170 air-quality stations + ~1,900 rain gauges live (5,300+ registered) · 0 mock data · every reading persisted to SQLite for full audit trail</span>
-  </div>
-  <div class="appfooter-line appfooter-core">
-    <span class="th" data-th="แก่นของระบบนี้ · คำนวณจากข้อมูลที่ดีที่สุดที่หาได้ เพื่อหาแนวทางปกป้องสุขภาพและรักษาชีวิต — นี่คือเป้าหมายสูงสุดของ AirDash">แก่นของระบบนี้ · คำนวณจากข้อมูลที่ดีที่สุดที่หาได้ เพื่อหาแนวทางปกป้องสุขภาพและรักษาชีวิต — นี่คือเป้าหมายสูงสุดของ AirDash</span>
-    <span class="en" data-en="Core idea of this system · compute from the best data we can find, to map out the possibilities of protecting health and saving lives — that is AirDash's highest goal.">Core idea of this system · compute from the best data we can find, to map out the possibilities of protecting health and saving lives — that is AirDash's highest goal.</span>
-  </div>
-</footer>
+
 
 <div id="about-overlay" hidden role="dialog" aria-modal="true" aria-label="AirDash information and fire briefing">
   <div class="about-head">
@@ -499,6 +479,23 @@
   </div>
 
   <div class="about-body about-pane active" data-about-pane="about">
+    <!-- Project information belongs in About, outside the live map reading path. -->
+<footer id="appfooter" class="appfooter">
+  <div class="airdash-webapp"><picture class="airdash-mark"><source media="(prefers-color-scheme: dark)" srcset="/img/brand/airdash-signal-white.png"><img src="/img/brand/airdash-signal-black.png" width="32" height="20" alt="AirDash"></picture><a href="/install.html">Available on Android &amp; iPhone · Web app <span lang="th">· เพิ่มบนหน้าจอโฮม</span></a><button type="button" id="burn-brief-open" class="burn-brief-open" data-i18n="สรุปไฟและรอยเผา|Fire & burning briefing">สรุปไฟและรอยเผา</button></div>
+  <div class="appfooter-line appfooter-disclaimer">
+    <span class="th" data-th="เรียลไทม์เท่าที่ระบบจะทำได้ — ข้อมูลอาจมีข้อผิดพลาดจากระบบรับสัญญาณ โปรดใช้วิจารณญาณในการตัดสินใจ เราพยายามอย่างสุดความสามารถเพื่อคำนวณจากข้อมูลที่ดีที่สุดที่มีอยู่ ณ ขณะนั้น">เรียลไทม์เท่าที่ระบบจะทำได้ — ข้อมูลอาจมีข้อผิดพลาดจากระบบรับสัญญาณ โปรดใช้วิจารณญาณในการตัดสินใจ เราพยายามอย่างสุดความสามารถเพื่อคำนวณจากข้อมูลที่ดีที่สุดที่มีอยู่ ณ ขณะนั้น</span>
+    <span class="en" data-en="Real-time as the system allows. Data may have reception issues, so use judgement in any decision. We work as hard as we can to compute from the best data available at the moment.">Real-time as the system allows. Data may have reception issues, so use judgement in any decision. We work as hard as we can to compute from the best data available at the moment.</span>
+  </div>
+  <div class="appfooter-line appfooter-standards">
+    <span class="th" data-th="มาตรฐานระบบ · 7 แหล่งข้อมูลสด · ดึงทุก 10 นาที–3 ชม. · สถานีฝุ่น ~170 + เกจฝน ~1,900 ที่รายงานสด (ลงทะเบียน 5,300+) · 0 ข้อมูลจำลอง · ทุกค่าถูกบันทึกลง SQLite เพื่อตรวจสอบย้อนหลัง">มาตรฐานระบบ · 7 แหล่งข้อมูลสด · ดึงทุก 10 นาที–3 ชม. · สถานีฝุ่น ~170 + เกจฝน ~1,900 ที่รายงานสด (ลงทะเบียน 5,300+) · 0 ข้อมูลจำลอง · ทุกค่าถูกบันทึกลง SQLite เพื่อตรวจสอบย้อนหลัง</span>
+    <span class="en" data-en="System standards · 7 live data sources · refreshed every 10 min–3 h · ~170 air-quality stations + ~1,900 rain gauges live (5,300+ registered) · 0 mock data · every reading persisted to SQLite for full audit trail">System standards · 7 live data sources · refreshed every 10 min–3 h · ~170 air-quality stations + ~1,900 rain gauges live (5,300+ registered) · 0 mock data · every reading persisted to SQLite for full audit trail</span>
+  </div>
+  <div class="appfooter-line appfooter-core">
+    <span class="th" data-th="แก่นของระบบนี้ · คำนวณจากข้อมูลที่ดีที่สุดที่หาได้ เพื่อหาแนวทางปกป้องสุขภาพและรักษาชีวิต — นี่คือเป้าหมายสูงสุดของ AirDash">แก่นของระบบนี้ · คำนวณจากข้อมูลที่ดีที่สุดที่หาได้ เพื่อหาแนวทางปกป้องสุขภาพและรักษาชีวิต — นี่คือเป้าหมายสูงสุดของ AirDash</span>
+    <span class="en" data-en="Core idea of this system · compute from the best data we can find, to map out the possibilities of protecting health and saving lives — that is AirDash's highest goal.">Core idea of this system · compute from the best data we can find, to map out the possibilities of protecting health and saving lives — that is AirDash's highest goal.</span>
+  </div>
+</footer>
+
     <!-- Hero image — the project poster. Same artwork as the GitHub README hero.
          Lives at the top of the about panel so a first-time visitor who
          opens About sees the project identity immediately. Sits above the
@@ -878,6 +875,6 @@
 </div>
 
 <script src="/vendor/leaflet/leaflet.js"></script>
-<script type="module" src="/js/boot.js?v=2.4.103"></script>
+<script type="module" src="/js/boot.js?v=2.4.104"></script>
 </body>
 </html>

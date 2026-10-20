@@ -1,17 +1,15 @@
 // Left rail: live province ranking — worst air first.
 // Sort mode: Worst air (default, by PM2.5) | Effective Harm (Watch × Social Load).
-import { on, store } from '../state.js?v=2.4.103'
-import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.103'
-import { fmtNum, el } from '../fmt.js?v=2.4.103'
-import { flyToProvince } from '../map.js?v=2.4.103'
-import { showProvinceDetail } from './detail.js?v=2.4.103'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.103'
+import { on, store } from '../state.js?v=2.4.104'
+import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.104'
+import { fmtNum, el } from '../fmt.js?v=2.4.104'
+import { flyToProvince } from '../map.js?v=2.4.104'
+import { showProvinceDetail } from './detail.js?v=2.4.104'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.104'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }
 const MODE_KEY = 'airdash.rankMode'
-/** Clean-air dim threshold — Thai "good" line (µg/m³). */
-const CLEAN_UG = 25
 /** @type {'worst' | 'harm'} */
 let rankMode = 'worst'
 
@@ -156,23 +154,6 @@ function nationalActionCard(nv) {
   return card
 }
 
-function socialChip(harm) {
-  if (!harm || harm.social_load == null) return null
-  const liveNote = harm.watch_live === false
-    ? tr(' · ไม่มีค่าเฝ้าระวังสด', ' · no live watch score')
-    : ''
-  return el('div', {
-    class: `social-chip${harm.social_load >= 65 ? ' sc-high' : ''}`,
-    title: tr(
-      `ภาระทางสังคม ${harm.social_load}${harm.social_label_th ? ` (${harm.social_label_th})` : ''}: กลางแจ้ง ${harm.outdoor_labor} · รายได้ ${harm.income_strain} · อายุ ${harm.sensitivity} · ที่พักพิง ${harm.adaptive_deficit}${harm.action_th ? ` — ${harm.action_th}` : ''}${liveNote}`,
-      `Social Load ${harm.social_load}${harm.social_label_en ? ` (${harm.social_label_en})` : ''}: outdoor ${harm.outdoor_labor} · income ${harm.income_strain} · age ${harm.sensitivity} · shelter ${harm.adaptive_deficit}${harm.action_en ? ` — ${harm.action_en}` : ''}${liveNote}`,
-    ),
-  },
-    el('span', { class: 'sc-lbl' }, tr('สังคม', 'Social')),
-    el('span', { class: 'sc-num' }, String(harm.social_load)),
-  )
-}
-
 /** Worst-PM2.5 first; provinces with no reading sink to the bottom. */
 function sortWorstAir(list) {
   return [...list].sort((a, b) => {
@@ -212,11 +193,11 @@ function render(snap) {
     const useWorst = !useHarm
 
     const badgeBand = useHarm ? harm.band : (useWorst ? pmBand(p.pm25) : p.band)
-    const badgeText = useHarm
-      ? String(harm.score ?? '–')
-      : (p.pm25 !== null && p.pm25 !== undefined ? fmtNum(p.pm25, 0) : '–')
 
     const stats = []
+    if (Number.isFinite(p.delta) && Math.abs(p.delta) >= TREND_THRESHOLD) {
+      stats.push(el('div', { class: 'line' }, tr('แนวโน้มคะแนนเฝ้าระวัง ', 'Watch-score trend '), trendArrow(p.delta)))
+    }
     if (useWorst && typeof p.score === 'number') {
       stats.push(el('div', { class: 'line' },
         tr('เฝ้าระวัง ', 'Watch '),
@@ -251,8 +232,8 @@ function render(snap) {
     }
     const causeEl = causeChip(p.cause)
     if (causeEl) stats.push(el('div', { class: 'line' }, causeEl))
-    const cardExpand = p.card
-    const expand = cardExpand ? el('div', { class: 'rank-expand', hidden: true }) : null
+    const cardExpand = p.card ?? {}
+    const expand = el('div', { class: 'rank-expand', hidden: true, id: `rank-details-${p.province_code}` })
     if (cardExpand) {
       if (useHarm && (harm.action_th || harm.action_en)) {
         expand.append(el('div', { class: 'rx-action' },
@@ -284,59 +265,51 @@ function render(snap) {
       }, tr('ดูสถานี/กราฟ →', 'See stations/chart →')))
     }
 
-    const danger = p.danger
-    const dangerChip = danger ? el('div', {
-      class: `danger-chip b-${danger.band}`,
-      title: tr(
-        `ดัชนีอันตราย: PM2.5 ${danger.pm25_live != null ? danger.pm25_live.toFixed(0) : '–'} · ความร้อน ${danger.temp_c != null ? danger.temp_c.toFixed(0) : '–'}°C · ความชื้น ${danger.rh_pct != null ? danger.rh_pct.toFixed(0) : '–'}%${danger.noise_leq_db != null ? ` · เสียง ${danger.noise_leq_db.toFixed(0)} dB` : ''} · ลดฝน ${(danger.rain_relief * 100).toFixed(0)}%`,
-        `Danger: PM2.5 ${danger.pm25_live != null ? danger.pm25_live.toFixed(0) : '–'} · T ${danger.temp_c != null ? danger.temp_c.toFixed(0) : '–'}°C · RH ${danger.rh_pct != null ? danger.rh_pct.toFixed(0) : '–'}%${danger.noise_leq_db != null ? ` · noise ${danger.noise_leq_db.toFixed(0)} dB` : ''} · rain −${(danger.rain_relief * 100).toFixed(0)}%`,
-      ),
-    },
-      el('span', { class: 'dc-num' }, String(danger.score ?? '–')),
-      el('span', { class: 'dc-band' }, tr(danger.label_th, danger.label_en), el('small', { class: 'dc-kind' }, tr('ไม่ใช่ดัชนีคลินิก', 'Non-clinical model'))),
-    ) : null
-
     const lvl = pm25Level(p.pm25)
     const bandLabel = useWorst && lvl
       ? (LEVEL_NAME[lvl]?.[store.lang] ?? badgeBand)
       : (BAND[badgeBand]?.[store.lang] ?? badgeBand)
 
-    const isClean = useWorst && (p.pm25 == null || p.pm25 < CLEAN_UG)
-    const isNodata = useWorst && (p.pm25 === null || p.pm25 === undefined)
 
-    const row = el('div', {
-      class: `rank-row b-${badgeBand}${isClean ? ' rank-row-clean' : ''}${isNodata ? ' rank-row-nodata' : ''}`,
+    const primary = rankMode === 'harm' ? harm?.score : p.pm25
+    const number = value => Number.isFinite(value) ? fmtNum(value, 0) : '–'
+    const name = tr(p.province_th, p.province_en) || '—'
+    const row = el('div', { class: `rank-row b-${badgeBand}` })
+    const summary = el('button', {
+      class: 'rank-summary', type: 'button',
+      'aria-expanded': 'false', 'aria-controls': expand.id,
+      'aria-label': `${i + 1}. ${name} · ${rankMode === 'harm' ? tr('ภาระจริง', 'Effective harm') : 'PM2.5'} ${number(primary)} · ${tr('เฝ้าระวัง', 'Watch')} ${number(p.score)} · ${tr('สังคม', 'Social')} ${number(harm?.social_load)} · ${tr('ดัชนีวิจัย ไม่ใช่ดัชนีคลินิก', 'Research index, not clinical')} ${number(p.danger?.score)}`,
       onclick: () => {
         flyToProvince(p)
-        if (expand) {
-          const wasHidden = expand.hidden
-          expand.hidden = !wasHidden
-          row.classList.toggle('rank-row-open', wasHidden)
-          if (wasHidden && !expand.dataset.causeLoaded) {
-            expand.dataset.causeLoaded = '1'
-            causesByProvince().then((map) => {
-              const block = causeEvidenceBlock(map.get(p.province_code))
-              if (block) expand.prepend(block)
-            }).catch(() => {})
-          }
+        const open = expand.hidden
+        expand.hidden = !open
+        summary.setAttribute('aria-expanded', String(open))
+        row.classList.toggle('rank-row-open', open)
+        if (open && !expand.dataset.causeLoaded) {
+          expand.dataset.causeLoaded = '1'
+          causesByProvince().then(map => {
+            const block = causeEvidenceBlock(map.get(p.province_code))
+            if (block) expand.prepend(block)
+          }).catch(() => {})
         }
       },
     },
-      el('span', { class: 'rank-position mono', style: 'width:18px;color:var(--ink-low);font-size:10px' }, String(i + 1)),
-      el('div', {
-        class: `score b-${badgeBand} badge`,
-        title: useWorst ? tr('PM2.5 (µg/m³)', 'PM2.5 (µg/m³)') : tr('คะแนนภาระจริง', 'Effective harm score'),
-      }, badgeText),
-      el('div', { class: 'who' },
-        el('div', { class: 'th' }, tr(p.province_th, p.province_en) || '—'),
-        el('div', { class: 'en' }, `${store.lang === 'th' ? (p.province_en ?? '') : (p.province_th ?? '')} · ${bandLabel}`,
-          useHarm ? '' : trendArrow(p.delta))),
-      socialChip(harm),
-      dangerChip,
-      el('div', { class: 'stats' }, ...stats),
+      el('span', { class: 'rank-place', title: name },
+        el('span', { class: 'rank-name' }, name),
+        el('span', { class: 'rank-condition' }, bandLabel)),
+      el('span', { class: 'rank-value rank-primary' }, number(primary)),
+      el('span', { class: 'rank-value' }, number(p.score)),
+      el('span', { class: 'rank-value' }, number(harm?.social_load)),
+      el('span', { class: 'rank-value', title: tr('ดัชนีวิจัย ไม่ใช่ดัชนีคลินิก', 'Research screening index, not clinical') }, number(p.danger?.score)),
     )
-    if (expand) row.append(expand)
+    expand.prepend(el('div', { class: 'rank-metrics-note' }, ...stats))
+    row.append(summary, expand)
     return row
   })
-  box.replaceChildren(...[modeToggle(), card, ...rowEls].filter(Boolean))
+  const headings = el('div', { class: 'rank-columns', 'aria-hidden': 'true' },
+    ...[tr('จังหวัด', 'Province'), rankMode === 'harm' ? tr('ภาระ', 'Harm') : 'PM2.5', tr('เฝ้าระวัง', 'Watch'), tr('สังคม', 'Social'), tr('ดัชนี', 'Index')].map(text => el('span', {}, text)))
+  const note = el('p', { class: 'rank-method' }, tr(
+    'PM2.5: µg/m³ · คะแนนวิจัย ไม่ใช่ดัชนีคลินิก',
+    'PM2.5: µg/m³ · Research scores, not clinical indices.'))
+  box.replaceChildren(...[modeToggle(), card, note, headings, ...rowEls].filter(Boolean))
 }
