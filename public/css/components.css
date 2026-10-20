@@ -1,17 +1,33 @@
 @import url('/fonts/region-faces.css');
+#ranking {
+  --font-display: 'Jost', 'Prompt', sans-serif;
+  --font-en: 'Jost', 'Prompt', sans-serif;
+  --font-num: 'Jost', 'Prompt', sans-serif;
+  font-family: 'Jost', 'Prompt', sans-serif;
+}
 .rank-row {
-  display: flex; align-items: center; gap: 10px;
+  display: grid; align-items: center; gap: 6px 10px;
+  grid-template-columns: 18px 34px minmax(0, 1fr) auto;
   padding: 8px 12px;
   border-bottom: 1px solid var(--rule);
   background: var(--well);
   cursor: pointer;
   border-left: 4px solid transparent;
-  min-width: 0;        /* let the flex row shrink to the bottom sheet
-                          width — without this, the cause-chip's
-                          natural width pushes the row to ~480px and
-                          overflows the 320px phone viewport */
+  min-width: 0;
 }
-.rank-row .stats { min-width: 0; max-width: 45%; }
+/* Explicit tracks keep long explanations below the metrics, never beside them. */
+.rank-row > .rank-position { grid-column: 1; grid-row: 1; }
+.rank-row > .score { grid-column: 2; grid-row: 1; }
+.rank-row > .who { grid-column: 3; grid-row: 1; }
+.rank-row > .danger-chip { grid-column: 4; grid-row: 1 / 3; margin-left: 0; }
+.rank-row > .social-chip { grid-column: 3; grid-row: 2; justify-self: start; }
+.rank-row > .stats {
+  grid-column: 1 / -1; grid-row: 3;
+  display: flex; flex-wrap: wrap; gap: 4px 12px;
+  text-align: left; max-width: none;
+}
+.rank-row > .rank-expand { grid-column: 1 / -1; grid-row: 4; min-width: 0; }
+.rank-row .stats { min-width: 0; }
 .rank-row .stats .cause-chip { max-width: 100%; }
 .rank-row:hover { background: var(--well-dim); }
 .rank-row.b-high     { border-left-color: var(--band-high); }
@@ -668,42 +684,31 @@
 
 /* ── Per-province action card (expandable inside each ranking row) ─────
    Audit Tier 1 #1 — "Dynamic Action Cards" per province. The card is
-   hidden by default; clicking the row toggles it. Style is the same
-   dashed-border / reason / action / checklist vocabulary as the
-   national card and the per-place verdict, so the eye recognizes the
-   pattern across surfaces. */
+   hidden by default; clicking the row toggles a full-width explanation. */
 .rank-row-open { background: var(--well-dim); }
 .rank-expand {
-  flex-basis: 100%;
-  margin-top: 8px;
-  padding: 8px 10px;
-  background: rgba(255,255,255,0.6);
-  border-left: 3px solid var(--rule-strong);
-  font-size: 11.5px; line-height: 1.45;
+  margin-top: 4px;
+  padding: 8px 0;
+  max-width: 65ch;
+  font-size: 14px; line-height: 1.6;
 }
-.rank-row.b-high     + .rank-expand { border-left-color: var(--band-high); }
-.rank-row.b-elevated + .rank-expand { border-left-color: var(--band-elevated); }
-.rank-row.b-watch    + .rank-expand { border-left-color: var(--band-watch); }
-.rank-row.b-normal   + .rank-expand { border-left-color: var(--band-normal); }
 .rx-reasons { margin-bottom: 6px; color: var(--ink-mid); }
-.rx-reason { font-size: 11px; }
+.rx-reason { font-size: inherit; }
 .rx-action {
   margin: 6px 0;
   padding: 5px 7px;
   font-weight: 600;
-  background: rgba(255,255,255,0.75);
-  border: 1px dashed var(--rule-strong);
-  font-size: 11.5px;
+  font-size: 14px;
 }
 .rx-checklist {
   margin: 0 0 6px 0; padding-left: 20px;
-  font-size: 11px; line-height: 1.45;
+  font-size: 14px; line-height: 1.6;
 }
 .rx-checklist li { margin-bottom: 2px; }
 .rx-disclaimer {
   margin-top: 6px; padding-top: 4px;
   border-top: 1px dashed var(--rule);
-  font-size: 9.5px; color: var(--ink-low);
+  font-size: 12px; color: var(--ink-mid);
   font-family: var(--font-en);
 }
 .rx-detail-btn {
@@ -3478,8 +3483,6 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
   .rnc-toggle,
   .rnc-window,
   .rnc-action,
-  .rank-expand,
-  .rx-action,
   .rx-detail-btn,
   .citizen-band-score,
   .place-verdict .pv-action,
@@ -4348,3 +4351,10 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .src-chain article { border-top: 1px solid var(--line, #435363); padding: 10px 0; }
 .src-chain h4 { margin: 0 0 6px; font-size: 14px; }
 .src-chain p { font-size: 13px; line-height: 1.65; margin: 6px 0; }
+
+/* Ranking is the rail's primary view; auxiliary panels must yield space. */
+@media (min-width: 1101px) {
+  #rail-left > #ranking { min-height: min(240px, 30vh); }
+  #rail-left > .forecast-strip,
+  #rail-left > .whatif-box { min-height: 0; }
+}

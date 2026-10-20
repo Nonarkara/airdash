@@ -1,11 +1,11 @@
 // Left rail: live province ranking — worst air first.
 // Sort mode: Worst air (default, by PM2.5) | Effective Harm (Watch × Social Load).
-import { on, store } from '../state.js?v=2.4.101'
-import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.101'
-import { fmtNum, el } from '../fmt.js?v=2.4.101'
-import { flyToProvince } from '../map.js?v=2.4.101'
-import { showProvinceDetail } from './detail.js?v=2.4.101'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.101'
+import { on, store } from '../state.js?v=2.4.102'
+import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.102'
+import { fmtNum, el } from '../fmt.js?v=2.4.102'
+import { flyToProvince } from '../map.js?v=2.4.102'
+import { showProvinceDetail } from './detail.js?v=2.4.102'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.102'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }
@@ -322,7 +322,7 @@ function render(snap) {
         }
       },
     },
-      el('span', { class: 'mono', style: 'width:18px;color:var(--ink-low);font-size:10px' }, String(i + 1)),
+      el('span', { class: 'rank-position mono', style: 'width:18px;color:var(--ink-low);font-size:10px' }, String(i + 1)),
       el('div', {
         class: `score b-${badgeBand} badge`,
         title: useWorst ? tr('PM2.5 (µg/m³)', 'PM2.5 (µg/m³)') : tr('คะแนนภาระจริง', 'Effective harm score'),

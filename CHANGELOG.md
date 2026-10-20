@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.102] — 2026-10-20 — repair expanded province ranking layout
+
+Province explanations now occupy their own full-width grid row below the name and metrics. Previously they were appended to a non-wrapping flex row: a long explanation shrank to a narrow column and vertically centered the summary inside a nearly screen-high empty slab. Supplementary metrics wrap separately; explanation text is larger, measured and unboxed. Ranking typography uses Jost/Prompt. Desktop ranking now reserves usable height while forecast and rain scenario panels yield; previously they could squeeze it to less than one pixel. Verified expanded and collapsed rows against populated data at phone, tablet and desktop widths.
+
 ## [2.4.101] — 2026-10-19 — Southeast Asia air and flood watch
 
 Added GDACS flood-episode collection and map locations across the 11 Southeast Asian countries. Explicitly requests all alert levels (omitting the filter excluded Green reports in live tests), bounds pagination and preserves event periods. Thirty-minute collection, six-hour retrieval freshness and rolling 14-day reports; empty or stale coverage never means safe. FL symbols represent event locations, not inundation footprints or depths. Thailand warnings reuse the existing FloodDash cache and require both source and retrieval timestamps within one hour, preserving prepare/protect/evacuate distinctions. Air and flood scores are not blended.
