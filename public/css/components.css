@@ -8,12 +8,13 @@
 .rank-row {
   min-width: 0;
   border-bottom: 1px solid var(--rule);
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
 }
 .rank-row.b-high { border-left-color: var(--band-high); }
 .rank-row.b-elevated { border-left-color: var(--band-elevated); }
 .rank-row.b-watch { border-left-color: var(--band-watch); }
 .rank-row.b-normal { border-left-color: var(--band-normal); }
+.rank-row.b-unknown { border-left-color: var(--ink-mid); }
 .rank-summary, .rank-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 42px 38px 38px 45px;
@@ -30,7 +31,6 @@
 .rank-summary:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
 .rank-place { min-width: 0; }
 .rank-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
-.rank-condition { display: block; color: var(--ink-mid); font-size: 11px; line-height: 1.4; }
 .rank-value { font-size: 15px; line-height: 1.5; text-align: right; font-variant-numeric: tabular-nums; }
 .rank-primary { font-weight: 600; }
 .rank-columns { position: sticky; top: 0; z-index: 2; background: var(--paper); color: var(--ink-mid); font-size: 11px; line-height: 1.4; border-bottom: 1px solid var(--rule); }

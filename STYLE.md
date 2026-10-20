@@ -4,6 +4,7 @@ Utilitarian information design, with Bauhaus grid discipline and Palette typogra
 
 - Keep the existing semantic air-quality colours; do not substitute decorative primary colours or a mood palette.
 - Use Jost/Prompt and tabular numerals. Maintain readable contrast at every score level; clean readings must not fade into illegibility.
+- Province names occupy one line, with urgency shown by the semantic colour marker; retain the full level in accessible labels and tooltips.
 - Province comparisons use shared labelled metric columns. Numbers align to the right. Units and research limitations remain visible in the list heading and accessible row descriptions.
 - Collapsed records size to their content, with44px minimum interaction targets. Do not add empty tracks, metric tiles or per-value boxes. Explanations open below the record at full width.
 - Header information follows one datum in52px. Secondary tools belong in explicit Find/Menu drawers with keyboard focus and dismissal.

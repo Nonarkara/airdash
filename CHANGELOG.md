@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.105] — 2026-10-20 — one-line province names
+
+Removed condition subtitles beneath province names. The semantic urgency stripe carries the visible level; full labels remain in screen-reader descriptions and hover titles. Missing primary measurements use a neutral stripe, never a green all-clear. Metric columns,44px touch targets and expandable details are preserved.
+
 ## [2.4.104] — 2026-10-20 — compact province comparison list
 
 Replaced spread-out province tiles with five aligned columns: province, PM2.5/effective harm, Watch, Social and research Index. Removed repeated badge boxes, duplicated English province names, clean-row fading and unnecessary multi-row spacing. Labels and units are shared above the list; complete source notes and action guidance remain in native-button disclosures. Unknown values remain unknown, including missing effective harm when that sort is selected. Moved the below-viewport footer into About so focusing list controls cannot scroll the entire fixed dashboard and hide its header. Direction follows the supplied UX Planet article’s Utilitarian/Bauhaus vocabulary, applied through Palette typography and semantic air-quality colours.

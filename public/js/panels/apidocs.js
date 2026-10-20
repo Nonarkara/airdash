@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.104'
-import { escapeHtml } from '../fmt.js?v=2.4.104'
+import { store, on } from '../state.js?v=2.4.105'
+import { escapeHtml } from '../fmt.js?v=2.4.105'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 

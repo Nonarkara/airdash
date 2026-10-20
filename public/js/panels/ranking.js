@@ -1,11 +1,11 @@
 // Left rail: live province ranking — worst air first.
 // Sort mode: Worst air (default, by PM2.5) | Effective Harm (Watch × Social Load).
-import { on, store } from '../state.js?v=2.4.104'
-import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.104'
-import { fmtNum, el } from '../fmt.js?v=2.4.104'
-import { flyToProvince } from '../map.js?v=2.4.104'
-import { showProvinceDetail } from './detail.js?v=2.4.104'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.104'
+import { on, store } from '../state.js?v=2.4.105'
+import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.105'
+import { fmtNum, el } from '../fmt.js?v=2.4.105'
+import { flyToProvince } from '../map.js?v=2.4.105'
+import { showProvinceDetail } from './detail.js?v=2.4.105'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.105'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }
@@ -192,7 +192,8 @@ function render(snap) {
     const useHarm = rankMode === 'harm' && harm
     const useWorst = !useHarm
 
-    const badgeBand = useHarm ? harm.band : (useWorst ? pmBand(p.pm25) : p.band)
+    const primary = rankMode === 'harm' ? harm?.score : p.pm25
+    const badgeBand = !Number.isFinite(primary) ? 'unknown' : (useHarm ? harm.band : pmBand(p.pm25))
 
     const stats = []
     if (Number.isFinite(p.delta) && Math.abs(p.delta) >= TREND_THRESHOLD) {
@@ -266,19 +267,18 @@ function render(snap) {
     }
 
     const lvl = pm25Level(p.pm25)
-    const bandLabel = useWorst && lvl
+    const bandLabel = !Number.isFinite(primary) ? tr('ไม่มีข้อมูล', 'No data') : (useWorst && lvl
       ? (LEVEL_NAME[lvl]?.[store.lang] ?? badgeBand)
-      : (BAND[badgeBand]?.[store.lang] ?? badgeBand)
+      : (BAND[badgeBand]?.[store.lang] ?? badgeBand))
 
 
-    const primary = rankMode === 'harm' ? harm?.score : p.pm25
     const number = value => Number.isFinite(value) ? fmtNum(value, 0) : '–'
     const name = tr(p.province_th, p.province_en) || '—'
     const row = el('div', { class: `rank-row b-${badgeBand}` })
     const summary = el('button', {
       class: 'rank-summary', type: 'button',
       'aria-expanded': 'false', 'aria-controls': expand.id,
-      'aria-label': `${i + 1}. ${name} · ${rankMode === 'harm' ? tr('ภาระจริง', 'Effective harm') : 'PM2.5'} ${number(primary)} · ${tr('เฝ้าระวัง', 'Watch')} ${number(p.score)} · ${tr('สังคม', 'Social')} ${number(harm?.social_load)} · ${tr('ดัชนีวิจัย ไม่ใช่ดัชนีคลินิก', 'Research index, not clinical')} ${number(p.danger?.score)}`,
+      'aria-label': `${i + 1}. ${name} · ${bandLabel} · ${rankMode === 'harm' ? tr('ภาระจริง', 'Effective harm') : 'PM2.5'} ${number(primary)} · ${tr('เฝ้าระวัง', 'Watch')} ${number(p.score)} · ${tr('สังคม', 'Social')} ${number(harm?.social_load)} · ${tr('ดัชนีวิจัย ไม่ใช่ดัชนีคลินิก', 'Research index, not clinical')} ${number(p.danger?.score)}`,
       onclick: () => {
         flyToProvince(p)
         const open = expand.hidden
@@ -294,9 +294,8 @@ function render(snap) {
         }
       },
     },
-      el('span', { class: 'rank-place', title: name },
-        el('span', { class: 'rank-name' }, name),
-        el('span', { class: 'rank-condition' }, bandLabel)),
+      el('span', { class: 'rank-place', title: `${name} · ${bandLabel}` },
+        el('span', { class: 'rank-name' }, name)),
       el('span', { class: 'rank-value rank-primary' }, number(primary)),
       el('span', { class: 'rank-value' }, number(p.score)),
       el('span', { class: 'rank-value' }, number(harm?.social_load)),
