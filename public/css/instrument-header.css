@@ -1,0 +1,119 @@
+/* Palette instrument hardware: status → score/location → actions.
+   One 52px datum at every width; secondary operations live in drawers. */
+:root {
+  --font-ui: 'Jost', 'Prompt', sans-serif;
+  --font-display: 'Jost', 'Prompt', sans-serif;
+  --font-en: 'Jost', 'Prompt', sans-serif;
+  --font-num: 'Jost', 'Prompt', sans-serif;
+  --font-th: 'Prompt', 'Jost', sans-serif;
+}
+header {
+  display: flex; flex-flow: row nowrap; align-items: center;
+  gap: 12px; height: 52px; min-height: 52px; padding: 4px 12px;
+  background: var(--paper); border: 0; border-radius: 0;
+  box-sizing: border-box; overflow: visible;
+}
+header::before, header::after { display: none; }
+header .brand { display: flex; flex: 0 0 auto; width: auto; min-width: 0; padding: 0; border: 0; background: none; }
+header .brand .sub, header .brand .sub-short { display: none; }
+header .hd-data {
+  display: flex; flex: 1 1 auto; align-items: center; gap: 20px;
+  width: auto; min-width: 0; max-width: none; height: 44px;
+}
+header .hd-data .national {
+  display: flex; flex: 0 0 auto; width: auto; min-width: 0; max-width: none;
+  height: auto; min-height: 0; padding: 0; margin: 0; border: 0; background: none;
+}
+header .national .plate, header .national #national-en,
+header .national-secondary { display: none; }
+header .national .label { min-width: 0; }
+header .national .verb-th { font: 600 16px/1.4 var(--font-display); white-space: nowrap; letter-spacing: 0; }
+header .hd-data #danger-hero {
+  display: flex; flex: 0 1 auto; flex-flow: row nowrap; align-items: center;
+  gap: 10px; min-width: 0; max-width: none; width: auto;
+  height: 44px; min-height: 44px; padding: 0; margin: 0;
+  background: none; border: 0; border-radius: 0; text-align: left;
+}
+header #danger-hero::before { display: none; }
+header #danger-hero .danger-label { display: block; margin: 0; padding: 0; }
+header #danger-hero .danger-label .th, header #danger-hero .danger-label .en { display: none; }
+header #danger-hero .danger-kind { display: block; font: 400 11px/1.4 var(--font-display); white-space: nowrap; color: var(--ink-mid); }
+header #danger-hero .danger-main { display: flex; align-items: baseline; gap: 5px; margin: 0; }
+header #danger-hero .danger-num { font: 600 26px/1 var(--font-num); }
+header #danger-hero .danger-band { font: 500 12px/1.4 var(--font-display); }
+header #danger-hero .danger-scope { font: 400 13px/1.4 var(--font-display); margin: 0; padding: 0; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+header .header-actions { display: flex; flex: none; align-items: center; gap: 4px; }
+header .header-actions button {
+  display: block; min-width: 44px; height: 44px; padding: 0 8px;
+  font: 500 14px/1.4 var(--font-display); color: var(--ink);
+  border: 0; border-radius: 0; background: none;
+}
+header .header-actions button[aria-expanded="true"] { background: var(--well-dim); }
+header [hidden] { display: none !important; }
+header .hd-tools {
+  display: flex; flex-flow: row wrap; align-items: center; justify-content: flex-start;
+  gap: 8px; position: absolute; top: 100%; right: 8px;
+  min-width: 0; max-width: min(560px, calc(100vw - 16px)); width: max-content;
+  max-height: calc(100dvh - 68px); overflow-y: auto;
+  height: auto; padding: 12px; margin: 0; background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 0; box-shadow: none; z-index: 1200;
+}
+header .hd-tools > button, header .hd-tools > a,
+header .hd-tools .langtoggle, header .hd-tools .focusbox { display: flex !important; position: static; grid-area: auto; align-items: center; }
+header .hd-tools .lbl { display: inline !important; }
+header .hd-tools > button, header .hd-tools > a,
+header .hd-tools .langtoggle button, header .hd-tools select {
+  min-height: 44px; height: auto; min-width: 44px; width: auto; padding: 8px;
+  font: 500 14px/1.4 var(--font-display); color: var(--ink);
+  background: none; border: 0; border-radius: 0; box-shadow: none;
+}
+header .hd-tools .langtoggle { border: 0; border-radius: 0; overflow: visible; }
+header .hd-tools .langtoggle button.active { color: var(--paper); background: var(--ink); }
+header #place-search-container {
+  display: flex; position: absolute; top: 100%; right: 8px; left: 8px;
+  width: auto; max-width: none; min-width: 0; min-height: 48px;
+  margin: 0; padding: 0 8px; background: var(--paper); border: 1px solid var(--rule);
+  border-radius: 0; z-index: 1201;
+}
+header #place-search-container .search-icon { display: none; }
+header #place-search-container #place-search { font: 400 16px/1.5 var(--font-display); min-width: 0; width: 100%; height: 44px; }
+header .data-freshness { display: none; } /* Persistent ticker retains source freshness. */
+header :is(button, a, select, input):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (max-width: 1100px) {
+  header { gap: 6px; padding: 4px 8px; }
+  header .brand { display: none; }
+  header .hd-data { gap: 10px; }
+  header .national .verb-th { font-size: 13px; }
+  header .hd-data #danger-hero { gap: 6px; flex: 1 1 auto; }
+  header #danger-hero .danger-kind { font-size: 10px; }
+  header #danger-hero .danger-num { font-size: 22px; }
+  header #danger-hero .danger-band { display: none; }
+  header #danger-hero .danger-scope { font-size: 12px; }
+  header .header-actions { gap: 0; }
+  header .header-actions button { padding: 0 4px; font-size: 12px; }
+}
+
+header #header-menu > :is(button, a),
+header #header-menu .langtoggle, header #header-menu .langtoggle button {
+  border-radius: 0 !important; box-shadow: none !important;
+  height: auto !important; min-height: 44px; border: 0;
+  background: none; padding: 8px; color: var(--ink);
+}
+header #header-menu .langtoggle { padding: 0; }
+header #header-menu .langtoggle button.active { background: var(--ink) !important; color: var(--paper) !important; }
+header #header-menu #ask-btn .ask-lbl { display: inline !important; }
+header #header-menu #window-btn .win-mark { display: none; }
+header #header-menu :is(#split-btn, #home-btn, #flooddash-btn, #about-btn) { display: flex !important; }
+
+header #header-menu #data-freshness {
+  display: block; position: static; flex: 1 0 100%; width: auto; max-width: none;
+  min-width: 0; margin: 0; padding: 4px 8px; border: 0; border-radius: 0;
+  font: 400 12px/1.5 var(--font-display); background: none;
+}
+header #danger-hero .danger-num { font-variant-numeric: tabular-nums; }
+
+/* Text must remain readable in both colour schemes; signal remains in the
+   measured value, explicit condition label and existing AQI stripe. */
+header #national-th { color: var(--ink); font: 600 16px/1.4 var(--font-display); }
+header #danger-hero .danger-num { color: var(--ink) !important; }
+@media (max-width: 1100px) { header #national-th { font-size: 13px; } }

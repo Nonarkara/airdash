@@ -11,13 +11,13 @@
 //
 // All coloring follows the AQI palette so the only saturated color band
 // on the page tells one consistent story.
-import { on, store, setLang } from '../state.js?v=2.4.102'
-import { tr } from '../i18n.js?v=2.4.102'
-import { openInsightsPane } from '../sensorHealth.js?v=2.4.102'
-import { riskCi } from '../confidence.js?v=2.4.102'
-import { getJson } from '../cache.js?v=2.4.102'
-import { flyToProvince } from '../map.js?v=2.4.102'
-import { showProvinceDetail } from './detail.js?v=2.4.102'
+import { on, store, setLang } from '../state.js?v=2.4.103'
+import { tr } from '../i18n.js?v=2.4.103'
+import { openInsightsPane } from '../sensorHealth.js?v=2.4.103'
+import { riskCi } from '../confidence.js?v=2.4.103'
+import { getJson } from '../cache.js?v=2.4.103'
+import { flyToProvince } from '../map.js?v=2.4.103'
+import { showProvinceDetail } from './detail.js?v=2.4.103'
 
 // AQI-derived 5-level palette — the same gradient the top stripe uses.
 // Watch (yellow) keeps dark text for contrast.
@@ -40,6 +40,39 @@ const NATIONAL_BAND = {
 }
 
 export function initHeader() {
+  // Two predictable drawers preserve every tool without making the map pay
+  // for a permanently expanded toolbar. Search results remain in their field.
+  const header = document.querySelector('header')
+  const search = document.getElementById('place-search-container')
+  const menu = document.getElementById('header-menu')
+  const searchToggle = document.getElementById('header-search-toggle')
+  const menuToggle = document.getElementById('header-menu-toggle')
+  header.append(search)
+  menu.append(document.getElementById('data-freshness'))
+  search.hidden = true
+  const closeDrawers = () => {
+    search.hidden = menu.hidden = true
+    searchToggle.setAttribute('aria-expanded', 'false')
+    menuToggle.setAttribute('aria-expanded', 'false')
+  }
+  for (const [button, panel] of [[searchToggle, search], [menuToggle, menu]]) {
+    button.addEventListener('click', () => {
+      const open = panel.hidden
+      closeDrawers()
+      panel.hidden = !open
+      button.setAttribute('aria-expanded', String(open))
+      if (open) (panel.querySelector('input, button, a, select'))?.focus()
+    })
+  }
+  header.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return
+    const target = !search.hidden ? searchToggle : menuToggle
+    closeDrawers()
+    target.focus()
+  })
+  document.addEventListener('click', (event) => {
+    if (!header.contains(event.target)) closeDrawers()
+  })
   const toggle = document.getElementById('langtoggle')
   if (toggle) {
     const paint = () => toggle.querySelectorAll('button').forEach((b) => {
@@ -125,7 +158,11 @@ function renderStatus(snap) {
   }
   const thEl = document.getElementById('national-th')
   const enEl = document.getElementById('national-en')
-  if (thEl) thEl.textContent = band.th
+  if (thEl) {
+    const compact = { normal: ['อากาศดี', 'Good air'], low: ['เฝ้าระวัง', 'Monitor'], watch: ['ติดตาม', 'Watch'], elevated: ['ลดกลางแจ้ง', 'Limit outdoors'], high: ['ป้องกัน', 'Protect now'] }[displayBand] ?? [band.th, band.en]
+    thEl.textContent = tr(...compact)
+    thEl.title = tr(band.th, band.en)
+  }
   if (enEl) enEl.textContent = band.en
 
   // "Why" — top 1 reason from the action card so the user gets the cause
@@ -207,7 +244,7 @@ function renderStatus(snap) {
       if (scopeEl) {
         scopeEl.textContent = isCityScoped
           ? tr(activeArea.name_th, activeArea.name_en)
-          : `${tr(showP.province_th, showP.province_en)} · ${tr('จังหวัดแย่สุด', 'worst province')}`
+          : `${tr('สูงสุด', 'Highest')}: ${tr(showP.province_th, showP.province_en)}`
       }
       // Build the audit-trail tooltip — every modifier, in one place.
       // Lets a curious reader see what drove the number without leaving
@@ -223,6 +260,7 @@ function renderStatus(snap) {
       if (show.rain_relief > 0) parts.push(`rain relief ${(show.rain_relief * 100).toFixed(0)}% (${show.rain_source ?? 'forecast'})`)
       parts.push(tr('คะแนนไม่ต่ำกว่าค่า PM ที่วัดได้ตอนนี้', 'score never below the measured PM baseline'))
       const provinceName = tr(showP.province_th, showP.province_en)
+      dangerEl.setAttribute('aria-label', `${tr('ดัชนีวิจัย ไม่ใช่ดัชนีคลินิก', 'Research index, not clinical')}: ${show.score ?? '–'}/100 · ${scopeEl?.textContent ?? ''} · ${label}`)
       dangerEl.title = `${label} · ${provinceName} (${show.score}/100)${cityBadge}\n${parts.join(' · ')}\n${tr('แตะเพื่อดูสูตรคำนวณ', 'tap for the formula breakdown')}`
     } else {
       dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high', 'band-unknown')

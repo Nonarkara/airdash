@@ -102,19 +102,12 @@ for (const w of WIDTHS) {
     const visible = (el) => el && el.offsetParent !== null && getComputedStyle(el).display !== 'none'
     const q = (s) => document.querySelector(s)
 
-    // 1. ONE ROW where the bar claims to be one row. Below 1100 the phone
-    //    grid is legitimately multi-row, so this only applies above it.
-    if (window.innerWidth > 1100) {
-      const h = Math.round(q('header').getBoundingClientRect().height)
-      if (h > 80) out.push(`BAR WRAPPED to ${h}px (>80)`)
-    }
-    // 2. HIERARCHY: the verdict is the headline and must outrank the score.
+    // The Palette header has one information line at every width.
+    const h = Math.round(q('header').getBoundingClientRect().height)
+    if (h > 56) out.push(`BAR WRAPPED to ${h}px (>56)`)
     const nat = q('header .hd-data .national')
     const hero = document.getElementById('danger-hero')
-    const nw = visible(nat) ? nat.getBoundingClientRect().width : 0
-    const hw = visible(hero) ? hero.getBoundingClientRect().width : 0
-    if (visible(nat) && nw < 150) out.push(`verdict CRUSHED (${Math.round(nw)}px < 150)`)
-    if (visible(hero) && visible(nat) && hw > nw + 20) out.push(`HIERARCHY INVERTED (danger ${Math.round(hw)} > verdict ${Math.round(nw)})`)
+    if (!visible(nat) || !visible(hero)) out.push('status or score absent')
     // 3. CLIPPED: content wider than its box.
     for (const sel of ['.hd-tools', '.hd-data', '#danger-hero', '.hd-data .national']) {
       const el = q(`header ${sel}`) || q(sel)
@@ -122,10 +115,10 @@ for (const w of WIDTHS) {
       if (el.scrollWidth > el.clientWidth + 2) out.push(`${sel} CLIPPED (${el.scrollWidth}>${el.clientWidth})`)
     }
     // 4. Every visible control still has a real hit target.
-    for (const el of document.querySelectorAll('header .hd-tools > *')) {
+    for (const el of document.querySelectorAll('header .header-actions button')) {
       if (!visible(el)) continue
       const r = el.getBoundingClientRect()
-      if (r.width < 8 || r.height < 8) out.push(`control crushed: ${el.id || el.className}`)
+      if (r.width < 44 || r.height < 44) out.push(`control crushed: ${el.id || el.className}`)
     }
     // 5. THE DANGER CHIP FITS ITS OWN BOX.
     //
@@ -195,7 +188,7 @@ for (const w of WIDTHS) {
   if (res.length) { problems += res.length; console.log(`${String(w).padStart(5)}px  FAIL  ${res.join(' | ')}`) }
   else console.log(`${String(w).padStart(5)}px  ok`)
   if (SHOT) {
-    const h = w > 1100 ? 76 : 150
+    const h = 56
     const buf = await page.screenshot({ clip: { x: 0, y: 0, width: w, height: h } })
     writeFileSync(`/tmp/header-gate-${w}.png`, buf)
   }

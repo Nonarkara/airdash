@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.103] — 2026-10-20 — Palette instrument header
+
+Replaced the permanent multi-row toolbar with one aligned52px status/score/location row and44px Find/Menu actions. Search and secondary tools open explicit drawers with Escape/outside-click dismissal and focus return. Preserved language, view mode, camera, compare, home, FloodDash and About controls. Removed ornamental header plates, duplicated translations, emoji icons and rounded boxes. Shared UI typography now uses the existing Jost/Prompt families. Air-quality colours retain their data meaning.
+
 ## [2.4.102] — 2026-10-20 — repair expanded province ranking layout
 
 Province explanations now occupy their own full-width grid row below the name and metrics. Previously they were appended to a non-wrapping flex row: a long explanation shrank to a narrow column and vertically centered the summary inside a nearly screen-high empty slab. Supplementary metrics wrap separately; explanation text is larger, measured and unboxed. Ranking typography uses Jost/Prompt. Desktop ranking now reserves usable height while forecast and rain scenario panels yield; previously they could squeeze it to less than one pixel. Verified expanded and collapsed rows against populated data at phone, tablet and desktop widths.
