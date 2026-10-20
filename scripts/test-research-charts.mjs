@@ -15,6 +15,17 @@ check('invalid network totals rejected', `svgNetwork({total_stations:10,stale:20
 check('no silent stations has no invented segment', `svgNetwork({total_stations:100,stale:0})`,s=>assert.match(s,/width="0"/))
 check('diurnal reference uses Thai 24h value', `svgDiurnal(Array.from({length:24},(_,hour)=>({hour,avg:12})),null)`,s=>{finite(s);assert.match(s,/37.5/);assert.doesNotMatch(s,/standard 15/);})
 check('empty series stays empty',`svgDiurnal([],null)+svgRegionMonths([])+svgAlertLedger([])`,s=>assert.equal(s,''))
+const { reliefFraction } = await import('../server/washout-curve.js')
+check('research fine-mode curve agrees with the running engine', 'svgRainRelief()', html => {
+  const anchors = [...html.matchAll(/data-mm="([^"]+)" data-relief="([^"]+)"/g)]
+  assert.equal(anchors.length, 6)
+  for (const [, mm, pct] of anchors) assert.equal(Number(pct), reliefFraction(Number(mm)) * 100)
+  assert.doesNotMatch(html, /a≈|C\(t\)/)
+})
+check('noise diagram labels an index baseline rather than a safe zone', 'svgNoiseAmp()', html => {
+  assert.match(html, /index baseline/)
+  assert.doesNotMatch(html, /WHO safe|safe zone/)
+})
 // Run the actual bumper in a disposable checkout; production files stay untouched.
 const {mkdtempSync,mkdirSync,writeFileSync,copyFileSync,rmSync}=await import('node:fs')
 const {tmpdir}=await import('node:os')

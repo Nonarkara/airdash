@@ -1,9 +1,9 @@
 // Research Paper panel — renders the full bilingual academic paper inside
 // the About overlay's "Research Paper" tab, with custom SVG infographics,
 // the complete source catalog, citations, and CSV dataset download.
-import { on, store } from '../state.js?v=2.4.105'
-import { getJson } from '../cache.js?v=2.4.105'
-import { escapeHtml } from '../fmt.js?v=2.4.105'
+import { on, store, setLang } from '../state.js?v=2.4.106'
+import { getJson } from '../cache.js?v=2.4.106'
+import { escapeHtml } from '../fmt.js?v=2.4.106'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -12,8 +12,8 @@ function tr(th, en) { return store.lang === 'th' ? th : en }
 function svgArchitecture() {
   const w = 760, h = 320
   const sources = [
-    { y: 36, label: 'AIR4', sub: 'PM2.5 · ~200 stn', color: 'var(--aqi)' },
-    { y: 70, label: 'RAIN', sub: '~4,200 gauges', color: 'var(--rain)' },
+    { y: 36, label: 'AIR4', sub: 'ground PM2.5', color: 'var(--aqi)' },
+    { y: 70, label: 'RAIN', sub: 'rain gauges', color: 'var(--rain)' },
     { y: 104, label: 'OMET', sub: 'weather fc', color: 'var(--band-watch)' },
     { y: 138, label: 'CAMS', sub: 'PM2.5 forecast', color: 'var(--aqi)' },
     { y: 172, label: 'IMERG', sub: 'satellite rain', color: 'var(--rain)' },
@@ -376,7 +376,7 @@ function svgNetwork(summary) {
 function sectionHero() {
   return `
     <div class="rp-hero">
-      <div class="rp-hero-eyebrow">RESEARCH PAPER · v3.0 — July 2026</div>
+      <div class="rp-hero-eyebrow">RESEARCH & METHODS · 2026-10-20</div>
       <h1 class="rp-hero-title" data-th="AirDash 3.0 — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย" data-en="AirDash 3.0 — A Real-Time, Open-Source Air Quality Watch for Thailand">
         ${tr('AirDash 3.0 — ระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศเรียลไทม์โอเพนซอร์สสำหรับประเทศไทย', 'AirDash 3.0 — A Real-Time, Open-Source Air Quality Watch for Thailand')}
       </h1>
@@ -386,12 +386,7 @@ function sectionHero() {
         <div><code>non.ar@depa.or.th</code> · <a href="https://smartcitythailand.or.th" target="_blank" rel="noopener">smartcitythailand.or.th</a></div>
       </div>
       <div class="rp-abstract">
-        <p data-th="AirDash เป็นระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศ 24/7 ที่ทำงานบนเครื่องเดียว เชื่อมข้อมูลเปิดจาก 7 แหล่ง (สถานีวัดคุณภาพอากาศ Air4Thai ~200 สถานี · ฝน ~4,200 สถานี · พยากรณ์อากาศรายจังหวัด · พยากรณ์ PM2.5 CAMS · ฝนดาวเทียม NASA GPM · ENSO · ข่าวฝุ่น/หมอกควัน) ผ่านแดชบอร์ดสองภาษา ข้อมูลทุกค่าถูกเก็บลง SQLite แล้วสรุปเป็นรายชั่วโมงถาวรหลัง 90 วัน ระบบแสดงดัชนีเฝ้าระวังรายจังหวัด (PM2.5 40% · มลพิษอื่น 10% · แนวโน้ม 15% · พยากรณ์ 20% · การระบายอากาศ 15%) และการวิเคราะห์ 'ฝนช่วยล้างฝุ่น' (rain washout) ที่บอกว่าฝนที่กำลังมาจะลดฝุ่นแต่ละพื้นที่ได้เท่าไร — ทั้งสองเป็น 'ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์'" data-en="AirDash is a 24/7 single-machine air-quality monitoring system for Thailand. It unifies seven open public data pipelines into a single bilingual dashboard. Every reading is persisted to SQLite; raw rows are rolled into hourly aggregates after 90 days. The system presents a province-level watch score (PM2.5 40% · other pollutants 10% · trend 15% · forecast 20% · ventilation 15%) and a first-class rain-washout analysis — the chance of precipitation and how much it would help the dust situation in each area. Both are explicitly framed as heuristic indicators, not forecasts.">
-          ${tr(
-            'AirDash เป็นระบบเฝ้าระวังฝุ่น PM2.5 และคุณภาพอากาศ 24/7 ที่ทำงานบนเครื่องเดียว เชื่อมข้อมูลเปิดจาก 7 แหล่ง (สถานีวัดคุณภาพอากาศ Air4Thai ~200 สถานี · ฝน ~4,200 สถานี · พยากรณ์อากาศรายจังหวัด · พยากรณ์ PM2.5 CAMS · ฝนดาวเทียม NASA GPM · ENSO · ข่าวฝุ่น/หมอกควัน) ผ่านแดชบอร์ดสองภาษา ข้อมูลทุกค่าถูกเก็บลง SQLite แล้วสรุปเป็นรายชั่วโมงถาวรหลัง 90 วัน ระบบแสดงดัชนีเฝ้าระวังรายจังหวัด (PM2.5 40% · มลพิษอื่น 10% · แนวโน้ม 15% · พยากรณ์ 20% · การระบายอากาศ 15%) และการวิเคราะห์ "ฝนช่วยล้างฝุ่น" ที่บอกว่าฝนที่กำลังมาจะลดฝุ่นแต่ละพื้นที่ได้เท่าไร — ทั้งสองเป็น "ดัชนีบ่งชี้ ไม่ใช่การพยากรณ์"',
-            'AirDash is a 24/7 single-machine air-quality monitoring system for Thailand. It unifies seven open public data pipelines into a single bilingual dashboard. Every reading is persisted to SQLite; raw rows are rolled into hourly aggregates after 90 days. The system presents a province-level watch score (PM2.5 40% · other pollutants 10% · trend 15% · forecast 20% · ventilation 15%) and a first-class rain-washout analysis — the chance of precipitation and how much it would help the dust situation in each area. Both are explicitly framed as heuristic indicators, not forecasts.'
-          )}
-        </p>
+        <p>${tr("เอกสารนี้อธิบายแหล่งข้อมูล วิธีคำนวณ และข้อจำกัดของระบบเฝ้าระวังอากาศและน้ำท่วม แยกค่าตรวจวัด ค่าพยากรณ์ และคะแนนวิจัยออกจากกัน ข้อมูลที่ขาดหรือเก่าไม่ใช่หลักฐานว่าปลอดภัย", "This paper explains the sources, calculations and limits behind air and flood watch. Measurements, forecasts and research scores are distinguished. Missing or stale data is not evidence of safety.")}</p>
       </div>
     </div>`
 }
@@ -534,12 +529,7 @@ function sectionDanger() {
       </h3>
       ${svgDangerFormula()}
 
-      <p data-th="โดยที่ pm_base เป็นค่า 0–100 จากค่า PM2.5 ตามเกณฑ์ Thai AQI 2023 (เส้นโค้งเดียวกับดัชนีเฝ้าระวัง); heat_amp, hum_amp และ noise_amp เป็นตัวคูณที่มาจาก synergy ทางระบาดวิทยา; และ rain_relief คือเปอร์เซ็นต์ PM2.5 ที่ถูกชะล้างโดยฝนที่กำลังจะตกหรือตกอยู่แล้ว" data-en="pm_base is a 0–100 score from the PM2.5 reading against the Thai AQI 2023 breakpoints (the same curve as the watch score); heat_amp, hum_amp, and noise_amp are multiplicative factors with epidemiological grounding; rain_relief is the percent of PM2.5 being washed out by rain that is either already falling or forecast.">
-        ${tr(
-          'โดยที่ pm_base เป็นค่า 0–100 จากค่า PM2.5 ตามเกณฑ์ Thai AQI 2023; heat_amp, hum_amp และ noise_amp เป็นตัวคูณที่มาจาก synergy ทางระบาดวิทยา; และ rain_relief คือเปอร์เซ็นต์ PM2.5 ที่ถูกชะล้างโดยฝน',
-          'pm_base is a 0–100 score from the PM2.5 reading against the Thai AQI 2023 breakpoints; heat_amp, hum_amp, and noise_amp are multiplicative factors with epidemiological grounding; rain_relief is the percent of PM2.5 being washed out by rain.'
-        )}
-      </p>
+      <p>${tr("pm_base คือฐานคะแนนจาก PM2.5 ส่วนตัวคูณความร้อน ความชื้น และเสียงเป็นสมมติฐานของดัชนีวิจัย ไม่ใช่ค่าความเสี่ยงทางคลินิก rain_relief ลดเฉพาะคะแนนที่ถูกขยายด้วยตัวคูณ และคะแนนสุดท้ายไม่ต่ำกว่าฐาน PM ที่วัดได้ เมื่อไม่มี PM ที่ใช้ได้ ผลเป็น unknown ไม่ใช่ศูนย์ปลอดภัย ตัวลดนี้ไม่ใช่เปอร์เซ็นต์ฝุ่นที่ตรวจวัดว่าถูกชะล้างแล้ว", "pm_base is the PM2.5 score baseline. Heat, humidity and noise multipliers are research-index assumptions, not calibrated clinical risks. Rain relief discounts the amplified score; the result never falls below the measured-PM baseline. Without usable PM, the result is unknown, not a safe zero. The discount is not a measured percentage of particles removed.")}</p>
 
       <h3 data-th="2.2 PM2.5 + ความร้อน = synergy ทางระบาดวิทยา" data-en="2.2 PM2.5 + heat = synergistic mortality">
         ${tr('2.2 PM2.5 + ความร้อน = synergy ทางระบาดวิทยา', '2.2 PM2.5 + heat = synergistic mortality')}
@@ -585,21 +575,11 @@ function sectionDanger() {
         ${tr('2.4 ฝน: wet scavenging', '2.4 Rain: wet deposition and below-cloud scavenging')}
       </h3>
 
-      <p data-th='ฝนเป็น "ตัวลด" ตัวเดียวในสูตร เมื่อเม็ดฝนตกผ่านชั้นอากาศที่มีฝุ่น ฝุ่นจะถูกจับโดยกระบวนการ Brownian diffusion, interception, และ impaction — เรียกรวมว่า "below-cloud scavenging" อัตราการกำจัดเป็น exponential: C(t) = C₀ · exp(−Λ·t) โดยที่ Λ คือ scavenging coefficient ที่ขึ้นกับความเข้มฝน R (mm/h) ตามกฎ Λ = a·R^b' data-en="Rain is the only subtractive term. When raindrops fall through a dusty air column they capture particles by Brownian diffusion, interception, and impaction — collectively called below-cloud scavenging. The removal is exponential: C(t) = C₀ · exp(−Λ·t), with Λ a power-law function of rainfall rate R (mm/h): Λ = a·R^b.">
-        ${tr(
-          'เมื่อเม็ดฝนตกผ่านชั้นอากาศที่มีฝุ่น ฝุ่นจะถูกจับโดยกระบวนการ below-cloud scavenging — C(t) = C₀ · exp(−Λ·t), Λ = a·R^b',
-          'Raindrops capture particles by below-cloud scavenging — C(t) = C₀ · exp(−Λ·t), with Λ = a·R^b.'
-        )}
-      </p>
+      <p>${tr("ฝนสามารถดักจับอนุภาคได้ แต่ประสิทธิภาพขึ้นกับขนาดอนุภาค สภาพอากาศ และกระบวนการในเมฆ สูตร wet scavenging เป็นพื้นฐานอธิบายกลไก ไม่ใช่สมการที่ระบบใช้แก้ความเข้มข้นฝุ่น ณ พื้นที่จริง AirDash ใช้เส้นขั้นบันไดเชิง heuristic สำหรับ rain washout จึงไม่ควรอ่านเป็นผลตรวจวัดหรือคำรับรองว่าฝุ่นจะลดลงตามตัวเลข", "Rain can capture particles, with efficiency depending on particle size and atmospheric conditions. Wet-scavenging equations describe the mechanism; AirDash does not solve them for local particle concentrations. Its rain-washout calculation uses a stepped heuristic curve, so the output is neither an observation nor a guarantee of the stated reduction.")}</p>
 
       ${svgRainRelief()}
 
-      <p data-th='สำหรับ PM2.5 ในช่วง accumulation mode (~0.1–1 µm) ค่า a และ b ที่วัดได้ในสนามจริงอยู่ที่ a ≈ 10⁻⁵ ถึง 10⁻² s⁻¹, b ≈ 0.6–0.9 (Henzing et al. 2006; Wang et al. 2010; parameterised ใน GEOS-Chem ที่ a = 0.00106, b = 0.61) — แปลว่าที่ R = 1 mm/h ค่า Λ ≈ 10⁻⁵ s⁻¹ ครึ่งชีวิตของฝุ่น ≈ 19 ชั่วโมง; แต่ที่ R = 10 mm/h (ฝนหนัก) Λ ≈ 10⁻⁴ s⁻¹ ครึ่งชีวิตเหลือเพียง 1.9 ชั่วโมง — นั่นคือ ฝนหนัก 5 มม. ใน 1 ชม. ลด PM2.5 ได้ราว 20% และ 35 มม. ใน 24 ชม. ลดได้ราว 40%' data-en="For PM2.5 in the accumulation mode (~0.1–1 µm) the field-measured a and b sit in the range a ≈ 10⁻⁵ to 10⁻² s⁻¹, b ≈ 0.6–0.9 (Henzing et al. 2006; Wang et al. 2010; GEOS-Chem's parameterisation is a = 0.00106, b = 0.61). At R = 1 mm/h, Λ ≈ 10⁻⁵ s⁻¹ and the PM2.5 half-life is ~19 hours. At R = 10 mm/h (heavy rain), Λ ≈ 10⁻⁴ s⁻¹ and the half-life is 1.9 hours. Practically: 5 mm of rain in an hour cuts PM2.5 by ~20%, and 35 mm in 24 h cuts it by ~40%.">
-        ${tr(
-          'ฝน 5 มม. ลด PM2.5 ได้ ~20% · ฝน 35 มม. ใน 24 ชม. ลดได้ ~40% — สอดคล้องกับการศึกษาในเอเชีย',
-          '5 mm of rain cuts PM2.5 ~20%, 35 mm in 24 h cuts it ~40% — consistent with field studies across Asian cities.'
-        )}
-      </p>
+      <p>${tr("เส้น fine-mode ของระบบใช้ค่าขั้น 8%, 20%, 30% และ 40% สำหรับฝน 24 ชั่วโมง 1–<5, 5–<15, 15–<35 และ ≥35 มม. ตามลำดับ โมดูล washout สามารถเลือกเส้น coarse-mode ที่มีเพดาน 60% ตามหลักฐานขนาดอนุภาค ตัวปรับ coarse ยังไม่ได้สอบเทียบกับ PM10 ในพื้นที่ ส่วน Danger Score ใช้เส้น fine-mode เป็นค่าเริ่มต้น ต้องอ่าน curve_basis และข้อมูลกำกับของผลลัพธ์ แทนการถือว่าฝนปริมาณเดียวให้ผลเหมือนกันทุกแห่ง", "The fine-mode curve uses steps of 8%, 20%, 30% and 40% for 24-hour rain totals of 1–<5, 5–<15, 15–<35 and ≥35 mm. The washout module can select a coarse-mode curve with a 60% ceiling from aerosol-size evidence. That coarse adjustment is not locally calibrated against PM10. Danger Score uses the default fine-mode curve. Read curve_basis and result metadata rather than assuming the same rain amount removes the same fraction everywhere.")}</p>
 
       <h3 data-th="2.5 เสียง: traffic + environmental noise amplifier" data-en="2.5 Noise: traffic & environmental noise amplifier">
         ${tr('2.5 เสียง: traffic + environmental noise amplifier', '2.5 Noise: traffic & environmental noise amplifier')}
@@ -614,7 +594,7 @@ function sectionDanger() {
 
       ${svgNoiseAmp()}
 
-      <p data-th="ที่สำคัญ AIRCARD cohort (2025) พบว่าเสียงจราจรยังคงมีผลกระทบต่อ MACE อย่างมีนัยสำคัญหลังปรับค่ามลพิษทางอากาศแล้ว (HR = 1.075 ต่อ 14.9 dB) — นั่นคือ เสียงเป็นตัวคูณต่อสุขภาพหัวใจและหลอดเลือดที่เป็นอิสระจากฝุ่น PM ไม่ใช่ confounding variable และยังมีกลไกเฉพาะ: การกระตุ้น sympathetic nervous system, การรบกวนการนอนหลับ, และการหลั่ง stress hormones (cortisol, adrenaline) ที่ทำให้ความดันโลหิตสูงและหลอดเลือดแข็ง AirDash ตั้ง noise_amp = 0 ที่เสียงต่ำกว่า 55 dB (บริเวณที่ WHO แนะนำว่าปลอดภัย) และเพิ่มเป็น 0.30 ที่ 85 dB ขึ้นไป (cap เดียวกับ heat_amp เพื่อไม่ให้ตัวคูณใดครอบงำสูตร)" data-en="Importantly, the AIRCARD cohort (2025) found that traffic noise retains a significant effect on MACE even after adjustment for air pollution (HR = 1.075 per 14.9 dB) — meaning noise is an INDEPENDENT cardiovascular amplifier of the same air, not a confounding proxy for PM. It works through distinct mechanisms: chronic sympathetic nervous system activation, sleep fragmentation, and stress-hormone release (cortisol, adrenaline) that drive hypertension and atherosclerosis. AirDash sets noise_amp = 0 below 55 dB (within the WHO safe zone) and ramps to 0.30 at 85 dB and above (the cap matches heat_amp, deliberately — every amplifier has the same ceiling so no single dimension dominates the composite).">
+      <p data-th="ที่สำคัญ AIRCARD cohort (2025) พบว่าเสียงจราจรยังคงมีผลกระทบต่อ MACE อย่างมีนัยสำคัญหลังปรับค่ามลพิษทางอากาศแล้ว (HR = 1.075 ต่อ 14.9 dB) — นั่นคือ เสียงเป็นตัวคูณต่อสุขภาพหัวใจและหลอดเลือดที่เป็นอิสระจากฝุ่น PM ไม่ใช่ confounding variable และยังมีกลไกเฉพาะ: การกระตุ้น sympathetic nervous system, การรบกวนการนอนหลับ, และการหลั่ง stress hormones (cortisol, adrenaline) ที่ทำให้ความดันโลหิตสูงและหลอดเลือดแข็ง AirDash ตั้ง noise_amp = 0 ที่เสียงต่ำกว่า 55 dB (ฐานที่ระบบเลือก ไม่ใช่เส้นปลอดภัยทางคลินิก) และเพิ่มเป็น 0.30 ที่ 85 dB ขึ้นไป (cap เดียวกับ heat_amp เพื่อไม่ให้ตัวคูณใดครอบงำสูตร)" data-en="Importantly, the AIRCARD cohort (2025) found that traffic noise retains a significant effect on MACE even after adjustment for air pollution (HR = 1.075 per 14.9 dB) — meaning noise is an INDEPENDENT cardiovascular amplifier of the same air, not a confounding proxy for PM. It works through distinct mechanisms: chronic sympathetic nervous system activation, sleep fragmentation, and stress-hormone release (cortisol, adrenaline) that drive hypertension and atherosclerosis. AirDash sets noise_amp = 0 below 55 dB (the chosen index baseline, not a clinical safe zone) and ramps to 0.30 at 85 dB and above (the cap matches heat_amp, deliberately — every amplifier has the same ceiling so no single dimension dominates the composite).">
         ${tr(
           'AIRCARD 2025: เสียงจราจร HR = 1.075 ต่อ 14.9 dB หลังปรับค่ามลพิษ — เสียงเป็น amplifier อิสระต่อหัวใจและหลอดเลือด',
           'AIRCARD 2025: traffic noise HR = 1.075 per 14.9 dB after adjusting for air pollution — noise is an independent cardiovascular amplifier.'
@@ -625,12 +605,7 @@ function sectionDanger() {
         ${tr('2.6 แหล่งข้อมูลอินพุต', '2.6 Inputs and provenance')}
       </h3>
 
-      <p data-th="ตัวเศษ PM2.5 ใช้ค่าที่สูงที่สุดระหว่าง (ก) ค่าที่สถานีภาคพื้นดิน Air4Thai ของกรมควบคุมมลพิษ (PCD) วัดได้ในชั่วโมงล่าสุด และ (ข) ค่าจาก GISTDA PM2.5 (satellite + ground fusion, https://pm25.gistda.or.th/) ตัวคูณความร้อนและความชื้นดึงจาก Open-Meteo current-hour fields (temperature_2m, relative_humidity_2m) ตัวคูณเสียงดึงจากสถานี PCD 27 แห่ง (noisemonitor.net, Leq 24h) โดยใช้ค่า MAX ระหว่างสถานีในจังหวัดเดียวกัน ตัวลดฝนดึงจาก (ก) เรดาร์ฝน HII ~4,200 สถานี (rain_24h) และ (ข) Open-Meteo forecast 24 ชม. × probability — ใช้ค่าที่มากกว่า" data-en="The PM2.5 numerator takes the worst of (a) the freshest Air4Thai ground station (PCD) reading per province and (b) the GISTDA PM2.5 satellite+ground fusion value (https://pm25.gistda.or.th/). The heat and humidity multipliers come from Open-Meteo current-hour fields. The noise amplifier comes from 27 PCD noise monitoring stations (noisemonitor.net, daily Leq), taking the MAX across stations in each province. The rain relief uses the maximum of (a) observed 24h rain from ~4,200 HII gauges and (b) Open-Meteo forecast 24h rain × probability.">
-        ${tr(
-          'ใช้ค่า PM2.5 ที่สูงสุดระหว่างสถานีภาคพื้นดิน PCD และ GISTDA satellite fusion; ตัวคูณเสียงใช้ค่า MAX จาก 27 สถานี PCD; ตัวลดฝนใช้ค่าที่มากกว่าระหว่างเรดาร์ฝน HII และ Open-Meteo forecast',
-          'Uses the higher of PCD ground station and GISTDA satellite fusion; noise amp takes the MAX of 27 PCD stations per province; rain relief uses the larger of HII gauge and Open-Meteo forecast.'
-        )}
-      </p>
+      <p>${tr("ฐาน PM ใช้ข้อมูล Air4Thai และ GISTDA fusion ตามกฎความสดของข้อมูลในโมดูล Danger ส่วนความร้อนและความชื้นมาจาก Open-Meteo ชั่วโมงปัจจุบัน เสียงใช้ค่า Leq จากเครือข่ายที่รายงานอยู่ ฝน HII เป็นข้อมูลจากสถานีวัด ไม่ใช่เรดาร์ เมื่อฝนที่วัดได้ใน 24 ชั่วโมง ≥5 มม. ระบบใช้ค่านั้นก่อน มิฉะนั้นจึงใช้ฝนพยากรณ์ที่ผ่านเกณฑ์ ≥1 มม. และโอกาส ≥25% โดยถ่วงปริมาณฝนด้วยความน่าจะเป็น ไม่ได้เลือกตัวลดที่มากที่สุดระหว่างสองแหล่ง", "The PM baseline uses Air4Thai and GISTDA fusion under the Danger module’s freshness rules. Heat and humidity come from current-hour Open-Meteo fields; noise uses reporting-network Leq. HII rainfall is gauge data, not radar. Observed 24-hour rain ≥5 mm takes precedence. Otherwise, forecast rain must meet ≥1 mm and ≥25% probability gates; the amount is probability-weighted before applying the curve. The code does not choose whichever source gives the greatest relief.")}</p>
 
       <h3 data-th="2.7 ขอบเขตของข้อสรุป" data-en="2.7 What this number is, and what it isn't">
         ${tr('2.7 ขอบเขตของข้อสรุป', '2.7 What this number is, and what it isn\'t')}
@@ -647,16 +622,12 @@ function sectionDanger() {
 }
 
 function svgDangerFormula() {
-  const w = 760, h = 90
-  let svg = `<svg viewBox="0 0 ${w} ${h}" class="research-svg" xmlns="http://www.w3.org/2000/svg">`
-  // Main formula box
-  svg += `<rect x="20" y="20" width="720" height="50" fill="var(--aqi-unhealthy)" opacity="0.08" stroke="var(--aqi-unhealthy)" stroke-width="1.5"/>`
-  svg += `<text x="380" y="46" text-anchor="middle" font-family="var(--font-num)" font-size="13" font-weight="700" fill="var(--ink)">`
-  svg += `raw = pm_base × (1 + heat_amp) × (1 + hum_amp) × (1 + noise_amp) × (1 − rain_relief)`
-  svg += `</text>`
-  svg += `<text x="380" y="62" text-anchor="middle" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">danger = max(pm_base, min(100, raw)) · rain cannot discount PM measured now</text>`
-  svg += `</svg>`
-  return svg
+  return `<div class="rp-formula" aria-label="Danger Score calculation">
+    <p><code>amplified = pm_base × (1 + heat_amp) × (1 + hum_amp) × (1 + noise_amp)</code></p>
+    <p><code>raw = amplified × (1 − rain_relief)</code></p>
+    <p><code>danger = max(pm_base, min(100, round(raw)))</code></p>
+    <p data-th="ไม่มีค่า PM ที่ใช้ได้ → ไม่ทราบค่า ดัชนีจะไม่ต่ำกว่าฐาน PM ที่วัดได้" data-en="No usable PM → unknown. The index cannot fall below the measured PM baseline.">No usable PM → unknown. The index cannot fall below the measured PM baseline.</p>
+  </div>`
 }
 
 function svgNoiseAmp() {
@@ -683,8 +654,8 @@ function svgNoiseAmp() {
   // Cap 85-95
   svg += `<line x1="${50 + (45 / 55) * 510}" y1="20" x2="${50 + (55 / 55) * 510}" y2="20" stroke="var(--aqi-hazardous)" stroke-width="3"/>`
   // Title
-  svg += `<text x="300" y="10" text-anchor="middle" font-family="var(--font-num)" font-size="10" font-weight="700" fill="var(--th-navy)">noise_amp(Leq) — 0 below 55 dB · 0.30 cap above 85 dB (WHO 53 dB Lden safe zone)</text>`
-  svg += `<text x="${50 + (7.5 / 55) * 510}" y="148" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-good)">WHO safe</text>`
+  svg += `<text x="300" y="10" text-anchor="middle" font-family="var(--font-num)" font-size="10" font-weight="700" fill="var(--th-navy)">noise_amp(Leq) — 0 below 55 dB · 0.30 cap above 85 dB (index heuristic)</text>`
+  svg += `<text x="${50 + (7.5 / 55) * 510}" y="148" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-good)">index baseline</text>`
   svg += `<text x="${50 + (30 / 55) * 510}" y="80" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-unhealthy)">roadside traffic</text>`
   svg += `<text x="${50 + (50 / 55) * 510}" y="14" text-anchor="middle" font-family="var(--font-num)" font-size="9" font-weight="700" fill="var(--aqi-hazardous)">cap +30%</text>`
   svg += `<text x="300" y="194" text-anchor="middle" font-family="var(--font-num)" font-size="8" fill="var(--ink-low)">RR = 1.08 per 10 dB for IHD · independent of PM2.5 (AIRCARD 2025)</text>`
@@ -773,24 +744,20 @@ function svgRainRelief() {
   svg += `<text x="42" y="92" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">20%</text>`
   svg += `<text x="42" y="156" text-anchor="end" font-family="var(--font-num)" font-size="9" fill="var(--ink-mid)">0%</text>`
   // Stepwise curve
-  const points = [
-    { x: 50, y: 160 },   // 0 mm → 0
-    { x: 50 + (1 / 50) * 510, y: 160 },
-    { x: 50 + (1 / 50) * 510, y: 145 },  // 1 mm → 5% relief
-    { x: 50 + (5 / 50) * 510, y: 145 },
-    { x: 50 + (5 / 50) * 510, y: 105 },  // 5 mm → 20% relief
-    { x: 50 + (15 / 50) * 510, y: 105 },
-    { x: 50 + (15 / 50) * 510, y: 70 }, // 15 mm → 30% relief
-    { x: 50 + (35 / 50) * 510, y: 70 },
-    { x: 50 + (35 / 50) * 510, y: 40 }, // 35 mm → 40% relief
-    { x: 50 + (50 / 50) * 510, y: 40 },
-  ]
+  const anchors = [[0, 0], [1, 8], [5, 20], [15, 30], [35, 40], [50, 40]]
+  const points = []
+  anchors.forEach(([mm, pct], i) => {
+    const x = 50 + mm / 50 * 510
+    if (i) points.push({ x, y: 160 - anchors[i - 1][1] / 40 * 140 })
+    points.push({ x, y: 160 - pct / 40 * 140 })
+    svg += `<circle cx="${x}" cy="${160 - pct / 40 * 140}" r="2" fill="var(--rain)" data-mm="${mm}" data-relief="${pct}"><title>${mm} mm · ${pct}% fine-mode heuristic</title></circle>`
+  })
   for (let i = 0; i < points.length - 1; i++) {
     svg += `<line x1="${points[i].x}" y1="${points[i].y}" x2="${points[i+1].x}" y2="${points[i+1].y}" stroke="var(--rain)" stroke-width="2.5"/>`
   }
   // Title
-  svg += `<text x="300" y="10" text-anchor="middle" font-family="var(--font-num)" font-size="10" font-weight="700" fill="var(--th-navy)">rain_relief(mm) — stepwise, observed wins over forecast</text>`
-  svg += `<text x="300" y="194" text-anchor="middle" font-family="var(--font-num)" font-size="8" fill="var(--ink-low)">C(t) = C₀ · exp(−Λ·t) · Λ = a·R^b · a≈10⁻⁵–10⁻² s⁻¹ · b≈0.6–0.9 for accumulation-mode PM2.5</text>`
+  svg += `<text x="300" y="10" text-anchor="middle" font-family="var(--font-num)" font-size="10" font-weight="700" fill="var(--th-navy)">Fine-mode rain relief · heuristic steps, not measured removal</text>`
+  svg += `<text x="300" y="194" text-anchor="middle" font-family="var(--font-num)" font-size="8" fill="var(--ink-low)">24h rain: 1–&lt;5 / 5–&lt;15 / 15–&lt;35 / ≥35 mm → 8 / 20 / 30 / 40%</text>`
   svg += `</svg>`
   return svg
 }
@@ -835,10 +802,8 @@ function sectionSources(catalog) {
   return `
     <section class="rp-section">
       <h2 data-th="4. แหล่งข้อมูล — ท่อสาธารณะ" data-en="4. Data Sources — Public Pipelines">${tr('4. แหล่งข้อมูล — ท่อสาธารณะ', '4. Data Sources — Public Pipelines')}</h2>
-      <p class="rp-lead" data-th="ทุกแหล่งข้อมูลเป็นสาธารณะ เข้าถึงได้โดยไม่ต้องใช้คีย์ และอ่านได้อย่างเดียว แต่ละท่อทำงานเป็นโมดูลใน server/sources/*.js" data-en="All sources are public, keyless, and read-only. Each runs as a module with a run({ db, bus }) contract that returns a { seen, added } summary.">
-        ${tr('ทุกแหล่งข้อมูลเป็นสาธารณะ เข้าถึงได้โดยไม่ต้องใช้คีย์ และอ่านได้อย่างเดียว', 'All sources are public, keyless, and read-only. Each runs as a module with a run({ db, bus }) contract.')}
-      </p>
-      <div class="rp-pipeline-grid">${cards}</div>
+      <p>${tr("ระบบใช้ข้อมูลสาธารณะและแสดงสถานะการเชื่อมต่อแยกแต่ละแหล่ง บางแหล่งต้องตั้งค่าการเข้าถึง เช่น IMERG ผ่าน Earthdata และ DustBoy ผ่านโทเคน ดูรายการแหล่งข้อมูลและความพร้อมล่าสุดด้านล่าง แหล่งที่ยังไม่ตั้งค่าหรือหยุดรายงานไม่ใช่ข้อมูลสด", "The system uses public data and reports availability per source. Some feeds need configured access, including Earthdata for IMERG and a DustBoy token. The catalogue below records source status; an unconfigured or silent feed is not live coverage.")}</p>
+      <div class="rp-pipeline-grid">${cards || `<p role="status">${tr('รายการแหล่งข้อมูลยังไม่พร้อม กรุณาลองเปิดเอกสารอีกครั้ง', 'The source catalogue is not available yet. Reopen the paper to retry.')}</p>`}</div>
       ${catalog?.jaxa ? `<div class="rp-jaxa-note">
         <strong>JAXA / NASA GIBS:</strong> ${tr(catalog.jaxa.note_th, catalog.jaxa.note_en)}
       </div>` : ''}
@@ -1133,7 +1098,7 @@ function sectionCitations() {
     'Seinfeld, J. H. & Pandis, S. N. (2016). Atmospheric Chemistry and Physics: From Air Pollution to Climate Change. 3rd ed., Wiley. (wet deposition, below-cloud scavenging, deliquescence RH)',
     'Henzing, J. S. et al. (2006). Parameterization of below-cloud scavenging for polydisperse fine mode aerosols. Atmos. Chem. Phys. 6, 4703–4722. (Λ = a·R^b, a ≈ 8×10⁻⁵, b ≈ 0.65 for accumulation-mode PM2.5)',
     'Wang, X. et al. (2010). Below-cloud scavenging by rain of atmospheric gases and particulates. Atmos. Environ. 45. (continuous-collection-equation framework)',
-    'GEOS-Chem wet-deposition parameterisation: a = 0.00106, b = 0.61 (default for accumulation-mode PM2.5)',
+    'AirDash implementation: server/washout-curve.js — stepped rain-relief heuristic; not a direct solution of scavenging-rate equations.',
     // Noise (Section 2.5) — peer-reviewed coefficients.
     'WHO (2018). Environmental Noise Guidelines for the European Region. (recommended 53 dB Lden for road traffic, cardiovascular protection)',
     'Kempen, E. van et al. (2018). WHO Environmental Noise Guidelines for the European Region: A Systematic Review on Environmental Noise and Cardiovascular and Metabolic Effects. PMC5858448. (meta-analysis of 7 cohorts, RR = 1.08 per 10 dB for IHD)',
@@ -1501,63 +1466,72 @@ async function paintVisionLive() {
 // The paper is ~1,100 lines of flat sections; without an index nobody finds
 // §9 again. Built from the rendered h2s so it can never drift from the body.
 
-let tocSeq = 0
-let tocObserver = null
-let tocResize = null
+let tocMediaCleanup = null
 
-function buildToc(container) {
-  if (tocObserver) { tocObserver.disconnect(); tocObserver = null }
-  if (tocResize) { tocResize.disconnect(); tocResize = null }
-  const heads = [...container.querySelectorAll('.rp-section > h2')]
-  if (heads.length < 5) return
+function buildToc(container, savedTop = null) {
+  tocMediaCleanup?.()
+  const reading = container.querySelector('.rp-reading')
+  const index = container.querySelector('.rp-index')
+  const heads = [...reading.querySelectorAll('.rp-section > h2, .rp-section > details > summary > h2')]
   const nav = document.createElement('nav')
   nav.className = 'rp-toc'
-  nav.setAttribute('aria-label', tr('สารบัญเอกสารวิจัย', 'Research paper contents'))
+  nav.setAttribute('aria-label', tr('สารบัญเอกสารวิจัย', 'Research contents'))
   const menu = document.createElement('details')
   const summary = document.createElement('summary')
-  summary.textContent = tr('สารบัญเอกสารวิจัย', 'Research contents')
-  menu.appendChild(summary)
+  summary.textContent = tr('เลือกบท', 'Choose a chapter')
+  menu.append(summary)
   const list = document.createElement('ol')
   list.className = 'rp-toc-list'
-  const links = []
-  for (const h of heads) {
+  const hero = reading.querySelector('.rp-hero')
+  hero.id = 'rp-overview'
+  const entries = [{ sec: hero, title: tr('ภาพรวม', 'Overview') }, ...heads.map((h, i) => {
     const sec = h.closest('.rp-section')
-    if (!sec.id) sec.id = `rp-sec-${++tocSeq}`
-    const li = document.createElement('li')
-    const a = document.createElement('a')
-    a.href = `#${sec.id}`
-    a.textContent = h.textContent.trim()
-    a.addEventListener('click', (e) => {
-      e.preventDefault()
-      menu.open = false
-      container.style.setProperty('--rp-toc-h', `${nav.offsetHeight}px`)
+    sec.id = `rp-sec-${i + 1}`
+    return { sec, title: i === 0 ? tr('ประวัติรุ่น', 'Version history') : h.textContent.trim().split('—')[0].trim() }
+  })]
+  const links = entries.map(({ sec, title }) => {
+    const item = document.createElement('li')
+    const link = document.createElement('a')
+    link.href = `#${sec.id}`
+    link.textContent = title
+    link.addEventListener('click', event => {
+      event.preventDefault()
+      if (!wide.matches) menu.open = false
+      const historyNote = sec.querySelector('.rp-history')
+      if (historyNote) historyNote.open = true
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
-      sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+      reading.scrollTo({ top: reading.scrollTop + sec.getBoundingClientRect().top - reading.getBoundingClientRect().top - 24, behavior: reduced ? 'auto' : 'smooth' })
+      const heading = sec.querySelector('h1, h2')
+      heading.tabIndex = -1
+      heading.focus({ preventScroll: true })
       history.replaceState(null, '', `#${sec.id}`)
     })
-    li.appendChild(a); list.appendChild(li)
-    links.push({ a, sec })
-  }
-  menu.appendChild(list)
-  nav.appendChild(menu)
-  const hero = container.querySelector('.rp-hero')
-  if (hero) hero.insertAdjacentElement('afterend', nav)
-  else container.insertBefore(nav, container.firstChild)
-
-  // The sticky index must not cover the first line of the section it jumps
-  // to, so the measured height drives a scroll margin rather than a guess.
-  const setOffset = () => container.style.setProperty('--rp-toc-h', `${nav.offsetHeight}px`)
-  setOffset()
-  if ('ResizeObserver' in window) { tocResize = new ResizeObserver(setOffset); tocResize.observe(nav) }
-
-  if (!('IntersectionObserver' in window)) return
-  tocObserver = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      const hit = links.find((l) => l.sec === e.target)
-      if (hit) hit.a.classList.toggle('active', e.isIntersecting)
+    item.append(link); list.append(item)
+    return { link, sec }
+  })
+  menu.append(list); nav.append(menu); index.append(nav)
+  const wide = matchMedia('(min-width: 1000px)')
+  const sync = () => { menu.open = wide.matches }
+  sync(); wide.addEventListener('change', sync)
+  tocMediaCleanup = () => wide.removeEventListener('change', sync)
+  const highlight = () => {
+    const edge = reading.getBoundingClientRect().top + 48
+    let active = links[0]
+    for (const candidate of links) if (candidate.sec.getBoundingClientRect().top <= edge) active = candidate
+    for (const item of links) {
+      item.link.classList.toggle('active', item === active)
+      if (item === active) item.link.setAttribute('aria-current', 'location')
+      else item.link.removeAttribute('aria-current')
     }
-  }, { root: container, rootMargin: '-12% 0px -72% 0px', threshold: 0 })
-  for (const { sec } of links) tocObserver.observe(sec)
+  }
+  reading.addEventListener('scroll', highlight, { passive: true })
+  highlight()
+  const initial = links.find(item => `#${item.sec.id}` === location.hash)
+  if (savedTop !== null) { reading.scrollTop = savedTop; highlight() }
+  else if (initial) requestAnimationFrame(() => {
+    reading.scrollTo({ top: reading.scrollTop + initial.sec.getBoundingClientRect().top - reading.getBoundingClientRect().top - 24 })
+    highlight()
+  })
 }
 
 let catalogCache = null
@@ -1577,6 +1551,7 @@ function paint() {
   const container = document.getElementById('research-content')
   if (!container) return
   const catalog = catalogCache
+  const savedTop = container.querySelector('.rp-reading')?.scrollTop ?? null
   const sections = [
     sectionHero(),
     sectionWhatsNew(),
@@ -1596,14 +1571,38 @@ function paint() {
     sectionDownload(),
     sectionFooter(),
   ]
-  container.innerHTML = sections.join('')
+  container.innerHTML = `<aside class="rp-index">
+    <div class="rp-index-head"><h2>${tr('งานวิจัยและวิธีคำนวณ', 'Research & methods')}</h2>
+    <p>${tr('เลือกประเด็น แล้วอ่านหลักฐาน วิธีคำนวณ และข้อจำกัดคู่กัน', 'Choose a question. Read the evidence, calculation and limits together.')}</p>
+    <div class="rp-language" role="group" aria-label="Language"><button type="button" data-rp-lang="th" lang="th" aria-pressed="${store.lang === 'th'}">ไทย</button><button type="button" data-rp-lang="en" lang="en" aria-pressed="${store.lang === 'en'}">EN</button></div></div>
+  </aside><article class="rp-reading" tabindex="0" aria-label="${tr('เนื้อหาเอกสารวิจัย', 'Research paper')}"><div class="rp-paper">${sections.join('')}</div></article>`
+  container.querySelectorAll('[data-rp-lang]').forEach(button => button.addEventListener('click', () => setLang(button.dataset.rpLang)))
 
   // Re-paint bilingual nodes
   for (const node of container.querySelectorAll('[data-th][data-en]')) {
     node.textContent = tr(node.dataset.th, node.dataset.en)
   }
 
-  buildToc(container)
+  const releaseNote = container.querySelector('.rp-section-v2')
+  const historyNote = document.createElement('details')
+  historyNote.className = 'rp-history'
+  const historySummary = document.createElement('summary')
+  historySummary.append(releaseNote.querySelector('h2'))
+  historyNote.append(historySummary, ...releaseNote.childNodes)
+  releaseNote.replaceChildren(historyNote)
+  for (const svg of container.querySelectorAll('svg.research-svg')) {
+    let viewport = svg.closest('.rp-figure')
+    if (!viewport) {
+      viewport = document.createElement('div')
+      viewport.className = 'rp-figure'
+      svg.replaceWith(viewport)
+      viewport.append(svg)
+    }
+    viewport.tabIndex = 0
+    viewport.setAttribute('role', 'region')
+    viewport.setAttribute('aria-label', tr('แผนภาพ เลื่อนด้านข้างเพื่ออ่านได้', 'Diagram; scroll horizontally to read'))
+  }
+  buildToc(container, savedTop)
   paintRecordLive()
   paintVisionLive()
 
@@ -1666,10 +1665,9 @@ export async function initResearch() {
       overlay.querySelectorAll('.about-pane').forEach((p) => {
         p.classList.toggle('active', p.dataset.aboutPane === target)
       })
-      if (target === 'research' && !rendered) {
-        loadCatalog().then(() => paint())
-      } else if (target === 'research') {
-        paint() // re-paint on lang switch
+      if (target === 'research') {
+        paint()
+        if (!catalogCache) loadCatalog().then(() => paint())
       }
     })
   })

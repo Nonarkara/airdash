@@ -16,18 +16,19 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/apple-touch-icon.png">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/css/tokens.css?v=2.4.105">
-<link rel="stylesheet" href="/css/layout.css?v=2.4.105">
-<link rel="stylesheet" href="/css/components.css?v=2.4.105">
-<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.105">
-<link rel="stylesheet" href="/css/witness.css?v=2.4.105">
+<link rel="stylesheet" href="/css/tokens.css?v=2.4.106">
+<link rel="stylesheet" href="/css/layout.css?v=2.4.106">
+<link rel="stylesheet" href="/css/components.css?v=2.4.106">
+<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.106">
+<link rel="stylesheet" href="/css/witness.css?v=2.4.106">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebSite","name":"AirDash","url":"https://air.nonarkara.org/","description":"Live Thailand air quality and dust watch — PM2.5, local risk and rain-washout outlook."}
 </script>
-<link rel="stylesheet" href="/css/brand.css?v=2.4.105">
-<link rel="stylesheet" href="/css/instrument-header.css?v=2.4.105">
+<link rel="stylesheet" href="/css/brand.css?v=2.4.106">
+<link rel="stylesheet" href="/css/instrument-header.css?v=2.4.106">
+<link rel="stylesheet" href="/css/research-desk.css?v=2.4.106">
 </head>
 <body>
 
@@ -336,7 +337,7 @@
         <button data-panes="2" class="active" type="button">2</button>
         <button data-panes="3" type="button">3</button>
         <button data-panes="4" type="button">4</button>
-        <button id="split-close" type="button" title="ปิดหน้าต่างเปรียบเทียบ / close compare view">✕ <span class="lbl">ปิด</span></button>
+        <button id="split-close" type="button" title="ปิดหน้าต่างเปรียบเทียบ / close compare view">✕ <span class="lbl" data-i18n="ปิด|Close">ปิด</span></button>
       </div>
     </div>
     <div class="places-body">
@@ -456,26 +457,26 @@
 <div id="about-overlay" hidden role="dialog" aria-modal="true" aria-label="AirDash information and fire briefing">
   <div class="about-head">
     <div class="sign">
-      <span class="th">เกี่ยวกับโครงการ</span>
+      <span class="th" data-i18n="เกี่ยวกับ AirDash|About AirDash">เกี่ยวกับ AirDash</span>
       <span class="en">ABOUT THIS PROJECT</span>
     </div>
     <div class="about-tabs">
-      <button class="about-tab active" data-about-pane="about">เกี่ยวกับ<br><span class="en-lbl">ABOUT</span></button>
+      <button class="about-tab active" data-about-pane="about"><span data-i18n="เกี่ยวกับ|About">เกี่ยวกับ</span></button>
       <!-- Manual: every control, what it does. Ported from FloodDash
            2026-09-01 — same reasoning: a health decision should never
            depend on guessing what a button means. -->
-      <button class="about-tab" data-about-pane="manual">คู่มือใช้งาน<br><span class="en-lbl">MANUAL</span></button>
-      <button class="about-tab" data-about-pane="research">เอกสารวิจัย<br><span class="en-lbl">RESEARCH PAPER</span></button>
+      <button class="about-tab" data-about-pane="manual"><span data-i18n="คู่มือ|Manual">คู่มือ</span></button>
+      <button class="about-tab" data-about-pane="research"><span data-i18n="งานวิจัย|Research">งานวิจัย</span></button>
       <!-- Agricultural burning: its own research tab because the seasonal
            inversion (forest-dominated in March, farm-dominated in September)
            is the single most misread fact in Thailand's haze debate. -->
-      <button class="about-tab" data-about-pane="burning">การเผา<br><span class="en-lbl">BURNING</span></button>
+      <button class="about-tab" data-about-pane="burning"><span data-i18n="การเผา|Burning">การเผา</span></button>
       <!-- API reference: the tab that lets someone else build on this data.
            Ported from FloodDash 2026-09-16, the day AirDash first answered
            a cross-origin read. -->
-      <button class="about-tab" data-about-pane="apidocs">API<br><span class="en-lbl">FOR DEVELOPERS</span></button>
+      <button class="about-tab" data-about-pane="apidocs"><span data-i18n="API|API">API</span></button>
     </div>
-    <button id="about-close">✕ <span class="lbl">ปิด</span></button>
+    <button id="about-close">✕ <span class="lbl" data-i18n="ปิด|Close">ปิด</span></button>
   </div>
 
   <div class="about-body about-pane active" data-about-pane="about">
@@ -862,7 +863,7 @@
     </div>
     <div class="library-head-actions">
       <button id="library-expand" title="เต็มจอ / Fullscreen">⛶</button>
-      <button id="library-close">✕ <span class="lbl">ปิด</span></button>
+      <button id="library-close">✕ <span class="lbl" data-i18n="ปิด|Close">ปิด</span></button>
     </div>
   </div>
   <div class="lib-reader">
@@ -875,6 +876,6 @@
 </div>
 
 <script src="/vendor/leaflet/leaflet.js"></script>
-<script type="module" src="/js/boot.js?v=2.4.105"></script>
+<script type="module" src="/js/boot.js?v=2.4.106"></script>
 </body>
 </html>

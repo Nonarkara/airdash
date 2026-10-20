@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.106] — 2026-10-20 — research reading desk
+
+Rebuilt Research as an aligned chapter index and a measured reading column, with collapsible phone contents, stable bilingual anchors and contained charts/tables. Removed decorative card nesting and folded legacy version history. Replaced the miniature score formula with wrapping text. Corrected stale source counts, gauge/radar terminology, source credential assumptions and rain-relief explanations; the fine-mode chart now follows backend thresholds. Preserved measured-PM floors and unknown states in the explanation. Added chart/engine parity checks.
+
 ## [2.4.105] — 2026-10-20 — one-line province names
 
 Removed condition subtitles beneath province names. The semantic urgency stripe carries the visible level; full labels remain in screen-reader descriptions and hover titles. Missing primary measurements use a neutral stripe, never a green all-clear. Metric columns,44px touch targets and expandable details are preserved.
