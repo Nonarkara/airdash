@@ -17,9 +17,9 @@
 // Node 22 has a global WebSocket, so this needs nothing installed.
 import { spawn } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
+import { requireChrome } from './chrome.mjs'
 
-const CHROME = process.env.CHROME_BIN
-  ?? '/private/tmp/pw-mavis/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell'
+const CHROME = requireChrome()
 const PORT = 9400 + (process.pid % 400)
 const URL = process.argv[2] ?? 'http://localhost:28341/ops.html'
 const OUT = process.argv[3] ?? '/tmp/ad'

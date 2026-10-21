@@ -4,8 +4,9 @@
 // This is a dev instrument, not a product feature: it is not shipped, not
 // imported by the app, and not part of any deploy.
 import { spawn } from 'node:child_process'
+import { requireChrome } from './chrome.mjs'
 
-const CHROME = '/private/tmp/pw-mavis/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell'
+const CHROME = requireChrome()
 const PORT = 9334
 const URL = process.argv[2] ?? 'http://localhost:28341/ops.html'
 const sleep = ms => new Promise(r => setTimeout(r, ms))

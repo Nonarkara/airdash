@@ -1,7 +1,8 @@
 // Measure the top of the citizen panel: what is the first thing on the first
 // screen, does anything overlap, and is the same name stated twice?
 import { spawn } from 'node:child_process'
-const CHROME = '/private/tmp/pw-mavis/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell'
+import { requireChrome } from './chrome.mjs'
+const CHROME = requireChrome()
 const PORT = 9600 + (process.pid % 200)
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const child = spawn(CHROME, ['--headless', '--disable-gpu', '--no-sandbox', '--hide-scrollbars',

@@ -1,6 +1,7 @@
 // Focused probe: what is actually inside the right rail, and does it render?
 import { spawn } from 'node:child_process'
-const CHROME = '/private/tmp/pw-mavis/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell'
+import { requireChrome } from './chrome.mjs'
+const CHROME = requireChrome()
 const PORT = 9335
 const URL = process.argv[2] ?? 'http://localhost:28341/ops.html'
 const sleep = ms => new Promise(r => setTimeout(r, ms))

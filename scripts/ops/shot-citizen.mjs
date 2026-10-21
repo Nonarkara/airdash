@@ -6,8 +6,9 @@
 // anything: a screenshot of the wrong page is worse than no screenshot.
 import { spawn } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
+import { requireChrome } from './chrome.mjs'
 
-const CHROME = '/private/tmp/pw-mavis/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell'
+const CHROME = requireChrome()
 const PORT = 9500 + (process.pid % 300)
 const URL = process.argv[2] ?? 'http://localhost:28341/ops.html?city=Chiang%20Mai'
 const sleep = ms => new Promise(r => setTimeout(r, ms))
