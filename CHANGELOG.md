@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.109] — 2026-10-21 — one class name, two widgets
+
+`.citizen-pin` was the name of **both** the 24×24 round map marker (`public/js/layers/citizen.js`) **and** the row in the citizen panel head that holds the pin icon, the province name and the change button (`public/js/panels/citizen.js`). The marker's rule came later in the stylesheet, so it won the cascade: the head's row collapsed into a 24px circle, the province name spilled to **x = −3** and was clipped by the edge of a phone screen, and the pin icon sat alone on a row of its own.
+
+Measured on a 390×844 phone before the fix: the pin icon at `left: 14, top: 60` on its own row, the province name at **`left: −3`**. After: the pin at `left: 10`, the name at `left: 37`, the change button at `left: 353` — one row, nothing clipped.
+
+The head row is now `citizen-place-row` / `citizen-place-text` / `citizen-place-icon`. The map marker keeps `citizen-pin` and its 24px box.
+
+**The guard.** A general "no class in two files" rule is too noisy to enforce — 40 classes are legitimately declared in several files and media queries. The precise rule is: *a class that gives an element a fixed width AND a fixed height is asserting a box, so it can only ever be one widget.* If the frontend uses such a class in two modules, the two usages must be the same widget. Six candidates were found; five are the same widget in two places and are allowed by name with the reason recorded; one was a real collision and is fixed. `scripts/test-css-widget-collisions.mjs` (10 checks) fails on any new one, and was mutation-tested: restoring the old name turns it red, and so does a partial fix that moves the collision elsewhere.
+
+**Also.** `scripts/ops/visual-check.mjs`, `shot-citizen.mjs`, `geometry-probe.mjs` and `probe-citizen-top.mjs` — a zero-dependency Chrome DevTools Protocol driver (Node 22's global `WebSocket`) that boots the real page, captures console errors and uncaught exceptions, measures the geometry and photographs 390 / 1024 / 1440 px. It refuses to photograph a page it did not land on. Two things it caught that reasoning alone did not: a screenshot taken four seconds after boot photographed an *empty* right rail that was in fact full of content, and a stale debug port photographed a completely different website. Both would have sent a layout refactor after an artefact.
+
 ## [2.4.108] — 2026-10-21 — the wind you can see
 
 The bearing existed for all 77 provinces and no screen showed it to the reader who needed it. `/api/risk` published a wind **speed** with no direction; the direction lived only in `/api/smoke`, and the map's arrow layer was wired to that payload — which the snapshot fills only for provinces with something burning upwind. So the wind layer was empty on exactly the days the wind matters most: a still, dusty, no-fire day. The citizen panel, the one screen a resident actually reads, printed a wind direction only as a clause inside that same fire-gated line, so on a quiet day it said nothing at all about which way the air was moving — and in the dry season that is the first question: is this wind bringing dust in, or clearing it out?

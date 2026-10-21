@@ -780,12 +780,12 @@
   background: var(--paper);
   border-bottom: 1px solid var(--rule);
 }
-.citizen-pin {
+.citizen-place-row {
   display: flex; align-items: center; gap: 8px;
   margin-bottom: 6px;
 }
-.citizen-pin-icon { font-size: 15px; }
-.citizen-pin-text { flex: 1; min-width: 0; }
+.citizen-place-icon { font-size: 15px; }
+.citizen-place-text { flex: 1; min-width: 0; }
 .citizen-province-th { font-weight: 700; font-size: 14px; line-height: 1.1; }
 .citizen-province-en { font-size: 9.5px; color: var(--ink-mid); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
 .citizen-change {
