@@ -8,10 +8,11 @@
 //   - Data bar sorted by score — hottest first, with Δ vs #1
 //   - Band colors use the real keys (normal/low/watch/elevated/high)
 
-import { on, store } from '../state.js?v=2.4.107'
-import { tr, BAND } from '../i18n.js?v=2.4.107'
-import { fmtNum, escapeHtml } from '../fmt.js?v=2.4.107'
-import { getJson } from '../cache.js?v=2.4.107'
+import { on, store } from '../state.js?v=2.4.108'
+import { tr, BAND } from '../i18n.js?v=2.4.108'
+import { fmtNum, escapeHtml } from '../fmt.js?v=2.4.108'
+import { getJson } from '../cache.js?v=2.4.108'
+import { windRowText } from '../wind.js?v=2.4.108'
 
 const TYPE_ICON = {
   province: '🏛', district: '🏘', subdistrict: '🏡',
@@ -575,6 +576,12 @@ function dataCard(pane, rank, topScore) {
     rows.append(numRow(tr('คาดฝุ่นพรุ่งนี้', 'PM2.5 FC TOMORROW'),
       `${fmtNum(risk.pm25_fc_48h, 0)} µg/m³`))
   }
+  // Wind — which way the air is moving over this province. It is tomorrow's
+  // dominant direction (the day being prepared for), and it is omitted
+  // entirely when the province carries no bearing rather than printed as a
+  // placeholder that looks like a measurement.
+  const windTxt = windRowText(risk)
+  if (windTxt) rows.append(numRow(tr('ลม', 'WIND'), windTxt))
   // Washout chip — rain expected to scrub this province's dust.
   if (risk.washout_helps && risk.washout_relief_pct != null) {
     rows.append(numRow(tr('ฝนล้างฝุ่น', 'WASHOUT'),

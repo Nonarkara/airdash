@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.108] — 2026-10-21 — the wind you can see
+
+The bearing existed for all 77 provinces and no screen showed it to the reader who needed it. `/api/risk` published a wind **speed** with no direction; the direction lived only in `/api/smoke`, and the map's arrow layer was wired to that payload — which the snapshot fills only for provinces with something burning upwind. So the wind layer was empty on exactly the days the wind matters most: a still, dusty, no-fire day. The citizen panel, the one screen a resident actually reads, printed a wind direction only as a clause inside that same fire-gated line, so on a quiet day it said nothing at all about which way the air was moving — and in the dry season that is the first question: is this wind bringing dust in, or clearing it out?
+
+**One renderer, one contract.** `public/js/wind.js` is now the only place a wind is drawn. The server owns the compass (`server/wind.js`) and now labels **both ends** of the bearing — `wind_from_*` and `wind_towards_*`, in Thai and English — so the browser never keeps its own compass table and never recomputes a bearing. `server/smoke.js` publishes the same contract as `/api/risk` (its `from_deg`/`from_th`/`from_en` stay as the aliases they always were), so one renderer reads either API. The browser-side `windTowards` formula is gone: two formulas in two runtimes disagree by half a degree eventually, and nobody can tell which one a reader was shown.
+
+**What a reader now sees.** The arrow points **downwind** — the way the air moves — and the words beside it say so ("From N, blowing towards S"), so a misread arrow is caught by the sentence. The arrow is drawn as a shape, not as a character a reader must interpret. The citizen panel states the wind on **every** province, fire or no fire, and names which day the wind is for. The map's province field is painted from the risk payload, so it and the score can never disagree about the same province. The province popup and the comparison cards carry the same line.
+
+**The limits are still published.** A dominant daily direction is a steering hint, not a flight path: it cannot resolve valleys, plume rise or arrival time. Every surface that shows the wind says so, in the reader's language, and an absent wind reads as absent — never as north.
+
+Verified live: **77 of 77** provinces carry a bearing, **0** towards-label mismatches, and the smoke and risk payloads agree on every province. The new guard (48 checks) executes the renderer, the citizen panel, the comparison card and the map's wind field against a DOM and Leaflet stub; it was mutation-tested by planting the bug it exists for — the citizen wind gated on a fire, the arrow reversed, the browser recomputing the bearing, the map drawing the wrong province, the English label leaking Thai, the server dropping the far-end labels. Each one turns it red. A source check for the map was replaced after the mutation test proved it stayed green through a broken map.
+
 ## [2.4.107] — 2026-10-21 — research visual hierarchy
 
 Gave Research a concise opening, warm editorial heading accent and a responsive evidence-flow diagram: observations, checks/interpretation, public watch. The diagram explains measured versus forecast evidence, transport uncertainty and research-score limits. Prose remains neutral and readable; diagrams carry meaning rather than decoration. Preserved chapter navigation, source detail and scientific qualifiers.

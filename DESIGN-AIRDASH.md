@@ -130,6 +130,16 @@ Entry: `{ province_code, province_th, province_en, pm25, prob24, prob48, rain_fc
 
 ## Design language — the 2026 rebrand (current truth)
 
+**Binding design law — MSH (Massacre Spatial Hallucination).** When you find SH,
+massacre: an interface that invents a reason for things to occupy space, instead
+of arranging them around how people read, choose and act, is a root design
+failure — not polish. Test every region: *why is this here, why this size, why
+this far from that?* Chrome earns its pixels, content determines size, the task
+determines the composition, and the first screen (390×844, 1440×900; check
+1024 px) must explain where the user is, what matters and what to do. Full law
+and evidence requirements: `/Users/axiom/.design-laws/MSH.md`. Tokens below
+describe how things look; MSH says whether they should be there at all.
+
 The FloodDash palette is gone. Current tokens:
 
 - Ground: light sky paper `#F4F8FB` · ink: deep teal `#0E4A5E`

@@ -4297,9 +4297,25 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .haze-plan-maps {display:flex; flex-wrap:wrap; gap:6px; margin:12px 0;}
 .haze-plan-maps button {min-height:44px; padding:8px; background:var(--well); color:var(--ink); border:1px solid var(--rule); cursor:pointer;}
 .haze-plan summary {cursor:pointer; min-height:44px; padding:10px 0; font-size:12px;}
-.haze-wind-icon {background:var(--well); border:1px solid var(--th-navy); border-radius:50%; color:var(--th-navy); text-align:center; box-shadow:0 1px 4px #0003;}
-.haze-wind-arrow {display:block; font-size:33px; line-height:36px; transform-origin:center;}
+.haze-wind-icon {background:var(--well); border:1px solid var(--th-navy); border-radius:50%; color:var(--th-navy); display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px #0003;}
+.haze-wind-icon .wind-arrow {display:block;}
 .haze-wind-icon small {position:absolute;right:-9px;bottom:-2px;background:var(--well);color:var(--ink);border:1px solid var(--rule);padding:1px 3px; font-size:11px;}
+/* Wind — the direction the air is moving.
+   ONE arrow shape for the whole dashboard: the map's province field, the
+   province popup and the citizen panel all draw the same wind the same way,
+   so a reader who has learned one has learned all three. The arrow points
+   downwind — the way the air MOVES — and the words beside it say which
+   direction that is, so the picture cannot be read backwards.
+   transform-box:view-box makes the rotation spin about the middle of the
+   glyph rather than about its top-left corner. */
+.wind-arrow {display:block; transform-box:view-box; transform-origin:50% 50%;}
+.wind-badge {display:flex; align-items:center; gap:10px;}
+.wind-badge .wind-arrow {color:var(--th-navy); flex:0 0 auto;}
+.wind-badge-body {display:flex; flex-direction:column; gap:1px; min-width:0;}
+.wind-badge-dir {font-size:13.5px; line-height:1.35; color:var(--ink);}
+.wind-badge-meta {font-size:12px; line-height:1.4; color:var(--ink-low);}
+.citizen-wind {margin:6px 10px; padding:8px 10px; border-left:3px solid var(--th-navy); background:var(--well-dim); border-radius:4px;}
+.citizen-wind-note {font-size:11.5px; line-height:1.45; color:var(--ink-low); margin-top:4px;}
 @media (max-width:360px) {.haze-plan-grid {grid-template-columns:1fr;}}
 /* Aerosol size strip — the particle-size signal that the PM2.5 advice above
    cannot give. The left border carries the mode so it reads at a glance

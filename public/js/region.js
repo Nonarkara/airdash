@@ -1,6 +1,7 @@
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.107'
-import { escapeHtml as esc } from './fmt.js?v=2.4.107'
-import { readPreference, writePreference } from './preferences.js?v=2.4.107'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.108'
+import { escapeHtml as esc } from './fmt.js?v=2.4.108'
+import { readPreference, writePreference } from './preferences.js?v=2.4.108'
+import { windArrowSvg, windRowText, windView } from './wind.js?v=2.4.108'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
@@ -73,12 +74,12 @@ function paint(){
  const windSeen=new Set()
  for(const r of data.wind??[]){
   const stamp=r.wind_updated_at,iso=/[zZ]|[+-]\d\d:\d\d$/.test(stamp??'')?stamp:`${stamp?.replace(' ','T')}+07:00`,age=Date.now()-Date.parse(iso)
-  if(!Number.isFinite(r.from_deg)||!Number.isFinite(r.lat)||!Number.isFinite(r.lng)||!Number.isFinite(age)||age< -300000||age>13*3600000)continue
+  const w=windView(r)
+  if(!w||!Number.isFinite(r.lat)||!Number.isFinite(r.lng)||!Number.isFinite(age)||age< -300000||age>13*3600000)continue
   const cell=`${Math.floor(r.lat/1.5)}:${Math.floor(r.lng/1.5)}`
   if(windSeen.has(cell))continue
   windSeen.add(cell)
-  const to=(r.from_deg+180)%360
-  L.marker([r.lat,r.lng],{icon:L.divIcon({className:'regional-wind',iconSize:[26,26],html:`<span style="transform:rotate(${to}deg)">↑</span>`})}).bindTooltip(esc(`${r.province_en} · ${tr('ทิศลมหลักรายวัน ไม่ใช่เส้นทางควัน','Daily dominant forecast, not smoke trajectory')} · ${r.wind_basis} · ${r.from_deg}° → ${to}° · ${clock(iso)}`)).addTo(wind)
+  L.marker([r.lat,r.lng],{icon:L.divIcon({className:'regional-wind',iconSize:[26,26],html:windArrowSvg(w.towards,{size:22})})}).bindTooltip(esc(`${r.province_en} · ${tr('ทิศลมหลักรายวัน ไม่ใช่เส้นทางควัน','Daily dominant forecast, not smoke trajectory')} · ${windRowText(r,{degrees:true})} · ${clock(iso)}`)).addTo(wind)
  }
  const now=Date.now(),obs=data.observations.map(r=>({...r,status:now-Date.parse(r.observed_at)>90*60000?'stale':r.status}))
  for(const r of obs){const stale=r.status!=='current';L.circleMarker([r.lat,r.lng],{radius:r.country==='SG'?9:5,color:stale?'#636e75':'#086a8c',weight:2,fillOpacity:stale?.25:.7})

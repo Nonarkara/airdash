@@ -1,10 +1,10 @@
 // Preparation aid: observed/estimated PM, model outlook and upwind-fire evidence
 // stay separate. No smoke arrival time or clean-air destination is invented.
-import { store } from '../state.js?v=2.4.107'
-import { escapeHtml as esc } from '../fmt.js?v=2.4.107'
+import { store } from '../state.js?v=2.4.108'
+import { escapeHtml as esc } from '../fmt.js?v=2.4.108'
+import { windBasisLabel, windRowText } from '../wind.js?v=2.4.108'
 const tr = (th,en) => store.lang === 'th' ? th : en
 const num = v => Number.isFinite(v) ? v.toLocaleString('en-GB',{maximumFractionDigits:1}) : '—'
-export const windTowards = from => Number.isFinite(from) && from >= 0 && from <= 360 ? (from + 180) % 360 : null
 export function planningState(pm, forecast, fires) {
   if (Number.isFinite(pm) && pm >= 37.5) return 'protect'
   if (Number.isFinite(forecast) && forecast >= 37.5) return 'prepare'
@@ -114,16 +114,23 @@ async function load(host,snapshot) {
   const order={protect:0,prepare:1,watch:2,unknown:3,monitor:4}
   rows.sort((a,b)=>order[a.state]-order[b.state] || (b.max??-1)-(a.max??-1))
   if (!rows.some(r=>r.p.province_code===selected)) selected=rows[0]?.p.province_code??''
-  const windRows=rows.filter(r=>Number.isFinite(r.p.lat??r.f?.lat)&&Number.isFinite(r.p.lng??r.f?.lng)&&windTowards(r.s?.from_deg)!==null && r.p.wind_fc_kmh !== 0)
-    .map(r=>({...r.s,lat:r.p.lat??r.f.lat,lng:r.p.lng??r.f.lng}))
-  window.dispatchEvent(new CustomEvent('airdash:haze-wind',{detail:{wind:windRows,rain:rows.filter(r=>r.r?.forecast_available && Number.isFinite(r.r?.fc_days?.[0]?.mm) && Number.isFinite(r.r?.fc_days?.[0]?.prob) && Number.isFinite(r.p.lat??r.f?.lat) && Number.isFinite(r.p.lng??r.f?.lng)).map(r=>({lat:r.p.lat??r.f.lat,lng:r.p.lng??r.f.lng,mm:r.r.fc_days[0].mm,prob:r.r.fc_days[0].prob,name:store.lang==='th'?r.p.province_th:r.p.province_en})),fireCells:smoke?.available?smoke.fire_cells??[]:[]}}))
+  // The map paints the wind field from the RISK payload — the bearing exists
+  // for all 77 provinces whether or not anything is burning upwind. This event
+  // therefore carries only what the smoke engine alone knows: how many fire
+  // detections sit upwind of each province, plus the rain and fire-cell
+  // overlays that have no home in the risk payload.
+  const windFires=rows.filter(r=>Number.isFinite(r.s?.upwind_fires)&&r.s.upwind_fires>0).map(r=>[r.p.province_code,r.s.upwind_fires])
+  window.dispatchEvent(new CustomEvent('airdash:haze-wind',{detail:{fires:windFires,rain:rows.filter(r=>r.r?.forecast_available && Number.isFinite(r.r?.fc_days?.[0]?.mm) && Number.isFinite(r.r?.fc_days?.[0]?.prob) && Number.isFinite(r.p.lat??r.f?.lat) && Number.isFinite(r.p.lng??r.f?.lng)).map(r=>({lat:r.p.lat??r.f.lat,lng:r.p.lng??r.f.lng,mm:r.r.fc_days[0].mm,prob:r.r.fc_days[0].prob,name:store.lang==='th'?r.p.province_th:r.p.province_en})),fireCells:smoke?.available?smoke.fire_cells??[]:[]}}))
   const draw=async()=>{
     const row=rows.find(r=>r.p.province_code===selected)
     if (!row) {host.innerHTML=`<p>${tr('ยังไม่มีข้อมูลจังหวัด','Province data unavailable')}</p>`;return}
     const {p,f,s,r,max,state}=row
     const name=store.lang==='th'?p.province_th:p.province_en
     const source=p.pm25_source==='air4thai'?'PCD / Air4Thai':p.pm25_source==='gistda_satellite'?tr('ค่าประมาณ GISTDA','GISTDA estimate'):tr('ไม่ทราบแหล่ง','Source unspecified')
-    const flow=windTowards(s?.from_deg)
+    // The wind comes from the RISK row and the fires from the SMOKE row. Both
+    // engines read the same Open-Meteo column for the same province, and the
+    // agreement is asserted live (77/77) by scripts/test-wind-direction.mjs.
+    const windTxt=windRowText(p)
     const options=rows.map(row=>`<option value="${row.p.province_code}" ${selected===row.p.province_code?'selected':''}>${esc(store.lang==='th'?row.p.province_th:row.p.province_en)} · ${esc(tr(...labels[row.state]))}</option>`).join('')
     host.innerHTML=`<h3>${tr('เตรียมรับหมอกควัน · พื้นที่ไหนควรติดตาม','Haze preparation · areas to watch')}</h3>
       <label>${tr('เลือกจังหวัด (เรียงตามสัญญาณที่ควรติดตาม)','Province (ordered by preparation signals)')}<select data-plan-province>${options}</select></label>
@@ -131,7 +138,7 @@ async function load(host,snapshot) {
       <div class="haze-plan-grid">
       <article><h4>1 · ${tr('ฝุ่นที่มีอยู่','Pollution now')}</h4><strong>${num(p.pm25)} µg/m³</strong><p>${esc(source)} · ${tr('ค่าสูงสุดในจังหวัด ไม่ใช่ทุกจุด','Provincial maximum; not every location')}</p></article>
       <article><h4>2 · ${tr('แบบจำลองฝุ่น','PM model outlook')}</h4><strong>${num(f?.forecast?.pm25_d0)} → ${num(f?.forecast?.pm25_d1)} → ${num(f?.forecast?.pm25_d2)}</strong><p>µg/m³ · ${tr('วันนี้ / พรุ่งนี้ / มะรืน · CAMS ปรับอคติ','Today / tomorrow / following day · bias-adjusted CAMS')}</p><details><summary>${tr('ข้อมูลต้นทาง → ค่าที่ปรับแล้ว','Source model → adjusted outlook')}</summary><p>${tr('CAMS ต้นทาง','Source CAMS')}: ${num(f?.forecast?.cams_raw_d0)} → ${num(f?.forecast?.cams_raw_d1)} → ${num(f?.forecast?.cams_raw_d2)} µg/m³<br>${tr('ตัวคูณปรับอคติ','Bias multiplier')}: ${num(f?.forecast?.bias_ratio)} · ${esc(f?.forecast?.bias_scope??'—')}</p><p>${tr('ค่าต้นทางนี้ยังเป็นแบบจำลอง ไม่ใช่ค่าตรวจวัด การปรับด้วยสถานีไม่ได้ทำให้เป็นหลักฐานอิสระ','The source values are already modelled, not measurements. Station adjustment does not make an independent observation.')}</p></details></article>
-      <article><h4>3 · ${tr('ไฟและลม','Fire and wind')}</h4><strong>${num(s?.upwind_fires)} ${tr('จุดเหนือลม','upwind detections')}</strong><p>${flow===null?tr('ลมไม่พร้อม','Wind unavailable'):tr(`ลมจาก ${s.from_deg}° → พัดไป ${flow}°`, `Wind from ${s.from_deg}° → blows towards ${flow}°`)} · ${esc(s?.wind_basis==='tomorrow-forecast'?tr('ทิศหลักพรุ่งนี้','Tomorrow’s dominant direction'):tr('ทิศหลักวันนี้','Today’s dominant direction'))}</p><p>${tr('ไฟย้อนหลัง 48 ชม. ภายใน 500 กม. ไม่ใช่ขนาดพื้นที่เผา หรือเวลาควันมาถึง','48-hour detections within 500 km; not burned area or smoke arrival time')}</p></article>
+      <article><h4>3 · ${tr('ไฟและลม','Fire and wind')}</h4><strong>${num(s?.upwind_fires)} ${tr('จุดเหนือลม','upwind detections')}</strong><p>${windTxt?esc(windTxt):tr('ลมไม่พร้อม','Wind unavailable')} · ${esc(windBasisLabel(p.wind_basis))}</p><p>${tr('ไฟย้อนหลัง 48 ชม. ภายใน 500 กม. ไม่ใช่ขนาดพื้นที่เผา หรือเวลาควันมาถึง','48-hour detections within 500 km; not burned area or smoke arrival time')}</p></article>
       <article><h4>4 · ${tr('ฝนที่อาจช่วย','Possible rain relief')}</h4><strong>${num(r?.fc_days?.[0]?.mm)} mm · ${num(r?.fc_days?.[0]?.prob)}%</strong><p>${tr('ฝนรวม / โอกาสฝนวันนี้ ไม่ระบุเวลาหรือทุกจุด','Today’s total / chance; not exact timing or every location')}</p><p>${tr('วัดฝุ่นซ้ำหลังฝน — ไม่หักฝนจากค่าฝุ่นที่วัดอยู่','Recheck PM after rain; measured pollution is not cancelled by rain')}</p></article></div>
       <div class="haze-plan-maps"><button type="button" data-view="pollution">${tr('แผนที่ฝุ่นตอนนี้','Pollution now map')}</button><button type="button" data-view="transport">${tr('สัญญาณไฟเหนือลม + ลม','Upwind fire signals + wind')}</button><button type="button" data-view="rain">${tr('แผนที่ฝน','Rain map')}</button></div>
       <div data-aerosol-slot></div>

@@ -74,7 +74,7 @@ ol{padding-left:22px}li{margin:12px 0}
 #resources h3{font-size:17px;font-weight:500;margin:0}
 .status-label{color:var(--ink-mid)}
 footer{display:flex;flex-wrap:wrap;gap:12px;padding:16px 20px;font-size:14px;border-top:1px solid var(--rule)}
-.regional-wind span{display:block;font:600 19px/26px var(--font-ui);color:#163b50;text-shadow:0 0 2px white,0 0 2px white;transform-origin:center}
+.regional-wind .wind-arrow{display:block;color:#163b50;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff);}
 .leaflet-container{font-family:var(--font-ui)}
 .leaflet-popup-content{font:400 15px/1.6 var(--font-ui);color:#163b50}
 .leaflet-popup-content a{color:#075672}

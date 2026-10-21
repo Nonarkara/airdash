@@ -13,7 +13,7 @@
 // (bias-corrected) carries the "how much". Labels say so.
 // (The compass table and the from-bearing labelling live in ./wind.js now, so
 // this engine and the risk engine cannot drift apart on what "NE" means.)
-import { COMPASS_TH, COMPASS_EN, compassIndex } from './wind.js'
+import { COMPASS_TH, COMPASS_EN, compassIndex, describeWind } from './wind.js'
 
 const RADIUS_KM = 500
 const SECTOR_HALF_DEG = 45        // upwind = within ±45° of the wind-from bearing
@@ -123,10 +123,20 @@ export function computeSmoke(db) {
     const provinces = []
     for (const p of byCode.values()) {
       if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue
-      const s = smokeFor(p, cells, p.wind_dir_d1 ?? p.wind_dir_d0)
-      if (s) provinces.push({ code: String(p.code), province_th: p.province_th, province_en: p.province_en, ...s,
-        wind_basis: Number.isFinite(p.wind_dir_d1) ? 'tomorrow-forecast' : 'today-forecast',
-        wind_updated_at: Number.isFinite(p.wind_dir_d1) ? p.wind_dir_d1_updated_at : p.wind_dir_d0_updated_at })
+      const bearing = p.wind_dir_d1 ?? p.wind_dir_d0
+      const s = smokeFor(p, cells, bearing)
+      if (!s) continue
+      // The SAME wind contract the risk engine publishes, so one renderer can
+      // read either API. from_deg / from_th / from_en stay as the aliases
+      // they have always been — they are the same number under shorter names,
+      // not a second opinion, and the legacy readers keep working.
+      provinces.push({
+        code: String(p.code), province_th: p.province_th, province_en: p.province_en, ...s,
+        ...describeWind(bearing, {
+          basis: Number.isFinite(p.wind_dir_d1) ? 'tomorrow-forecast' : 'today-forecast',
+          updatedAt: Number.isFinite(p.wind_dir_d1) ? p.wind_dir_d1_updated_at : p.wind_dir_d0_updated_at,
+        }),
+      })
     }
     provinces.sort((a, b) => b.upwind_frp_mw - a.upwind_frp_mw)
     value = { available: true, fire_source_checked_at: fireRun.started_at, fires_48h: fires.length, fire_cells: cells.map(c=>({lat:c.lat,lng:c.lng,detections:c.n})), fire_grid_degrees: GRID_DEG, provinces, computed_at: new Date().toISOString() }

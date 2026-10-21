@@ -1,4 +1,4 @@
-import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.107'
+import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.108'
 // Citizen-mode panel — what ordinary people need to see in 30 seconds.
 // Surfaces the four questions that matter during a dust episode:
 //   1. Am I safe right now?          → JMA verb at the top
@@ -16,19 +16,20 @@ import { readPreference, writePreference, removePreference } from '../preference
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.107'
-import { tr, BAND } from '../i18n.js?v=2.4.107'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.107'
-import { getJson } from '../cache.js?v=2.4.107'
-import { flyToProvince } from '../map.js?v=2.4.107'
-import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.107'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.107'
+import { on, store, emit } from '../state.js?v=2.4.108'
+import { tr, BAND } from '../i18n.js?v=2.4.108'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.108'
+import { getJson } from '../cache.js?v=2.4.108'
+import { flyToProvince } from '../map.js?v=2.4.108'
+import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.108'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.108'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare, renderNoiseTrends,
-} from './citizenLife.js?v=2.4.107'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.107'
+} from './citizenLife.js?v=2.4.108'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.108'
+import { windBadgeHtml, windCaveatText } from '../wind.js?v=2.4.108'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -85,7 +86,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.107').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.108').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -399,17 +400,38 @@ function renderForProvince(province) {
       .catch(() => {})
   }
 
+  // WIND — which way the air is moving over this province.
+  //
+  // This used to appear only as a clause inside the fire-upwind line, and the
+  // snapshot fills that line only for provinces with something burning
+  // upwind. So on a day with no fires the panel said nothing about the wind
+  // at all — and "is the air coming in from the north or going out to sea"
+  // is the first question of the dry season, fire or no fire. The bearing
+  // exists for all 77 provinces.
+  const windHtml = windBadgeHtml(live ?? {})
+  const windBlock = windHtml ? (() => {
+    const body = el('div', { class: 'citizen-wind-body' })
+    body.innerHTML = windHtml
+    return el('div', { class: 'citizen-wind' },
+      el('div', { class: 'citizen-section-head' },
+        tr('ลมพัดไปทางไหน', 'which way the wind blows')),
+      body,
+      el('div', { class: 'citizen-wind-note' }, windCaveatText()))
+  })() : null
+
   // SMOKE — fire burning upwind (server/smoke.js via snapshot.smoke). The
   // ground sensor only says so once the smoke has arrived; this says it
-  // can arrive. Absent key = nothing upwind worth mentioning.
+  // can arrive. Absent key = nothing upwind worth mentioning. The wind
+  // itself is stated in its own block above, so this one carries only the
+  // fires.
   const smk = snap?.smoke?.[live?.province_code ?? province.code] ?? null
   const smokeWrap = smk ? el('div', { class: `citizen-smoke smoke-${smk.level}` },
     el('div', { class: 'citizen-section-head' },
       el('span', { 'aria-hidden': 'true' }, '🔥 '),
       tr('ไฟเหนือลม · ควันอาจพัดมา', 'fire upwind · smoke may drift in')),
     el('div', { class: 'citizen-smoke-line' }, tr(
-      `ลมพรุ่งนี้พัดมาจากทิศ${smk.from_th} — มีจุดไฟ ${smk.fires} จุด (${smk.mw} MW)${smk.km != null ? ` ใกล้สุด ${smk.km} กม.` : ''}${smk.thai_share != null && smk.thai_share < 0.5 ? ' ส่วนใหญ่อยู่นอกประเทศ' : ''}`,
-      `Tomorrow's wind comes from the ${smk.from_en} — ${smk.fires} fire detections upwind (${smk.mw} MW)${smk.km != null ? `, nearest ${smk.km} km` : ''}${smk.thai_share != null && smk.thai_share < 0.5 ? ', mostly across the border' : ''}`)),
+      `มีจุดไฟ ${smk.fires} จุด (${smk.mw} MW) ในแนวเหนือลม${smk.km != null ? ` ใกล้สุด ${smk.km} กม.` : ''}${smk.thai_share != null && smk.thai_share < 0.5 ? ' ส่วนใหญ่อยู่นอกประเทศ' : ''}`,
+      `${smk.fires} fire detections upwind (${smk.mw} MW)${smk.km != null ? `, nearest ${smk.km} km` : ''}${smk.thai_share != null && smk.thai_share < 0.5 ? ', mostly across the border' : ''}`)),
     el('div', { class: 'citizen-smoke-note' }, tr(
       smk.level === 'high' ? 'ควันมีโอกาสพัดเข้ามามาก — ปิดหน้าต่างตอนกลางคืน เตรียมหน้ากาก N95' : 'ติดตามค่าฝุ่นช่วงเช้า — ควันมักลงต่ำตอนกลางคืนถึงเช้า',
       smk.level === 'high' ? 'Smoke is likely to reach you — keep windows shut overnight, have N95 masks ready' : 'Watch the morning readings — smoke settles lowest overnight into the morning')),
@@ -494,7 +516,7 @@ function renderForProvince(province) {
   // then the standard AQ-stations row, then migrant-worker phrases
   // (only at elevated+ bands, when they're needed).
   const out = [
-    head, why, smokeWrap, weatherWrap, reliefWrap,
+    head, why, windBlock, smokeWrap, weatherWrap, reliefWrap,
     tomorrowHost,
     personaHost,
     useTimeline ? renderActionTimeline(band) : null,

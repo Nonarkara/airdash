@@ -1,40 +1,58 @@
-import { windTowards } from './panels/hazePlan.js?v=2.4.107'
-import { escapeHtml } from './fmt.js?v=2.4.107'
-import { moveMap } from './mapView.js?v=2.4.107'
-import { readPreference, writePreference } from './preferences.js?v=2.4.107'
+import { windArrowSvg, windBasisLabel, windRowText, windView } from './wind.js?v=2.4.108'
+import { escapeHtml } from './fmt.js?v=2.4.108'
+import { moveMap } from './mapView.js?v=2.4.108'
+import { readPreference, writePreference } from './preferences.js?v=2.4.108'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.107'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.107'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.107'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.107'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.107'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.107'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.107'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.107'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.107'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.107'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.107'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.107'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.107'
-import { openWindow } from './witness.js?v=2.4.107'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.107'
+import { on, store } from './state.js?v=2.4.108'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.108'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.108'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.108'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.108'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.108'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.108'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.108'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.108'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.108'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.108'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.108'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.108'
+import { openWindow } from './witness.js?v=2.4.108'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.108'
 
-const windToggle = {id:'hazeWind',th:'ลมพยากรณ์ + จุดตรวจไฟเหนือลม',en:'Forecast wind + upwind fire counts',on:false,
+const windToggle = {id:'hazeWind',th:'ทิศลมรายจังหวัด + จุดไฟเหนือลม',en:'Province wind field + upwind fire counts',on:false,
   note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where wind blows. Daily dominant forecast, not current wind.',
   what_th:'ตัวเลขคือจำนวนจุดไฟในแนวเหนือลมของจังหวัด ไม่ใช่ตำแหน่งไฟหรือเวลาถึง',what_en:'Counts are detections upwind of the province, not fire positions or smoke arrival times.'}
 LAYER_GROUPS.unshift({id:'preparation',th:'เตรียมรับหมอกควัน',en:'HAZE PREPARATION',layers:[windToggle,{id:'hazeRain',th:'วงกลมฝนพยากรณ์วันนี้ · ใหญ่ = ปริมาณมาก',en:'Today’s model rain · larger = more mm',on:false},{id:'fireCells',th:'จุดความร้อน VIIRS 48 ชม. (รวมกริด)',en:'VIIRS detections 48h (grid cells)',on:false}]})
-let hazeWindRows = []
-function paintHazeWind() {
+
+// ── The wind field ─────────────────────────────────────────────────────────
+// The province-wide picture of which way the air is moving.
+//
+// It is painted from the RISK payload, not from the smoke engine. The bearing
+// exists for all 77 provinces whether or not anything is burning upwind, and
+// the old wiring took its arrows from the smoke payload — which the snapshot
+// only fills for provinces with something upwind. The wind layer was
+// therefore empty on exactly the days the wind matters most: a still, dusty,
+// no-fire day. Arrows and score now come from the same payload, so the layer
+// and the verdict cannot disagree about the same province.
+let windFires = new Map()   // province_code → upwind fire detections
+function paintWindField(risk) {
   if (!layers.hazeWind) return
   layers.hazeWind.clearLayers()
-  for (const row of hazeWindRows) {
-    const to = windTowards(row.from_deg)
-    if (to === null || !Number.isFinite(row.lat) || !Number.isFinite(row.lng)) continue
-    const name = store.lang === 'th' ? row.province_th : row.province_en
-    L.marker([row.lat,row.lng],{pane:'vectors',icon:L.divIcon({className:'haze-wind-icon',iconSize:[48,48],iconAnchor:[24,24],
-      html:`<span class="haze-wind-arrow" style="transform:rotate(${to}deg)">↑</span><small>${Number.isFinite(row.upwind_fires)?row.upwind_fires:'—'}</small>`})})
-      .bindTooltip(escapeHtml(`${name} · ${tr('ลมจาก','wind from')} ${row.from_deg}° → ${to}° · ${row.upwind_fires} ${tr('จุดไฟเหนือลม','upwind detections')} · ${row.wind_basis} · ${row.wind_updated_at} ICT`)).addTo(layers.hazeWind)
+  for (const p of risk?.provinces ?? []) {
+    const w = windView(p)
+    if (!w || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue
+    const name = store.lang === 'th' ? p.province_th : p.province_en
+    const fires = windFires.get(String(p.province_code))
+    L.marker([p.lat, p.lng], { pane: 'vectors', icon: L.divIcon({
+      className: 'haze-wind-icon', iconSize: [44, 44], iconAnchor: [22, 22],
+      html: windArrowSvg(w.towards, { size: 30 }) +
+            (fires != null ? `<small>${fires}</small>` : ''),
+    })}).bindTooltip(escapeHtml(
+      `${name} · ${windRowText(p, { degrees: true })} · ${windBasisLabel(w.basis)}` +
+      (fires != null ? ` · ${fires} ${tr('จุดไฟเหนือลม', 'upwind detections')}` : '') +
+      (w.updatedAt ? ` · ${w.updatedAt}` : '')
+    )).addTo(layers.hazeWind)
   }
 }
 const TH_BOUNDS = L.latLngBounds([4.8, 96.5], [21.2, 106.5])
@@ -109,7 +127,7 @@ export function initMap() {
   layers.hazeWind = L.layerGroup()
   layers.fireCells = L.layerGroup()
   layers.hazeRain = L.layerGroup()
-  window.addEventListener('airdash:haze-wind', e => {hazeWindRows = e.detail.wind;paintHazeWind();layers.fireCells.clearLayers();layers.hazeRain.clearLayers();
+  window.addEventListener('airdash:haze-wind', e => {windFires=new Map(e.detail.fires??[]);paintWindField(store.snapshot?.risk);layers.fireCells.clearLayers();layers.hazeRain.clearLayers();
     for (const r of e.detail.rain) {
       L.circleMarker([r.lat,r.lng],{pane:'vectors',radius:4+Math.min(40,Math.max(0,r.mm))/4,color:'#257caa',weight:1,fillColor:'#257caa',fillOpacity:0.25+Math.min(100,Math.max(0,r.prob))/200}).bindTooltip(escapeHtml(`${r.name} · ${tr('พยากรณ์ฝนวันนี้','Today’s model rain')} ${r.mm} mm / ${r.prob}% · ${tr('ไม่ใช่ฝนตรวจวัด','not observed rain')}`)).addTo(layers.hazeRain)
     }
@@ -189,7 +207,7 @@ export function initMap() {
   window.__airdash = { map, layers, osmBuildingsApi }
 
   on('snapshot', renderAll)
-  on('lang', () => { paintHazeWind(); addLegend(); addLayerControl(); renderAll(store.snapshot) })
+  on('lang', () => { addLegend(); addLayerControl(); renderAll(store.snapshot) })
   // Drought risk is a separate (weekly) feed, not part of the snapshot
   // pipeline — fetch it once at boot and on every snapshot tick so a
   // long-running tab picks up next week's polygons without a manual
@@ -209,6 +227,7 @@ function renderAll(snap) {
   paintRain(layers, snap.rain)
   layers.heatmap?.setData(snap.air)
   newsFireApi?.setData(snap.news, snap.risk?.provinces)
+  paintWindField(snap.risk)
 }
 
 let airStations = null

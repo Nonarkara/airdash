@@ -14,6 +14,13 @@
 // an observation and not a trajectory. Daily 10 m data cannot resolve valleys,
 // plume rise or arrival time — the hazard plan already says so where it matters.
 // `wind_basis` is always published so a reader can tell today from tomorrow.
+//
+// BOTH ENDS ARE LABELLED. `wind_from_*` names where the air comes FROM and
+// `wind_towards_*` names where it goes, each in Thai and English, so a renderer
+// never has to keep its own compass table or derive the far end itself. The
+// browser draws the number this module published — it does not recompute a
+// bearing, because a second formula in a second runtime is a second answer to
+// the same question, and the two answers eventually disagree by half a degree.
 
 export const COMPASS_TH = ['เหนือ', 'ตะวันออกเฉียงเหนือ', 'ตะวันออก', 'ตะวันออกเฉียงใต้', 'ใต้', 'ตะวันตกเฉียงใต้', 'ตะวันตก', 'ตะวันตกเฉียงเหนือ']
 export const COMPASS_EN = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
@@ -42,14 +49,22 @@ export function describeWind(dirDeg, { basis = null, updatedAt = null } = {}) {
   if (k === null) {
     return {
       wind_dir_deg: null, wind_from_th: null, wind_from_en: null,
-      wind_towards_deg: null, wind_basis: null, wind_updated_at: null,
+      wind_towards_deg: null, wind_towards_th: null, wind_towards_en: null,
+      wind_basis: null, wind_updated_at: null,
     }
   }
+  const towards = towardsDeg(dirDeg)
+  // The label for the far end is read off the PUBLISHED towards bearing, not
+  // from an assumed "opposite sector" — so the words and the number can never
+  // disagree at a sector boundary.
+  const kt = compassIndex(towards)
   return {
     wind_dir_deg: Math.round(dirDeg) % 360,
     wind_from_th: COMPASS_TH[k],
     wind_from_en: COMPASS_EN[k],
-    wind_towards_deg: towardsDeg(dirDeg),
+    wind_towards_deg: towards,
+    wind_towards_th: COMPASS_TH[kt],
+    wind_towards_en: COMPASS_EN[kt],
     wind_basis: basis,
     wind_updated_at: updatedAt,
   }

@@ -1,7 +1,8 @@
 // Operational context beside historical agricultural scars. A wind/fire
 // indicator never becomes a measured PM concentration or a terrain simulation.
-import { store } from '../state.js?v=2.4.107'
-import { escapeHtml } from '../fmt.js?v=2.4.107'
+import { store } from '../state.js?v=2.4.108'
+import { escapeHtml } from '../fmt.js?v=2.4.108'
+import { windBasisLabel, windRowText } from '../wind.js?v=2.4.108'
 const tr = (th, en) => store.lang === 'th' ? th : en
 const esc = escapeHtml
 const n = value => Number.isFinite(value) ? value.toLocaleString(store.lang === 'th' ? 'th-TH' : 'en-GB', { maximumFractionDigits: 1 }) : '—'
@@ -50,9 +51,9 @@ function contextHtml(live, smoke) {
   const sourceLabel = source === 'gistda_satellite' ? tr('ค่าประมาณ GISTDA', 'GISTDA estimate') : source === 'air4thai' ? 'PCD / Air4Thai' : '—'
   const smokeText = !province ? tr('เลือกจังหวัดเพื่อดูไฟเหนือลม', 'Select a province for upwind fire context')
     : !s ? tr('ยังไม่มีข้อมูลไฟหรือลมที่ใหม่พอ', 'Recent fire or wind data unavailable')
-    : tr(`ตรวจพบ ${n(s.upwind_fires)} จุดในแนวเหนือลม · ลมจาก${s.from_th}`, `${n(s.upwind_fires)} detections upwind · wind from ${s.from_en}`)
+    : tr(`ตรวจพบ ${n(s.upwind_fires)} จุดในแนวเหนือลม · ${windRowText(s)}`, `${n(s.upwind_fires)} detections upwind · ${windRowText(s)}`)
   return `<div class="bn-brief-grid"><div><h3>${pmName}</h3><strong>${n(value)} µg/m³</strong><p>${esc(sourceLabel)} · ${tr('เวลาสถานี', 'Station time')} (Asia/Bangkok): ${date(station?.obs_time)}</p></div>
-    <div><h3>${tr('ศักยภาพควันพัดมา', 'Potential smoke transport')}</h3><strong>${esc(smokeText)}</strong><p>${tr('ตรวจแหล่งไฟ (UTC)', 'Fire source checked (UTC)')}: ${date(smoke?.fire_source_checked_at)}<br>${tr('ลมพยากรณ์', 'Forecast wind')}: ${s ? (s.wind_basis === 'tomorrow-forecast' ? tr('ทิศลมหลักพรุ่งนี้ · Open-Meteo', 'Tomorrow’s dominant wind · Open-Meteo') : tr('ทิศลมหลักวันนี้ · Open-Meteo', 'Today’s dominant wind · Open-Meteo')) : '—'} · ${date(s?.wind_updated_at)} (Asia/Bangkok)</p></div></div>
+    <div><h3>${tr('ศักยภาพควันพัดมา', 'Potential smoke transport')}</h3><strong>${esc(smokeText)}</strong><p>${tr('ตรวจแหล่งไฟ (UTC)', 'Fire source checked (UTC)')}: ${date(smoke?.fire_source_checked_at)}<br>${tr('ลมพยากรณ์', 'Forecast wind')}: ${s ? `${windBasisLabel(s.wind_basis)} · Open-Meteo` : '—'} · ${date(s?.wind_updated_at)} (Asia/Bangkok)</p></div></div>
     <p class="bn-brief-note">${tr('ตัวชี้ไฟเหนือลม ไม่ใช่ความเข้มข้นฝุ่น ไม่ใช่เส้นทางควันที่จำลองภูเขา และไม่ยืนยันว่าฝุ่นมาจากไฟเหล่านี้', 'Upwind fire indicator, not a PM concentration, terrain-resolved smoke trajectory, or proof these fires caused the measured pollution.')}</p>
     <p>${tr('สร้างบริบทปัจจุบัน (UTC)', 'Current context generated (UTC)')}: ${date(live?.now)}</p>`
 }

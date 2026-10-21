@@ -1,13 +1,26 @@
 import assert from 'node:assert/strict'
 import vm from 'node:vm'
 import {readFileSync} from 'node:fs'
+// The REAL wind renderer, not a stub. The panel used to carry its own copy of
+// the "which way does the wind blow" formula; the formula now lives on the
+// server and the browser only draws what the server published, so a stubbed
+// windRowText here would prove nothing about what a reader sees.
+//
+// The asset token is read from the source, not hardcoded: a hardcoded
+// `?v=` becomes a DIFFERENT module instance from the one the panel imports
+// after the next `npm run bump`, and the two instances then disagree about
+// the language while the test still reports green.
+const TOKEN=readFileSync('public/ops.html','utf8').match(/\?v=(\d+\.\d+\.\d+)/)?.[1]??''
+const Q=TOKEN?`?v=${TOKEN}`:''
+const {store: realStore} = await import(`../public/js/state.js${Q}`)
+realStore.lang='en'
+const {windRowText, windBasisLabel} = await import(`../public/js/wind.js${Q}`)
 const src=readFileSync('public/js/panels/hazePlan.js','utf8').replace(/^import .*$/gm,'').replace(/export /g,'')
-const ctx=vm.createContext({store:{lang:'en'},console,AbortSignal,esc:s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;')})
+const ctx=vm.createContext({store:{lang:'en'},console,AbortSignal,esc:s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;'),
+  windRowText,windBasisLabel})
 vm.runInContext(src,ctx)
 let n=0
 for(const [label,expr,want] of [
- ['north wind blows south','windTowards(0)',180],['east wind blows west','windTowards(90)',270],['south wind blows north','windTowards(180)',0],
- ['missing wind stays unknown','windTowards(null)',null],['invalid wind rejected','windTowards(-5)',null],
  ['measured elevated PM leads despite rain/low model','planningState(50,10,0)','protect'],
  ['model elevated triggers preparation','planningState(10,45,0)','prepare'],
  ['upwind detections trigger watch not exposure prediction','planningState(10,10,3)','watch'],
@@ -45,15 +58,21 @@ const host={isConnected:true,innerHTML:'',querySelector:sel=>{
 },querySelectorAll:()=>mapButtons}
 const events=[]
 ctx.host=host
-ctx.snapshot={risk:{provinces:[{province_code:'50',province_th:'เชียงใหม่',province_en:'Chiang Mai',lat:18.8,lng:99,pm25:12,pm25_source:'air4thai',wind_fc_kmh:10}]}}
-ctx.fetch=async url=>({ok:true,json:async()=>url.includes('smoke')?{available:true,provinces:[{code:'50',from_deg:270,upwind_fires:3,wind_basis:'tomorrow-forecast'}],fire_cells:[{lat:18,lng:98,detections:3}]}:url.includes('forecast')?{provinces:[{code:'50',forecast:{pm25_d0:15,pm25_d1:45,pm25_d2:30}}]}:{provinces:[]}})
+ctx.snapshot={risk:{provinces:[{province_code:'50',province_th:'เชียงใหม่',province_en:'Chiang Mai',lat:18.8,lng:99,pm25:12,pm25_source:'air4thai',wind_fc_kmh:10,wind_dir_deg:270,wind_from_th:'ตะวันตก',wind_from_en:'W',wind_towards_deg:90,wind_towards_th:'ตะวันออก',wind_towards_en:'E',wind_basis:'tomorrow-forecast',wind_updated_at:'2026-10-18T00:00'}]}}
+ctx.fetch=async url=>({ok:true,json:async()=>url.includes('smoke')?{available:true,provinces:[{code:'50',wind_dir_deg:270,wind_from_th:'ตะวันตก',wind_from_en:'W',wind_towards_deg:90,wind_towards_th:'ตะวันออก',wind_towards_en:'E',upwind_fires:3,wind_basis:'tomorrow-forecast',wind_updated_at:'2026-10-18T00:00'}],fire_cells:[{lat:18,lng:98,detections:3}]}:url.includes('forecast')?{provinces:[{code:'50',forecast:{pm25_d0:15,pm25_d1:45,pm25_d2:30}}]}:{provinces:[]}})
 ctx.CustomEvent=class{constructor(type,{detail}){this.type=type;this.detail=detail}}
 ctx.window={dispatchEvent:e=>events.push(e),matchMedia:()=>({matches:false})}
 await vm.runInContext('load(host,snapshot)',ctx)
 assert.match(host.innerHTML,/data-state="prepare"/)
 assert.match(host.innerHTML,/15 → 45 → 30/)
-assert.match(host.innerHTML,/Wind from 270° → blows towards 90°/)
+// The wind line comes from the RISK row now — the canonical contract, with
+// the speed the risk payload carries and the smoke engine does not.
+assert.match(host.innerHTML,/W → E · 10 km\/h/)
 assert.equal(events[0].detail.fireCells[0].detections,3)
+// JSON comparison, not deepEqual: the array was built inside the vm context,
+// so its prototype is the vm's Array, not the host's, and a strict deep
+// comparison would fail on structure that is identical.
+assert.equal(JSON.stringify(events[0].detail.fires),JSON.stringify([['50',3]]))
 mapButtons[1].onclick()
 assert.equal(events.at(-1).detail.view,'transport')
 console.log('PASS rendered panel keeps measured PM, model, wind direction and rain gaps separate; transport button dispatches correct map preset')
