@@ -315,7 +315,7 @@ const LEDGER = `(() => {
     for (const r of rows) {
       const el = r.querySelector('.rank-name');
       if (!el) continue;
-      if (el.scrollWidth > el.clientWidth + 2) {
+      if (el.scrollWidth > el.clientWidth + 1) {
         cut.push({ text: (el.textContent || '').trim(), need: el.scrollWidth, have: el.clientWidth });
       }
     }
