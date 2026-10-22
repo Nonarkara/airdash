@@ -1,39 +1,39 @@
-import { moveMap } from './mapView.js?v=2.4.113'
-import { containDialog } from './dialogFocus.js?v=2.4.113'
-import { readPreference, writePreference } from './preferences.js?v=2.4.113'
+import { moveMap } from './mapView.js?v=2.4.114'
+import { containDialog } from './dialogFocus.js?v=2.4.114'
+import { readPreference, writePreference } from './preferences.js?v=2.4.114'
 
 // AirDash frontend boot: snapshot → map + panels, SSE tap, ticker, tabs, mobile sheet.
-import { on, emit, store, setLang } from './state.js?v=2.4.113'
-import { paintChrome } from './i18n.js?v=2.4.113'
-import { startTap } from './sse.js?v=2.4.113'
-import { initMap, invalidateMap } from './map.js?v=2.4.113'
-import { initHeader } from './panels/header.js?v=2.4.113'
-import { initRanking } from './panels/ranking.js?v=2.4.113'
-import { initForecast } from './panels/forecast.js?v=2.4.113'
-import { initWhatIf } from './panels/whatif.js?v=2.4.113'
-import { initDetail, hideDetail } from './panels/detail.js?v=2.4.113'
-import { initTap } from './panels/tap.js?v=2.4.113'
-import { initSources } from './panels/sources.js?v=2.4.113'
-import { initHistory } from './panels/history.js?v=2.4.113'
-import { initInsights } from './panels/insights.js?v=2.4.113'
-import { initAnalytics } from './panels/analytics.js?v=2.4.113'
-import { initFeeds } from './panels/feeds.js?v=2.4.113'
-import { initChat } from './panels/chat.js?v=2.4.113'
-import { initCitizen } from './panels/citizen.js?v=2.4.113'
-import { initWaterways } from './panels/waterways.js?v=2.4.113'
-import { initFocus } from './panels/focus.js?v=2.4.113'
-import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.113'
-import { initSplit } from './panels/split.js?v=2.4.113'
-import { initLibrary } from './panels/library.js?v=2.4.113'
-import { initResearch } from './panels/research.js?v=2.4.113'
-import { initManual } from './panels/manual.js?v=2.4.113'
-import { initBurning } from './panels/burning.js?v=2.4.113'
-import { initApiDocs } from './panels/apidocs.js?v=2.4.113'
-import { initSearch } from './panels/search.js?v=2.4.113'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.113'
-import { initWitness } from './witness.js?v=2.4.113'
-import { initCctvWall } from './cctvEntry.js?v=2.4.113'
-import { refreshSensorHealth } from './sensorHealth.js?v=2.4.113'
+import { on, emit, store, setLang } from './state.js?v=2.4.114'
+import { paintChrome } from './i18n.js?v=2.4.114'
+import { startTap } from './sse.js?v=2.4.114'
+import { initMap, invalidateMap } from './map.js?v=2.4.114'
+import { initHeader } from './panels/header.js?v=2.4.114'
+import { initRanking } from './panels/ranking.js?v=2.4.114'
+import { initForecast } from './panels/forecast.js?v=2.4.114'
+import { initWhatIf } from './panels/whatif.js?v=2.4.114'
+import { initDetail, hideDetail } from './panels/detail.js?v=2.4.114'
+import { initTap } from './panels/tap.js?v=2.4.114'
+import { initSources } from './panels/sources.js?v=2.4.114'
+import { initHistory } from './panels/history.js?v=2.4.114'
+import { initInsights } from './panels/insights.js?v=2.4.114'
+import { initAnalytics } from './panels/analytics.js?v=2.4.114'
+import { initFeeds } from './panels/feeds.js?v=2.4.114'
+import { initChat } from './panels/chat.js?v=2.4.114'
+import { initCitizen } from './panels/citizen.js?v=2.4.114'
+import { initWaterways } from './panels/waterways.js?v=2.4.114'
+import { initFocus } from './panels/focus.js?v=2.4.114'
+import { initCityDashboard } from './panels/city-dashboard.js?v=2.4.114'
+import { initSplit } from './panels/split.js?v=2.4.114'
+import { initLibrary } from './panels/library.js?v=2.4.114'
+import { initResearch } from './panels/research.js?v=2.4.114'
+import { initManual } from './panels/manual.js?v=2.4.114'
+import { initBurning } from './panels/burning.js?v=2.4.114'
+import { initApiDocs } from './panels/apidocs.js?v=2.4.114'
+import { initSearch } from './panels/search.js?v=2.4.114'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.114'
+import { initWitness } from './witness.js?v=2.4.114'
+import { initCctvWall } from './cctvEntry.js?v=2.4.114'
+import { refreshSensorHealth } from './sensorHealth.js?v=2.4.114'
 
 function tr(th, en) {
   return store.lang === 'th' ? th : en
@@ -48,12 +48,9 @@ function safeInit(name, fn) {
 }
 
 const SNAPSHOT_MS = 5 * 60_000
-// Snapshot boot timeout. The Cloudflare Pages Function proxy has a 30s
-// timeout for non-streaming JSON, and the 779KB snapshot can be slow
-// on cellular. 10s is short enough that phone users see the retry
-// button fast (via the stuck-on-boot escape hatch), but long enough
-// to ride out a normal cold start.
-const SNAPSHOT_TIMEOUT_MS = 10_000
+// Allow the edge's two possible8s backend attempts plus response transfer.
+// The6s escape hatch remains visible while a useful fallback can still arrive.
+const SNAPSHOT_TIMEOUT_MS = 30_000
 
 async function loadSnapshot() {
   const res = await fetch('/api/snapshot', { cache: 'no-store', signal: AbortSignal.timeout(SNAPSHOT_TIMEOUT_MS) })

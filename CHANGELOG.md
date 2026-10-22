@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.114] — 2026-10-23 — ranking room and honest protection guidance
+
+Replaced the seven-tile city picker with one labelled native selector. Forecast and rain-scenario tools open explicitly, returning default desktop space to province comparisons while retaining both tools. Included scrollbar/urgency-stripe costs in the ranking budget, recovered label space from gaps/padding, measured all77 names in both languages and removed the old60-row cap. The guard compares both font families and both languages' geometry. Removed unsupported claims that N95 respirators offer little protection against coarse particles from optical guidance and its preparation-panel fallback; linked NIOSH guidance and retained national-signal limits. Updated behavioural guards that previously required the incorrect claim. City navigation now follows language changes and rejects late responses. Snapshot boot waits for the edge fallback window while retaining the early escape option.
+
 ## [2.4.113] — 2026-10-22 — the preparation panel knew the size of the dust, in the wrong scope
 
 **The panel is per-province. Its particle-size reading was not.** The haze preparation panel — *เตรียมรับหมอกควัน · พื้นที่ไหนควรติดตาม* — opens with a province dropdown and answers four questions for the province you picked: how bad is the pollution now, what does the model say, where is the fire and which way is the wind, will the rain help. Below them it told you the size of the particles.

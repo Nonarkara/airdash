@@ -2,26 +2,9 @@
 // aerosol optical depth.
 //
 // WHY THIS EXISTS. AirDash speaks PM2.5, and PM2.5 is a fine-particle measure.
-// But the hazard people prepare for in Thailand is not one thing: the Dec–Apr
-// dust season loads the air with COARSE mineral particles, while crop-residue
-// burning and diesel put FINE particles there. The two need different
-// precautions, and a PM2.5 number cannot tell them apart — a reading of 80 can
-// be mostly fine smoke (stay in, close windows, a respirator works) or largely
-// coarse dust (a respirator barely helps; the problem is eyes, laundry, cars
-// and driving).
+// Particle-size evidence characterises the optical aerosol column, not local
+// exposure or respirator effectiveness. It must not override ground PM advice.
 //
-// AERONET measures optical depth at seven wavelengths and AirDash already
-// stores all of them. The single most standard summary of that spectrum is the
-// Ångström exponent, which has been the aerosol-size indicator since Ångström
-// (1929): α is inversely related to particle size, so low α means coarse.
-//
-// WHAT IT MAY CLAIM, AND WHAT IT MAY NOT. Like everything else in this
-// project, α is a QUALITATIVE size indicator, never a concentration. It is
-// computed from a daily AERONET aggregate at a handful of stations, so it says
-// what the air is made of, not how bad it is today, and not what it will be
-// tomorrow. PM2.5 concentration still comes from the ground stations.
-//
-// Thresholds are taken from the literature rather than invented here:
 //   · Eck et al. 1999 / Westphal & Toon 1991 / NASA Deep Blue: α ≲ 1 indicates
 //     coarse-mode dominance (dust, sea salt); α ≳ 1 indicates fine-mode
 //     dominance (urban pollution, biomass burning); α ≳ 2 is small-particle.
@@ -154,10 +137,11 @@ export function aerosolProfile(row = {}) {
  */
 export const MODE_GUIDANCE = {
   coarse: {
-    th: 'อนุภาคเกือบหนา — ฝุ่นดิน/ทราย',
+    th: 'อนุภาคหยาบ — ฝุ่นดิน/ทราย',
     en: 'Coarse particles — mineral dust',
-    act_th: 'ฝุ่นหยาบจะไม่ผ่านหน้ากาก แต่จะรบกวนตา คอ และจมูกมาก — ปิดหน้าต่างรถเวลาขับ คลุมรถ/ตากรั้งให้เสร็จก่อนฝุ่นมา และล้างตาถ้ารู้สึกร้อน',
-    act_en: 'Coarse dust does not reach deep into the lungs, but it irritates eyes, throat and nose hard. Close the car windows while driving, get laundry and anything drying outside in before it arrives, and rinse your eyes if they sting. A PM2.5 respirator does little against particles this size.',
+    act_th: 'ขนาดอนุภาคไม่ใช่การวัดการรับฝุ่นของแต่ละคน ลดการรับฝุ่นตามค่าตรวจวัดในพื้นที่ หน้ากาก N95 ที่ได้รับการรับรองและแนบสนิทช่วยกรองอนุภาคทั้งละเอียดและหยาบ แต่ไม่กรองก๊าซหรือไอระเหย',
+    act_en: 'Particle size is not personal exposure. Reduce exposure according to local measurements. A well-fitting, approved N95 filters fine and coarse particles, but not gases or vapours.',
+
   },
   mixed: {
     th: 'อนุภาคผสม — ทั้งฝุ่นละเอียดและหยาบ',

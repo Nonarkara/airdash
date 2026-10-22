@@ -36,8 +36,8 @@
      in layout.css and scripts/test-rail-width.mjs, which fails if the rail
      ever drops below what the longest province name needs. */
   grid-template-columns: minmax(0, 1fr) 58px 40px 30px 28px;
-  column-gap: 6px; align-items: center;
-  padding: 6px 10px;
+  column-gap: 4px; align-items: center;
+  padding: 6px 8px;
 }
 .rank-summary {
   width: 100%; min-height: 44px; margin: 0;
@@ -4429,7 +4429,16 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 
 /* Ranking is the rail's primary view; auxiliary panels must yield space. */
 @media (min-width: 1101px) {
-  #rail-left > #ranking { min-height: min(400px, 60vh); }
+  #rail-left > #ranking { min-height: 0; flex: 1 1 0; }
   #rail-left > .forecast-strip,
   #rail-left > .whatif-box { min-height: 0; }
+}
+
+/* Secondary rail tools open by choice; they cannot reserve ranking space. */
+.rail-tool { flex: none; min-width: 0; }
+.rail-tool > summary { min-height: 44px; padding: 10px; cursor: pointer; font-size: 14px; line-height: 24px; color: var(--ink); }
+.rail-tool > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.rail-tool > :is(.forecast-strip, .whatif-box) { max-height: 28vh; overflow-y: auto; }
+@media (max-width: 1100px) {
+  .rail-tool > :is(.forecast-strip, .whatif-box) { max-height: none; overflow: visible; }
 }

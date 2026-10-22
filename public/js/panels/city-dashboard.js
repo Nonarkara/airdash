@@ -8,12 +8,12 @@
 // The panel is injected into the left rail (#rail-left) below the place card,
 // and auto-refreshes every 5 minutes. It degrades gracefully — if the city
 // detail fetch fails, it shows the blurb from the manifest and nothing else.
-import { store, on, emit } from '../state.js?v=2.4.113'
-import { tr } from '../i18n.js?v=2.4.113'
-import { getJson } from '../cache.js?v=2.4.113'
-import { fmtNum } from '../fmt.js?v=2.4.113'
-import { riskCi } from '../confidence.js?v=2.4.113'
-import { focusById } from './focus.js?v=2.4.113'
+import { store, on, emit } from '../state.js?v=2.4.114'
+import { tr } from '../i18n.js?v=2.4.114'
+import { getJson } from '../cache.js?v=2.4.114'
+import { fmtNum } from '../fmt.js?v=2.4.114'
+import { riskCi } from '../confidence.js?v=2.4.114'
+import { focusById } from './focus.js?v=2.4.114'
 
 const REFRESH_MS = 5 * 60_000
 const FETCH_TTL = 60_000 // city detail cache — 1 min (data moves on ingest cadence)
@@ -78,8 +78,10 @@ const REGION_LABELS = {
 
 let activeAreaId = null
 let refreshTimer = null
+let renderRevision = 0
 
 export function initCityDashboard() {
+  on('lang', renderCityPanel)
   // When the focus event fires (from focus.js selecting a city), show the panel.
   on('focus', (area) => {
     activeAreaId = area?.id ?? null
@@ -94,13 +96,11 @@ export function initCityDashboard() {
 async function renderCityPanel() {
   const host = document.getElementById('city-dashboard')
   if (!host) return
+  const revision = ++renderRevision
 
-  // All-Thailand selected → show the "pick a city" landing grid instead
-  // of nothing. Lets the user see all 7 focus cities without scrolling
-  // back to the header dropdown, and previews each city's personality
-  // accent SVG + blurb before they commit.
+  // National view keeps city navigation beside the province comparison.
   if (!activeAreaId || activeAreaId === 'thailand') {
-    await renderCityPicker(host)
+    await renderCityPicker(host, revision)
     return
   }
 
@@ -108,10 +108,12 @@ async function renderCityPanel() {
   try {
     data = await getJson(`/api/focus/${activeAreaId}`, FETCH_TTL)
   } catch {
+    if (revision !== renderRevision) return
     host.style.display = 'none'
     return
   }
 
+  if (revision !== renderRevision) return
   host.style.display = ''
   const isEn = store.lang === 'en'
   const L = (th, en) => (isEn ? en : th)
@@ -193,53 +195,38 @@ async function renderCityPanel() {
 }
 
 /** Render the "pick a city" landing grid when the user has All Thailand
- *  selected. Lists all 7 focus cities with their accent SVG, blurb, and a
- *  one-click handler that fires the same 'focus' event the dropdown uses.
+ *  selected. Offers all focus cities in a native selector with a
+ *  change handler that fires the same 'focus' event the dropdown uses.
  *  Pulls the manifest from cache so the grid is in sync with whatever the
  *  user sees in the focus dropdown. */
-async function renderCityPicker(host) {
+async function renderCityPicker(host, revision) {
   host.style.display = ''
-  const isEn = store.lang === 'en'
-  const L = (th, en) => (isEn ? en : th)
+  const L = (th, en) => (store.lang === 'en' ? en : th)
   let areas = []
   try {
     const data = await getJson('/api/focus', 3600_000)
     areas = (data.areas ?? []).filter((a) => a.id !== 'thailand')
   } catch {
+    if (revision !== renderRevision) return
     host.replaceChildren(el('div', { class: 'cd-pick-error' }, L('ไม่สามารถโหลดเมือง', 'Failed to load cities')))
     return
   }
-  const tiles = areas.map((a) =>
-    el('button', {
-      class: `cd-pick-tile geo-${a.geography ?? 'plain'}`,
-      // The blurb no longer renders inside the tile (the compact grid
-      // keeps only name + terrain line) — it lives in the tooltip, and
-      // the full story appears in the city dashboard after the tap.
-      title: L(a.blurb_th, a.blurb_en),
-      // focusById is the SAME path the header dropdown takes: it flies
-      // the map, scopes the rails, and syncs the dropdown + ?city= URL.
-      // The old handler emitted the bare 'focus' event, which notified
-      // panels but never called map.flyTo — "tap a city to fly there"
-      // loaded the dashboard while the camera never moved.
-      onclick: () => focusById(a.id),
-    },
-      a.accent_svg
-        ? el('svg', { class: 'cd-pick-accent', viewBox: '0 0 80 40', preserveAspectRatio: 'none', 'aria-hidden': 'true' },
-            el('path', { d: a.accent_svg, fill: 'currentColor' }))
-        : null,
-      el('div', { class: 'cd-pick-name display' }, L(a.name_th, a.name_en)),
-      el('div', { class: 'cd-pick-geo' },
-        a.geography ? L(GEO_LABELS[a.geography]?.th ?? '', GEO_LABELS[a.geography]?.en ?? '') : null,
-        a.region_code ? ' · ' + L(REGION_LABELS[a.region_code]?.th ?? '', REGION_LABELS[a.region_code]?.en ?? '') : null,
-      ),
-    ))
+  if (revision !== renderRevision) return
+  // This is navigation, not seven simultaneous data comparisons.
+  // Keep every destination in one native, keyboard-accessible control.
   host.replaceChildren(
-    el('div', { class: 'cd-pick-head' },
-      el('div', { class: 'cd-pick-eyebrow' }, L('เลือกเมือง', 'PICK A CITY')),
-      el('div', { class: 'cd-pick-hint' }, L('แตะเพื่อบินไปยังเมืองที่สนใจ', 'Tap a city to fly there and load its dashboard.')),
+    el('div', { class: 'cd-city-choice' },
+      el('label', { for: 'city-watch-select' }, L('ดูเมือง', 'City watch')),
+      el('select', {
+        id: 'city-watch-select',
+        onchange: (event) => { if (event.target.value) focusById(event.target.value) },
+      },
+        el('option', { value: '' }, L('เลือกเมือง…', 'Choose a city…')),
+        ...areas.map(a => el('option', { value: a.id }, L(a.name_th, a.name_en))),
+      ),
     ),
-    el('div', { class: 'cd-pick-grid' }, ...tiles),
   )
+
 }
 
 function cityScoreRow(data, L) {

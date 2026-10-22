@@ -314,89 +314,9 @@
    already saw. Geometry classes (geo-basin, geo-valley, etc.) get
    their own background tint so the grid reads as a categorised
    lattice, not a wall of identical boxes. */
-.cd-pick-head {
-  padding: 14px 12px 10px;
-  border-bottom: 1px solid var(--rule);
-  background: linear-gradient(180deg, var(--paper-warm) 0%, var(--well) 100%);
-}
-.cd-pick-eyebrow {
-  font-family: var(--font-num);
-  font-size: 10px; font-weight: 600; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--th-sage);
-  margin-bottom: 2px;
-}
-.cd-pick-hint {
-  font-size: 11.5px; color: var(--ink-mid); line-height: 1.4;
-}
-.cd-pick-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--rule);
-  border-bottom: 2px solid var(--rule-strong);
-}
-.cd-pick-tile {
-  position: relative;
-  padding: 8px 10px 7px;
-  background: var(--well);
-  color: var(--ink);
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  border: 0;
-  overflow: hidden;
-  /* Compact: name + terrain line only. The tiles used to be 110px-tall
-     cards with a 3-line blurb each — eight of them ate most of the rail
-     on laptop and most of the sheet on phone before any live data
-     appeared. The blurb now lives in the tile's title tooltip, and the
-     full story loads in the city dashboard after the tap. */
-  min-height: 48px;
-  display: flex; flex-direction: column; justify-content: center;
-  transition: background 120ms;
-}
-.cd-pick-tile:hover { background: var(--paper-warm); }
-.cd-pick-tile:active { background: var(--th-deep); color: var(--ink-inv); }
-.cd-pick-accent {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  height: 28px;
-  color: var(--th-sage);
-  opacity: 0.10;
-  pointer-events: none;
-}
-.cd-pick-name {
-  font-family: var(--font-display);
-  font-size: 14.5px; font-weight: 800; line-height: 1.15;
-  letter-spacing: -0.01em; color: var(--ink);
-  margin-bottom: 1px; position: relative; z-index: 1;
-}
-.cd-pick-tile:active .cd-pick-name { color: var(--ink-inv); }
-.cd-pick-geo {
-  font-family: var(--font-num);
-  font-size: 9.5px; letter-spacing: 0.04em;
-  color: var(--ink-low);
-  margin-bottom: 0; position: relative; z-index: 1;
-}
-/* .cd-pick-blurb no longer renders — the compact tiles keep the blurb
-   in their title tooltip; the rule stays for any cached markup. */
-.cd-pick-blurb { display: none; }
-
-/* Geography-class background tints — subtle, just enough to group the
-   grid by terrain type. Bg + accent both shift together. */
-.geo-basin   { background: var(--well); }
-.geo-basin   .cd-pick-accent { color: #2E8B57; }
-.geo-valley  { background: var(--well); }
-.geo-valley  .cd-pick-accent { color: #6B2D5C; }
-.geo-plain   .cd-pick-accent { color: #C8B560; }
-.geo-coastal .cd-pick-accent { color: #3A8A6E; }
-.geo-metro   .cd-pick-accent { color: #0E4A5E; opacity: 0.14; }
-.geo-border  .cd-pick-accent { color: #C8453A; }
-
-/* Dark-mode overrides — the city-picker grid should sit on the same
-   dark navy ground as the rest of the dashboard in night mode. */
-@media (prefers-color-scheme: dark) {
-  .cd-pick-tile { background: var(--paper); color: var(--ink); }
-  .cd-pick-tile:hover { background: var(--paper-warm); }
-  .cd-pick-accent { opacity: 0.18; }
-  .cd-pick-name { color: var(--ink); }
-  .cd-pick-blurb { color: var(--ink-mid); }
-}
+/* City navigation fits one label + target; rankings keep the operating room. */
+#city-dashboard:has(.cd-city-choice) { max-height: none; overflow: visible; }
+.cd-city-choice { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
+.cd-city-choice label { flex: none; font-size: 14px; font-weight: 600; }
+.cd-city-choice select { min-width: 0; flex: 1; min-height: 44px; padding: 8px; font: inherit; font-size: 14px; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 0; }
+.cd-city-choice select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

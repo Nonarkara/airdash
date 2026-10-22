@@ -73,10 +73,11 @@ check('it names the instruments it read', /Bangkok/.test(fine) && /Chiang_Mai|Ch
 check('it publishes how old the reading is', /read 30 h ago/.test(fine))
 
 const coarse = await renderWith(payload('coarse', 0.4))
-check('coarse explicitly warns the N95 advice above does little',
-  /N95 recommended above does very little/i.test(coarse), 'that is the entire point of the block')
-check('fine mode does NOT carry the coarse-only warning',
-  !/N95 recommended above does very little/i.test(fine))
+check('coarse does not dismiss respirators based on optical size',
+  !/does very little|matter more than a respirator/i.test(coarse) && /filters both fine and coarse/i.test(coarse))
+check('coarse protection explanation links official guidance', coarse.includes('https://www.cdc.gov/niosh/ppe/php/community-respirators-masks/'))
+check('fine mode does not carry the coarse-only explanation', !/National particle-size evidence cannot determine/i.test(fine))
+
 
 const empty = await renderWith({ reading_age_h: null, aerosol: {} })
 check('an empty aerosol block still renders something', empty.includes('haze-plan-aerosol'))

@@ -1,8 +1,8 @@
 // Preparation aid: observed/estimated PM, model outlook and upwind-fire evidence
 // stay separate. No smoke arrival time or clean-air destination is invented.
-import { store } from '../state.js?v=2.4.113'
-import { escapeHtml as esc } from '../fmt.js?v=2.4.113'
-import { windBasisLabel, windRowText } from '../wind.js?v=2.4.113'
+import { store } from '../state.js?v=2.4.114'
+import { escapeHtml as esc } from '../fmt.js?v=2.4.114'
+import { windBasisLabel, windRowText } from '../wind.js?v=2.4.114'
 const tr = (th,en) => store.lang === 'th' ? th : en
 const num = v => Number.isFinite(v) ? v.toLocaleString('en-GB',{maximumFractionDigits:1}) : '—'
 export function planningState(pm, forecast, fires) {
@@ -30,11 +30,8 @@ async function planningEvidence() {
 }
 let selected = ''
 // ── Aerosol size: what the particles actually ARE ────────────────────────
-// The advice above is PM2.5 advice: HEPA, an N95, a cleaner-air room. That is
-// right for FINE particles (smoke, combustion) and close to useless for COARSE
-// mineral dust, which loads the air every dry season, does not stay in the
-// lungs, and is not stopped by the respirator those instructions tell you to
-// wear. PM2.5 cannot tell the two apart — the same number can be either.
+// Particle size does not establish respirator effectiveness or personal exposure.
+// Optical evidence must keep its national scope and must not override PM advice.
 //
 // AERONET measures optical depth at seven wavelengths, so the Angstrom
 // exponent — the aerosol-size indicator since 1929 — answers it. Deliberately
@@ -112,8 +109,8 @@ async function aerosolStrip() {
     <p class="haze-plan-aerosol-verdict"><strong>${esc(tr(...label))}</strong> · α = ${mode.alpha} <span class="muted">(${esc(mode.alpha_pair ?? '')})</span></p>
     <p>${esc(g?.act_th ?? '')}</p>
     <p class="muted">${esc(g?.act_en ?? '')}</p>
-    ${mode.mode === 'coarse' ? `<p class="haze-plan-aerosol-warn">${esc(tr('ถ้าอนุภาคหยาบ หน้ากาก N95 ที่แนะนำไว้ข้างบนจะช่วยได้น้อยมากกับฝุ่นขนาดนี้ — เน้นปิดหน้าต่างรถ เก็บผ้าให้เสร็จก่อนฝุ่นมา และปกป้องตาจะสำคัญกว่า',
-      'If these particles are coarse, the N95 recommended above does very little against them. Car windows, bringing laundry in early, and protecting your eyes matter more than a respirator here.'))}</p>` : ''}
+    ${mode.mode === 'coarse' ? `<p class="haze-plan-aerosol-warn">${esc(tr('ขนาดอนุภาคระดับประเทศไม่ใช้ตัดสินว่าหน้ากากได้ผลหรือไม่ หน้ากาก N95 ที่ได้รับการรับรองและแนบสนิทช่วยกรองอนุภาคทั้งละเอียดและหยาบ แต่ไม่กรองก๊าซหรือไอระเหย',
+      'National particle-size evidence cannot determine respirator effectiveness. A well-fitting, approved N95 filters both fine and coarse particles; it does not filter gases or vapours.'))} <a href="https://www.cdc.gov/niosh/ppe/php/community-respirators-masks/" target="_blank" rel="noopener">NIOSH</a></p>` : ''}
     <p class="muted">${esc(tr('วัดที่', 'Measured at'))}: ${esc(where)} · ${esc(ageText(d.reading_age_h))}</p>
     <p class="muted">${esc(tr('นี่คือขนาดอนุภาคเชิงคุณภาพ ไม่ใช่ค่าความเข้มข้น µg/m³ — ค่าฝุ่นยังมาจากสถานีพื้นดิน และเป็นสัญญาณระดับประเทศ ไม่ใช่รายจังหวัด',
       'This is a qualitative particle size, not a µg/m³ concentration — the concentration still comes from the ground stations. This is a national-scale signal from a few instruments, not a per-province measurement.'))}</p>

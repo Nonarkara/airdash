@@ -98,10 +98,16 @@ const pad = padding4(tableDecls['padding'] ?? '')
 const padL = pad[3], padR = pad[1]
 const nameFontSize = nameDecls['font-size'] ?? ''
 const nameFontWeight = nameDecls['font-weight'] ?? ''
+const rankFontFamily = decls(rule('#ranking'))['font-family'] ?? ''
+const nameFontFamily = nameDecls['font-family'] ?? rankFontFamily
+const normalizeFont = value => String(value).replace(/[\"']/g, '').replace(/\s*,\s*/g, ',').replace(/\s+/g, ' ').trim()
 
 const flexIdx = tracks.findIndex(t => /fr\b/.test(t))
 const fixedTracks = tracks.filter((t, i) => i !== flexIdx).map(t => parseFloat(t) || 0)
 const fixedSum = fixedTracks.reduce((a, b) => a + b, 0)
+const rowBorder = parseFloat(decls(rule('\\.rank-row'))['border-left']) || 0
+const scrollbar = parseFloat(tokens.match(/::\-webkit-scrollbar\s*\{[^}]*width:\s*([\d.]+)px/)?.[1] ?? '0')
+check('the width budget includes the urgency stripe and scrollbar', rowBorder > 0 && scrollbar > 0)
 
 // ── every --rail-l the layout can use ─────────────────────────────────────
 const railValues = [
@@ -124,26 +130,29 @@ check('the measurement covers BOTH languages', !!fit && !!fit.th && !!fit.en,
 
 // Staleness: the measurement must still describe the CSS it was taken at.
 if (fit?.th && fit?.en) {
-  const measured = fit.th
-  const measuredTracks = (measured.tracks || []).slice(1)
-  check('the measurement was taken against the current name font',
-    String(measured.nameFont || '').includes(nameFontSize) && String(measured.nameFont || '').includes(nameFontWeight),
-    `measured at "${measured.nameFont}", CSS now says ${nameFontWeight} ${nameFontSize} — re-run the probe`)
-
-  check('the measurement was taken against the current fixed tracks',
-    measuredTracks.length === fixedTracks.length && measuredTracks.every((t, i) => Math.abs(t - fixedTracks[i]) <= 0.5),
-    `measured tracks [${measuredTracks.join(' ')}], CSS now says [${fixedTracks.join(' ')}] — re-run the probe`)
-
-  check('the measurement was taken against the current gap and padding',
-    measured.gap === gap && measured.padL === padL && measured.padR === padR,
-    `measured gap ${measured.gap} pad ${measured.padL}/${measured.padR}, CSS now says gap ${gap} pad ${padL}/${padR} — re-run the probe`)
+  for (const lang of ['th', 'en']) {
+    const measured = fit[lang]
+    const measuredTracks = (measured.tracks || []).slice(1)
+    check(`${lang}: all77 province names were measured`, measured.rows === 77)
+    check(`${lang}: stripe and scrollbar costs match the measurement`, measured.rowBorder === rowBorder && measured.scrollbar <= scrollbar)
+    const expectedFont = `${nameFontWeight} ${nameFontSize} ${nameFontFamily}`
+    check(`${lang}: the measurement uses the current name font including family`,
+      !!nameFontFamily && normalizeFont(measured.nameFont) === normalizeFont(expectedFont),
+      `measured "${measured.nameFont}", CSS says "${expectedFont}" — re-run the probe`)
+    check(`${lang}: the measurement uses the current fixed tracks`,
+      measuredTracks.length === fixedTracks.length && measuredTracks.every((t, i) => Math.abs(t - fixedTracks[i]) <= 0.5),
+      'fixed tracks changed — re-run the probe')
+    check(`${lang}: the measurement uses the current gap and padding`,
+      measured.gap === gap && measured.padL === padL && measured.padR === padR,
+      'gap or padding changed — re-run the probe')
+  }
 
   // The budget. The name column needs the wider of the two languages'
   // longest names, plus a little room so the next province on the list
   // does not instantly clip.
   const HEADROOM = 10
   const nameNeed = Math.max(fit.th.nameNeed || 0, fit.en.nameNeed || 0)
-  const required = Math.ceil(nameNeed + HEADROOM + fixedSum + gap * (tracks.length - 1) + padL + padR)
+  const required = Math.ceil(nameNeed + HEADROOM + fixedSum + gap * (tracks.length - 1) + padL + padR + rowBorder + scrollbar)
 
   check('the name column is the flexible one',
     flexIdx === 0,
@@ -157,7 +166,7 @@ if (fit?.th && fit?.en) {
     fit.th.cut === 0 && fit.en.cut === 0,
     `th cut ${fit.th.cut} (${(fit.th.cutNames || []).join(', ')}) · en cut ${fit.en.cut} (${(fit.en.cutNames || []).join(', ')})`)
 
-  console.log(`\nbudget: name ${nameNeed}px (+${HEADROOM}) + tracks ${fixedSum}px + gaps ${gap * (tracks.length - 1)}px + padding ${padL + padR}px = ${required}px`)
+  console.log(`\nbudget: name ${nameNeed}px (+${HEADROOM}) + tracks ${fixedSum}px + gaps ${gap * (tracks.length - 1)}px + padding ${padL + padR}px + stripe ${rowBorder}px + scrollbar ${scrollbar}px = ${required}px`)
   console.log(`ladder: ${railValues.map(r => `${r.px}px`).join(', ')}`)
 }
 

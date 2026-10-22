@@ -306,7 +306,9 @@ const LEDGER = `(() => {
     const padR = parseFloat(sum.paddingRight) || 0;
     const fixed = cols.filter(c => !c.flexible).reduce((s, c) => s + c.track, 0);
     const name = cols[0];
-    const required = Math.ceil(name.binding + fixed + gap * (cols.length - 1) + padL + padR);
+    const rowBorder = parseFloat(getComputedStyle(row).borderLeftWidth) || 0;
+    const scrollbar = rail ? Math.max(0, document.querySelector('#ranking').offsetWidth - document.querySelector('#ranking').clientWidth) : 0;
+    const required = Math.ceil(name.binding + fixed + gap * (cols.length - 1) + padL + padR + rowBorder + scrollbar);
 
     // What the reader actually sees, for the columns that overflow.
     const cut = [];
@@ -321,7 +323,7 @@ const LEDGER = `(() => {
     return {
       railW: rail ? Math.round(rail.getBoundingClientRect().width) : null,
       tracks: cols.map(c => c.track),
-      gap, padL, padR,
+      gap, padL, padR, rowBorder, scrollbar, rows: rows.length,
       nameFont: (() => { const s = getComputedStyle(row.querySelector('.rank-name')); return s.fontWeight + ' ' + s.fontSize + ' ' + s.fontFamily; })(),
       cols: cols.map(c => ({ ...c, flexible: undefined })),
       nameNeed: name.binding,
@@ -380,6 +382,7 @@ const fitOf = d => d.rankFit && ({
   rail: d.rankFit.railW,
   tracks: d.rankFit.tracks,
   gap: d.rankFit.gap, padL: d.rankFit.padL, padR: d.rankFit.padR,
+  rowBorder: d.rankFit.rowBorder, scrollbar: d.rankFit.scrollbar, rows: d.rankFit.rows,
   nameFont: d.rankFit.nameFont,
   nameNeed: d.rankFit.nameNeed,
   cut: d.rankFit.cutCount,

@@ -129,8 +129,8 @@ check('the published bands match the code', SIZE_MODE.COARSE_MAX === 0.8 && SIZE
 const dustProfile = aerosolProfile({ aod_440: 0.60, aod_500: 0.62, aod_675: 0.55, aod_870: 0.50 })
 const dustGuidance = guidanceFor(dustProfile)
 check('a near-flat long baseline reads coarse', dustProfile.mode === 'coarse', `mode=${dustProfile.mode} alpha=${dustProfile.alpha}`)
-check('dust guidance warns that a PM2.5 respirator does not help coarse particles',
-  /does little against particles this size/i.test(dustGuidance?.act_en ?? ''))
+check('dust guidance keeps respirator protection and optical exposure limits honest',
+  /well-fitting, approved N95 filters fine and coarse/i.test(dustGuidance?.act_en ?? '') && /not personal exposure/i.test(dustGuidance?.act_en ?? '') && !/does little/i.test(dustGuidance?.act_en ?? ''))
 check('fine smoke guidance tells the reader an N95 helps', /N95\/FFP2|respirator genuinely helps/i.test(
   guidanceFor(aerosolProfile({ aod_440: 0.40, aod_500: 0.38, aod_675: 0.10, aod_870: 0.05 })).act_en))
 check('coarse and fine guidance are genuinely different advice',
