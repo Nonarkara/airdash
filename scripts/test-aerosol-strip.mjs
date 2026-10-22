@@ -130,5 +130,94 @@ check('no tr() call is handed a single argument',
   !/tr\(\.\.\.\[[^\]]*\]\)/.test(src) || !/\[\s*g\?\.act_/.test(src),
   'tr(...[x]) passes one arg, so the English branch returns undefined')
 
+// ── the MEASURED size, per province ───────────────────────────────────────
+//
+// The optical strip above answers "what is the aerosol regime?" for the whole
+// country. Air4Thai publishes PM10 as well as PM2.5, so the coarse fraction
+// of PM10 is a DIRECT measurement at a ground station — and it is per-province,
+// which the optical signal is not.
+//
+// The danger this creates is two answers to one question. The panel picks ONE:
+// the measured size where the province has one, the optical signal where it
+// does not. These checks hold that, and that the measured strip claims only
+// what was measured.
+const particle = (over = {}) => ({
+  mode: 'coarse',
+  coarse_fraction: 0.558,
+  pm25: 15.9,
+  pm10: 36,
+  ratio: 2.26,
+  label_th: 'ส่วนใหญ่ของมวลฝุ่นที่วัดได้เป็นฝุ่นหยาบ (ใหญ่กว่า 2.5 ไมครอน)',
+  label_en: 'Most of the measured particulate mass is coarse (larger than 2.5 µm)',
+  act_th: 'ฝุ่นหยาบจะไม่ผ่านหน้ากาก แต่จะรบกวนตา คอ และจมูกมาก',
+  act_en: 'Coarse dust does not reach deep into the lungs, but it irritates eyes, throat and nose hard.',
+  station: '25t',
+  observed_at: '2026-10-22T20:00',
+  ...over,
+})
+
+/** Evaluate measuredSizeStrip(pa) in the same vm context. */
+function renderMeasured(pa) {
+  const ctx = vm.createContext({
+    console,
+    setTimeout, clearTimeout, AbortSignal: { timeout: () => ({}) },
+    store: { lang: 'en' },
+    esc: s => String(s ?? ''),
+    escapeHtml: s => String(s ?? ''),
+    document: { querySelector: () => null },
+    window: { dispatchEvent() {} },
+    CustomEvent: class { constructor(t, o) { this.type = t; Object.assign(this, o) } },
+    fetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }),
+  })
+  vm.runInContext(src.replace(/^import .*$/gm, '').replace(/\bexport /g, ''), ctx)
+  return vm.runInContext(`measuredSizeStrip(${JSON.stringify(pa)})`, ctx)
+}
+
+const measured = renderMeasured(particle())
+check('the measured strip names the mode it measured', /data-state="coarse"/.test(measured) && measured.includes('Most of the measured particulate mass is coarse'))
+check('the measured strip publishes the coarse fraction', /coarse fraction 56%/.test(measured), measured.slice(0, 200))
+check('the measured strip shows the two numbers it was made from', /PM10 36 µg\/m³ = 2\.3× PM2\.5/.test(measured), measured.slice(0, 200))
+check('the measured strip names the station it was measured at', /ground station 25t/.test(measured))
+check('the measured strip publishes when the reading was taken', /2026-10-22 20:00/.test(measured))
+check('the measured strip says it is NOT a provincial average', /not a provincial average/i.test(measured))
+check('the measured strip does NOT claim where the dust came from',
+  !/mineral dust|volcanic|biomass|salt/i.test(measured),
+  'a mass ratio cannot identify the source of the coarse mass')
+check('the measured strip does NOT carry the optical alpha', !/α|440\/675/i.test(measured),
+  'alpha is a different quantity; showing it here would be a second answer')
+check('the measured strip does NOT carry the optical national-scope claim',
+  !/national-scale signal/i.test(measured), 'that sentence describes the optical strip, not this one')
+check('the measured strip says it is measured IN this province',
+  /measured at a ground station in this province/i.test(measured))
+const optical = await renderWith(payload('coarse'))
+const headingOf = s => (s.match(/<h4>([^<]*)</) || [])[1]
+check('the measured strip and the optical strip have DIFFERENT headings',
+  headingOf(measured) && headingOf(optical) && headingOf(measured) !== headingOf(optical),
+  `measured "${headingOf(measured)}" vs optical "${headingOf(optical)}"`)
+
+// An absent measurement must render NOTHING, so the optical strip stands in.
+// "Absent" must never read as "fine".
+check('a province with no measurement renders no strip at all', renderMeasured(null) === '')
+check('a measurement with no mode renders no strip', renderMeasured(particle({ mode: null })) === '')
+check('a measurement with no label renders no strip', renderMeasured(particle({ label_en: null })) === '')
+check('a measurement with no station renders no strip', renderMeasured(particle({ station: null })) === '')
+
+// ── the wiring: one answer, never two ─────────────────────────────────────
+const loadBody = src.slice(src.indexOf('async function load('), src.indexOf('\n  draw()'))
+check('the science payload is fetched', /\/api\/science/.test(src))
+check('the science fetch is NOT inside the province evidence promise',
+  (src.match(/Promise\.allSettled\(\[[^\]]*\]/)?.[0] ?? '').includes('/api/science') === false,
+  'a science outage must not make the panel declare its evidence incomplete')
+check('a failed science fetch degrades instead of throwing',
+  /\.catch\(\(\) => \{ science = \{ provinces: \[\] \}/.test(src))
+check('the measured size is looked up by the SELECTED province code',
+  /measuredByCode\.get\(selected\)/.test(loadBody),
+  'the reading must belong to the province on screen')
+check('the measured strip is preferred and the optical signal is the FALLBACK',
+  /measuredSizeStrip\(measuredByCode\.get\(selected\)\)\s*\|\|\s*await aerosolStrip\(\)/.test(loadBody),
+  'one question must get one answer')
+check('the two strips are never rendered together',
+  !/measuredSizeStrip\([^)]*\)\s*\+\s*await aerosolStrip\(\)/.test(loadBody))
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

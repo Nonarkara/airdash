@@ -1,8 +1,8 @@
 // Preparation aid: observed/estimated PM, model outlook and upwind-fire evidence
 // stay separate. No smoke arrival time or clean-air destination is invented.
-import { store } from '../state.js?v=2.4.112'
-import { escapeHtml as esc } from '../fmt.js?v=2.4.112'
-import { windBasisLabel, windRowText } from '../wind.js?v=2.4.112'
+import { store } from '../state.js?v=2.4.113'
+import { escapeHtml as esc } from '../fmt.js?v=2.4.113'
+import { windBasisLabel, windRowText } from '../wind.js?v=2.4.113'
 const tr = (th,en) => store.lang === 'th' ? th : en
 const num = v => Number.isFinite(v) ? v.toLocaleString('en-GB',{maximumFractionDigits:1}) : '—'
 export function planningState(pm, forecast, fires) {
@@ -53,6 +53,35 @@ async function aerosolEvidence() {
     .finally(() => { aeroPending = null })
   return aeroPending
 }
+
+// ── The MEASURED particle size, per province ──────────────────────────────
+//
+// AERONET above answers "what is the aerosol regime?" for the whole
+// country. It cannot answer "what are the particles IN this province?".
+// Air4Thai can: it publishes PM10 as well as PM2.5, so the coarse fraction
+// of PM10 (1 − PM2.5/PM10) is a DIRECT measurement at a ground station,
+// published with its station and its time.
+//
+// The two are DIFFERENT measurements and are never shown as two answers to
+// the same question. Where the province has a measured size, THAT is the
+// strip; where it does not, the national optical signal stands in and says
+// so. One question, one answer, always labelled with where it came from.
+//
+// A separate loader with its own cache and its own failure handling: a
+// science outage must degrade to the optical signal, never blank the
+// province plan.
+let science = null, scienceAt = 0, sciencePending = null
+const SCIENCE_TTL = 10 * 60e3
+async function scienceEvidence() {
+  if (science && Date.now() - scienceAt < SCIENCE_TTL) return science
+  if (sciencePending) return sciencePending
+  sciencePending = fetch('/api/science', { signal: AbortSignal.timeout(15000) })
+    .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json() })
+    .then(d => { science = d; scienceAt = Date.now(); return d })
+    .catch(() => { science = { provinces: [] }; scienceAt = Date.now(); return science })
+    .finally(() => { sciencePending = null })
+  return sciencePending
+}
 const MODE_LABEL = {
   coarse: ['อนุภาคหยาบ — ฝุ่นดิน/ทราย', 'Coarse particles — mineral dust'],
   mixed:  ['อนุภาคผสม — ทั้งหยาบและละเอียด', 'Mixed particles — fine and coarse'],
@@ -87,9 +116,54 @@ async function aerosolStrip() {
       'If these particles are coarse, the N95 recommended above does very little against them. Car windows, bringing laundry in early, and protecting your eyes matter more than a respirator here.'))}</p>` : ''}
     <p class="muted">${esc(tr('วัดที่', 'Measured at'))}: ${esc(where)} · ${esc(ageText(d.reading_age_h))}</p>
     <p class="muted">${esc(tr('นี่คือขนาดอนุภาคเชิงคุณภาพ ไม่ใช่ค่าความเข้มข้น µg/m³ — ค่าฝุ่นยังมาจากสถานีพื้นดิน และเป็นสัญญาณระดับประเทศ ไม่ใช่รายจังหวัด',
-      'This is a qualitative particle size, not a µg/m³ concentration — the concentration still comes from the ground stations. It is a national-scale signal from a few instruments, not a per-province measurement.'))}</p>
+      'This is a qualitative particle size, not a µg/m³ concentration — the concentration still comes from the ground stations. This is a national-scale signal from a few instruments, not a per-province measurement.'))}</p>
   </aside>`
-} 
+}
+
+// The MEASURED strip for one province. Same question as the optical strip
+// above, answered from a ground station instead of from five instruments.
+//
+// The label, the bands and the precautions all come from the server with
+// the measurement — this function only lays them out. It never computes a
+// band, never invents a concentration, and says nothing about where the
+// dust came from: a mass ratio cannot tell mineral dust from biomass salt
+// from resuspended road grit.
+function measuredSizeStrip(pa) {
+  // A station is REQUIRED. The fraction is the station's measurement, so a
+  // row without one is not a measurement anyone can check — and a bare
+  // "coarse 56%" with nothing behind it is exactly the kind of number that
+  // should not be published. A province with no usable row falls back to
+  // the optical signal, which says what it is.
+  if (!pa || !pa.mode || !pa.station) return ''
+  const th = store.lang === 'th'
+  const label = th ? pa.label_th : pa.label_en
+  const act = th ? pa.act_th : pa.act_en
+  if (!label || !act) return ''
+  const coarse = Number.isFinite(pa.coarse_fraction) ? Math.round(pa.coarse_fraction * 100) : null
+  // The two numbers the fraction was made from, and the ratio between
+  // them — shown ONLY because a station actually measured them.
+  const measured = (pa.station && Number.isFinite(pa.pm10) && Number.isFinite(pa.ratio))
+    ? (th
+        ? `PM10 ${num(pa.pm10)} µg/m³ = ${num(pa.ratio)}× PM2.5`
+        : `PM10 ${num(pa.pm10)} µg/m³ = ${num(pa.ratio)}× PM2.5`)
+    : ''
+  const where = pa.station
+    ? (th ? `วัดที่สถานีพื้นดิน ${pa.station}` : `measured at ground station ${pa.station}`)
+    : ''
+  const when = pa.observed_at
+    ? (th ? `เมื่อ ${String(pa.observed_at).replace('T', ' ')}` : `at ${String(pa.observed_at).replace('T', ' ')}`)
+    : ''
+  const meta = [where, when].filter(Boolean).join(' · ')
+  return `<aside class="haze-plan-aerosol" data-state="${esc(pa.mode)}" data-source="measured">
+    <h4>${esc(tr('อนุภาคในอากาศ — วัดที่สถานีพื้นดินในจังหวัดนี้', 'Particle size — measured at a ground station in this province'))}</h4>
+    <p class="haze-plan-aerosol-verdict"><strong>${esc(label)}</strong>${coarse === null ? '' : ` · ${esc(tr('สัดส่วนฝุ่นหยาบ', 'coarse fraction'))} ${coarse}%`}</p>
+    ${measured ? `<p>${esc(measured)}</p>` : ''}
+    <p>${esc(act)}</p>
+    ${meta ? `<p class="muted">${esc(meta)}</p>` : ''}
+    <p class="muted">${esc(tr('นี่คือสัดส่วนของมวลฝุ่นหยาบที่วัดได้จากสถานีพื้นดินที่รายงานทั้ง PM2.5 และ PM10 — ไม่ใช่ค่าความเข้มข้นเฉลี่ยของจังหวัด และไม่ได้บอกที่มาของฝุ่น',
+      'This is the fraction of coarse particulate MASS measured at a ground station reporting both PM2.5 and PM10 — not a provincial average concentration, and it does not say where the dust came from'))}</p>
+  </aside>`
+}
 export function hazePlanBlock(snapshot) {
   const host = document.createElement('section')
   host.className='haze-plan'
@@ -99,9 +173,14 @@ export function hazePlanBlock(snapshot) {
 }
 async function load(host,snapshot) {
   const lang=store.lang
-  const results=await planningEvidence()
+  // The science payload carries the measured particle size per province.
+  // It is fetched alongside the province evidence but is NOT part of it:
+  // its failure must not make the panel declare its evidence incomplete,
+  // and it must never delay the province plan above it.
+  const [results,sci]=await Promise.all([planningEvidence(),scienceEvidence()])
   if (!host.isConnected || store.lang!==lang) return
   const [smoke,forecast,rain]=results.map(r=>r.status==='fulfilled'?r.value:null)
+  const measuredByCode=new Map((sci?.provinces??[]).filter(p=>p?.particle).map(p=>[p.code,p.particle]))
   const sm=new Map((smoke?.available ? smoke.provinces : []).map(p=>[p.code,p]))
   const fc=new Map((forecast?.provinces??[]).map(p=>[p.code,p]))
   const rn=new Map((rain?.provinces??[]).map(p=>[p.province_code,p]))
@@ -157,8 +236,14 @@ async function load(host,snapshot) {
     }
     // Last, and off the critical path: a slow or empty AERONET can never delay
     // or blank the province plan above it.
+    //
+    // ONE particle-size answer, never two. Where the province has a measured
+    // size (PM10 against PM2.5 at its own ground station) that is the strip,
+    // because it is a measurement OF this province. Where it does not, the
+    // national optical signal stands in and says so. The two are different
+    // quantities, so showing both would be two answers to one question.
     const slot = host.querySelector('[data-aerosol-slot]')
-    if (slot) slot.outerHTML = await aerosolStrip()
+    if (slot) slot.outerHTML = measuredSizeStrip(measuredByCode.get(selected)) || await aerosolStrip()
   }
   draw()
 }

@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.113] — 2026-10-22 — the preparation panel knew the size of the dust, in the wrong scope
+
+**The panel is per-province. Its particle-size reading was not.** The haze preparation panel — *เตรียมรับหมอกควัน · พื้นที่ไหนควรติดตาม* — opens with a province dropdown and answers four questions for the province you picked: how bad is the pollution now, what does the model say, where is the fire and which way is the wind, will the rain help. Below them it told you the size of the particles.
+
+That reading was the **Ångström exponent**: the optical size distribution over AERONET's five instruments, a national daily aggregate. Its own caption said so — *"a national-scale signal from a few instruments, not a per-province measurement"* — inside a panel that is entirely about one province. It was a good measurement in the wrong scope for this box.
+
+**Now the panel answers with the province's own measurement.** Air4Thai publishes PM10 as well as PM2.5, so the coarse fraction of PM10 (1 − PM2.5/PM10) is a direct measurement at a ground station *in that province*, published with its station and its time. Surin — the worst province on the board right now, at 950 µg/m³ — measures **56% coarse** at station 25t: most of the particulate mass there is the coarse stuff that irritates eyes, throat and nose, settles fast, and that a PM2.5 respirator does little about. That is what the panel now says, beside the precautions that follow from it.
+
+**One question, one answer.** The two measurements are deliberately not shown together: they have different scopes, different quantities and different bands, so showing both would be two answers to one question. Where the province has a measured size (34 of 77 today) that is the strip; where it does not, the optical signal stands in and keeps saying that it is national. The two strips carry different headings, so a reader can always tell which measurement they are looking at.
+
+**Absent reads as absent.** A province row with no station is not a measurement anyone can check, so the strip renders **nothing** and the optical signal stands in. The first version of this rendered a bare "coarse 56%" with nothing behind it — precisely the kind of number that should not be published — and the guard now holds the station as required. The science payload is fetched by its own loader with its own cache: a science outage degrades to the optical signal and never makes the panel declare its evidence incomplete.
+
+**Guards.** `scripts/test-aerosol-strip.mjs` grew from 33 checks to 54, and nine mutations were proven red: the station stops being required, the optical strip preferred over the measured one, both rendered together, the reading attached to the first row instead of the selected province, the science fetch moved into the province evidence promise, a failed science fetch throwing instead of degrading, the strip claiming the dust was mineral dust, the strip showing the optical α as well, and the coarse fraction dropped. `scripts/ops/check-haze-strip.mjs` drives a real browser, picks a province with a measurement and one without, and asserts which strip answers and that only one is on screen.
+
+**Two recorded mistakes of my own, because both would have shipped a check that passes for the wrong reason.** The live check first asserted on an English phrase while the page was in Thai, and failed for no reason except the language; it now asserts on the **values** (the station id, the fraction, the PM10), which do not change with the language. And the pick ran before the province dropdown existed, so it silently read the *default* province and passed for the wrong one — the script now waits for the control.
+
+---
+
 ## [2.4.112] — 2026-10-22 — the table was given the narrowest column on the page
 
 **The province ranking is the left rail's whole job, and it had the least room.** The rail layout is three columns — ranking, map, prose panel — and the widths were `--rail-l: 300px` against `--rail-r: 360px` at every desktop breakpoint. The ranking is a **five-column numeric table** whose first column is a province name; the right rail holds prose and stat cells, which reflow. The table got the narrower column.

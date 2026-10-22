@@ -8,11 +8,11 @@
 //   - Data bar sorted by score — hottest first, with Δ vs #1
 //   - Band colors use the real keys (normal/low/watch/elevated/high)
 
-import { on, store } from '../state.js?v=2.4.112'
-import { tr, BAND } from '../i18n.js?v=2.4.112'
-import { fmtNum, escapeHtml } from '../fmt.js?v=2.4.112'
-import { getJson } from '../cache.js?v=2.4.112'
-import { windRowText } from '../wind.js?v=2.4.112'
+import { on, store } from '../state.js?v=2.4.113'
+import { tr, BAND } from '../i18n.js?v=2.4.113'
+import { fmtNum, escapeHtml } from '../fmt.js?v=2.4.113'
+import { getJson } from '../cache.js?v=2.4.113'
+import { windRowText } from '../wind.js?v=2.4.113'
 
 const TYPE_ICON = {
   province: '🏛', district: '🏘', subdistrict: '🏡',
