@@ -131,6 +131,21 @@ const dustGuidance = guidanceFor(dustProfile)
 check('a near-flat long baseline reads coarse', dustProfile.mode === 'coarse', `mode=${dustProfile.mode} alpha=${dustProfile.alpha}`)
 check('dust guidance keeps respirator protection and optical exposure limits honest',
   /well-fitting, approved N95 filters fine and coarse/i.test(dustGuidance?.act_en ?? '') && /not personal exposure/i.test(dustGuidance?.act_en ?? '') && !/does little/i.test(dustGuidance?.act_en ?? ''))
+// THE THAI COPY IS THE PRIMARY LANGUAGE for this audience, so it has to be
+// held to the same three claims as the English. The check above cannot see
+// it: a Thai string reading "a PM2.5 respirator does little against
+// particles this size" — the claim that was WRONG and shipped until
+// 2.4.114 — passed every guard in this file. Verified by planting it.
+const thCoarse = dustGuidance?.act_th ?? ''
+check('THAI dust guidance keeps respirator protection and exposure limits honest',
+  /ช่วยกรองอนุภาคทั้งละเอียดและหยาบ/.test(thCoarse)
+  && /ไม่ใช่การวัดการรับฝุ่นของแต่ละคน/.test(thCoarse)
+  && !/ไม่ผ่านหน้ากาก|ช่วยได้น้อยมาก|แทบไม่ช่วย/.test(thCoarse),
+  `th: ${thCoarse.slice(0, 90)}`)
+check('NO Thai guidance dismisses the respirator',
+  ['coarse', 'mixed', 'fine'].every(m =>
+    !/ไม่ผ่านหน้ากาก|ช่วยได้น้อยมาก|แทบไม่ช่วย/.test(guidanceFor({ mode: m })?.act_th ?? '')),
+  'a respirator that is certified and well-fitting filters coarse particles; what coarse dust does badly is irritate and settle')
 check('fine smoke guidance tells the reader an N95 helps', /N95\/FFP2|respirator genuinely helps/i.test(
   guidanceFor(aerosolProfile({ aod_440: 0.40, aod_500: 0.38, aod_675: 0.10, aod_870: 0.05 })).act_en))
 check('coarse and fine guidance are genuinely different advice',

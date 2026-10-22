@@ -1,49 +1,49 @@
 {
-  "note": "Measured through CUA on the candidate with the real edge snapshot; all77 province rows at1440x900. Includes scrollbar and urgency-stripe costs.",
+  "note": "Written by scripts/ops/probe-first-screen.mjs — a live browser measurement of the ranking table at 1440x900. The guard scripts/test-rail-width.mjs reads this; re-run the probe after changing the table CSS or the name font.",
   "viewport": {
     "w": 1440,
     "h": 900
   },
-  "en": {
-    "cut": 0,
-    "cutNames": [],
-    "gap": 4,
-    "measuredAt": "2026-10-22T18:15:37.850Z",
-    "nameFont": "600 14px Jost, Prompt, sans-serif",
-    "nameNeed": 165,
-    "padL": 8,
-    "padR": 8,
+  "th": {
     "rail": 375,
-    "rowBorder": 3,
-    "rows": 77,
-    "scrollbar": 8,
     "tracks": [
-      175,
+      183,
       58,
       40,
       30,
       28
-    ]
-  },
-  "th": {
-    "cut": 0,
-    "cutNames": [],
+    ],
     "gap": 4,
-    "measuredAt": "2026-10-22T18:15:40.349Z",
+    "padL": 8,
+    "padR": 8,
+    "rowBorder": 3,
+    "scrollbar": 0,
+    "rows": 77,
     "nameFont": "600 14px Jost, Prompt, sans-serif",
     "nameNeed": 106,
-    "padL": 8,
-    "padR": 8,
+    "cut": 0,
+    "cutNames": [],
+    "measuredAt": "2026-10-22T19:49:35.344Z"
+  },
+  "en": {
     "rail": 375,
-    "rowBorder": 3,
-    "rows": 77,
-    "scrollbar": 8,
     "tracks": [
-      175,
+      183,
       58,
       40,
       30,
       28
-    ]
+    ],
+    "gap": 4,
+    "padL": 8,
+    "padR": 8,
+    "rowBorder": 3,
+    "scrollbar": 0,
+    "rows": 77,
+    "nameFont": "600 14px Jost, Prompt, sans-serif",
+    "nameNeed": 165,
+    "cut": 0,
+    "cutNames": [],
+    "measuredAt": "2026-10-22T19:49:35.354Z"
   }
 }

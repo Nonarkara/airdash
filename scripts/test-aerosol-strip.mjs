@@ -39,11 +39,11 @@ const payload = (mode, alpha = 1.2, ageH = 30) => ({
 })
 
 /** Build a context whose fetch returns `d`, and evaluate aerosolStrip() in it. */
-function renderWith(d) {
+function renderWith(d, lang = 'en') {
   const ctx = vm.createContext({
     console,
     setTimeout, clearTimeout, AbortSignal: { timeout: () => ({}) },
-    store: { lang: 'en' },
+    store: { lang },
     esc: s => String(s ?? ''),
     escapeHtml: s => String(s ?? ''),
     document: { querySelector: () => null },
@@ -77,6 +77,18 @@ check('coarse does not dismiss respirators based on optical size',
   !/does very little|matter more than a respirator/i.test(coarse) && /filters both fine and coarse/i.test(coarse))
 check('coarse protection explanation links official guidance', coarse.includes('https://www.cdc.gov/niosh/ppe/php/community-respirators-masks/'))
 check('fine mode does not carry the coarse-only explanation', !/National particle-size evidence cannot determine/i.test(fine))
+
+// The same claim, in the language most of the readers are using. The
+// English check above cannot see the Thai string, and a Thai string
+// dismissing the respirator shipped once without any guard noticing.
+const coarseTh = await renderWith(payload('coarse', 0.4), 'th')
+check('THAI coarse does not dismiss respirators based on optical size',
+  !/ไม่ผ่านหน้ากาก|ช่วยได้น้อยมาก|แทบไม่ช่วย/.test(coarseTh)
+  && /ทั้งละเอียดและหยาบ/.test(coarseTh),
+  coarseTh.slice(0, 140))
+const fineTh = await renderWith(payload('fine', 0.4), 'th')
+check('THAI fine mode does not carry the coarse-only explanation',
+  !/ระดับประเทศไม่ใช้ตัดสินว่าหน้ากากได้ผลหรือไม่/.test(fineTh))
 
 
 const empty = await renderWith({ reading_age_h: null, aerosol: {} })
