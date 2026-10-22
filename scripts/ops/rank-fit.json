@@ -1,0 +1,43 @@
+{
+  "note": "Written by scripts/ops/probe-first-screen.mjs — a live browser measurement of the ranking table at 1440x900. The guard scripts/test-rail-width.mjs reads this; re-run the probe after changing the table CSS or the name font.",
+  "viewport": {
+    "w": 1101,
+    "h": 800
+  },
+  "th": {
+    "rail": 375,
+    "tracks": [
+      171,
+      58,
+      40,
+      30,
+      28
+    ],
+    "gap": 6,
+    "padL": 10,
+    "padR": 10,
+    "nameFont": "600 14px Jost, Prompt, sans-serif",
+    "nameNeed": 106,
+    "cut": 0,
+    "cutNames": [],
+    "measuredAt": "2026-10-22T14:02:10.998Z"
+  },
+  "en": {
+    "rail": 375,
+    "tracks": [
+      171,
+      58,
+      40,
+      30,
+      28
+    ],
+    "gap": 6,
+    "padL": 10,
+    "padR": 10,
+    "nameFont": "600 14px Jost, Prompt, sans-serif",
+    "nameNeed": 165,
+    "cut": 0,
+    "cutNames": [],
+    "measuredAt": "2026-10-22T14:02:11.000Z"
+  }
+}

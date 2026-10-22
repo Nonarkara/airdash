@@ -17,11 +17,25 @@
 .rank-row.b-unknown { border-left-color: var(--ink-mid); }
 .rank-summary, .rank-columns {
   display: grid;
-  /* The PM2.5 column carries its own unit (µg/m³) in the header cell, so it
-     is wider than a bare number column; the Index column holds a 0–100
-     integer and was 45px for 3 glyphs, which is more than it needs. The
-     trade is 3px off the province name, not 10. */
-  grid-template-columns: minmax(0, 1fr) 56px 38px 38px 34px;
+  /* EVERY FIXED TRACK IS SIZED BY THE CONTENT IT HOLDS — measured in the
+     browser (scripts/ops/probe-first-screen.mjs → rankFit), not guessed:
+
+       PM2.5 µg/m³   56px   the values under it are ≤ 3 digits (29px)
+       เฝ้าระวัง      38px   the values under it are ≤ 2 digits (18px)
+       สังคม         28px   the values under it are ≤ 2 digits (18px)
+       ดัชนี / Index 25px   the values under it are ≤ 3 digits (25px)
+
+     The three score columns were sized at 38px and 34px for symmetry, and
+     the digits under them are half that wide — so the table was paying 25px
+     for room no glyph ever used, and the province name paid for it. Every
+     track now carries its own content plus 2–3px of headroom, which hands
+     10px back to the name column.
+
+     The name column is `minmax(0, 1fr)`: it takes whatever the rail leaves.
+     That is only safe if the RAIL is big enough — see the --rail-l ladder
+     in layout.css and scripts/test-rail-width.mjs, which fails if the rail
+     ever drops below what the longest province name needs. */
+  grid-template-columns: minmax(0, 1fr) 58px 40px 30px 28px;
   column-gap: 6px; align-items: center;
   padding: 6px 10px;
 }

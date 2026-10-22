@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.112] — 2026-10-22 — the table was given the narrowest column on the page
+
+**The province ranking is the left rail's whole job, and it had the least room.** The rail layout is three columns — ranking, map, prose panel — and the widths were `--rail-l: 300px` against `--rail-r: 360px` at every desktop breakpoint. The ranking is a **five-column numeric table** whose first column is a province name; the right rail holds prose and stat cells, which reflow. The table got the narrower column.
+
+Its name column is `minmax(0, 1fr)`, so it took whatever the rail left after the four fixed tracks — **86px**. Measured against the real names in the real font, that is less than "พระนครศรีอยุธยา" (106px) and less than half of "Phra Nakhon Si Ayutthaya" (165px). So the table was truncating **3 of 77 Thai names and 15 of 77 English names** — Bangkok ("กรุงเทพมหานคร", 99px) and Ayutthaya among them, cut off mid-word. The province a reader scans for is the one that disappears.
+
+**THE TRACKS WERE PAYING FOR SPACE NOTHING USED.** Measured per column, each fixed track was sized by its *header*, not by its digits: the PM2.5 column is 56px wide for a 3-digit value that needs 29px, and the three score columns were given 38px and 34px for values that are 18–25px. Ten pixels of that went back to the name column.
+
+**THE RAIL IS NOW SIZED BY THE TABLE.** The left rail keeps its budget at every desktop width — `--rail-l: 375px` — which is the name column (175px: the longest name in *either* language, plus headroom) + the tracks (156px) + the gaps (24px) + the padding (20px). The **right rail yields first** when the window narrows, because prose wraps and a table column does not. The map gives up 24px at 1440 and still has 705px.
+
+**THE INSTRUMENT WAS BLIND TO THE DESKTOP, AND THAT MATTERED.** The first-screen ledger labelled each band with the *first* non-empty column it sampled, so on a multi-column desktop the left rail always won and the map and the right rail were structurally invisible — a 1440px screen could be reported as a single region. It now labels a band by the region that owns the **most** of it and prints the full column mix, so a band split across columns says so. The same ledger also measured each column's true text width with the canvas, per node, because a block-level grid item reports its *track* width and would have told us every column was exactly full.
+
+**A GUARD THAT CHECKS A MEASUREMENT, NOT A CONSTANT.** The budget is a font metric, so it cannot be typed by hand and trusted. `scripts/ops/probe-first-screen.mjs` now measures the table in **both languages** and writes `scripts/ops/rank-fit.json`; `scripts/test-rail-width.mjs` (8 checks) combines that measurement with the CSS, recomputes the budget, and fails if any `--rail-l` drops below it. It also fails if the measurement is **stale** — the artifact records the font and the tracks it was taken at, so changing either forces a re-measure instead of quietly validating a number that no longer applies. Seven mutations were proven red: the rail shrunk back to 300px, a track widened, the name font grew, the name column stopped being flexible, the gap changed, the measurement recorded a cut name, and the English measurement was missing.
+
+**Recorded, because it is the way this kind of guard fails silently:** the first version of that guard **passed for the wrong reason**. It read the CSS with a regex that missed any declaration following a comment block, so it computed the fixed tracks as **zero** and the budget as 189px — and 375px sailed past 189px. A guard that reads zero and then reports success is worse than no guard, because it converts a parsing mistake into a false all-clear. The declarations are now read by stripping comments first and splitting on `;`.
+
+**Also recorded:** a budget measured in one language proves nothing. The Thai names top out at 106px and the English at 165px; the first version of the check would have passed on the Thai measurement alone while fifteen English names were being cut. The measurement covers both, and the guard fails if either language's half is missing.
+
+---
+
 ## [2.4.111] — 2026-10-22 — the dust you can see is not the dust that reaches your lungs
 
 **Every health band in AirDash is keyed to PM2.5 — the fine fraction.** The story page's personas therefore gave fine-particle advice only, and the air that a person actually sees and feels was nowhere in the story. That is now measured rather than assumed.

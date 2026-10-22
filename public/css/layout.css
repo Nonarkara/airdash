@@ -769,7 +769,12 @@ html[lang="en"] .appfooter-line .en { display: inline; }
   .brand .sub { display: none; }
   .brand .sub-short { display: block; }
   .national-secondary { display: none; }
-  :root { --rail-l: 300px; --rail-r: 360px; }
+  /* The LEFT rail keeps its table budget (--rail-l, set in tokens.css) at
+     every desktop width. Only the RIGHT rail yields as the window narrows:
+     its content is prose and stat cells, which reflow, while a table
+     column does not. Shrinking --rail-l here is what cut the province
+     names — see the budget note in tokens.css. */
+  :root { --rail-l: 375px; --rail-r: 360px; }
 }
 @media (max-width: 1480px) {
   .searchbox { min-width: 180px; max-width: 300px; }
@@ -777,18 +782,20 @@ html[lang="en"] .appfooter-line .en { display: inline; }
 }
 @media (max-width: 1380px) {
   /* Keep the about label — operators look for it specifically. */
-  :root { --rail-l: 300px; --rail-r: 360px; }
+  :root { --rail-l: 375px; --rail-r: 360px; }
 }
 @media (max-width: 1280px) {
   .searchbox { min-width: 160px; max-width: 260px; }
   .danger { min-width: 78px; padding: 4px 8px 0 8px; }
   .danger-num { font-size: 22px; }
-  :root { --rail-l: 300px; --rail-r: 360px; }
+  :root { --rail-l: 375px; --rail-r: 360px; }
 }
 @media (max-width: 1180px) {
   #ask-btn .ask-lbl { display: none !important; }
   #ask-btn { padding: 4px 8px; }
-  :root { --rail-l: 280px; --rail-r: 320px; }
+  /* The narrowest three-column layout. The table still gets its budget;
+     the prose rail gives up 20px so the map keeps a usable canvas. */
+  :root { --rail-l: 375px; --rail-r: 300px; }
   .searchbox { min-width: 140px; max-width: 220px; }
 }
 @media (max-width: 1080px) {

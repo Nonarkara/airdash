@@ -1,7 +1,7 @@
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.111'
-import { escapeHtml as esc } from './fmt.js?v=2.4.111'
-import { readPreference, writePreference } from './preferences.js?v=2.4.111'
-import { windArrowSvg, windRowText, windView } from './wind.js?v=2.4.111'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.112'
+import { escapeHtml as esc } from './fmt.js?v=2.4.112'
+import { readPreference, writePreference } from './preferences.js?v=2.4.112'
+import { windArrowSvg, windRowText, windView } from './wind.js?v=2.4.112'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]

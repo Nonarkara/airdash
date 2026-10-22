@@ -75,7 +75,24 @@
      overlay, mirroring FloodDash's decision). */
   --header-h: 68px;   /* v2 single-row instrument panel — was 96px (two rows), then 80px */
   --ticker-h: 30px;
-  --rail-l: 324px;
+  /* THE RAIL LADDER IS A CONTENT BUDGET, NOT A PREFERENCE.
+     The left rail holds the ranking table: a province name plus four
+     numbers. Its name column is `minmax(0, 1fr)`, so it gets whatever the
+     rail leaves after the four fixed tracks — and at 300px that was 86px,
+     less than "พระนครศรีอยุธยา" (106px) and far less than "Phra Nakhon Si
+     Ayutthaya" (165px). Three Thai names and fifteen English ones were cut
+     off mid-word, Bangkok among them.
+
+     The left rail is therefore sized to what the table needs —
+       name 175px (the longest name in either language, + headroom)
+     + tracks 156px + gaps 24px + padding 20px = 375px
+     and the RIGHT rail yields first when the window is narrow, because
+     prose wraps and a table does not.
+
+     scripts/test-rail-width.mjs recomputes this budget from the CSS and
+     fails if any --rail-l drops below it. Do not shrink --rail-l without
+     re-running the probe. */
+  --rail-l: 375px;
   --rail-r: 392px;
 
   /* ── 3.0 surface language ─────────────────────────────────────────────
