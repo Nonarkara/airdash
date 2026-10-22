@@ -1,24 +1,24 @@
-import { windArrowSvg, windBasisLabel, windRowText, windView } from './wind.js?v=2.4.109'
-import { escapeHtml } from './fmt.js?v=2.4.109'
-import { moveMap } from './mapView.js?v=2.4.109'
-import { readPreference, writePreference } from './preferences.js?v=2.4.109'
+import { windArrowSvg, windBasisLabel, windRowText, windView } from './wind.js?v=2.4.110'
+import { escapeHtml } from './fmt.js?v=2.4.110'
+import { moveMap } from './mapView.js?v=2.4.110'
+import { readPreference, writePreference } from './preferences.js?v=2.4.110'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.109'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.109'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.109'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.109'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.109'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.109'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.109'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.109'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.109'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.109'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.109'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.109'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.109'
-import { openWindow } from './witness.js?v=2.4.109'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.109'
+import { on, store } from './state.js?v=2.4.110'
+import { tr, LEVEL_NAME } from './i18n.js?v=2.4.110'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.110'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.110'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.110'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.110'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.110'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.110'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.110'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.110'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.110'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.110'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.110'
+import { openWindow } from './witness.js?v=2.4.110'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.110'
 
 const windToggle = {id:'hazeWind',th:'ทิศลมรายจังหวัด + จุดไฟเหนือลม',en:'Province wind field + upwind fire counts',on:false,
   note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where wind blows. Daily dominant forecast, not current wind.',
@@ -44,10 +44,9 @@ function paintWindField(risk) {
     if (!w || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue
     const name = store.lang === 'th' ? p.province_th : p.province_en
     const fires = windFires.get(String(p.province_code))
-    L.marker([p.lat, p.lng], { pane: 'vectors', icon: L.divIcon({
-      className: 'haze-wind-icon', iconSize: [44, 44], iconAnchor: [22, 22],
-      html: windArrowSvg(w.towards, { size: 30 }) +
-            (fires != null ? `<small>${fires}</small>` : ''),
+    L.marker([p.lat, p.lng], { pane: 'windfield', icon: L.divIcon({
+      className: 'haze-wind-icon', iconSize: [20, 20], iconAnchor: [10, 10],
+      html: windArrowSvg(w.towards, { size: 18 }),
     })}).bindTooltip(escapeHtml(
       `${name} · ${windRowText(p, { degrees: true })} · ${windBasisLabel(w.basis)}` +
       (fires != null ? ` · ${fires} ${tr('จุดไฟเหนือลม', 'upwind detections')}` : '') +
@@ -449,6 +448,8 @@ function addLegend() {
       <div class="lrow"><span class="lsw" style="background:var(--th-red)"></span>${tr('รอยเผาภาคเกษตร — สะสมทั้งฤดู ธ.ค.68–เม.ย.69 (ไม่ใช่ไฟวันนี้) เฉพาะภาคเหนือ+กลาง', 'agri burn scars — whole season Dec 25–Apr 26 (not today\'s fires), north+central only')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
       <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>
+      <div class="eyebrow" style="margin-top:6px">${tr('ทิศลมรายจังหวัด', 'PROVINCE WIND')}</div>
+      <div class="lrow"><span class="lrow-arrow">${windArrowSvg(90, { size: 16 })}</span>${tr('ลูกศรชี้ทางที่อากาศเคลื่อนไป (ทิศลมหลักรายวัน ไม่ใช่เส้นทางควัน)', 'arrow points where the air moves (daily dominant direction, not a smoke path)')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ฮีทแมป PM2.5', 'PM2.5 HEAT MAP')}</div>
       <div class="lrow">${tr('สีของแต่ละจุด = ค่า PM2.5 จริงที่สถานีนั้น ไม่ใช่ความหนาแน่นจุด', 'blob colour = the actual PM2.5 at that station, not point density')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('กล้อง CCTV', 'CCTV')}</div>

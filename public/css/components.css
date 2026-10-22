@@ -17,7 +17,11 @@
 .rank-row.b-unknown { border-left-color: var(--ink-mid); }
 .rank-summary, .rank-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px 38px 38px 45px;
+  /* The PM2.5 column carries its own unit (µg/m³) in the header cell, so it
+     is wider than a bare number column; the Index column holds a 0–100
+     integer and was 45px for 3 glyphs, which is more than it needs. The
+     trade is 3px off the province name, not 10. */
+  grid-template-columns: minmax(0, 1fr) 56px 38px 38px 34px;
   column-gap: 6px; align-items: center;
   padding: 6px 10px;
 }
@@ -35,6 +39,9 @@
 .rank-primary { font-weight: 600; }
 .rank-columns { position: sticky; top: 0; z-index: 2; background: var(--paper); color: var(--ink-mid); font-size: 11px; line-height: 1.4; border-bottom: 1px solid var(--rule); }
 .rank-columns > :not(:first-child) { text-align: right; }
+/* The unit rides with the column it measures, at caption weight — a unit is
+   a label, not a second headline. */
+.rank-columns .unit { font-size: 8px; font-weight: 500; letter-spacing: 0; opacity: 0.85; }
 .rank-method { margin: 6px 10px; max-width: 65ch; color: var(--ink-mid); font-size: 12px; line-height: 1.5; }
 .rank-row > .rank-expand { margin: 0; padding: 8px 10px 12px; }
 .rank-metrics-note { margin-bottom: 8px; }
@@ -433,15 +440,33 @@
 .danger-chip.b-high     .dc-band { color: var(--aqi-hazardous); }
 
 /* Watch | Effective Harm sort toggle (ranking rail) */
+.rank-mode-block {
+  /* The switch and the note that explains it are ONE row. The note used to
+     live in the panel head, where it fought the mandated score disclaimer
+     for the same element; here it costs nothing extra, because the block's
+     height is the taller of the two and the note is one line. */
+  display: flex; align-items: center; gap: 8px;
+  margin: 8px 10px 4px;
+}
+.rank-mode-note {
+  flex: 1; min-width: 0; margin: 0;
+  font-size: 10px; line-height: 1.3;
+  color: var(--ink-mid);
+}
 .rank-mode-toggle {
   display: flex;
   gap: 0;
-  margin: 8px 10px 4px;
+  flex: none;
   border: 1px solid var(--rule);
   background: var(--paper-warm);
 }
 .rank-mode-toggle .rmt-btn {
-  flex: 1;
+  /* `flex: 1` means flex-basis: 0, and a flex-basis of 0 makes a
+     shrink-to-fit container size itself to ZERO — the button labels then
+     wrapped and the switch grew to 48px. `auto` keeps the intrinsic width
+     so the switch is as wide as its two labels and the note beside it
+     keeps its own line. */
+  flex: 1 1 auto;
   border: 0;
   background: transparent;
   padding: 6px 8px;
@@ -649,6 +674,31 @@
   font-size: 9.5px; color: var(--ink-low);
   font-family: var(--font-en);
   line-height: 1.4;
+}
+
+/* PHONE: the national action card was TWO boxes for one idea — a solid card
+   carrying the level, then a dashed sub-box carrying the action sentence.
+   Two borders, two shapes, and the task-relevant line ("check your own
+   province's dust twice a day") was the one boxed in dashes, below the
+   conclusion. It is ONE block now: the level on a single line, the action
+   directly under it in the same weight, the "what to do?" toggle still
+   opening the checklist. Measured on a 390px phone: 80px → 48px. */
+@media (max-width: 620px) {
+  .rank-national-card { padding: 8px 12px; }
+  .rnc-head { font-size: 12px; gap: 6px; }
+  .rnc-icon { width: 18px; height: 18px; font-size: 11px; }
+  .rnc-toggle { padding: 3px 7px; }
+  .rnc-action {
+    margin-top: 5px; padding: 0;
+    background: none; border: 0;
+    font-size: 12px; font-weight: 600;
+  }
+  /* The caption this line used to carry ("research scores, not clinical
+     indices") is on the danger chip in the header on a phone — the same
+     words, one screen apart. The unit moved into the PM2.5 column header.
+     So on a phone the line has nothing left to say, and it cost 30px of
+     the opening screen. */
+  .rank-method { display: none; }
 }
 
 /* ── Per-province action card (expandable inside each ranking row) ─────
@@ -1509,6 +1559,13 @@
   overflow: hidden;
 }
 .tabs button:last-child { border-right: none; }
+/* Eleven tabs in a six-column rail leave the twelfth cell of the second row
+   empty — a hole in the navigation, and the grid was sized for twelve items
+   rather than for the eleven there are. The last tab spans the two cells it
+   actually needs, so the strip reads as a complete grid instead of one with
+   a gap. In citizen mode most tabs are hidden, so this has no effect there:
+   a hidden button occupies no cell. */
+.tabs button:nth-child(11):last-child { grid-column: span 2; }
 .tabs button:hover { background: var(--well); color: var(--ink); }
 .tabs button.active { background: var(--well); color: var(--ink); border-bottom: 3px solid var(--th-navy); }
 /* English subtitle line — slightly smaller, consistent across all tabs. */
@@ -1776,6 +1833,9 @@ body.mode-citizen .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .legend-close:hover { background: var(--th-navy); color: #fff; }
 .legend .lrow { display: flex; align-items: center; gap: 6px; padding: 1.5px 0; }
+/* The legend's wind arrow is the same shape the map draws, so the key and
+   the marks are one visual language rather than two. */
+.legend .lrow-arrow { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; flex:none; color:var(--th-navy); }
 .legend .lsw { width: 11px; height: 11px; flex: none; }
 .legend .lsw.round { border-radius: 50% !important; }
 
@@ -4297,9 +4357,17 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .haze-plan-maps {display:flex; flex-wrap:wrap; gap:6px; margin:12px 0;}
 .haze-plan-maps button {min-height:44px; padding:8px; background:var(--well); color:var(--ink); border:1px solid var(--rule); cursor:pointer;}
 .haze-plan summary {cursor:pointer; min-height:44px; padding:10px 0; font-size:12px;}
-.haze-wind-icon {background:var(--well); border:1px solid var(--th-navy); border-radius:50%; color:var(--th-navy); display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px #0003;}
-.haze-wind-icon .wind-arrow {display:block;}
-.haze-wind-icon small {position:absolute;right:-9px;bottom:-2px;background:var(--well);color:var(--ink);border:1px solid var(--rule);padding:1px 3px; font-size:11px;}
+/* Wind arrows on the map.
+   They were a 44px white badge per province — the same badge shape as the
+   province risk markers, so seventy of them blanketed the map, piled up in
+   the north and buried the PM2.5 circles, which are the map's primary
+   reading. A wind field must read as a FIELD: bare direction marks, one
+   colour, subordinate to the data, never competing with it.
+   The arrow points downwind; the fire count it used to carry has its own
+   layer and stays in the tooltip. */
+.haze-wind-icon {background:transparent; border:none; box-shadow:none; display:flex; align-items:center; justify-content:center;}
+.haze-wind-icon .wind-arrow {display:block; width:18px; height:18px; color:var(--th-navy); opacity:.7;}
+.haze-wind-icon:hover .wind-arrow {opacity:1;}
 /* Wind — the direction the air is moving.
    ONE arrow shape for the whole dashboard: the map's province field, the
    province popup and the citizen panel all draw the same wind the same way,
@@ -4309,6 +4377,14 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
    transform-box:view-box makes the rotation spin about the middle of the
    glyph rather than about its top-left corner. */
 .wind-arrow {display:block; transform-box:view-box; transform-origin:50% 50%;}
+/* Wind — the direction the air is moving.
+   ONE arrow shape for the whole dashboard: the map's province field, the
+   province popup and the citizen panel all draw the same wind the same way,
+   so a reader who has learned one has learned all three. The arrow points
+   downwind — the way the air MOVES — and the words beside it say which
+   direction that is, so the picture cannot be read backwards.
+   transform-box:view-box makes the rotation spin about the middle of the
+   glyph rather than about its top-left corner. */
 .wind-badge {display:flex; align-items:center; gap:10px;}
 .wind-badge .wind-arrow {color:var(--th-navy); flex:0 0 auto;}
 .wind-badge-body {display:flex; flex-direction:column; gap:1px; min-width:0;}

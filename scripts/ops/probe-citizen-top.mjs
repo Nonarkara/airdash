@@ -2,6 +2,7 @@
 // screen, does anything overlap, and is the same name stated twice?
 import { spawn } from 'node:child_process'
 import { requireChrome } from './chrome.mjs'
+import { waitForLiveData } from './page.mjs'
 const CHROME = requireChrome()
 const PORT = 9600 + (process.pid % 200)
 const sleep = ms => new Promise(r => setTimeout(r, ms))
@@ -23,7 +24,9 @@ await send('Page.enable'); await send('Runtime.enable')
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true })
 await send('Page.navigate', { url: 'http://localhost:28341/ops.html' })
 await sleep(3500)
-for (let i = 0; i < 120; i++) { await sleep(2000); if (await evaluate('!document.getElementById("boot")')) break }
+const ready = await waitForLiveData(evaluate, sleep)
+if (!ready.ok) { console.error(`FATAL: ${ready.reason} after ${Math.round(ready.waited_ms / 1000)}s — refusing to measure a page that is not live.`) ; ws.close(); try { child.kill('SIGKILL') } catch {}; process.exit(1) }
+console.log(`live in ${Math.round(ready.waited_ms / 1000)}s`)
 await sleep(9000)
 await evaluate(`(() => { const s = document.querySelector('#sheettabs button[data-sheet="citizen"]'); if (s) s.click(); return 'ok'; })()`)
 await sleep(4000)

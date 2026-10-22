@@ -612,6 +612,30 @@ html[lang="en"] #ask-btn .ask-lbl.en { display: inline; }
   background: var(--well);
   flex: none;
 }
+/* The ranking's panel head is ONE heading, plus a LIVE tag beside it.
+   It used to be two stacked headings — an eyebrow reading "จัดอันดับอากาศ
+   แย่สุด · สด" directly above a title saying the same thing. On a phone
+   that duplicate line cost 26px of the opening screen before a single row
+   of data. The title names the ranking (and changes with the ranking mode);
+   the tag carries only what the title cannot say: that it refreshes itself.
+   Deliberately NOT the ticker-style blinking dot — an infinite animation
+   on the page is a cost the dashboard should not pay. */
+#rail-left > .panel-head {
+  display: flex; align-items: flex-start; gap: 8px;
+}
+#rail-left > .panel-head .sign { flex: 1; min-width: 0; }
+#rail-left > .panel-head .live-tag {
+  flex: none;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding-top: 3px;
+  font-family: var(--font-num); font-size: 9.5px; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-low);
+}
+#rail-left > .panel-head .live-tag .pip {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--th-sage);
+}
 .rail .panel-head .sign .th { font-size: 15px; }
 .rail .scroll {
   overflow-y: auto;

@@ -5,6 +5,7 @@
 // imported by the app, and not part of any deploy.
 import { spawn } from 'node:child_process'
 import { requireChrome } from './chrome.mjs'
+import { waitForLiveData } from './page.mjs'
 
 const CHROME = requireChrome()
 const PORT = 9334

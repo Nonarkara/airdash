@@ -18,6 +18,7 @@
 import { spawn } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 import { requireChrome } from './chrome.mjs'
+import { waitForLiveData } from './page.mjs'
 
 const CHROME = requireChrome()
 const PORT = 9400 + (process.pid % 400)
@@ -116,20 +117,15 @@ if (!landedOk) {
   ws.close(); cleanup(); process.exit(1)
 }
 
-// Wait for the boot element to go away. The boot splash is removed by
-// main.js when the snapshot is applied; if it never goes, the page did not
-// boot and every screenshot would be of the splash.
-let booted = false
-while (Date.now() - t0 < READY_TIMEOUT_MS) {
-  await sleep(2000)
-  try {
-    if (await evaluate(READY)) { booted = true; break }
-  } catch {}
-}
-const bootMs = Date.now() - t0
+// Wait for the page to be genuinely live — the boot splash gone, the
+// failure banner absent, and data actually on the page.
+const ready = await waitForLiveData(evaluate, sleep, { tries: Math.round(READY_TIMEOUT_MS / 2000) })
+const booted = ready.ok
+const bootMs = ready.waited_ms
+if (!booted) console.log(`NOT LIVE: ${ready.reason}`)
 
 if (!booted) {
-  console.log(`NOT BOOTED after ${Math.round(bootMs / 1000)}s — the boot element is still present`)
+  console.log(`NOT LIVE after ${Math.round(bootMs / 1000)}s — ${ready.reason}`)
 } else {
   console.log(`booted in ${Math.round(bootMs / 1000)}s`)
 }

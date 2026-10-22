@@ -513,6 +513,11 @@ export function ensureMapPanes(map) {
     ['heatmap', 320], // above radar, below province boundaries/station data
     ['vectors', 350],
     ['data', 450],
+    // The wind field is an annotation ON the province markers, not under
+    // them: the arrows were drawn in the 'vectors' pane (350) and the
+    // province risk circles (450) covered them, so most of the field was
+    // invisible and the rest looked like part of the marker.
+    ['windfield', 500],
   ]
   for (const [name, z] of spec) {
     if (!map.getPane(name)) {

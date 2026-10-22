@@ -12,6 +12,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.110] — 2026-10-22 — the sentence that vanished, and the phone's first screen
+
+**The mandated disclaimer was not shipping.** The corpus bible (sec10.4) names ONE sentence that must travel with the score everywhere, in both languages. It lived in `#risk-method-note`, in the ranking panel's head — and it had **three** writers:
+
+- `public/js/panels/header.js` wrote the server's `risk.method_th` / `risk.method_en` — the real sentence.
+- `public/js/panels/ranking.js` wrote the ranking-*mode* explanation into the same element on every language switch.
+- `public/ops.html` carried a `data-i18n` attribute, and `i18n.paintChrome()` rewrites every `[data-i18n]` node from its static attribute.
+
+`initHeader()` registers its `lang` listener first, so on a language switch the sequence was: the header writes the mandated sentence, the ranking overwrites it with the mode note, `paintChrome` overwrites it again with the static HTML. **The mandated sentence then sat off the screen for up to five minutes — until the next snapshot — every time anyone switched language.** Reproduced live, not assumed: `scripts/ops/check-method-note.mjs` drives a real browser, switches to English and back, and fails if the sentence is missing from the element. It was missing.
+
+The fix gives each message one home. The mandated sentence stays server-owned (its `data-i18n` attribute is gone, so `paintChrome` cannot reach it) with the same sentence as the static pre-snapshot fallback; the mode explanation moved into its own element beside the mode switch. `scripts/test-score-disclaimer.mjs` (12 checks) holds the shape, the single owner, and the two copies of the sentence in step — mutation-tested by putting the `data-i18n` back, letting the fallback drift, letting the ranking claim the element again, removing the mode note, and softening the server's sentence. Each turns it red.
+
+**The phone's first screen: 313px → 253px before the first row of data.** Measured with a new pixel ledger (`scripts/ops/probe-first-screen.mjs`) that asks the browser what is painted in every 4px band of the opening screen. A scrollHeight calculation cannot see fixed or sticky chrome, and a screenshot cannot be measured; only the painted surface answers both. On a 390×844 phone the first province row sat **313px down — 37% of the screen** — behind four blocks of apparatus:
+
+| | before | after |
+|---|---|---|
+| ranking panel head | 80px | 66px |
+| mode switch (+ its explanation, restored) | 31px | 31px |
+| national action card | 80px | 63px |
+| caption (unit + caveat) | 30px | 0px |
+| **first province row** | **313px (37%)** | **253px (30%)** |
+
+- **One heading, not two.** The eyebrow read "จัดอันดับอากาศแย่สุด · สด" directly above a title saying the same thing. The title names the ranking and changes with the ranking mode; a small `● สด` tag beside it now carries the one thing the title cannot say — that the list refreshes itself.
+- **The action card was two boxes for one idea** — a solid card for the level, then a dashed sub-box for the action sentence — and the task-relevant line ("check your own province's dust twice a day") was the one boxed in dashes. On a phone it is one block now, and the level fits on a single line.
+- **The unit moved to the column it measures.** "PM2.5 µg/m³" is the PM2.5 column's header, not a caption above the table; the caption keeps only the caveat, which a phone already shows on the danger chip.
+- **The mode explanation came back at no cost.** The writer collision had destroyed it entirely; it now rides on the same row as the switch, so the block's height is the taller of the two and nothing is added.
+
+**The wind field reads as a field.** The map's wind arrows were a 44px white badge per province — the same badge shape as the province risk markers. Seventy of them blanketed the map, piled up in the north and buried the PM2.5 circles, which are the map's primary reading; and they were drawn in the `vectors` pane (350) while the province markers sat in `data` (450), so much of the field was hidden behind the very data it annotated. They are now bare 18px teal arrows in their own `windfield` pane (500), with a legend row that says the arrow points where the air moves.
+
+**The navigation fills the row it is given.** Eleven tabs in a six-column grid left the twelfth cell of the second row empty — a hole in the navigation, because the grid was sized for twelve items rather than the eleven there are. The last tab now spans the two cells it needs.
+
+**The guards.** `scripts/test-layout-contract.mjs` (17 checks) holds what the screen is allowed to look like: no badge on the wind arrow, the wind pane above the data pane, the tab strip filling its row, one heading in the panel head, the unit on its column, the phone card as one block. It was mutation-tested by planting each of the eight defects it exists for. `scripts/ops/page.mjs` gives every driver one shared readiness probe — the boot splash gone **and** no failure banner **and** data actually on the page — because "the boot element is gone" also describes the dashboard's own error state, and a driver that measured that once reported "arrows: 0" as though the feature were broken.
+
+**What was refuted on the way.** The suspicion that the mandated sentence was being *clipped* on a phone was wrong: measured, it fits in two lines at 10px with nothing cut. The duplicate eyebrow was worth 14px, not the 26px first assumed. And `flex-basis: 0` on the mode switch's buttons made the switch size itself to zero and wrap its own labels to 48px — a defect that only appeared because the switch stopped being full-width.
+
 ## [2.4.109] — 2026-10-21 — one class name, two widgets
 
 `.citizen-pin` was the name of **both** the 24×24 round map marker (`public/js/layers/citizen.js`) **and** the row in the citizen panel head that holds the pin icon, the province name and the change button (`public/js/panels/citizen.js`). The marker's rule came later in the stylesheet, so it won the cascade: the head's row collapsed into a 24px circle, the province name spilled to **x = −3** and was clipped by the edge of a phone screen, and the pin icon sat alone on a row of its own.

@@ -11,13 +11,13 @@
 //
 // All coloring follows the AQI palette so the only saturated color band
 // on the page tells one consistent story.
-import { on, store, setLang } from '../state.js?v=2.4.109'
-import { tr } from '../i18n.js?v=2.4.109'
-import { openInsightsPane } from '../sensorHealth.js?v=2.4.109'
-import { riskCi } from '../confidence.js?v=2.4.109'
-import { getJson } from '../cache.js?v=2.4.109'
-import { flyToProvince } from '../map.js?v=2.4.109'
-import { showProvinceDetail } from './detail.js?v=2.4.109'
+import { on, store, setLang } from '../state.js?v=2.4.110'
+import { tr } from '../i18n.js?v=2.4.110'
+import { openInsightsPane } from '../sensorHealth.js?v=2.4.110'
+import { riskCi } from '../confidence.js?v=2.4.110'
+import { getJson } from '../cache.js?v=2.4.110'
+import { flyToProvince } from '../map.js?v=2.4.110'
+import { showProvinceDetail } from './detail.js?v=2.4.110'
 
 // AQI-derived 5-level palette — the same gradient the top stripe uses.
 // Watch (yellow) keeps dark text for contrast.
@@ -192,6 +192,15 @@ function renderStatus(snap) {
 
   // Risk method note — the technical citation that travels with the
   // ranking's eyebrow. Bilingual server-side.
+  //
+  // This element is OWNED BY THIS FILE. The corpus bible (sec10.4) requires
+  // one specific sentence to ship with the score everywhere, and this is
+  // where it ships. It used to have a second writer — the ranking panel
+  // wrote its sort explanation into the same element on every language
+  // switch — and the ranking's ran last, so switching language left the
+  // mandated sentence off the screen until the next snapshot. Measured
+  // live: scripts/ops/check-method-note.mjs. The sort explanation now has
+  // its own element beside the mode switch.
   const note = document.getElementById('risk-method-note')
   if (note && snap.risk.method_th) {
     note.textContent = store.lang === 'th' ? snap.risk.method_th : snap.risk.method_en

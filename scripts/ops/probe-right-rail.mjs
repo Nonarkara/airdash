@@ -1,6 +1,7 @@
 // Focused probe: what is actually inside the right rail, and does it render?
 import { spawn } from 'node:child_process'
 import { requireChrome } from './chrome.mjs'
+import { waitForLiveData } from './page.mjs'
 const CHROME = requireChrome()
 const PORT = 9335
 const URL = process.argv[2] ?? 'http://localhost:28341/ops.html'
@@ -21,7 +22,9 @@ const send = (method, params = {}) => new Promise((resolve, reject) => { const i
 const evaluate = async e => { const r = await send('Runtime.evaluate', { expression: e, returnByValue: true }); if (r.exceptionDetails) return 'ERR ' + r.exceptionDetails.text + ' ' + (r.exceptionDetails.exception?.description ?? ''); return r.result?.value }
 await send('Page.enable'); await send('Runtime.enable')
 await send('Page.navigate', { url: URL })
-for (let i = 0; i < 120; i++) { await sleep(2000); if (await evaluate('!document.getElementById("boot")')) break }
+const ready = await waitForLiveData(evaluate, sleep)
+if (!ready.ok) { console.error(`FATAL: ${ready.reason} after ${Math.round(ready.waited_ms / 1000)}s — refusing to measure a page that is not live.`) ; ws.close(); try { child.kill('SIGKILL') } catch {}; process.exit(1) }
+console.log(`live in ${Math.round(ready.waited_ms / 1000)}s`)
 await sleep(6000)
 await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
 await sleep(3000)

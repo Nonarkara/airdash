@@ -16,19 +16,19 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/apple-touch-icon.png">
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/css/tokens.css?v=2.4.109">
-<link rel="stylesheet" href="/css/layout.css?v=2.4.109">
-<link rel="stylesheet" href="/css/components.css?v=2.4.109">
-<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.109">
-<link rel="stylesheet" href="/css/witness.css?v=2.4.109">
+<link rel="stylesheet" href="/css/tokens.css?v=2.4.110">
+<link rel="stylesheet" href="/css/layout.css?v=2.4.110">
+<link rel="stylesheet" href="/css/components.css?v=2.4.110">
+<link rel="stylesheet" href="/css/city-dashboard.css?v=2.4.110">
+<link rel="stylesheet" href="/css/witness.css?v=2.4.110">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0E4A5E">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebSite","name":"AirDash","url":"https://air.nonarkara.org/","description":"Live Thailand air quality and dust watch — PM2.5, local risk and rain-washout outlook."}
 </script>
-<link rel="stylesheet" href="/css/brand.css?v=2.4.109">
-<link rel="stylesheet" href="/css/instrument-header.css?v=2.4.109">
-<link rel="stylesheet" href="/css/research-desk.css?v=2.4.109">
+<link rel="stylesheet" href="/css/brand.css?v=2.4.110">
+<link rel="stylesheet" href="/css/instrument-header.css?v=2.4.110">
+<link rel="stylesheet" href="/css/research-desk.css?v=2.4.110">
 </head>
 <body>
 
@@ -299,11 +299,26 @@
 
   <aside class="rail" id="rail-left">
     <div class="panel-head">
-      <div class="eyebrow" id="left-eyebrow" data-i18n="จัดอันดับอากาศแย่สุด · สด|WORST AIR RANKING · LIVE">WORST AIR RANKING · LIVE</div>
+      <!-- ONE heading, not two. The eyebrow used to read "จัดอันดับอากาศแย่สุด · สด"
+           (WORST AIR RANKING · LIVE) directly above a title that said the same
+           thing — two headings for one idea, and on a phone the duplicate
+           line cost 26px of the opening screen. The title names the ranking
+           and changes with the ranking mode; the tag carries the one thing
+           the title cannot say, that the list refreshes itself. -->
       <div class="sign">
         <div class="th" data-i18n="จัดอันดับจังหวัดอากาศแย่สุด|Worst air quality by province">จัดอันดับจังหวัดอากาศแย่สุด</div>
-        <div class="en" id="risk-method-note" data-i18n="เรียงจาก PM2.5 สูงสุดก่อน — จังหวัดอากาศดีถูกจางไว้ด้านล่าง · คะแนนเฝ้าระวังยังแสดงในแถว|Sorted by highest PM2.5 first — clean provinces dimmed below · watch score still shown per row">Sorted by highest PM2.5 first — clean provinces dimmed below · watch score still shown per row</div>
+        <!-- THE MANDATED SCORE DISCLAIMER. This element is fed by the server
+             (risk.method_th / risk.method_en) and painted by header.js — it
+             deliberately carries NO data-i18n. i18n.paintChrome() rewrites
+             every [data-i18n] node from its static attribute, and when this
+             element had one, a language switch replaced the mandated
+             sentence with the HTML fallback until the next snapshot. The
+             fallback below is the same sentence, so even the pre-snapshot
+             moment shows the right thing; scripts/test-score-disclaimer.mjs
+             asserts the two copies cannot drift. -->
+        <div class="en" id="risk-method-note">ดัชนีเฝ้าระวังจากข้อมูลจริง (PM2.5 40% · มลพิษอื่น 10% · แนวโน้ม 15% · พยากรณ์ 20% · การระบายอากาศ 15%) — ไม่ใช่การพยากรณ์</div>
       </div>
+      <span class="live-tag" id="left-eyebrow"><span class="pip" aria-hidden="true"></span><span data-i18n="สด|LIVE">สด</span></span>
     </div>
     <div class="scroll" id="ranking"></div>
     <div class="scroll" id="detail" style="display:none"></div>
@@ -876,6 +891,6 @@
 </div>
 
 <script src="/vendor/leaflet/leaflet.js"></script>
-<script type="module" src="/js/boot.js?v=2.4.109"></script>
+<script type="module" src="/js/boot.js?v=2.4.110"></script>
 </body>
 </html>

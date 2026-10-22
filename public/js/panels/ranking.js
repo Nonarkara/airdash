@@ -1,11 +1,11 @@
 // Left rail: live province ranking — worst air first.
 // Sort mode: Worst air (default, by PM2.5) | Effective Harm (Watch × Social Load).
-import { on, store } from '../state.js?v=2.4.109'
-import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.109'
-import { fmtNum, el } from '../fmt.js?v=2.4.109'
-import { flyToProvince } from '../map.js?v=2.4.109'
-import { showProvinceDetail } from './detail.js?v=2.4.109'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.109'
+import { on, store } from '../state.js?v=2.4.110'
+import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.110'
+import { fmtNum, el } from '../fmt.js?v=2.4.110'
+import { flyToProvince } from '../map.js?v=2.4.110'
+import { showProvinceDetail } from './detail.js?v=2.4.110'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.110'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }
@@ -40,25 +40,17 @@ function setMode(mode) {
 }
 
 function paintChromeForMode() {
-  // Own these nodes: update data-i18n so a later i18n.paintChrome() cannot
+  // Own this node: update data-i18n so a later i18n.paintChrome() cannot
   // clobber Harm-mode copy back to the static strings in ops.html.
-  const eyebrow = document.getElementById('left-eyebrow')
-  const method = document.getElementById('risk-method-note')
+  //
+  // It used to write TWO things here: the eyebrow (now a LIVE tag that does
+  // not change with the mode) and #risk-method-note. It must NOT write
+  // #risk-method-note: that element carries the MANDATED score disclaimer,
+  // published by the server and owned by header.js. Two writers, one
+  // element, and the ranking's ran last — so a language switch dropped the
+  // mandated sentence from the screen for up to five minutes. The mode
+  // note now lives in its own element beside the switch (modeToggle).
   const title = document.querySelector('#rail-left .panel-head .sign .th')
-  if (eyebrow) {
-    const pair = rankMode === 'harm'
-      ? 'จัดอันดับภาระจริง · สด|EFFECTIVE HARM RANKING · LIVE'
-      : 'จัดอันดับอากาศแย่สุด · สด|WORST AIR RANKING · LIVE'
-    eyebrow.setAttribute('data-i18n', pair)
-    eyebrow.textContent = tr(...pair.split('|'))
-  }
-  if (method) {
-    const pair = rankMode === 'harm'
-      ? 'ภาระจริง = ดัชนีเฝ้าระวัง × ภาระทางสังคม — ใครรับฝุ่นมากกว่าเมื่อค่าเฝ้าระวังใกล้กัน|Effective Harm = Watch × Social Load — who absorbs more when watch scores are similar'
-      : 'เรียงจาก PM2.5 สูงสุดก่อน — จังหวัดอากาศดีถูกจางไว้ด้านล่าง · คะแนนเฝ้าระวังยังแสดงในแถว|Sorted by highest PM2.5 first — clean provinces dimmed below · watch score still shown per row'
-    method.setAttribute('data-i18n', pair)
-    method.textContent = tr(...pair.split('|'))
-  }
   if (title) {
     const pair = rankMode === 'harm'
       ? 'จัดอันดับภาระจริงรายจังหวัด|Province effective-harm ranking'
@@ -87,7 +79,23 @@ function trendArrow(delta) {
   }, `${up ? '▲' : '▼'}${Math.abs(delta)}`)
 }
 
+// The ranking mode switch and the note that explains it.
+//
+// WHY THE NOTE LIVES HERE AND NOT IN THE PANEL HEAD
+// #risk-method-note (the panel head) carries the MANDATED score disclaimer —
+// the sentence the corpus bible requires to ship with the score everywhere.
+// It used to ALSO carry this mode note, and the two fought over the one
+// element: header.js writes the disclaimer on every snapshot, this file
+// wrote the mode note on every language switch, and initHeader() registers
+// its listener first — so a language switch left the mode note on screen and
+// the mandated sentence gone for up to five minutes. Measured live, not
+// assumed: scripts/ops/check-method-note.mjs reproduced it.
+//
+// So the mode note gets its OWN element, beside the control it explains.
+// It costs no extra height: the block is a flex row, so a one-line note
+// rides next to the switch.
 function modeToggle() {
+  const block = el('div', { class: 'rank-mode-block' })
   const wrap = el('div', { class: 'rank-mode-toggle', role: 'group', 'aria-label': tr('โหมดจัดอันดับ', 'Ranking mode') })
   const mk = (id, th, en) => {
     const btn = el('button', {
@@ -102,7 +110,11 @@ function modeToggle() {
     mk('worst', 'อากาศแย่สุด', 'Worst air'),
     mk('harm', 'ภาระจริง', 'Effective Harm'),
   )
-  return wrap
+  const note = el('p', { class: 'rank-mode-note' }, rankMode === 'harm'
+    ? tr('ภาระจริง = ดัชนีเฝ้าระวัง × ภาระทางสังคม', 'Effective harm = watch × social load')
+    : tr('เรียงจาก PM2.5 สูงสุดก่อน', 'Sorted by highest PM2.5 first'))
+  block.append(wrap, note)
+  return block
 }
 
 // National action card — the "so what" panel + concrete next steps.
@@ -305,10 +317,23 @@ function render(snap) {
     row.append(summary, expand)
     return row
   })
+  // The unit belongs to the column it measures, not in a caption above the
+  // table: "relationships determine distance". So PM2.5 carries µg/m³ in its
+  // own header cell, and the caption line is left with the one thing the
+  // column header cannot say — that these are research scores, not clinical
+  // indices (a phone shows that caveat on the danger chip instead, so the
+  // caption is hidden there; see layout.css).
+  const second = rankMode === 'harm'
+    ? el('span', {}, tr('ภาระ', 'Harm'))
+    : el('span', {}, 'PM2.5', el('small', { class: 'unit' }, ' µg/m³'))
   const headings = el('div', { class: 'rank-columns', 'aria-hidden': 'true' },
-    ...[tr('จังหวัด', 'Province'), rankMode === 'harm' ? tr('ภาระ', 'Harm') : 'PM2.5', tr('เฝ้าระวัง', 'Watch'), tr('สังคม', 'Social'), tr('ดัชนี', 'Index')].map(text => el('span', {}, text)))
+    el('span', {}, tr('จังหวัด', 'Province')),
+    second,
+    el('span', {}, tr('เฝ้าระวัง', 'Watch')),
+    el('span', {}, tr('สังคม', 'Social')),
+    el('span', {}, tr('ดัชนี', 'Index')))
   const note = el('p', { class: 'rank-method' }, tr(
-    'PM2.5: µg/m³ · คะแนนวิจัย ไม่ใช่ดัชนีคลินิก',
-    'PM2.5: µg/m³ · Research scores, not clinical indices.'))
+    'คะแนนวิจัย ไม่ใช่ดัชนีคลินิก',
+    'Research scores, not clinical indices.'))
   box.replaceChildren(...[modeToggle(), card, note, headings, ...rowEls].filter(Boolean))
 }

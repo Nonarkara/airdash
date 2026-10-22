@@ -7,6 +7,7 @@
 import { spawn } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 import { requireChrome } from './chrome.mjs'
+import { waitForLiveData } from './page.mjs'
 
 const CHROME = requireChrome()
 const PORT = 9500 + (process.pid % 300)
@@ -45,7 +46,9 @@ let ok = false
 try { const l = JSON.parse(landed); ok = l.href.includes('/ops') && /AIRDASH/i.test(l.title); console.log(`landed: ${l.href}`) } catch {}
 if (!ok) { console.error('FATAL: wrong page'); ws.close(); try { child.kill('SIGKILL') } catch {}; process.exit(1) }
 
-for (let i = 0; i < 120; i++) { await sleep(2000); if (await evaluate('!document.getElementById("boot")')) break }
+const ready = await waitForLiveData(evaluate, sleep)
+if (!ready.ok) { console.error(`FATAL: ${ready.reason} after ${Math.round(ready.waited_ms / 1000)}s — refusing to measure a page that is not live.`) ; ws.close(); try { child.kill('SIGKILL') } catch {}; process.exit(1) }
+console.log(`live in ${Math.round(ready.waited_ms / 1000)}s`)
 await sleep(11000)
 
 for (const [w, h] of [[390, 844], [1440, 900]]) {
