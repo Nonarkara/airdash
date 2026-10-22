@@ -37,12 +37,39 @@
 // can tell coarse from fine, so the curve can be told.
 //
 // HONESTY NOTE ON THE COARSE CONSTANT. Unlike the fine curve, COARSE_ASCENT is
-// NOT a locally calibrated coefficient — AirDash has no PM10 instrument to fit
-// against. It is an order-of-magnitude-informed, deliberately CONSERVATIVE
-// adjustment of the same shape, not a measured one. It is reported alongside
-// the fine figure wherever it applies, and `curve_basis` says which one a
-// reader is looking at, so nobody has to guess which curve produced a number.
-// Do not tighten it without a real coarse-fraction measurement to fit.
+// NOT a locally calibrated coefficient. It is an order-of-magnitude-informed,
+// deliberately CONSERVATIVE adjustment of the same shape, not a measured one. It
+// is reported alongside the fine figure wherever it applies, and `curve_basis`
+// says which one a reader is looking at, so nobody has to guess which curve
+// produced a number. Do not tighten it without a real coarse-fraction
+// measurement to fit.
+//
+// MEASURED, 2026-10-22 — WHY IT IS STILL NOT CALIBRATED. The blocker is not
+// the coarse fraction; it is the RAIN record. air4thai publishes pm10 and
+// pm25 for 66 stations, so the coarse fraction of PM10 (1 − PM2.5/PM10) is
+// measurable per station-hour, and scripts/ops/calibrate-washout.mjs measures
+// it. What it found, over the whole available record:
+//
+//   · The rain history starts 2026-10-08 — 14 days — and archiving began
+//     2026-07-27 with an EMPTY archive, so no pre-August-2026 reading exists
+//     anywhere. The 2025-26 dust season is gone and cannot be recovered.
+//   · The window is the CLEAN season: baseline PM2.5 ≈ 18 µg/m³, against the
+//     60–150 µg/m³ of a dust episode. There is little particulate to wash.
+//   · With a dry control and a rain-event composite (the only method that
+//     works — a trailing 24h total cannot tell "rained early" from "rained
+//     late"), there were 26 clean rain events in 45 days, ALL of them in the
+//     1–<5 mm band. Zero events in the 5–<15, 15–<35 and ≥35 mm bands —
+//     the bands that carry this curve's 20%, 30%, 45% and 60% steps.
+//   · In the one band with events, the dry-adjusted relief measured 4.7%
+//     (mixed) and 5.3% (coarse) against the published 8% and 12%. The dry
+//     control itself showed PM2.5 falling ~4–7% over ~36 hours with no rain
+//     at all, so most of any raw "relief" is ambient trend, not washout.
+//
+// So the number stays. Moving it on 26 events in one band of the clean
+// season would be a guess dressed as a measurement. The instrument is ready
+// and will produce a real fit once the 2026-27 dust season (from 1 December)
+// has accumulated enough bounded rain events — run scripts/ops/
+// calibrate-washout.mjs then, and only then move this constant.
 const FINE_ASCENT = 40
 const COARSE_ASCENT = 60
 

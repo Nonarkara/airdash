@@ -1,4 +1,4 @@
-import { readPreference, writePreference } from './preferences.js?v=2.4.110'
+import { readPreference, writePreference } from './preferences.js?v=2.4.111'
 // ────────────────────────────────────────────────────────────────────────────
 // AIR STORY — the new front door. A scroll narrative about TODAY's air for
 // smart kids and curious adults. Not a dashboard: one question per chapter,
@@ -6,11 +6,11 @@ import { readPreference, writePreference } from './preferences.js?v=2.4.110'
 // back to /api/science. Unavailable readings stay unknown while the page
 // retries; reference formulas remain available for explanation.
 // ────────────────────────────────────────────────────────────────────────────
-import { store, on, setLang, emit } from './state.js?v=2.4.110'
-import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.110'
-import { getJson } from './cache.js?v=2.4.110'
-import { fmtNum, escapeHtml } from './fmt.js?v=2.4.110'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.110'
+import { store, on, setLang, emit } from './state.js?v=2.4.111'
+import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.111'
+import { getJson } from './cache.js?v=2.4.111'
+import { fmtNum, escapeHtml } from './fmt.js?v=2.4.111'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.111'
 
 const $ = (sel) => document.querySelector(sel)
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -361,7 +361,53 @@ async function renderPersonal() {
       </div>
     </div>
     <div class="guidance"><b>${tr('คำแนะนำวันนี้:', 'Today\'s advice:')}</b> ${escapeHtml(store.lang === 'th' ? guideTh : guideEn)}</div>
+    ${particleLens()}
     ${d.__estimate ? `<div class="blurb" style="margin-top:10px">${tr('· ประมาณการฝั่งเบราว์เซอร์ (API วิทยาศาสตร์ยังไม่พร้อม)', '· browser-side estimate (science API not ready yet)')}</div>` : ''}`
+}
+
+// ── The particle-type lens ─────────────────────────────────────────────────
+//
+// The advice above is keyed to PM2.5 — the FINE fraction, the one the health
+// literature and every band in the product are written against. This says
+// what the REST of the measured particulate is, because the precautions are
+// not the same. Coarse particles are what you see and what stings your eyes
+// and throat; they settle out of the air quickly; and they are not what a
+// PM2.5 number describes.
+//
+// The measurement is the coarse FRACTION of PM10 (1 − PM2.5/PM10) from one
+// ground station reporting both sizes — a direct measurement, published with
+// its station and its time. It is NOT the Ångström exponent, which is a
+// different quantity (an optical size distribution) with a national scope.
+//
+// When no station in the province reports both sizes, this renders nothing.
+// An absent measurement reads as absent, never as "fine".
+function particleLens() {
+  const pa = row()?.particle
+  if (!pa || !pa.mode) return ''
+  const th = store.lang === 'th'
+  const label = th ? pa.label_th : pa.label_en
+  const act = th ? pa.act_th : pa.act_en
+  if (!label || !act) return ''
+  // The measured concentrations are shown ONLY when a station actually
+  // measured them. The national rollup is a median of per-province
+  // fractions and has no concentration of its own, so it publishes the
+  // fraction and the province count — never a synthetic µg/m³.
+  let meta = ''
+  if (pa.station && Number.isFinite(pa.pm10) && Number.isFinite(pa.ratio)) {
+    meta = th
+      ? `PM10 ${fmtNum(pa.pm10, 1)} µg/m³ = ${fmtNum(pa.ratio, 1)}× PM2.5 · วัดที่สถานีพื้นดิน ${pa.station}`
+      : `PM10 ${fmtNum(pa.pm10, 1)} µg/m³ = ${fmtNum(pa.ratio, 1)}× PM2.5 · measured at ground station ${pa.station}`
+  } else if (Number.isFinite(pa.provinces)) {
+    meta = th
+      ? `สัดส่วนฝุ่นหยาบ ${fmtNum(pa.coarse_fraction * 100, 0)}% ของ ${pa.provinces} จังหวัดที่วัดได้ทั้งสองขนาด`
+      : `coarse fraction ${fmtNum(pa.coarse_fraction * 100, 0)}% across the ${pa.provinces} provinces reporting both sizes`
+  }
+  return `
+    <div class="particle p-${pa.mode}">
+      <span class="pchip">${escapeHtml(label)}</span>
+      ${meta ? `<span class="pmeta">${escapeHtml(meta)}</span>` : ''}
+      <span class="ptext">${escapeHtml(act)}</span>
+    </div>`
 }
 
 // ── 3 · BODY ─────────────────────────────────────────────────────────────────

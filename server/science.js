@@ -17,6 +17,7 @@
 import { num } from './util.js'
 import { allProvinces, isThaiProvinceCode, provinceByName } from './provinces.js'
 import { PROVINCE_POP, THAILAND_POP } from './populations.js'
+import { measuredSize, measuredSizeMode, MEASURED_SIZE_LABEL, MODE_GUIDANCE } from './aerosol.js'
 
 const FRESH_PM_HOURS = 6
 const FRESH_WX_HOURS = 13
@@ -259,6 +260,8 @@ export function createScience({ db, CONFIG }) {
 
   function compute() {
     const pmRows = freshRows('air4thai', ['pm25'], localCutoff(FRESH_PM_HOURS))
+    // PM2.5 AND PM10 from the same stations, for the measured size split.
+    const sizeRows = freshRows('air4thai', ['pm25', 'pm10'], localCutoff(FRESH_PM_HOURS))
     const gistRows = freshRows('gistda_pm25', ['pm25', 'pm25_avg24h'], localCutoff(S.gistdaFreshHours))
     const rhRows = freshRows('openmeteo', ['rh_pct'], localCutoff(FRESH_WX_HOURS))
     const aot40 = aot40ByProvince()
@@ -271,6 +274,39 @@ export function createScience({ db, CONFIG }) {
       if (v === null) continue
       const cur = ground.get(row.province_code)
       if (cur === undefined || v > cur) ground.set(row.province_code, v)
+    }
+
+    // THE MEASURED SIZE SPLIT, per province. PM2.5 and PM10 from the SAME
+    // station, so the coarse fraction (1 − PM2.5/PM10) is one instrument's
+    // two channels rather than two stations' readings. The province's
+    // published pm25 above is NOT touched by this — it stays the worst
+    // station's value, exactly as before. The size comes from the worst
+    // station THAT REPORTS BOTH SIZES, which is a different station in some
+    // provinces, so it carries its own station and time.
+    const byStation = new Map() // province -> Map(station -> {pm25, pm10, obs_time})
+    for (const row of sizeRows) {
+      if (!isThaiProvinceCode(row.province_code)) continue
+      const v = num(row.value)
+      if (v === null) continue
+      let stations = byStation.get(row.province_code)
+      if (!stations) byStation.set(row.province_code, stations = new Map())
+      let s = stations.get(row.station_key)
+      if (!s) { s = { pm25: null, pm10: null, obs_time: null }; stations.set(row.station_key, s) }
+      if (row.metric === 'pm25') s.pm25 = v
+      else if (row.metric === 'pm10') s.pm10 = v
+      if (!s.obs_time || row.obs_time > s.obs_time) s.obs_time = row.obs_time
+    }
+    const sizeByProvince = new Map()
+    for (const [code, stations] of byStation) {
+      let best = null
+      for (const [key, s] of stations) {
+        if (s.pm25 === null || s.pm10 === null) continue
+        if (!best || s.pm25 > best.s.pm25) best = { key, s }
+      }
+      if (!best) continue
+      const measured = measuredSize(best.s.pm25, best.s.pm10)
+      if (!measured) continue
+      sizeByProvince.set(code, { ...measured, station: best.key, observed_at: best.s.obs_time })
     }
     // GISTDA fusion per province (station_key is 'pv_<code>').
     const gist = new Map()
@@ -321,6 +357,10 @@ export function createScience({ db, CONFIG }) {
         play_budget_min: budget.min,
         play_unlimited: budget.unlimited,
         o3_aot40_week: aot40.has(code) ? Math.round(aot40.get(code)) : null,
+        // The measured particle-size signal. Null when no station in the
+        // province reports both sizes — an absent measurement reads as
+        // absent, never as "fine".
+        particle: sizeByProvince.get(code) ?? null,
       }
     }).sort((a, b) => (b.pm25 ?? -1) - (a.pm25 ?? -1))
 
@@ -348,8 +388,40 @@ export function createScience({ db, CONFIG }) {
     const natAot40 = weightedAvg('o3_aot40_week')
     const natCigs = natPm !== null ? natPm / S.cigUgPerDay : null
 
+    // The NATIONAL size signal: the median coarse fraction across the
+    // provinces that report both sizes. A median, not a population-weighted
+    // mean, because the signal is qualitative and one dusty province must
+    // not redefine the country's. The count is published so a reader knows
+    // how many provinces it rests on.
+    const sized = provinces.filter((p) => p.particle)
+    const nationalParticle = sized.length ? (() => {
+      const fracs = sized.map((p) => p.particle.coarse_fraction).sort((a, b) => a - b)
+      const mid = fracs.length >> 1
+      const cf = fracs.length % 2 ? fracs[mid] : (fracs[mid - 1] + fracs[mid]) / 2
+      const mode = measuredSizeMode(cf)
+      const label = MEASURED_SIZE_LABEL[mode]
+      const actions = MODE_GUIDANCE[mode]
+      // ONLY the fraction and the mode. The national figure is a MEDIAN of
+      // per-province fractions, so it has no concentration of its own —
+      // publishing a synthetic pm10/pm10 pair here (the obvious way to
+      // reuse measuredSize) would put "PM10 1 µg/m³" in front of a reader,
+      // which is a number no instrument measured. The provinces publish
+      // their real concentrations; the national rollup publishes the
+      // fraction it actually computed.
+      return {
+        mode,
+        coarse_fraction: Math.round(cf * 1000) / 1000,
+        provinces: sized.length,
+        label_th: label.th,
+        label_en: label.en,
+        act_th: actions.act_th,
+        act_en: actions.act_en,
+      }
+    })() : null
+
     const national = {
       pm25: r1(natPm),
+      particle: nationalParticle,
       population: THAILAND_POP,
       population_covered: coveredPop,
       band: pm25Band(natPm),

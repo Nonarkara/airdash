@@ -231,6 +231,26 @@ body.story {
 .persona-card .guidance { margin-top: 16px; font-size: 15px; border-top: 1px dashed var(--rule); padding-top: 14px; }
 .persona-card .guidance b { color: var(--accent); }
 
+/* The particle-type lens: what the measured coarse fraction of PM10 is, and
+   what to do about it. It sits UNDER the PM2.5 advice because it is an
+   addition to that advice, not a correction of it — the bands are keyed to
+   PM2.5 and stay keyed to PM2.5. One accent, like the rest of the page: the
+   chip takes the chapter's accent and the WORDS carry coarse/mixed/fine, so
+   the distinction never depends on telling three colours apart. */
+.persona-card .particle {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+  font-size: 13.5px; line-height: 1.5;
+}
+.persona-card .pchip {
+  display: inline-block; margin-right: 8px; padding: 2px 8px;
+  font-size: 12px; font-weight: 700;
+  color: var(--accent);
+  border: 1px solid currentColor; border-radius: 2px;
+}
+.persona-card .pmeta { color: var(--ink-mid); font-size: 12px; }
+.persona-card .ptext { display: block; margin-top: 6px; color: var(--ink-mid); }
+
 /* ── 3 · BODY ────────────────────────────────────────────────────────────── */
 .chapter.body { --accent: #2D7A8C; }
 .bodymap { width: 100%; height: auto; margin: 10px 0 6px; }

@@ -1,9 +1,9 @@
 // Research Paper panel — renders the full bilingual academic paper inside
 // the About overlay's "Research Paper" tab, with custom SVG infographics,
 // the complete source catalog, citations, and CSV dataset download.
-import { on, store, setLang } from '../state.js?v=2.4.110'
-import { getJson } from '../cache.js?v=2.4.110'
-import { escapeHtml } from '../fmt.js?v=2.4.110'
+import { on, store, setLang } from '../state.js?v=2.4.111'
+import { getJson } from '../cache.js?v=2.4.111'
+import { escapeHtml } from '../fmt.js?v=2.4.111'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -586,7 +586,7 @@ function sectionDanger() {
 
       ${svgRainRelief()}
 
-      <p>${tr("เส้น fine-mode ของระบบใช้ค่าขั้น 8%, 20%, 30% และ 40% สำหรับฝน 24 ชั่วโมง 1–<5, 5–<15, 15–<35 และ ≥35 มม. ตามลำดับ โมดูล washout สามารถเลือกเส้น coarse-mode ที่มีเพดาน 60% ตามหลักฐานขนาดอนุภาค ตัวปรับ coarse ยังไม่ได้สอบเทียบกับ PM10 ในพื้นที่ ส่วน Danger Score ใช้เส้น fine-mode เป็นค่าเริ่มต้น ต้องอ่าน curve_basis และข้อมูลกำกับของผลลัพธ์ แทนการถือว่าฝนปริมาณเดียวให้ผลเหมือนกันทุกแห่ง", "The fine-mode curve uses steps of 8%, 20%, 30% and 40% for 24-hour rain totals of 1–<5, 5–<15, 15–<35 and ≥35 mm. The washout module can select a coarse-mode curve with a 60% ceiling from aerosol-size evidence. That coarse adjustment is not locally calibrated against PM10. Danger Score uses the default fine-mode curve. Read curve_basis and result metadata rather than assuming the same rain amount removes the same fraction everywhere.")}</p>
+      <p>${tr("เส้น fine-mode ของระบบใช้ค่าขั้น 8%, 20%, 30% และ 40% สำหรับฝน 24 ชั่วโมง 1–<5, 5–<15, 15–<35 และ ≥35 มม. ตามลำดับ โมดูล washout สามารถเลือกเส้น coarse-mode ที่มีเพดาน 60% ตามหลักฐานขนาดอนุภาค ตัวปรับ coarse ยังไม่ได้สอบเทียบกับฝนที่ตกจริงในพื้นที่ เพราะประวัติฝนที่บันทึกไว้ยังสั้นเกินกว่าจะมีฝนหนักพอให้สอบเทียบ (วัดเมื่อ 22 ต.ค. 2026: มีเหตุฝนที่วัดได้ 26 ครั้ง และไม่มีเหตุเลยในช่วงฝน 5 มม. ขึ้นไป) ส่วน Danger Score ใช้เส้น fine-mode เป็นค่าเริ่มต้น ต้องอ่าน curve_basis และข้อมูลกำกับของผลลัพธ์ แทนการถือว่าฝนปริมาณเดียวให้ผลเหมือนกันทุกแห่ง", "The fine-mode curve uses steps of 8%, 20%, 30% and 40% for 24-hour rain totals of 1–<5, 5–<15, 15–<35 and ≥35 mm. The washout module can select a coarse-mode curve with a 60% ceiling from aerosol-size evidence. That coarse adjustment is not yet calibrated against real local rain: the recorded rain history is still too short to hold enough heavy-rain events to fit it against (measured 22 Oct 2026 — 26 clean rain events, and none above 5 mm). Danger Score uses the default fine-mode curve. Read curve_basis and result metadata rather than assuming the same rain amount removes the same fraction everywhere.")}</p>
 
       <h3 data-th="2.5 เสียง: traffic + environmental noise amplifier" data-en="2.5 Noise: traffic & environmental noise amplifier">
         ${tr('2.5 เสียง: traffic + environmental noise amplifier', '2.5 Noise: traffic & environmental noise amplifier')}

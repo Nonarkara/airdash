@@ -210,7 +210,88 @@ export function dominantAerosol(db, { days = 7 } = {}) {
 
 export const AEROSOL_METHOD = {
   th: 'ขนาดอนุภาคเชิงคุณภาพจากรูปร่างสเปกตรัม AERONET (Ångström exponent α) — ฝุ่นหยาบต่ำกว่า 0.8, ผสม 0.8–1.5, ฝุ่นละเอียดสูงกว่า 1.5 · ไม่ใช่ค่าความเข้มข้น µg/m³',
-  en: 'Qualitative particle size from the AERONET spectral shape (Ångström exponent α): coarse below 0.8, mixed 0.8–1.5, fine above 1.5. Not a µg/m³ concentration — the ground stations give the concentration.',
-  refs: ['Ångström 1929', 'Eck et al. 1999', 'Westphal & Toon 1991', 'NASA Deep Blue', 'Gkikas et al. 2021a (AE(440–870) ≤ 0.75 for near-pure dust)', 'Bond et al. 2013'],
+  en: 'Qualitative particle size from the AERONET spectral shape (Ångström exponent α): coarse below 0.8, mixed 0.8–1.5, fine above 1.5. Not a µg/m³ concentration — the ground stations give the concentration.',  refs: ['Ångström 1929', 'Eck et al. 1999', 'Westphal & Toon 1991', 'NASA Deep Blue', 'Gkikas et al. 2021a (AE(440–870) ≤ 0.75 for near-pure dust)', 'Bond et al. 2013'],
   caution: 'A daily aggregate at a handful of stations. It says what the air is made of, not how bad it is today. Values below the AOD floor are withheld rather than guessed.',
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// THE MEASURED SIZE SPLIT — a DIFFERENT quantity from the Ångström mode
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// The Ångström exponent describes the OPTICAL size distribution of the
+// aerosol column above a station: it says which wavelengths the light
+// scatters off, which is a proxy for particle SIZE. It says nothing about
+// how much mass sits above 2.5 µm.
+//
+// The ground PM10/PM2.5 ratio measures something else and directly: the
+// fraction of the measured particulate mass that is COARSE (larger than
+// 2.5 µm). Measured across AirDash's 64 stations that carry both metrics,
+// the coarse fraction runs 0.27 → 0.80 with a MEDIAN of 0.54 — most of the
+// particulate mass in Thailand right now is coarse, while every health
+// band in the product is keyed to PM2.5.
+//
+// These are different measurements of different things, so they get
+// DIFFERENT bands and a DIFFERENT label. Reusing the Ångström bands
+// (0.8 / 1.5) on a mass ratio would be reading a number as if it were a
+// different number — the mistake the repo already has a rule about.
+//
+// The source of coarse mass is NOT claimed. A PM10/PM2.5 ratio cannot tell
+// mineral dust from biomass salt from resuspended road grit, so the label
+// says what was measured and stops there. The PRECAUTIONS are reused from
+// MODE_GUIDANCE, whose actions are true of coarse particles whatever their
+// origin.
+export const MEASURED_SIZE_BANDS = { coarse_min: 0.5, mixed_min: 0.25 }
+
+/** Size mode from the MEASURED coarse fraction (1 − PM2.5/PM10). */
+export function measuredSizeMode(coarseFraction) {
+  if (!Number.isFinite(coarseFraction)) return null
+  if (coarseFraction >= MEASURED_SIZE_BANDS.coarse_min) return 'coarse'
+  if (coarseFraction >= MEASURED_SIZE_BANDS.mixed_min) return 'mixed'
+  return 'fine'
+}
+
+/** What the measurement says, in the reader's language. */
+export const MEASURED_SIZE_LABEL = {
+  coarse: {
+    th: 'ส่วนใหญ่ของมวลฝุ่นที่วัดได้เป็นฝุ่นหยาบ (ใหญ่กว่า 2.5 ไมครอน)',
+    en: 'Most of the measured particulate mass is coarse (larger than 2.5 µm)',
+  },
+  mixed: {
+    th: 'ฝุ่นที่วัดได้เป็นทั้งขนาดหยาบและขนาดละเอียดผสมกัน',
+    en: 'The measured particulate is a mix of coarse and fine',
+  },
+  fine: {
+    th: 'ส่วนใหญ่ของมวลฝุ่นที่วัดได้เป็นฝุ่นละเอียด (เล็กกว่า 2.5 ไมครอน)',
+    en: 'Most of the measured particulate mass is fine (below 2.5 µm)',
+  },
+}
+
+/**
+ * The measured size signal for one station-hour: the coarse fraction, the
+ * two concentrations it came from, and the precautions that follow from the
+ * size. Returns null when the station does not report both sizes — an
+ * absent measurement reads as absent, never as "fine".
+ */
+export function measuredSize(pm25, pm10) {
+  if (!Number.isFinite(pm25) || !Number.isFinite(pm10) || pm10 <= 0) return null
+  const coarseFraction = 1 - (pm25 / pm10)
+  if (!Number.isFinite(coarseFraction)) return null
+  const mode = measuredSizeMode(coarseFraction)
+  const label = MEASURED_SIZE_LABEL[mode]
+  const actions = MODE_GUIDANCE[mode]
+  return {
+    mode,
+    coarse_fraction: Math.round(coarseFraction * 1000) / 1000,
+    pm25: Math.round(pm25 * 10) / 10,
+    pm10: Math.round(pm10 * 10) / 10,
+    ratio: Math.round((pm10 / pm25) * 100) / 100,
+    label_th: label.th,
+    label_en: label.en,
+    act_th: actions.act_th,
+    act_en: actions.act_en,
+  }
+}
+
+export const MEASURED_SIZE_METHOD = {
+  th: 'สัดส่วนฝุ่นหยาบที่วัดได้ = 1 − (PM2.5 ÷ PM10) จากสถานีพื้นดินเดียวกัน · หยาบเมื่อ ≥ 0.50, ผสม 0.25–0.50, ละเอียด < 0.25 · ไม่ได้ระบุแหล่งที่มาของฝุ่น',
+  en: 'Measured coarse fraction = 1 − (PM2.5 ÷ PM10) from the same ground station · coarse at ≥ 0.50, mixed 0.25–0.50, fine below 0.25 · does not identify the source of the dust',
 }
