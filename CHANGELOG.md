@@ -14,6 +14,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+---
+
+## [2.4.120] — 2026-10-23 — the page denied the feature it was shipping
+
+**The regional page's method narrative still said it calculates no transport paths.** It had shipped hourly air-movement paths (+1/+3/+6 hours) in 2.4.117, and four hundred pixels further down, in "From raw data to preparation", step 3 still read:
+
+> *"Cooked: AOD is column aerosol; fires are signals, not arriving surface concentration. **This page does not calculate transport paths or arrival times.**"*
+
+Both sentences were true at different times. Only one is true now, and the reader who checks what a number means is the reader who hits the contradiction. The page had become its own contradiction — in the one place the product asks careful readers to look. The Thai copy of the same sentence said the same thing.
+
+**Now it says what the page does.** The +hour paths are *wind-based air-movement scenarios* — not smoke dispersion, not AQI. The honest boundary is unchanged and still stated: no plume rise, no dispersion, no rain removal, no terrain, and a link to NOAA HYSPLIT for the modelling that a real prediction needs. Correcting a stale denial must not become an unearned claim, so the guard holds the *limits* as firmly as the correction.
+
+**A guard that reads both copies.** Every sentence on this page lives twice: once as the visible text and once inside `data-t="ไทย|English"`, which is what the language switch reads. A guard that searches the whole file therefore sees a claim even after the copy a reader actually sees has been deleted — and two of this guard's own mutations slipped through for exactly that reason before it was tightened. `scripts/test-region-claims.mjs` (15 checks) now reads the rendered copy and the `data-t` copy separately, in both languages. Seven mutations proven red: the English denial, the Thai denial, the rendered scenario caveat deleted, the rendered omitted-physics caveat deleted, the rendered wind-based sentence deleted, the Thai caveat deleted, the HYSPLIT reference deleted, and the code drawing a path from missing wind.
+
+**Also fixed: the instruments could not see this page at all.** The shared readiness check looked for a `#boot` splash and a `.rank-row` — neither exists on the regional page, so a driver measuring it reported "never showed live data" for 300 seconds and learned nothing. `scripts/ops/page.mjs` now knows the region's own markers and its own failure text. And the local Node server does not serve `/region` at all (it is a Pages route), so a check pointed at `localhost:28341/region` measures a 404 page that looks like a broken feature.
+
+**Verified independently of the 2.4.119 report, on production:** the map starts at **104px** (a 52px header and a 52px toolbar — no stacked bands above it) and is 740px tall; the evidence loads; the wind reading publishes a direction and a speed; the path is labelled *"Air-movement scenario · 6.0 h · 18 km"*; the map key itself says the path is a scenario; and when the hourly wind feed is unavailable the page says **"No path drawn with missing or stale winds"** and draws nothing — which is the right answer, and is now reported as *not verified* by the check rather than as a pass or a failure.
+
+**One thing left open, and it is a real limitation rather than a bug:** at the country zoom an 18 km path is a few pixels across, so the +1/+3/+6 labels collide and the map keeps one. The marks separate once the path fills the view — which is what the "Zoom to +hour path" button is for — and the step list always names all three.
+
+---
+
 ## [2.4.119] — 2026-10-23 — preserve the map task through resize
 
 A small map-size change could reset a focused air path to the country extent, replacing the useful view during rendering. Ignore sub-20 px layout changes and preserve path focus through actual viewport changes; explicit area/reset actions clear focus. No change to physical distances, wind ingestion or forecast claims.

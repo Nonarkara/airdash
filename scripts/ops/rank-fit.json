@@ -1,5 +1,5 @@
 {
-  "note": "Written by scripts/ops/probe-first-screen.mjs — a live browser measurement of the ranking table at 1440x900. The guard scripts/test-rail-width.mjs reads this; re-run the probe after changing the table CSS or the name font.",
+  "note": "Written by scripts/ops/probe-first-screen.mjs — a live browser measurement of the ranking table. The guard scripts/test-rail-width.mjs reads this; re-run the probe after changing the table CSS or the name font.",
   "viewport": {
     "w": 1440,
     "h": 900
@@ -23,7 +23,7 @@
     "nameNeed": 106,
     "cut": 0,
     "cutNames": [],
-    "measuredAt": "2026-10-22T19:49:35.344Z"
+    "measuredAt": "2026-10-23T11:55:22.607Z"
   },
   "en": {
     "rail": 375,
@@ -44,6 +44,6 @@
     "nameNeed": 165,
     "cut": 0,
     "cutNames": [],
-    "measuredAt": "2026-10-22T19:49:35.354Z"
+    "measuredAt": "2026-10-23T11:55:22.615Z"
   }
 }

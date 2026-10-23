@@ -1,6 +1,6 @@
-import { windAt, airPath } from './wind-transport.js?v=2.4.119'
-import { windArrowSvg } from './wind.js?v=2.4.119'
-import { escapeHtml as esc } from './fmt.js?v=2.4.119'
+import { windAt, airPath } from './wind-transport.js?v=2.4.120'
+import { windArrowSvg } from './wind.js?v=2.4.120'
+import { escapeHtml as esc } from './fmt.js?v=2.4.120'
 export function createRegionalWindView({map,tr,clock}){
  const vectors=L.layerGroup().addTo(map),track=L.layerGroup().addTo(map)
  let data=null,origin={lat:20,lng:98},offset=0,level='surface',lastPath=[],focusActive=false

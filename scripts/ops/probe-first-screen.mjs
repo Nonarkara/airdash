@@ -389,13 +389,24 @@ const fitOf = d => d.rankFit && ({
   cutNames: d.rankFit.cut.map(c => c.text),
   measuredAt: new Date().toISOString(),
 })
-writeFileSync(FIT_JSON, JSON.stringify({
-  note: 'Written by scripts/ops/probe-first-screen.mjs — a live browser measurement of the ranking table at 1440x900. The guard scripts/test-rail-width.mjs reads this; re-run the probe after changing the table CSS or the name font.',
-  viewport: { w: W, h: H },
-  th: fitOf(thData),
-  en: fitOf(enData),
-}, null, 2))
-console.log(`\nwrote ${FIT_JSON}`)
+const thFit = fitOf(thData), enFit = fitOf(enData)
+if (thFit && enFit) {
+  writeFileSync(FIT_JSON, JSON.stringify({
+    note: 'Written by scripts/ops/probe-first-screen.mjs — a live browser measurement of the ranking table. The guard scripts/test-rail-width.mjs reads this; re-run the probe after changing the table CSS or the name font.',
+    viewport: { w: W, h: H },
+    th: thFit,
+    en: enFit,
+  }, null, 2))
+  console.log(`\nwrote ${FIT_JSON}`)
+} else {
+  // It is only written when a measurement was actually TAKEN. Pointing
+  // this probe at a page with no ranking table — the regional page, for
+  // instance — used to overwrite a good desktop measurement with nulls,
+  // and the rail guard then failed for a reason that had nothing to do
+  // with the rail. A detector that destroys the evidence it could not
+  // collect is worse than one that does nothing.
+  console.log(`\nno ranking table on this page — ${FIT_JSON} left untouched (a null measurement must not overwrite a real one)`)
+}
 
 // End in the requested language so the screenshot is the one asked for.
 if ((LANG || 'th') !== 'en') {

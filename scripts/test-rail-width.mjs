@@ -147,6 +147,14 @@ if (fit?.th && fit?.en) {
       'gap or padding changed — re-run the probe')
   }
 
+  // The rail ladder only exists above 1101px, so a measurement taken on a
+  // phone says nothing about it. A probe run against a page with no
+  // ranking table once overwrote a good desktop measurement with nulls,
+  // and the whole budget became unverifiable.
+  check('the measurement was taken at a DESKTOP width',
+    (fit.viewport?.w ?? 0) >= 1101,
+    `measured at ${fit.viewport?.w}px — the rail ladder exists only above 1101px; re-run the probe at 1440`)
+
   // The budget. The name column needs the wider of the two languages'
   // longest names, plus a little room so the next province on the list
   // does not instantly clip.
