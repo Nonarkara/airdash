@@ -15,7 +15,7 @@ const now=Date.parse('2026-10-19T12:00:00Z')
 raw.prepare('INSERT INTO ingest_runs VALUES(1,?,?,?)').run('firms_regional',1,new Date(now).toISOString())
 const insert=raw.prepare('INSERT INTO regional_hotspots VALUES(?,?,?,?,?)')
 for(const row of [[-2.1,113,20,'2026-10-19','430'],[20,96,30,'2026-10-19','430'],[20,96,30,'2026-10-16','430'],[20,96,30,'2026-10-20','430'],[20,96,30,'2026-10-19','2460']])insert.run(...row)
-let coverage=JSON.stringify({bounds:[-11,92,29,142],fetched_at:new Date(now).toISOString(),feeds_ok:2})
+let coverage=JSON.stringify({bounds:[-11,92,29,142],fetched_at:new Date(now).toISOString(),feeds_ok:2,key_version:2,feeds:[{fetched_at:new Date(now).toISOString(),newest_acquisition_at:new Date(now-3600000).toISOString()},{fetched_at:new Date(now).toISOString(),newest_acquisition_at:new Date(now-3600000).toISOString()}]})
 const db={kvGet:()=>coverage,all:(sql,...args)=>raw.prepare(sql).all(...args)}
 const result=regionalFires(db,now)
 assert.equal(result.available,true);assert.equal(result.cells.length,2)
@@ -30,16 +30,17 @@ const originalFetch=globalThis.fetch
 try {
   globalThis.fetch=async()=>({ok:true,text:async()=>'<html>Maintenance</html>'})
   await assert.rejects(source.run({db:{}}),/all feeds failed/,'HTTP200 HTML must fail ingestion')
+  const time=new Date().toISOString(); const freshCsv=csv.replaceAll('2026-10-19',time.slice(0,10)).replaceAll(',0430,',','+time.slice(11,13)+time.slice(14,16)+',')
   let call=0,receipt=null
-  globalThis.fetch=async()=>({ok:true,text:async()=>++call===2?'':csv})
-  await source.run({db:{tx:fn=>fn(),run:()=>({changes:1}),kvSet:(_key,value)=>{receipt=JSON.parse(value)}}})
+  globalThis.fetch=async()=>({ok:true,text:async()=>++call===2?'':freshCsv})
+  await source.run({db:{kvGet:()=>null,all:()=>[],tx:fn=>fn(),run:()=>({changes:1}),kvSet:(_key,value)=>{receipt=JSON.parse(value)}}})
   assert.equal(receipt.feeds_ok,2,'partial satellite failure is reported')
   assert.deepEqual(receipt.bounds,[-11,92,29,142])
-  const large=header+'\n'+Array.from({length:501},(_,i)=>`-2,${110+i/1000},2026-10-19,0430,N,high,20`).join('\n')
+  const large=header+'\n'+Array.from({length:501},(_,i)=>`-2,${110+i/1000},${time.slice(0,10)},${time.slice(11,13)+time.slice(14,16)},N,high,20`).join('\n')
   let inTransaction=0,largestBatch=0,batchRows=0,yielded=false
   globalThis.fetch=async()=>({ok:true,text:async()=>large})
   const immediate=setImmediate(()=>{yielded=true})
-  await source.run({db:{tx(fn){inTransaction++;batchRows=0;fn();largestBatch=Math.max(largestBatch,batchRows);inTransaction--},run(sql){if(sql.includes('INSERT')){assert.equal(inTransaction,1);batchRows++}return {changes:1}},kvSet(){assert.equal(yielded,true,'collector yields before certifying a large run')}}})
+  await source.run({db:{kvGet:()=>null,all:()=>[],tx(fn){inTransaction++;batchRows=0;fn();largestBatch=Math.max(largestBatch,batchRows);inTransaction--},run(sql){if(sql.includes('INSERT')){assert.equal(inTransaction,1);batchRows++}return {changes:1}},kvSet(){assert.equal(yielded,true,'collector yields before certifying a large run')}}})
   clearImmediate(immediate)
   assert.equal(largestBatch,500,'large ingestion has bounded transactions')
 } finally { globalThis.fetch=originalFetch }

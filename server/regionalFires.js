@@ -8,7 +8,14 @@ export function regionalFires(db, now = Date.now()) {
   let coverage = null
   try { coverage = JSON.parse(db.kvGet('firms_regional:coverage') ?? 'null') } catch {}
   const age = now - Date.parse(coverage?.fetched_at)
-  const available = coverage?.feeds_ok > 0 && JSON.stringify(coverage?.bounds) === JSON.stringify(REGIONAL_FIRE_BOUNDS) && Number.isFinite(age) && age >= -300000 && age <= 12 * 3600000
+  const feeds = (coverage?.feeds ?? []).map(feed => {
+    const observationAge = now - Date.parse(feed.newest_acquisition_at)
+    const retrievalAge = now - Date.parse(feed.fetched_at)
+    return { ...feed, current: !feed.error && Number.isFinite(observationAge) && observationAge >= -300000 && observationAge <= 12*3600000 && Number.isFinite(retrievalAge) && retrievalAge >= -300000 && retrievalAge <= 12*3600000 }
+  })
+  const currentFeeds = feeds.filter(f => f.current).length
+  const nativeAge = now-Date.parse(coverage?.native_precision_since)
+  const available = currentFeeds > 0 && coverage?.key_version === 2 && coverage?.feeds_ok > 0 && JSON.stringify(coverage?.bounds) === JSON.stringify(REGIONAL_FIRE_BOUNDS) && Number.isFinite(age) && age >= -300000 && age <= 12 * 3600000
   const cells = available ? db.all(`
     WITH detections AS (
       SELECT lat, lng, frp,
@@ -24,9 +31,12 @@ export function regionalFires(db, now = Date.now()) {
     FROM detections WHERE observed BETWEEN datetime(?) AND datetime(?)
     GROUP BY floor(lat*4), floor(lng*4)
   `, new Date(now - 48 * 3600000).toISOString(), new Date(now + 300000).toISOString()) : []
-  return { available, checked_at: coverage?.fetched_at ?? run?.started_at ?? null, cells,
-    feeds_ok: coverage?.feeds_ok ?? 0, feeds_expected: 3,
-    reason: available ? null : 'regional-coverage-not-collected-or-stale',
+  return { available, evaluated_at: new Date(now).toISOString(), checked_at: coverage?.fetched_at ?? run?.started_at ?? null, cells,
+    feeds_ok: coverage?.feeds_ok ?? 0, feeds_current: currentFeeds, feeds_expected: 3, feeds,
+    counts_partial: currentFeeds < 3 || !Number.isFinite(nativeAge) || nativeAge<48*3600000,
+    latest_acquisition_at: feeds.filter(f => f.current).map(f => f.newest_acquisition_at).sort().at(-1) ?? null,
+    latest_regional_detection_at: cells.map(c => c.last_observed_at).sort().at(-1) ?? null,
+    reason: available ? null : 'regional-coverage-or-upstream-acquisitions-not-current',
     bounds: REGIONAL_FIRE_BOUNDS, window_hours: 48, grid_degrees: 0.25,
     method: 'VIIRS Suomi NPP / NOAA-20 / NOAA-21 detections. Cloud and overpass gaps; repeated detections are not unique fires, burned area, agricultural attribution or smoke arrival forecasts.' }
 }

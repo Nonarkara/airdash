@@ -34,9 +34,9 @@ const FIRMS_FEEDS = [
 export const REGIONAL_FIRE_BOUNDS = [-11, 92, 29, 142]
 const BBOX = { latMin: -11, latMax: 29, lngMin: 92, lngMax: 142 }
 
-export function parseCsv(text) {
+export function parseCsv(text, report = {}) {
   const lines = text.split('\n')
-  const head = lines[0].split(',')
+  const head = lines[0].split(',').map(s => s.trim())
   const idx = (name) => head.indexOf(name)
   const iLat = idx('latitude'), iLng = idx('longitude')
   const iDate = idx('acq_date'), iTime = idx('acq_time')
@@ -50,11 +50,15 @@ export function parseCsv(text) {
     if (c.length !== head.length) continue
     if (!c[iLat]?.trim() || !c[iLng]?.trim()) continue
     const lat = Number(c[iLat]), lng = Number(c[iLng])
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue
-    if (lat < BBOX.latMin || lat > BBOX.latMax || lng < BBOX.lngMin || lng > BBOX.lngMax) continue
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat)>90 || Math.abs(lng)>180) continue
     if (!/^\d{4}-\d{2}-\d{2}$/.test(c[iDate]) || !/^\d{1,4}$/.test(c[iTime])) continue
     const hhmm = c[iTime].padStart(4, '0')
     if (+hhmm.slice(0, 2) > 23 || +hhmm.slice(2) > 59) continue
+    const acquired = `${c[iDate]}T${hhmm.slice(0,2)}:${hhmm.slice(2)}:00Z`
+    const stamp = Date.parse(acquired)
+    if (!Number.isFinite(stamp) || new Date(stamp).toISOString().slice(0,10) !== c[iDate] || stamp > (report.now ?? Date.now()) + 300000) continue
+    if (stamp <= (report.now ?? Date.now()) + 300000 && (!report.newest_acquisition_at || stamp > Date.parse(report.newest_acquisition_at))) report.newest_acquisition_at = acquired
+    if (lat < BBOX.latMin || lat > BBOX.latMax || lng < BBOX.lngMin || lng > BBOX.lngMax) continue
     rows.push({
       lat, lng,
       acq_date: c[iDate] ?? null,
@@ -67,9 +71,29 @@ export function parseCsv(text) {
   return rows
 }
 
+// A VIIRS pixel is375m; rounding to1km merges distinct observations.
+export function detectionKey(row) {
+  return `v2:${row.satellite}:${row.acq_date}:${String(row.acq_time).padStart(4,'0')}:${Number(row.lat)}:${Number(row.lng)}`
+}
+// Re-key surviving legacy rows before adding new ones. Interrupted runs can
+// resume; an already-migrated duplicate is retained rather than counted twice.
+export async function migrateDetectionKeys(db) {
+  let cursor = ''
+  for (;;) {
+    const batch = db.all("SELECT detection_key,lat,lng,acq_date,acq_time,satellite FROM regional_hotspots WHERE detection_key > ? AND detection_key NOT LIKE 'v2:%' ORDER BY detection_key LIMIT 500", cursor)
+    if (!batch.length) return
+    db.tx(() => { for (const row of batch) {
+      db.run('UPDATE OR IGNORE regional_hotspots SET detection_key=? WHERE detection_key=?', detectionKey(row), row.detection_key)
+      db.run('DELETE FROM regional_hotspots WHERE detection_key=?', row.detection_key)
+    } })
+    cursor = batch.at(-1).detection_key
+    await new Promise(setImmediate)
+  }
+}
+
 export default {
   name: 'firms_regional',
-  version: 3, // bump when the fetch/parse logic changes → runs at next boot
+  version: 4, // bump when the fetch/parse logic changes → runs at next boot
   label_th: 'จุดความร้อนภูมิภาค (NASA FIRMS — ข้ามพรมแดน)',
   label_en: 'Regional hotspots (NASA FIRMS — cross-border)',
   // Bulk 24h files, refreshed several times daily upstream. Every 6 h: the
@@ -81,19 +105,30 @@ export default {
   async run({ db }) {
     const rows = []
     const failures = []
+    const feeds = []
     for (const url of FIRMS_FEEDS) {
       try {
         const r = await fetch(url, { signal: AbortSignal.timeout(60_000) })
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        rows.push(...parseCsv(await r.text()))
+        const report = { now: Date.now() }
+        const parsed = parseCsv(await r.text(), report)
+        rows.push(...parsed)
+        feeds.push({ name: url.split('/').pop(), fetched_at: new Date().toISOString(), newest_acquisition_at: report.newest_acquisition_at ?? null, regional_detections: parsed.length })
       } catch (err) {
+        feeds.push({ name: url.split('/').pop(), error: true, newest_acquisition_at: null })
         failures.push(`${url.split('/').pop()}: ${err?.message ?? err}`)
       }
     }
     // One satellite down is a gap, not an outage; all three down must throw
     // so /api/health and the watchdog see it.
     if (failures.length === FIRMS_FEEDS.length) throw new Error(`FIRMS: all feeds failed — ${failures.join('; ')}`)
+    if (!feeds.some(f => !f.error && Number.isFinite(Date.parse(f.newest_acquisition_at)) && Date.now()-Date.parse(f.newest_acquisition_at) <= 12*3600000 && Date.now()-Date.parse(f.newest_acquisition_at) >= -300000)) throw new Error('FIRMS: no recent upstream acquisitions in successfully fetched feeds')
+    let previous = null
+    try { previous = JSON.parse(db.kvGet('firms_regional:coverage') ?? 'null') } catch {}
+    const nativePrecisionSince = previous?.native_precision_since ?? new Date().toISOString()
 
+
+    await migrateDetectionKeys(db)
     let added = 0
     const now = new Date().toISOString()
     // Commit bounded batches and yield between them. A regional fire episode
@@ -102,9 +137,7 @@ export default {
     for (let offset = 0; offset < rows.length; offset += 500) {
       db.tx(() => {
         for (const row of rows.slice(offset, offset + 500)) {
-          // Round to ~1 km so the key is stable even though FIRMS assigns
-          // no persistent detection ID of its own.
-          const key = `${row.satellite}:${row.acq_date}:${row.acq_time}:${row.lat.toFixed(2)}:${row.lng.toFixed(2)}`
+          const key = detectionKey(row)
           const { inThailand, province_th, province_en } = pointInThailand(row.lat, row.lng)
           const res = db.run(
             `INSERT OR IGNORE INTO regional_hotspots
@@ -125,7 +158,7 @@ export default {
     // 14 days keeps roughly two burning-season weeks of context without
     // growing forever.
     db.run(`DELETE FROM regional_hotspots WHERE acq_date < date('now', '-14 days')`)
-    db.kvSet('firms_regional:coverage', JSON.stringify({ bounds: REGIONAL_FIRE_BOUNDS, fetched_at: now, feeds_ok: FIRMS_FEEDS.length - failures.length, feeds_expected: FIRMS_FEEDS.length }))
+    db.kvSet('firms_regional:coverage', JSON.stringify({ bounds: REGIONAL_FIRE_BOUNDS, feeds, key_version: 2, native_precision_since: nativePrecisionSince, fetched_at: now, feeds_ok: FIRMS_FEEDS.length - failures.length, feeds_expected: FIRMS_FEEDS.length }))
     return { seen: rows.length, added }
   },
 }
