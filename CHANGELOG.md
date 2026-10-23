@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.123] — 2026-10-23 — the zone was painted black
+
+**2.4.122 turned the zone on and painted every province black.** `bandColor` is a *function*; the layer indexed it — `bandColor[band]` — which is `undefined`, and Leaflet falls back to its default, which is black. The province areas were there, in the right shapes, at the right opacities, and every one of them was the same colour: none.
+
+**A pattern-matching guard cannot see this.** The guard that shipped with 2.4.122 asserted that the source said `BAND_COLOR[band]` — which is exactly what the broken code said. It read as deliberate, so it passed. The style now lives in its own pure module, `public/js/zone-style.js`, and the guard **executes** it: the fill must be a real colour, the stroke and the fill must be the same colour, an unknown band must get the neutral reference style, and the opacity ladder must grow with severity. **Thirteen mutations, thirteen caught** — among them "the band colour is indexed instead of called" and "the zone is painted black", which are the two mistakes that actually shipped.
+
+**And a live check that reads the pixels.** `scripts/ops/check-zone-layer.mjs` samples the map's own canvas at the province areas and refuses a grey or black pixel, a fill that is not a band colour, a missing province card, or a legend whose counts do not add up to 77. A check that cannot see what the browser painted is a check that cannot fail.
+
+**Verified on the live map:** 77 areas, the zone on, the score circles off, every painted pixel a band colour, no black, no grey, the legend counting all 77 provinces, and every area opening the province card.
+
+---
+
 ## [2.4.122] — 2026-10-23 — the zone of air pollution was invisible
 
 **The map could not show you where the air was bad.** The dashboard drew 77 province risk circles as translucent discs — 5% to 18% fill — over a pale basemap. A reader who opens the map to find out where the pollution is gets a pile of grey rings, and the loudest layer on the screen is the radar rain. The layer that could have drawn the zone as an *area* — the DOPA province polygons, filled with each province's watch band — was off by default and filled at 4%: a whisper. Its 1.1 MB of boundary geometry was fetched at boot anyway, for a layer that was off by default.
@@ -29,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **A guard that can fail.** `scripts/test-zone-layer.mjs` (32 checks, in `npm test`) holds the contract: the zone is on, the duplicate encoding is off, every band's fill is legible and grows with severity, the fill comes from the band's own colour, the legend names the bands and counts them, the card exists once, and no data means no invented band. **Ten mutations, ten caught** — the zone switched off again, the score circles switched back on, the worst band painted at a whisper, the clean band painted at nothing, the fill coming from a second palette, the legend losing its key, the zone stopping opening the card, the card written a second time, the counts frozen at zero, and the counts baked in at build time.
 
 **Verified on the live map:** 77 province areas drawn — 58 at 20% and 19 at 36% (the north-east and the Bangkok area) — the score circles off, the legend key live and correct, no console errors.
+
+> **Corrected in 2.4.123:** the areas were drawn, but painted **black** — the band colour was indexed instead of called, so the fill fell back to the renderer default. The guard that shipped here matched the broken pattern instead of the behaviour. The style is now a pure module the guard executes, and a live check reads the map's own pixels.
 
 **Still to come, and it is the same idea:** the wind that moves the zone, and the horizon it will reach. Both are already in the payload — `wind_towards_deg` and `pm25_fc_24h/48h/72h` per province — and neither is on the main map today. The regional page has the wind; the main map now has the zone; neither has the other's half.
 

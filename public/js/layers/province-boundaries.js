@@ -10,17 +10,12 @@
 // provinces recede and the bad ones shout. The numbers live here, and the
 // map legend reads them from here, so the key and the map can never drift
 // apart.
-import { getJson } from '../cache.js?v=2.4.122'
-import { store, on } from '../state.js?v=2.4.122'
-import { tr, bandColor } from '../i18n.js?v=2.4.122'
-import { escapeHtml } from '../fmt.js?v=2.4.122'
-import { provinceCard } from '../paint.js?v=2.4.122'
-
-const BAND_COLOR = bandColor // theme-aware; single source of truth in i18n.js
-
-// The zone's fill opacity per band. A whisper for normal, a shout for high.
-export const ZONE_OPACITY = { normal: 0.20, watch: 0.36, elevated: 0.52, high: 0.66 }
-const DEFAULT_STYLE = { color: '#241E4E', weight: 1, opacity: 0.55, fillColor: '#241E4E', fillOpacity: 0.04 }
+import { getJson } from '../cache.js?v=2.4.123'
+import { store, on } from '../state.js?v=2.4.123'
+import { tr, bandColor } from '../i18n.js?v=2.4.123'
+import { escapeHtml } from '../fmt.js?v=2.4.123'
+import { provinceCard } from '../paint.js?v=2.4.123'
+import { zoneStyle } from '../zone-style.js?v=2.4.123'
 
 export function createProvinceBoundariesLayer() {
   const group = L.layerGroup()
@@ -62,14 +57,7 @@ export function createProvinceBoundariesLayer() {
       const p = feat.properties ?? {}
       const row = riskRowForName(p.pro_th, p.pro_en)
       const band = row?.band ?? null
-      const style = {
-        color: band ? BAND_COLOR[band] : DEFAULT_STYLE.color,
-        weight: band === 'high' ? 1.6 : band === 'elevated' ? 1.4 : 0.9,
-        opacity: band ? 0.85 : DEFAULT_STYLE.opacity,
-        fillColor: band ? BAND_COLOR[band] : DEFAULT_STYLE.fillColor,
-        fillOpacity: band ? ZONE_OPACITY[band] : DEFAULT_STYLE.fillOpacity,
-        dashArray: band ? null : '3 3',
-      }
+      const style = zoneStyle(band)
       try {
         const layer = L.geoJSON(feat, {
           pane: 'vectors',
@@ -77,7 +65,7 @@ export function createProvinceBoundariesLayer() {
           onEachFeature: (f, lyr) => {
             const name = tr(p.pro_th, p.pro_en)
             lyr.bindTooltip(
-              `<b>${escapeHtml(name)}</b>${band ? `<br><span style="color:${BAND_COLOR[band]}">${tr('คะแนน', 'score')} ${row.score}/100</span>` : ''}`,
+              `<b>${escapeHtml(name)}</b>${band ? `<br><span style="color:${bandColor(band)}">${tr('คะแนน', 'score')} ${row.score}/100</span>` : ''}`,
               { sticky: true, direction: 'top', opacity: 0.95 },
             )
             // The province card lives on the ZONE, because the zone is the
