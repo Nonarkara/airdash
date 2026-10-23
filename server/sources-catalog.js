@@ -3,6 +3,7 @@
 // portals, and the compiled exports we serve from SQLite. Exposed at
 // GET /api/sources for researchers and integrators who want the same feeds.
 export const SOURCES = [
+  {id:'regional_wind',kind:'pipeline',stored:true,name_th:'ลมรายชั่วโมงระดับภูมิภาค',name_en:'Regional hourly winds',agency_th:'Open-Meteo',agency_en:'Open-Meteo',cadence_th:'ทุก 6 ชั่วโมง',cadence_en:'6-hourly retrieval / hourly valid times',url:'https://open-meteo.com/en/docs',api:'/api/region',metrics:['wind_speed_10m','wind_direction_10m','wind_speed_850hPa','wind_direction_850hPa','precipitation','geopotential_height_850hPa'],note_th:'63 จุด กริด 6° เส้นทางอากาศสมมุติ ไม่ใช่เวลาควันถึงหรือค่า AQI',note_en:'63 samples at 6° spacing. Fixed-level air movement, not smoke arrival, concentration or AQI. Below-terrain pressure levels masked.'},
   {
     id: 'air4thai',
     kind: 'pipeline',

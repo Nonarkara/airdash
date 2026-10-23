@@ -1349,11 +1349,9 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     'GET /api/region': async (req, res) => {
       const sg = await readSingapore()
       const observations = [...thailandRows(airStationsNow(db)), ...sg.readings.map(r => ({ ...r, status: observationStatus(r.observed_at) }))]
-      const smoke = computeSmoke(db)
       json(res, 200, {
         generated_at: new Date().toISOString(), countries: COUNTRIES, resources: REGIONAL_RESOURCES,
         pollution_outlook: pollutionOutlook(db, forecastBias(db)),
-        wind: (smoke.provinces ?? []).map(p => { const location = allProvinces().find(l => l.province_code === p.code); return { ...p, lat: location?.lat, lng: location?.lng } }),
         observations, singapore: { available: sg.available, fetched_at: sg.fetched_at, error: sg.error },
         regional_wind: regionalWind(db),
         fires: regionalFires(db),
