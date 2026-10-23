@@ -1,22 +1,25 @@
 // Province-boundaries layer — pulled from chingchai/OpenGISData-Thailand
 // (CC-BY 4.0, derived from DOPA shapefiles). 77 features, ~1.6 MB.
 //
-// Color each province by its current risk band when both layers are on,
-// so the operator gets a quick visual scan of where the situation is
-// elevated. The plain boundary outline is also useful on its own for
-// orientation ("which province am I looking at?").
-import { getJson } from '../cache.js?v=2.4.121'
-import { store, on } from '../state.js?v=2.4.121'
-import { tr, bandColor } from '../i18n.js?v=2.4.121'
-import { escapeHtml } from '../fmt.js?v=2.4.121'
+// This is the ZONE layer: each province is one area, filled with that
+// province's watch band. It is the only layer on the map that answers
+// "where is the air bad" as an area rather than as a pile of overlapping
+// circles, so it is on by default.
+//
+// The fill is the BAND's own colour at a per-band opacity: the normal
+// provinces recede and the bad ones shout. The numbers live here, and the
+// map legend reads them from here, so the key and the map can never drift
+// apart.
+import { getJson } from '../cache.js?v=2.4.122'
+import { store, on } from '../state.js?v=2.4.122'
+import { tr, bandColor } from '../i18n.js?v=2.4.122'
+import { escapeHtml } from '../fmt.js?v=2.4.122'
+import { provinceCard } from '../paint.js?v=2.4.122'
 
 const BAND_COLOR = bandColor // theme-aware; single source of truth in i18n.js
-const BAND_FILL = {
-  normal:   { fill: '#00933C', opacity: 0.04 },
-  watch:    { fill: '#F0B400', opacity: 0.10 },
-  elevated: { fill: '#E86A10', opacity: 0.16 },
-  high:     { fill: '#A51931', opacity: 0.22 },
-}
+
+// The zone's fill opacity per band. A whisper for normal, a shout for high.
+export const ZONE_OPACITY = { normal: 0.20, watch: 0.36, elevated: 0.52, high: 0.66 }
 const DEFAULT_STYLE = { color: '#241E4E', weight: 1, opacity: 0.55, fillColor: '#241E4E', fillOpacity: 0.04 }
 
 export function createProvinceBoundariesLayer() {
@@ -39,13 +42,16 @@ export function createProvinceBoundariesLayer() {
     } catch { /* boundaries unavailable — layer still adds as empty group */ }
   }
 
-  function bandForName(nameTh, nameEn) {
+  function riskRowForName(nameTh, nameEn) {
     const snap = store.snapshot
     if (!snap?.risk?.provinces) return null
-    const p = snap.risk.provinces.find((p) =>
+    return snap.risk.provinces.find((p) =>
       (nameTh && p.province_th === nameTh) ||
-      (nameEn && p.province_en === nameEn))
-    return p?.band ?? null
+      (nameEn && p.province_en === nameEn)) ?? null
+  }
+
+  function bandForName(nameTh, nameEn) {
+    return riskRowForName(nameTh, nameEn)?.band ?? null
   }
 
   function draw() {
@@ -54,14 +60,14 @@ export function createProvinceBoundariesLayer() {
 
     for (const feat of boundaries.features) {
       const p = feat.properties ?? {}
-      const band = bandForName(p.pro_th, p.pro_en)
-      const fill = band ? BAND_FILL[band] : null
+      const row = riskRowForName(p.pro_th, p.pro_en)
+      const band = row?.band ?? null
       const style = {
-        color: fill ? BAND_COLOR[band] : DEFAULT_STYLE.color,
+        color: band ? BAND_COLOR[band] : DEFAULT_STYLE.color,
         weight: band === 'high' ? 1.6 : band === 'elevated' ? 1.4 : 0.9,
         opacity: band ? 0.85 : DEFAULT_STYLE.opacity,
-        fillColor: fill ? fill.fill : DEFAULT_STYLE.fillColor,
-        fillOpacity: fill ? fill.opacity : DEFAULT_STYLE.fillOpacity,
+        fillColor: band ? BAND_COLOR[band] : DEFAULT_STYLE.fillColor,
+        fillOpacity: band ? ZONE_OPACITY[band] : DEFAULT_STYLE.fillOpacity,
         dashArray: band ? null : '3 3',
       }
       try {
@@ -71,9 +77,13 @@ export function createProvinceBoundariesLayer() {
           onEachFeature: (f, lyr) => {
             const name = tr(p.pro_th, p.pro_en)
             lyr.bindTooltip(
-              `<b>${escapeHtml(name)}</b>${band ? `<br><span style="color:${BAND_COLOR[band]}">${tr('คะแนน', 'score')} ${bandForScore(p.pro_th, p.pro_en)}/100</span>` : ''}`,
+              `<b>${escapeHtml(name)}</b>${band ? `<br><span style="color:${BAND_COLOR[band]}">${tr('คะแนน', 'score')} ${row.score}/100</span>` : ''}`,
               { sticky: true, direction: 'top', opacity: 0.95 },
             )
+            // The province card lives on the ZONE, because the zone is the
+            // thing a reader clicks. One card, one implementation — the same
+            // one the score circles show, so they cannot disagree.
+            if (row) lyr.bindPopup(() => provinceCard(row))
             lyr.on('click', () => {
               const evt = new CustomEvent('province-boundary-click', { detail: { pro_th: p.pro_th, pro_en: p.pro_en } })
               window.dispatchEvent(evt)
@@ -83,15 +93,6 @@ export function createProvinceBoundariesLayer() {
         group.addLayer(layer)
       } catch { /* skip malformed feature */ }
     }
-  }
-
-  function bandForScore(nameTh, nameEn) {
-    const snap = store.snapshot
-    if (!snap?.risk?.provinces) return null
-    const p = snap.risk.provinces.find((p) =>
-      (nameTh && p.province_th === nameTh) ||
-      (nameEn && p.province_en === nameEn))
-    return p?.score ?? null
   }
 
   load()

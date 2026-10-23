@@ -1,24 +1,24 @@
-import { windArrowSvg, windBasisLabel, windRowText, windView } from './wind.js?v=2.4.121'
-import { escapeHtml } from './fmt.js?v=2.4.121'
-import { moveMap } from './mapView.js?v=2.4.121'
-import { readPreference, writePreference } from './preferences.js?v=2.4.121'
+import { windArrowSvg, windBasisLabel, windRowText, windView } from './wind.js?v=2.4.122'
+import { escapeHtml } from './fmt.js?v=2.4.122'
+import { moveMap } from './mapView.js?v=2.4.122'
+import { readPreference, writePreference } from './preferences.js?v=2.4.122'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.121'
-import { tr, LEVEL_NAME } from './i18n.js?v=2.4.121'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.121'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.121'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.121'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.121'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.121'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.121'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.121'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.121'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.121'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.121'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.121'
-import { openWindow } from './witness.js?v=2.4.121'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.121'
+import { on, store } from './state.js?v=2.4.122'
+import { tr, LEVEL_NAME, BAND, bandColor } from './i18n.js?v=2.4.122'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.122'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.122'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.122'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.122'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.122'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.122'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.122'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.122'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.122'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.122'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.122'
+import { openWindow } from './witness.js?v=2.4.122'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.122'
 
 const windToggle = {id:'hazeWind',th:'ทิศลมรายจังหวัด + จุดไฟเหนือลม',en:'Province wind field + upwind fire counts',on:false,
   note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where wind blows. Daily dominant forecast, not current wind.',
@@ -227,6 +227,7 @@ function renderAll(snap) {
   layers.heatmap?.setData(snap.air)
   newsFireApi?.setData(snap.news, snap.risk?.provinces)
   paintWindField(snap.risk)
+  refreshZoneCounts()
 }
 
 let airStations = null
@@ -413,6 +414,17 @@ function addLayerControl() {
   radarCtl.addTo(map)
 }
 
+// The legend's zone counts are live: the legend is built once, when the
+// snapshot may not have arrived yet, so the counts are written into the
+// open legend rather than baked into it. A key that says "0 provinces" is
+// worse than no key.
+function refreshZoneCounts() {
+  const counts = store.snapshot?.risk?.national?.bandCounts ?? {}
+  for (const el of document.querySelectorAll('.legend-body .zcount')) {
+    el.textContent = String(counts[el.dataset.band] ?? 0)
+  }
+}
+
 function addLegend() {
   legendCtl?.remove()
   legendCtl = L.control({ position: 'bottomleft' })
@@ -429,7 +441,17 @@ function addLegend() {
     const PM_SAMPLE = { 1: 10, 2: 20, 3: 30, 4: 50, 5: 90 }
     const PM_RANGE = { 1: '≤15', 2: '15–25', 3: '25–37.5', 4: '37.5–75', 5: '>75' }
     const lv = (n) => `<div class="lrow"><span class="lsw" style="background:${pm25Color(PM_SAMPLE[n])}"></span>${PM_RANGE[n]} ${tr('มคก./ลบ.ม.', 'µg/m³')} · ${LEVEL_NAME[n][store.lang]}</div>`
+    // The zone key: the four bands the province areas are filled with, and
+    // how many provinces are in each. A key that names the colours is what
+    // makes the map readable; a key that omits them makes it decoration.
+    const zoneKey = ['normal', 'watch', 'elevated', 'high'].map(b => {
+      const name = store.lang === 'th' ? BAND[b].noun_th : BAND[b].noun_en
+      return `<div class="lrow"><span class="lsw" style="background:${bandColor(b)}"></span>${name} · <span class="zcount" data-band="${b}">0</span> ${tr('จังหวัด', 'provinces')}</div>`
+    }).join('')
     body.innerHTML = `
+      <div class="eyebrow">${tr('โซนอากาศรายจังหวัด', 'PROVINCE AIR ZONE')}</div>
+      ${zoneKey}
+      <div class="lrow">${tr('สีพื้นที่ = ระดับเฝ้าระวังของจังหวัด (ดัชนีรวมหลายปัจจัย ไม่ใช่ค่าความเข้มข้น) กดพื้นที่เพื่อดูการ์ดของจังหวัด', 'Area colour = the province’s watch band (a multi-factor composite, not a concentration). Click an area for its card.')}</div>
       <div class="eyebrow">${tr('PM2.5 (AQI ไทย 2566)', 'PM2.5 (THAI AQI 2023)')}</div>
       ${[5, 4, 3, 2, 1].map(lv).join('')}
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#2c97ae,#68b9a0,#cbd75c,#f0ad36,#cf4b35,#813e83,#472656)"></span>${tr('พื้นผิวประมาณ PM2.5: 0 · 15 · 25 · 37.5 · 75 · 150 · 300 µg/m³ ไม่ใช่ AQI ช่องว่าง = ข้อมูลไม่พอ','Estimated PM surface: 0 · 15 · 25 · 37.5 · 75 · 150 · 300 µg/m³, not AQI. Blank = unsupported.')}</div>
@@ -447,7 +469,7 @@ function addLegend() {
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#0f2f4a,#2f8fa8,#d8e04a)"></span>${tr('CO 500 hPa — ควันที่ลอยมาจากที่อื่น ไม่ใช่ไฟที่กำลังไหม้ตรงนี้', 'CO 500 hPa — smoke transported from elsewhere, not fire below')}</div>
       <div class="lrow"><span class="lsw" style="background:var(--th-red)"></span>${tr('รอยเผาภาคเกษตร — สะสมทั้งฤดู ธ.ค.68–เม.ย.69 (ไม่ใช่ไฟวันนี้) เฉพาะภาคเหนือ+กลาง', 'agri burn scars — whole season Dec 25–Apr 26 (not today\'s fires), north+central only')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
-      <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง', 'circle size = watch score')}</div>
+      <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง (เปิดชั้นวงคะแนนเพื่อดู) — พื้นที่จังหวัดแสดงระดับเดียวกันอยู่แล้ว', 'circle size = watch score (turn the score-circles layer on) — the province areas already carry the band')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ทิศลมรายจังหวัด', 'PROVINCE WIND')}</div>
       <div class="lrow"><span class="lrow-arrow">${windArrowSvg(90, { size: 16 })}</span>${tr('ลูกศรชี้ทางที่อากาศเคลื่อนไป (ทิศลมหลักรายวัน ไม่ใช่เส้นทางควัน)', 'arrow points where the air moves (daily dominant direction, not a smoke path)')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ฮีทแมป PM2.5', 'PM2.5 HEAT MAP')}</div>

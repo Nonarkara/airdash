@@ -16,6 +16,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.122] — 2026-10-23 — the zone of air pollution was invisible
+
+**The map could not show you where the air was bad.** The dashboard drew 77 province risk circles as translucent discs — 5% to 18% fill — over a pale basemap. A reader who opens the map to find out where the pollution is gets a pile of grey rings, and the loudest layer on the screen is the radar rain. The layer that could have drawn the zone as an *area* — the DOPA province polygons, filled with each province's watch band — was off by default and filled at 4%: a whisper. Its 1.1 MB of boundary geometry was fetched at boot anyway, for a layer that was off by default.
+
+**The zone now exists.** The province areas are on by default and filled with the band's own colour: 20% for a normal province, 36% for a watch province, 52% for elevated, 66% for critical. The clean provinces recede; the bad ones shout. And because the map now has a primary layer, the band is encoded **once**: the watch-score circles, which repeated the same band as a second disc around each centroid, are off by default and stay available as a toggle.
+
+**The zone is decodable.** The legend opens with the zone key — the four bands, the colour each uses, and how many provinces are in it. The counts are written into the open legend when the snapshot arrives, not baked into it at build time; a key that says "0 provinces" is worse than no key.
+
+**The province card moved to the thing you click.** The card — worst PM2.5, tomorrow's forecast, rain chance, which way the air is moving — is now **one implementation** (`provinceCard` in `paint.js`) opened by the province areas, so the map keeps its information and the two surfaces cannot disagree with each other.
+
+**A guard that can fail.** `scripts/test-zone-layer.mjs` (32 checks, in `npm test`) holds the contract: the zone is on, the duplicate encoding is off, every band's fill is legible and grows with severity, the fill comes from the band's own colour, the legend names the bands and counts them, the card exists once, and no data means no invented band. **Ten mutations, ten caught** — the zone switched off again, the score circles switched back on, the worst band painted at a whisper, the clean band painted at nothing, the fill coming from a second palette, the legend losing its key, the zone stopping opening the card, the card written a second time, the counts frozen at zero, and the counts baked in at build time.
+
+**Verified on the live map:** 77 province areas drawn — 58 at 20% and 19 at 36% (the north-east and the Bangkok area) — the score circles off, the legend key live and correct, no console errors.
+
+**Still to come, and it is the same idea:** the wind that moves the zone, and the horizon it will reach. Both are already in the payload — `wind_towards_deg` and `pm25_fc_24h/48h/72h` per province — and neither is on the main map today. The regional page has the wind; the main map now has the zone; neither has the other's half.
+
+---
+
 ## [2.4.121] — 2026-10-23 — the map threw two of its three hour marks away
 
 **The regional page drew one hour mark where it should have drawn three.** The path carries a +1 h, +3 h and +6 h position. The map placed those three marks with a de-collision loop that *skipped* any mark landing within 42 px of one already placed — and it placed them in reverse order, so +6 h won every time. On a country-scale map an 18 km path is a few pixels across, so two of the three marks were always dropped. The map showed a single chip reading "+6h" while the panel beside it listed three steps, and nothing on the page said the other two had been thrown away. A reader had no way to tell the difference between "there is one hour mark" and "the map kept one of three".

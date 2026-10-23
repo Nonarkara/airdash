@@ -1,10 +1,10 @@
 // Pure data-paint functions — accept a target layers object + snapshot slice.
 // Imported by map.js so the map renders risk/air/rain widgets straight from
 // the /api/snapshot stream with its own layer groups. No module-level state.
-import { emit, store } from './state.js?v=2.4.121'
-import { tr, pick, BAND, LEVEL_NAME, pm25Level, bandColor, pmColorFor, PM_COLORS } from './i18n.js?v=2.4.121'
-import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.4.121'
-import { windRowText } from './wind.js?v=2.4.121'
+import { emit, store } from './state.js?v=2.4.122'
+import { tr, pick, BAND, LEVEL_NAME, pm25Level, bandColor, pmColorFor, PM_COLORS } from './i18n.js?v=2.4.122'
+import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.4.122'
+import { windRowText } from './wind.js?v=2.4.122'
 
 const BAND_COLOR = bandColor // theme-aware; single source of truth in i18n.js
 
@@ -32,6 +32,34 @@ export function popupHtml(title_th, title_en, rows) {
   return `<div class="pop-name">${escapeHtml(title)}</div><div class="pop-en">${escapeHtml(sub)}</div>${kv}`
 }
 
+// ── The province card ──────────────────────────────────────────────────────
+// ONE implementation of "what this province looks like", shared by the map's
+// score circles and by the province-zone polygons. Two surfaces, one answer:
+// a card that exists in two places must not be able to disagree with itself.
+//
+// The rows are the four numbers a person deciding what to prepare needs:
+// how bad it is now, what it is expected to be, whether rain will help, and
+// which way the air is moving.
+export function provinceCardRows(p) {
+  return [
+    [tr('PM2.5 สูงสุด (มคก./ลบ.ม.)', 'worst PM2.5 (µg/m³)'), p.pm25 !== null ? fmtNum(p.pm25, 0) : '—'],
+    [tr('คาด PM2.5 พรุ่งนี้', 'PM2.5 forecast tomorrow'), p.pm25_fc_48h != null ? fmtNum(p.pm25_fc_48h, 0) : '—'],
+    [tr('โอกาสฝน 24 ชม.', 'rain chance 24h'), p.precip_prob_24h !== null ? `${fmtNum(p.precip_prob_24h, 0)}%` : '—'],
+    // Which way the air is moving. Null when the province carries no
+    // bearing — an absent wind must read as absent, never as north.
+    [tr('ลมพัดไปทางไหน', 'wind'), windRowText(p) || null],
+  ]
+}
+
+export function provinceCard(p) {
+  const th = store.lang === 'th'
+  return popupHtml(
+    `${tr('จ.', 'Prov. ')}${tr(p.province_th, p.province_en)} — ${p.score}/100 ${BAND[p.band][store.lang]}`,
+    `${th ? (p.province_en ?? '') : (p.province_th ?? '')} · ${BAND[p.band].en}`,
+    provinceCardRows(p),
+  )
+}
+
 export function paintRisk(layers, risk) {
   layers.risk.clearLayers()
   if (!risk?.provinces) return
@@ -43,18 +71,8 @@ export function paintRisk(layers, risk) {
       radius, color, weight: p.band === 'normal' ? 0.8 : 1.6,
       fillColor: color, fillOpacity: p.band === 'normal' ? 0.05 : 0.18, opacity: 0.85,
       pane: 'data',
-    }).bindPopup(() => popupHtml(
-      `${tr('จ.', 'Prov. ')}${tr(p.province_th, p.province_en)} — ${p.score}/100 ${BAND[p.band][store.lang]}`,
-      `${store.lang === 'th' ? (p.province_en ?? '') : (p.province_th ?? '')} · ${BAND[p.band].en}`,
-      [
-        [tr('PM2.5 สูงสุด (มคก./ลบ.ม.)', 'worst PM2.5 (µg/m³)'), p.pm25 !== null ? fmtNum(p.pm25, 0) : '—'],
-        [tr('คาด PM2.5 พรุ่งนี้', 'PM2.5 forecast tomorrow'), p.pm25_fc_48h != null ? fmtNum(p.pm25_fc_48h, 0) : '—'],
-        [tr('โอกาสฝน 24 ชม.', 'rain chance 24h'), p.precip_prob_24h !== null ? `${fmtNum(p.precip_prob_24h, 0)}%` : '—'],
-        // Which way the air is moving. Null when the province carries no
-        // bearing — an absent wind must read as absent, never as north.
-        [tr('ลมพัดไปทางไหน', 'wind'), windRowText(p) || null],
-      ],
-    )).on('click', () => emit('province-select', p))
+    }).bindPopup(() => provinceCard(p))
+      .on('click', () => emit('province-select', p))
       .addTo(layers.risk)
   }
 }
