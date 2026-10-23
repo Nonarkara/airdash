@@ -21,6 +21,7 @@ const crossing=structuredClone(data);for(const p of crossing.points)for(const h 
 w=windAt(crossing,16,100,now,'surface',now);assert.ok(w.north< -29);assert.ok(Math.abs(w.east)<1)
 const wrong=structuredClone(fixture);wrong[0].hourly_units.wind_speed_10m='m/s';assert.throws(()=>parseRegionalWind(wrong,new Date(now).toISOString()),/units/)
 const old=structuredClone(fixture);for(const p of old)p.hourly.time=p.hourly.time.map(t=>t-48*3600);assert.throws(()=>parseRegionalWind(old,new Date(now).toISOString()),/current-hour/)
+const moved=structuredClone(fixture);moved[0].latitude+=6;assert.throws(()=>parseRegionalWind(moved,new Date(now).toISOString()),/coordinate/)
 const gaps=structuredClone(fixture);gaps[0].hourly.time.splice(1,1);assert.throws(()=>parseRegionalWind(gaps,new Date(now).toISOString()),/hourly slots/)
 const mountain=structuredClone(fixture);mountain[0].elevation=1800;assert.deepEqual(parseRegionalWind(mountain,new Date(now).toISOString()).points[0].hours[0].aloft,[null,null])
 assert.equal(regionalWind({kvGet:()=>JSON.stringify(parsed)},now).available,true)

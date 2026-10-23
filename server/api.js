@@ -1351,7 +1351,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
       const observations = [...thailandRows(airStationsNow(db)), ...sg.readings.map(r => ({ ...r, status: observationStatus(r.observed_at) }))]
       json(res, 200, {
         generated_at: new Date().toISOString(), countries: COUNTRIES, resources: REGIONAL_RESOURCES,
-        pollution_outlook: pollutionOutlook(db, forecastBias(db)),
+        pollution_outlook: pollutionOutlook(db, forecastBias(db, { cachedOnly: true })),
         observations, singapore: { available: sg.available, fetched_at: sg.fetched_at, error: sg.error },
         regional_wind: regionalWind(db),
         fires: regionalFires(db),

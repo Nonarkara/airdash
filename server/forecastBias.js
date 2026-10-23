@@ -86,8 +86,10 @@ export function correct(v, { ratio, camsMean = 0 }) {
 const cache = new WeakMap() // db → { at, ratios }
 
 /** Per-DB cached bias model. Never throws: on failure the forecast passes through raw. */
-export function forecastBias(db) {
+export function forecastBias(db, { cachedOnly = false } = {}) {
   let c = cache.get(db)
+  // Regional live maps must not wait for historical calibration scans.
+  if (cachedOnly && (!c || Date.now() - c.at > TTL_MS)) return null
   if (!c || Date.now() - c.at > TTL_MS) {
     let ratios
     try { ratios = load(db) } catch { ratios = { byCode: new Map(), national: { ratio: 1, n: 0, scope: 'none' } } }
