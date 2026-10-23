@@ -26,9 +26,9 @@
 // recomputes a bearing — it draws the number the server published, because two
 // formulas in two runtimes eventually disagree by half a degree and nobody can
 // tell which one the reader was shown.
-import { store } from './state.js?v=2.4.120'
-import { tr } from './i18n.js?v=2.4.120'
-import { escapeHtml } from './fmt.js?v=2.4.120'
+import { store } from './state.js?v=2.4.121'
+import { tr } from './i18n.js?v=2.4.121'
+import { escapeHtml } from './fmt.js?v=2.4.121'
 
 /** Which day's wind this is — published so a reader can tell today from tomorrow. */
 export const WIND_BASIS_LABEL = {

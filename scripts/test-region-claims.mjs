@@ -63,7 +63,7 @@ check('the method narrative and the scenario caveat were found to read',
 
 // ── 1. the page ships the feature ─────────────────────────────────────────
 check('the page ships the path controls', /id="focus-wind"/.test(page) && /id="wind-steps"/.test(page))
-check('the page draws hour marks', /wind-hour-mark/.test(view) && /\[1,3,6\]/.test(view))
+check('the page draws hour marks', /wind-hour-mark/.test(view) && /HOUR_STEPS/.test(view))
 
 // ── 2. no denial of a feature the page has ───────────────────────────────
 // Checked in the RENDERED copy and in the data-t copy separately.

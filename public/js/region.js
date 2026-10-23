@@ -1,8 +1,8 @@
-import { createRegionalWindView } from './regional-wind-view.js?v=2.4.120'
-import { fireView, fireOpacity } from './regional-fire-view.js?v=2.4.120'
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.120'
-import { escapeHtml as esc } from './fmt.js?v=2.4.120'
-import { readPreference, writePreference } from './preferences.js?v=2.4.120'
+import { createRegionalWindView } from './regional-wind-view.js?v=2.4.121'
+import { fireView, fireOpacity } from './regional-fire-view.js?v=2.4.121'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.121'
+import { escapeHtml as esc } from './fmt.js?v=2.4.121'
+import { readPreference, writePreference } from './preferences.js?v=2.4.121'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
@@ -19,6 +19,10 @@ let data=null,imagery=null,loading=false,lastError=false
 const byId=id=>document.getElementById(id)
 function clock(time){if(!time)return '—';const date=new Date(time);return Number.isFinite(date.getTime())?date.toLocaleString(lang==='th'?'th-TH':'en-GB',{timeZone:'Asia/Bangkok',hour12:false})+' ICT':'—'}
 const windViewUI=createRegionalWindView({map,tr,clock})
+// A test hook: the live check has to be able to read the map's zoom and
+// centre, or it cannot prove that a focused path survives a resize — it
+// would be comparing two nulls and calling it a pass.
+window.__regionMap=map
 function translate(){document.documentElement.lang=lang;byId('watch-area').setAttribute('aria-label',tr('พื้นที่เฝ้าระวัง','Watch area'));for(const n of document.querySelectorAll('[data-t]')){const [th,en]=n.dataset.t.split('|');n.textContent=tr(th,en)}byId('language').textContent=lang==='th'?'EN':'ไทย';paint();setImagery()}
 byId('language').onclick=()=>{lang=lang==='th'?'en':'th';writePreference('ad_lang',lang);translate()}
 byId('reset-map').onclick=()=>{windViewUI.unfocus();byId('watch-area').value='region';map.fitBounds(whole)}

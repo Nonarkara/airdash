@@ -50,6 +50,14 @@ const READ = `JSON.stringify({
   toolbarH: (() => { const m=document.querySelector('.region-map-toolbar'); return m ? Math.round(m.getBoundingClientRect().height) : null })(),
   headerH: (() => { const m=document.querySelector('header'); return m ? Math.round(m.getBoundingClientRect().height) : null })(),
   hourMarks: [...document.querySelectorAll('.wind-hour-mark span')].map(e=>e.textContent.trim()),
+  // Every hour the chips NAME, not the number of chips. One chip may carry
+  // three hours ("+1h·+3h·+6h") when they cannot be read apart — what must
+  // never happen is an hour quietly missing.
+  hourHours: [...new Set([...document.querySelectorAll('.wind-hour-mark span')].flatMap(e=>[...e.textContent.matchAll(/(\\d+)h/g)].map(m=>Number(m[1]))))].sort((a,b)=>a-b),
+  // The rendered boxes, so the separation can be measured on screen rather
+  // than inferred from the zoom.
+  markBoxes: [...document.querySelectorAll('.wind-hour-mark')].map(e=>{const b=e.getBoundingClientRect();return {x:Math.round(b.x+b.width/2),y:Math.round(b.y+b.height/2),w:Math.round(b.width)}}),
+  mapZoom: window.__regionMap ? window.__regionMap.getZoom() : null,
   steps: [...document.querySelectorAll('#wind-steps li')].map(e=>e.textContent.replace(/\\s+/g,' ').trim().slice(0,60)),
   summary: (document.getElementById('wind-path-summary')?.textContent || '').replace(/\\s+/g,' ').trim().slice(0,180),
   limit: (document.querySelector('.scenario-limit')?.textContent || '').replace(/\\s+/g,' ').trim().slice(0,220),
@@ -80,6 +88,15 @@ console.log(JSON.stringify(last, null, 1))
 let failures = 0
 const check = (name, cond, why = '') => { cond ? console.log(`PASS ${name}`) : (failures++, console.log(`FAIL ${name} — ${why}`)) }
 const skip = name => console.log(`NOT VERIFIED ${name}`)
+// The closest pair of rendered chips, in screen pixels.
+const minGap = boxes => {
+  const b = boxes || []
+  let gap = Infinity
+  for (let i = 0; i < b.length; i++) for (let j = i + 1; j < b.length; j++) {
+    gap = Math.min(gap, Math.hypot(b[i].x - b[j].x, b[i].y - b[j].y))
+  }
+  return gap
+}
 
 // The hourly wind feed comes from Open-Meteo and is not always there. The
 // page's own behaviour in that case is to REFUSE to draw a path — which is
@@ -103,33 +120,57 @@ if (noWind) {
   skip('the step list — the hourly wind feed is unavailable right now')
   skip('the path summary — the hourly wind feed is unavailable right now')
 } else {
-  check('the path shows +1, +3 and +6 hour marks', (last?.hourMarks || []).length === 3,
-    `marks: ${JSON.stringify(last?.hourMarks)}`)
+  // The marks may be CLUSTERED at the country zoom — one chip carrying all
+  // three hours, because an 18 km path is a few pixels across. What must
+  // never happen is an hour quietly missing: the old de-collision loop
+  // dropped two of the three and left a lone "+6h" on the map.
+  check('no hour mark is dropped from the map', (last?.hourHours || []).join() === '1,3,6',
+    `marks ${JSON.stringify(last?.hourMarks)} name ${JSON.stringify(last?.hourHours)}`)
   check('the step list names the three hours', (last?.steps || []).length === 3, `steps: ${JSON.stringify(last?.steps)}`)
   check('the path is labelled a scenario, with the distance', /สมมุติ|scenario/i.test(last?.summary || ''), `summary: ${last?.summary}`)
 
+  // When the marks cannot be read apart, the map has to say so. A lone
+  // "+6h" chip with no explanation reads as "there is only one step".
+  const clustered = (last?.hourMarks || []).length < 3
+  if (clustered) {
+    check('the map says why the hour marks overlap', /overlap|too close|ทับกัน|ใกล้กัน/i.test(last?.mapKey || ''),
+      `map key: ${last?.mapKey}`)
+  } else {
+    console.log('note: the marks were already separate at the country zoom')
+  }
+
   // ── zoom to the path, and the three hour marks separate ────────────────
-  // At the country zoom the whole 18 km path is a few pixels across, so the
-  // +1/+3/+6 labels would sit on top of each other and the map drops the
-  // overlapping ones. That is the right behaviour, and it is why the page
-  // ships a "Zoom to +hour path" button: the marks separate once the path
-  // fills the view.
   await evaluate(`(() => { const b=document.getElementById('focus-wind'); if(b) b.click(); return !!b })()`)
   await sleep(4000)
   const focused = JSON.parse(await evaluate(READ))
-  console.log(`\nafter "Zoom to +hour path": marks ${JSON.stringify(focused.hourMarks)}`)
-  check('zooming to the path separates the +1/+3/+6 marks', (focused.hourMarks || []).length === 3,
-    `marks: ${JSON.stringify(focused.hourMarks)}`)
+  console.log(`\nafter "Zoom to +hour path": zoom ${last?.mapZoom} -> ${focused?.mapZoom}, marks ${JSON.stringify(focused?.hourMarks)}`)
+  check('zooming to the path separates the +1/+3/+6 marks', (focused?.hourMarks || []).length === 3,
+    `marks: ${JSON.stringify(focused?.hourMarks)}`)
+  check('each separated mark names exactly one hour', (focused?.hourMarks || []).every(m => (m.match(/\d+h/g) || []).length === 1),
+    `marks: ${JSON.stringify(focused?.hourMarks)}`)
+  check('the separated marks are readable on screen (not overlapping)', minGap(focused?.markBoxes) >= 40,
+    `closest pair ${minGap(focused?.markBoxes)}px`)
+  if (clustered) {
+    check('the focus actually zoomed in', (focused?.mapZoom ?? 0) > (last?.mapZoom ?? 0),
+      `zoom ${last?.mapZoom} -> ${focused?.mapZoom}`)
+  }
 }
 
 // ── focus survives a real viewport change ─────────────────────────────────
-const before = await evaluate(`JSON.stringify(window.__map ? window.__map.getCenter() : null)`)
+// The page exposes its map so this can be measured. Comparing two nulls
+// would pass for the wrong reason: before the hook existed this check read
+// null on both sides of the resize and called it a pass.
+const parseJson = s => { try { return JSON.parse(s) } catch { return null } }
+const before = parseJson(await evaluate(`JSON.stringify(window.__regionMap ? {lat:window.__regionMap.getCenter().lat,lng:window.__regionMap.getCenter().lng,zoom:window.__regionMap.getZoom()} : null)`))
 await send('Emulation.setDeviceMetricsOverride', { width: 1024, height: 800, deviceScaleFactor: 1, mobile: false })
 await sleep(4000)
-const after = await evaluate(`JSON.stringify(window.__map ? window.__map.getCenter() : null)`)
-console.log(`\nmap centre before ${before} · after a 390→1024 resize ${after}`)
-check('the map did not jump back to the country extent on resize', before === after || !!before,
-  `centre moved from ${before} to ${after}`)
+const after = parseJson(await evaluate(`JSON.stringify(window.__regionMap ? {lat:window.__regionMap.getCenter().lat,lng:window.__regionMap.getCenter().lng,zoom:window.__regionMap.getZoom()} : null)`))
+console.log(`\nmap before ${JSON.stringify(before)} · after a 390→1024 resize ${JSON.stringify(after)}`)
+check('the map exposes its own state to the check', !!before && !!after,
+  'the page did not expose window.__regionMap — this check would compare two nulls')
+check('the map did not jump back to the country extent on resize',
+  !!before && !!after && Math.abs(before.lat - after.lat) < 0.05 && Math.abs(before.lng - after.lng) < 0.05,
+  `centre moved from ${before?.lat},${before?.lng} to ${after?.lat},${after?.lng}`)
 
 const shot = await send('Page.captureScreenshot', { format: 'png' })
 writeFileSync('/tmp/region-390.png', Buffer.from(shot.data, 'base64'))

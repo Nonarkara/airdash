@@ -16,6 +16,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.121] — 2026-10-23 — the map threw two of its three hour marks away
+
+**The regional page drew one hour mark where it should have drawn three.** The path carries a +1 h, +3 h and +6 h position. The map placed those three marks with a de-collision loop that *skipped* any mark landing within 42 px of one already placed — and it placed them in reverse order, so +6 h won every time. On a country-scale map an 18 km path is a few pixels across, so two of the three marks were always dropped. The map showed a single chip reading "+6h" while the panel beside it listed three steps, and nothing on the page said the other two had been thrown away. A reader had no way to tell the difference between "there is one hour mark" and "the map kept one of three".
+
+**The promise was worse than the bug.** The page ships a "Zoom to +hour path" button, and 2.4.120's changelog said the marks "separate once the path fills the view". They could not: the focus capped the zoom at 8, where an 18 km path is about 30 px across — smaller than the separation — so the button could never deliver what it said, at any path length. The changelog recorded a hope as a fact.
+
+**Now no mark is ever dropped.** Marks too close to read apart are *clustered* into one chip that names every hour it covers — "+1h·+3h·+6h" — so the map always shows all three, and the map key says why they are together: *"Hour marks overlap at this zoom — zoom to separate."* When the path is too short to separate at any zoom the key says that instead, rather than promising a zoom that cannot deliver.
+
+**And the focus now delivers.** The zoom is computed from the geometry: the level at which the closest pair of marks clears the separation, or the level at which the path fills the view — whichever is closer, and never past the map's own maximum. Measured on the live page: zoom 5 → 11, three separated chips, 93 px and 155 px apart on a 390 px phone; 187 px apart at 1440.
+
+**The geometry lives in one place.** `public/js/hour-marks.js` owns the clustering, the chip widths, the separation and the focus zoom, away from Leaflet, so the map and the tests cannot drift apart. `scripts/test-hour-marks.mjs` (41 checks) holds the contract and proves it can fail: **ten mutations, ten caught** — including the exact bug this release fixes (a cluster that drops its last hour), a separation of zero, a separation zoom one level short, a focus that ignores the separation, and a focus that ignores the map's maximum. A mutation that changes nothing is rejected, because a no-op mutation proves nothing.
+
+**A check that could not fail was fixed too.** The live region's resize check compared `window.__map` before and after a viewport change — and the regional page has no such global, so it compared two nulls and called it a pass. The page now exposes `window.__regionMap`, and the check reads the map's real centre and zoom.
+
+**Verified** at 390 × 844, 1024 × 800 and 1440 × 900: the map starts at 104 px (a 52 px header and a 52 px toolbar), the cluster chip is 89 px and carries all three hours, the separated chips are 30 px and never overlap, and the map key's third line is exactly one line at 390 px. The full `npm test` suite is green.
+
+---
+
 ## [2.4.120] — 2026-10-23 — the page denied the feature it was shipping
 
 **The regional page's method narrative still said it calculates no transport paths.** It had shipped hourly air-movement paths (+1/+3/+6 hours) in 2.4.117, and four hundred pixels further down, in "From raw data to preparation", step 3 still read:
@@ -33,6 +51,8 @@ Both sentences were true at different times. Only one is true now, and the reade
 **Verified independently of the 2.4.119 report, on production:** the map starts at **104px** (a 52px header and a 52px toolbar — no stacked bands above it) and is 740px tall; the evidence loads; the wind reading publishes a direction and a speed; the path is labelled *"Air-movement scenario · 6.0 h · 18 km"*; the map key itself says the path is a scenario; and when the hourly wind feed is unavailable the page says **"No path drawn with missing or stale winds"** and draws nothing — which is the right answer, and is now reported as *not verified* by the check rather than as a pass or a failure.
 
 **One thing left open, and it is a real limitation rather than a bug:** at the country zoom an 18 km path is a few pixels across, so the +1/+3/+6 labels collide and the map keeps one. The marks separate once the path fills the view — which is what the "Zoom to +hour path" button is for — and the step list always names all three.
+
+> **Corrected in 2.4.121:** the paragraph above was a hope written as a fact. The labels did not merely collide — two of the three were *dropped*, with nothing on the page saying so; and the marks could not separate at all, because the button capped the zoom below the separation. 2.4.121 clusters the marks instead of dropping them and computes the focus zoom from the geometry.
 
 ---
 
