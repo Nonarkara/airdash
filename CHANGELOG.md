@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.118] — 2026-10-23 — narrow-screen wind readout
+
+Final 320 px check found a two-digit wind speed pushing the reading past the screen edge. Narrowed the area selector and kept the numeric bearing in the accessible name/dialog while retaining visible direction and speed. Compact tablet selector/reset sizing preserves the same controls at 770 px. No wind calculation or ingestion change.
+
 ## [2.4.117] — 2026-10-23 — hourly regional wind, a map-first workspace
 
 Replaced stacked regional chrome with a 52 px identity row and compact map controls. The selected point's wind speed and movement direction are visible above the map; secondary imagery controls collapse. Regional hourly winds now ingest 63 samples at 6° spacing every six hours using the existing scheduler and quota breaker: surface 10 m, 850 hPa, geopotential height and hourly precipitation. Pressure levels intersecting terrain are masked. The map shows arrow speeds in km/h, selectable release points, a six-hour fixed-level air-movement scenario with +1/+3/+6 h markers, release-time control and a path-focus action. Missing/stale data stops paths; calm has no false bearing. Paths do not predict smoke concentration, AQI, source attribution or smoke arrival. Removed the regional endpoint's obsolete daily smoke computation and aligned the client deadline with its 30-second edge budget. Regional optical/PM and flood evidence are retained.

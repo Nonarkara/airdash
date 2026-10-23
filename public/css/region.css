@@ -160,3 +160,5 @@ header nav{gap:16px}.brand{font-size:18px}.brand small{font-size:11px}
 #regional-map{color-scheme:only light}
 
 .wind-map-key{white-space:pre-line}
+@media(max-width:360px){.region-map-toolbar select{width:120px}#wind-reading>span>small{display:none}}
+@media(min-width:701px) and (max-width:900px){.region-map-toolbar select{width:150px}.region-map-toolbar #reset-map{font-size:13px;padding-inline:4px}}
