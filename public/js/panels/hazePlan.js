@@ -1,8 +1,8 @@
 // Preparation aid: observed/estimated PM, model outlook and upwind-fire evidence
 // stay separate. No smoke arrival time or clean-air destination is invented.
-import { store } from '../state.js?v=2.4.115'
-import { escapeHtml as esc } from '../fmt.js?v=2.4.115'
-import { windBasisLabel, windRowText } from '../wind.js?v=2.4.115'
+import { store } from '../state.js?v=2.4.116'
+import { escapeHtml as esc } from '../fmt.js?v=2.4.116'
+import { windBasisLabel, windRowText } from '../wind.js?v=2.4.116'
 const tr = (th,en) => store.lang === 'th' ? th : en
 const num = v => Number.isFinite(v) ? v.toLocaleString('en-GB',{maximumFractionDigits:1}) : '—'
 export function planningState(pm, forecast, fires) {
@@ -41,7 +41,7 @@ let selected = ''
 let aero = null, aeroAt = 0, aeroPending = null
 const AERO_TTL = 6 * 3600e3
 async function aerosolEvidence() {
-  if (aero && Date.now() - aeroAt < AERO_TTL) return aero
+  if (aero && Date.now() - aeroAt < (aero.empty_note ? 5*60e3 : AERO_TTL)) return aero
   if (aeroPending) return aeroPending
   aeroPending = fetch('/api/aeronet', { signal: AbortSignal.timeout(15000) })
     .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json() })
@@ -80,9 +80,9 @@ async function scienceEvidence() {
   return sciencePending
 }
 const MODE_LABEL = {
-  coarse: ['อนุภาคหยาบ — ฝุ่นดิน/ทราย', 'Coarse particles — mineral dust'],
-  mixed:  ['อนุภาคผสม — ทั้งหยาบและละเอียด', 'Mixed particles — fine and coarse'],
-  fine:   ['อนุภาคละเอียด — ควัน/การเผาไหม้', 'Fine particles — smoke and combustion'],
+  coarse: ['สัญญาณเชิงแสงเด่นทางอนุภาคหยาบ', 'Coarse-dominated optical signal'],
+  mixed:  ['สัญญาณเชิงแสงแบบผสม', 'Mixed optical signal'],
+  fine:   ['สัญญาณเชิงแสงเด่นทางอนุภาคละเอียด', 'Fine-dominated optical signal'],
 }
 function ageText(h) {
   if (!Number.isFinite(h)) return ''
@@ -91,27 +91,30 @@ function ageText(h) {
 }
 async function aerosolStrip() {
   const d = await aerosolEvidence()
-  const stations = Object.entries(d?.aerosol ?? {}).filter(([, p]) => p?.mode)
+  const stations = Object.entries(d?.aerosol ?? {}).filter(([, p]) => {
+    const age = Date.now() - Date.parse(p?.observed_at)
+    return MODE_LABEL[p?.mode] && Number.isFinite(p.alpha) && p.alpha >= 0 && Number.isFinite(p.load) && p.load >= 0 && Number.isFinite(age) && age >= -300000 && age <= 7*86400000
+  })
   if (!stations.length) {
     return `<aside class="haze-plan-aerosol" data-state="unavailable">
-      <h4>${esc(tr('อนุภาคในอากาศ · ยังไม่มีข้อมูลวันนี้', 'Particle size · no reading yet'))}</h4>
+      <h4>${esc(tr('บริบทเชิงแสง · ยังไม่มีค่าที่ใช้ได้', 'Optical context · no usable reading'))}</h4>
       <p>${esc(tr('สถานีวัดอาร์โรซอลยังไม่ได้รายงานค่าที่ใช้บอกขนาดอนุภาคได้ — คำแนะนำด้านบนยังใช้ตามค่าฝุ่น PM2.5 ได้ตามปกติ',
         'No aerosol station has reported a usable size reading yet. The advice above still stands on PM2.5.'))}</p></aside>`
   }
-  const mode = stations.reduce((a, b) => (b[1].load > a[1].load ? b : a))[1]
+  const [station, mode] = stations.reduce((a, b) => (b[1].load > a[1].load ? b : a))
+  const ageH = Math.round((Date.now() - Date.parse(mode.observed_at))/3600000)
   const g = mode.guidance
   const label = MODE_LABEL[mode.mode] ?? ['', '']
   // Name the stations so the reader knows this is five instruments, not a
   // province-wide measurement.
-  const where = stations.map(([k]) => k.replace(/_/g, ' ')).join(' · ')
-  return `<aside class="haze-plan-aerosol" data-state="${esc(mode.mode)}">
-    <h4>${esc(tr('อนุภาคในอากาศ — สิ่งที่คำแนะนำข้างบนไม่ได้บอก', 'Particle size — what the advice above does not say'))}</h4>
+  const where = station.replace(/_/g, ' ')
+  return `<aside class="haze-plan-aerosol" data-source="optical" data-state="${esc(mode.mode)}">
+    <h4>${esc(tr('บริบทเชิงแสงระดับประเทศ — ไม่มีค่าขนาดฝุ่นที่วัดในจังหวัดนี้', 'National optical context — no measured particle size for this province'))}</h4>
     <p class="haze-plan-aerosol-verdict"><strong>${esc(tr(...label))}</strong> · α = ${mode.alpha} <span class="muted">(${esc(mode.alpha_pair ?? '')})</span></p>
-    <p>${esc(g?.act_th ?? '')}</p>
-    <p class="muted">${esc(g?.act_en ?? '')}</p>
+    <p>${esc(tr(g?.act_th ?? '', g?.act_en ?? ''))}</p>
     ${mode.mode === 'coarse' ? `<p class="haze-plan-aerosol-warn">${esc(tr('ขนาดอนุภาคระดับประเทศไม่ใช้ตัดสินว่าหน้ากากได้ผลหรือไม่ หน้ากาก N95 ที่ได้รับการรับรองและแนบสนิทช่วยกรองอนุภาคทั้งละเอียดและหยาบ แต่ไม่กรองก๊าซหรือไอระเหย',
       'National particle-size evidence cannot determine respirator effectiveness. A well-fitting, approved N95 filters both fine and coarse particles; it does not filter gases or vapours.'))} <a href="https://www.cdc.gov/niosh/ppe/php/community-respirators-masks/" target="_blank" rel="noopener">NIOSH</a></p>` : ''}
-    <p class="muted">${esc(tr('วัดที่', 'Measured at'))}: ${esc(where)} · ${esc(ageText(d.reading_age_h))}</p>
+    <p class="muted">${esc(tr('วัดที่', 'Measured at'))}: ${esc(where)} · ${esc(mode.observed_at)} · ${esc(ageText(ageH))}</p>
     <p class="muted">${esc(tr('นี่คือขนาดอนุภาคเชิงคุณภาพ ไม่ใช่ค่าความเข้มข้น µg/m³ — ค่าฝุ่นยังมาจากสถานีพื้นดิน และเป็นสัญญาณระดับประเทศ ไม่ใช่รายจังหวัด',
       'This is a qualitative particle size, not a µg/m³ concentration — the concentration still comes from the ground stations. This is a national-scale signal from a few instruments, not a per-province measurement.'))}</p>
   </aside>`

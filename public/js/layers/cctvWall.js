@@ -1,13 +1,13 @@
-import { containDialog } from '../dialogFocus.js?v=2.4.115'
+import { containDialog } from '../dialogFocus.js?v=2.4.116'
 let releaseDialogFocus
 // Haze eyes — the working cameras that face the worst air right now.
 // The server (GET /api/cctv/haze-eyes) walks the PM2.5 stations from the
 // highest reading down and, for each, picks the nearest camera that a health
 // probe has shown to be alive. So this wall answers "what does that look
 // like, over there?" for the places the numbers say are worst.
-import { tr } from '../i18n.js?v=2.4.115'
-import { escapeHtml } from '../fmt.js?v=2.4.115'
-import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.115'
+import { tr } from '../i18n.js?v=2.4.116'
+import { escapeHtml } from '../fmt.js?v=2.4.116'
+import { airChipHtml, playerHtml, startVideos, stopVideos, NOT_OFFICIAL, visionChipHtml, LOOK_LABEL } from './cctvPlayer.js?v=2.4.116'
 
 const MAX_AUTOPLAY = 4
 let overlay = null

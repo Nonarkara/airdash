@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.116] — 2026-10-23 — regional fire evidence integrity
+
+Preserve native VIIRS detection coordinates instead of merging 375 m pixels into 1 km keys. A bounded, resumable re-key migration avoids duplicate legacy observations; the earlier window is marked partial while native-precision coverage fills. Collector receipts now retain each satellite feed's acquisition time, and all-stale upstream files fail ingestion rather than certify a fresh source. Regional maps gate both acquisition freshness and aggregate age, show partial coverage, and use a labelled detection-count scale. Moved Myanmar/Indonesia area selection before the map on phones, exposed the regional wind reference, and restored geographic contrast when browser darkening rewrites tile blending. Optical fallback now identifies its selected station/time, rejects undated/invalid/expired signals, labels national scope before the verdict and shows only the selected language. It does not infer fire origin or smoke arrival times.
+
 ## [2.4.115] — 2026-10-23 — the Thai health claim was unguarded
 
 **2.4.114 corrected a wrong claim about respirators. The correction was only half-guarded.** The English copy was checked — `test-aerosol-size.mjs` asserts that a certified N95 "filters fine and coarse", that particle size is not personal exposure, and that the text does **not** say a respirator "does little". The **Thai** copy was checked only for *existence*: every mode had an `act_th` and an `act_en`, and nobody had looked at what the Thai said.

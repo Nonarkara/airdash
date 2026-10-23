@@ -2,9 +2,8 @@
 // overstating what it knows.
 //
 // The block it sits under gives PM2.5 advice — HEPA, an N95, a cleaner-air
-// room. That is right for fine smoke and close to useless for coarse mineral
-// dust, which is what loads the air every dry season. So the strip earns its
-// place by saying what the PM2.5 advice cannot. The risk in adding it is
+// room. Particle-size evidence adds context; it cannot dismiss respirators
+// or establish personal exposure. The risk in adding it is
 // saying it too confidently: AERONET is five instruments publishing daily
 // aggregates that often run a day or two behind, so an unqualified claim here
 // would be worse than the silence it replaces.
@@ -33,8 +32,8 @@ const guidance = {
 const payload = (mode, alpha = 1.2, ageH = 30) => ({
   reading_age_h: ageH,
   aerosol: {
-    Bangkok: { mode, alpha, load: 0.24, alpha_pair: '440/675', guidance: guidance[mode] },
-    Chiang_Mai: { mode, alpha, load: 0.19, alpha_pair: '440/675', guidance: guidance[mode] },
+    Bangkok: { mode, alpha, observed_at: new Date(Date.now()-ageH*3600000).toISOString(), load: 0.24, alpha_pair: '440/675', guidance: guidance[mode] },
+    Chiang_Mai: { mode, alpha, observed_at: new Date(Date.now()-ageH*3600000).toISOString(), load: 0.19, alpha_pair: '440/675', guidance: guidance[mode] },
   },
 })
 
@@ -58,7 +57,7 @@ function renderWith(d, lang = 'en') {
 for (const mode of ['coarse', 'mixed', 'fine']) {
   const html = await renderWith(payload(mode))
   check(`${mode}: the mode is named`, new RegExp(mode).test(html) && html.includes(
-    mode === 'coarse' ? 'Coarse particles' : mode === 'mixed' ? 'Mixed particles' : 'Fine particles'),
+    mode === 'coarse' ? 'Coarse-dominated' : mode === 'mixed' ? 'Mixed optical' : 'Fine-dominated'),
     html.slice(0, 160))
   check(`${mode}: the alpha and the pair it came from are shown`, /α = 1\.2/.test(html) && html.includes('440/675'))
   check(`${mode}: that mode's own advice is shown`, html.includes(guidance[mode].act_en))
@@ -69,7 +68,7 @@ const fine = await renderWith(payload('fine'))
 check('it says plainly this is not a concentration', /not a µg\/m³ concentration/i.test(fine))
 check('it says the concentration still comes from the ground stations', /still comes from the ground stations/i.test(fine))
 check('it says this is a national signal, not per-province', /not a per-province measurement/i.test(fine))
-check('it names the instruments it read', /Bangkok/.test(fine) && /Chiang_Mai|Chiang Mai/.test(fine))
+check('it names the instruments it read', /Bangkok/.test(fine) && !/Chiang_Mai|Chiang Mai/.test(fine))
 check('it publishes how old the reading is', /read 30 h ago/.test(fine))
 
 const coarse = await renderWith(payload('coarse', 0.4))
@@ -91,9 +90,21 @@ check('THAI fine mode does not carry the coarse-only explanation',
   !/ระดับประเทศไม่ใช้ตัดสินว่าหน้ากากได้ผลหรือไม่/.test(fineTh))
 
 
+const differentAges = payload('coarse', .4, 50)
+differentAges.reading_age_h = 3
+differentAges.aerosol.Chiang_Mai.observed_at = new Date(Date.now()-3*3600000).toISOString()
+const selectedAge = await renderWith(differentAges)
+check('fallback reports the selected station age, not the newest unrelated instrument', /2 days ago/.test(selectedAge) && !/3 h ago/.test(selectedAge))
+for (const [name, patch] of Object.entries({missingTime:{observed_at:null},future:{observed_at:new Date(Date.now()+86400000).toISOString()},expired:{observed_at:new Date(Date.now()-8*86400000).toISOString()},badAlpha:{alpha:null},badLoad:{load:Infinity},badMode:{mode:'unknown'}})) {
+  const d=payload('coarse');d.aerosol={Bangkok:{...d.aerosol.Bangkok,...patch}}
+  check(`${name}: unusable optical context remains unavailable`, (await renderWith(d)).includes('data-state="unavailable"'))
+}
+check('optical context never claims mineral or combustion attribution', !/mineral dust|smoke and combustion/.test(selectedAge))
+check('optical fallback names its national scope before the verdict', selectedAge.indexOf('National optical context') < selectedAge.indexOf('Coarse-dominated'))
+
 const empty = await renderWith({ reading_age_h: null, aerosol: {} })
 check('an empty aerosol block still renders something', empty.includes('haze-plan-aerosol'))
-check('an empty block explains itself instead of going blank', /no reading yet|not reported/i.test(empty))
+check('an empty block explains itself instead of going blank', /no usable reading|not reported/i.test(empty))
 // Mutation-tested: adding `hidden` to the empty state left every text check
 // green, which is exactly a guard that cannot fail. The reader needs the
 // absence explained, not merely absent.
@@ -135,7 +146,7 @@ check('the AERONET fetch is not inside the province evidence promise',
 check('a failed AERONET degrades instead of throwing',
   /\.catch\(\(\) => \{ aero = \{ empty_note: 'unavailable' \}/.test(src))
 check('interpolated server copy is escaped, not injected raw',
-  /\$\{esc\(g\?\.act_th \?\? ''\)\}/.test(src) && /\$\{esc\(g\?\.act_en \?\? ''\)\}/.test(src)
+  src.includes("esc(tr(g?.act_th ?? '', g?.act_en ?? ''))")
   && /\$\{esc\(mode\.alpha_pair \?\? ''\)\}/.test(src))
 // tr(th, en) returns `en` unless Thai is selected, so passing a single argument
 // renders `undefined` in English. This caught exactly that.

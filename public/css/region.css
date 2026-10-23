@@ -100,3 +100,17 @@ footer{display:flex;flex-wrap:wrap;gap:12px;padding:16px 20px;font-size:14px;bor
 .flood-watch{margin:28px 0}.flood-watch h2{margin-bottom:12px}.flood-option{display:flex;align-items:flex-start;gap:10px;font-size:15px;min-height:44px}.flood-watch details{font-size:14px}.flood-watch p{max-width:65ch;line-height:1.6}
 .regional-flood span{display:block;width:26px;height:22px;background:#163b50;color:#fff;border:1px solid #fff;font:600 12px/20px var(--font-ui);text-align:center}
 #flood-events>p{margin:0 0 20px}
+
+.region-map-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 8px 16px; padding: 0 20px 12px; }
+.region-map-toolbar label { font-size: 14px; }
+.region-map-toolbar select { width: 240px; display: block; }
+#fire-status { flex-basis: 100%; margin: 0; font-size: 14px; line-height: 1.5; }
+.fire-key { display: flex; flex-wrap: wrap; gap: 8px 12px; font-size: 13px; line-height: 1.5; }
+.fire-key > span:first-child { flex-basis: 100%; }
+.fire-key i { display: inline-block; width: 12px; height: 12px; background: #a44216; margin-right: 4px; }
+@media(max-width:700px) { .region-map-toolbar { padding: 0 14px 12px; align-items: end; gap: 8px 12px; } .region-map-toolbar label { flex: 1; min-width: 0; } .region-map-toolbar select { width: 100%; } .region-map-toolbar button { font-size: 14px; padding: 8px 0; } }
+
+.regional-wind-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; margin-bottom: 12px; }
+
+/* Preserve geographic contrast when browser darkening rewrites image blending. */
+#regional-map .leaflet-tile{mix-blend-mode:normal!important;color-scheme:light}
