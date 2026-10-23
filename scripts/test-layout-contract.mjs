@@ -25,6 +25,14 @@ const css = read('public/css/components.css')
 const mapJs = read('public/js/map.js')
 const satJs = read('public/js/layers/satellite.js')
 
+// The wind scale is read from the MODULE, not restated here: a guard that
+// copies the number it checks is a guard that drifts. The asset token is
+// read from the source so this imports the same module instance the page
+// loads — a stale `?v=` would silently assert a different build.
+const TOKEN = read('public/ops.html').match(/\?v=(\d+\.\d+\.\d+)/)?.[1] ?? ''
+const { windArrowSize, WIND_ARROW } = await import(`../public/js/wind.js${TOKEN ? `?v=${TOKEN}` : ''}`)
+const windArrowMax = windArrowSize(WIND_ARROW.CEIL).size
+
 let pass = 0, fail = 0
 const check = (name, cond, why = '') => {
   cond ? pass++ : fail++
@@ -49,9 +57,23 @@ check('the wind arrow carries no badge of its own',
     && isInvisible(decl(windIcon, 'border-width'))
     && isInvisible(decl(windIcon, 'box-shadow')),
   `a badge per province blankets the map: ${windIcon.trim()}`)
-check('the wind arrow is small enough to sit inside a province marker',
-  /width:\s*1[0-9]px/.test(css.match(/\.haze-wind-icon \.wind-arrow\s*\{([^}]*)\}/)?.[1] ?? ''),
-  'a 30px arrow inside a 24px marker is not a mark, it is a lid')
+
+// The old contract here was "the arrow must be small enough to sit inside a
+// 24px province marker". That mark is GONE: the province's mark on the map
+// is now its AREA (the DOPA zone layer, on by default since 2.4.122), and the
+// watch-score circle is a variable-radius ring (10 + score·0.3 px, so 20–80px
+// across) that is OFF by default and drawn in the pane BELOW the wind.
+// What must still hold is that the arrow stays a MARK: its size is now the
+// wind's SPEED, so CSS may not pin it (that would flatten the encoding), and
+// the drawn size must stay inside the scale's own bound — past that the
+// arrow is a lid over the province instead of a mark on it.
+const windArrowCss = css.match(/\.haze-wind-icon \.wind-arrow\s*\{([^}]*)\}/)?.[1] ?? ''
+check('the wind arrow’s size is not pinned in CSS',
+  !/width:\s*\d+px/.test(windArrowCss) && !/height:\s*\d+px/.test(windArrowCss),
+  `a pinned size would flatten the speed encoding: ${windArrowCss.trim()}`)
+check('the wind arrow never grows past the drawn scale',
+  windArrowMax <= 32,
+  `the biggest arrow is ${windArrowMax}px; past ~32px it stops being a mark`)
 
 // ── the field is drawn above the data it annotates ────────────────────────
 const panes = [...satJs.matchAll(/\['(\w+)',\s*(\d+)\]/g)].map(m => [m[1], Number(m[2])])
@@ -74,8 +96,16 @@ check('the spanning rule targets the real last tab',
   tabCount === 11, `the rule names the 11th tab; there are ${tabCount}`)
 
 // ── the legend explains the mark it shows ─────────────────────────────────
+// The legend must carry the key. The SENTENCE that explains the arrow now
+// lives in one place (wind.js) and the legend asks for it — so this checks
+// the legend's use of it and the sentence's content, rather than demanding
+// the wording stay in map.js.
+const windJs = read('public/js/wind.js')
 check('the map legend explains the wind arrow',
-  /PROVINCE WIND|ทิศลมรายจังหวัด/.test(mapJs) && /arrow points where the air moves/.test(mapJs),
+  /PROVINCE WIND|ทิศลมรายจังหวัด/.test(mapJs)
+    && /windEncodingText\(\)/.test(mapJs)
+    && /arrow points where the air moves/.test(windJs)
+    && /longer the arrow, the stronger the wind/.test(windJs),
   'a mark with no key is a mark nobody can read')
 
 // ── the ranking panel: one heading, and every block earns its height ─────

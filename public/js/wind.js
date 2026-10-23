@@ -26,9 +26,9 @@
 // recomputes a bearing — it draws the number the server published, because two
 // formulas in two runtimes eventually disagree by half a degree and nobody can
 // tell which one the reader was shown.
-import { store } from './state.js?v=2.4.123'
-import { tr } from './i18n.js?v=2.4.123'
-import { escapeHtml } from './fmt.js?v=2.4.123'
+import { store } from './state.js?v=2.4.124'
+import { tr } from './i18n.js?v=2.4.124'
+import { escapeHtml } from './fmt.js?v=2.4.124'
 
 /** Which day's wind this is — published so a reader can tell today from tomorrow. */
 export const WIND_BASIS_LABEL = {
@@ -90,6 +90,67 @@ export function windView(p) {
 export function windArrowSvg(towards, { size = 24, cls = '' } = {}) {
   if (!Number.isFinite(towards)) return ''
   return `<svg class="wind-arrow${cls ? ' ' + cls : ''}" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="transform:rotate(${towards}deg)"><path d="M12 2.6 L18.4 21.4 L12 16.6 L5.6 21.4 Z" fill="currentColor"/></svg>`
+}
+
+/**
+ * The drawn scale of the wind arrow, in one place.
+ *
+ * These are the numbers the map, the legend and the guard all have to agree
+ * on. They are exported rather than written into the drawing code so that the
+ * legend's two example arrows can be the scale's own ends (WIND_ARROW.MIN
+ * and WIND_ARROW.MAX) instead of two hand-typed pixel values that can drift
+ * away from the function that draws them.
+ *
+ * MIN  — a still hour: the smallest arrow that still reads as an arrow.
+ * MAX  — the ceiling of the scale: the biggest arrow worth drawing.
+ * CEIL — the speed at which MAX is reached (km/h). Past it, more ink says
+ *        nothing more, so the size clamps instead of growing.
+ * UNKNOWN — the size drawn when there is NO speed reading. It is not the
+ *        calm size: an absent reading must not look like a measurement.
+ */
+export const WIND_ARROW = { MIN: 12, MAX: 30, CEIL: 32, UNKNOWN: 18 }
+
+/**
+ * The arrow's SIZE says how strong the wind is.
+ *
+ * A direction with no strength is half an answer: the reader can see where
+ * the air is going and not how fast it is moving — and "how strong" is the
+ * question that decides whether the air will carry anything. The size grows
+ * with the forecast speed on a square-root scale, so the difference between
+ * a still hour and a moving one is visible, and stops at a ceiling: past
+ * that, more ink says nothing more.
+ *
+ * A MISSING speed is not a calm wind. It draws at the base size and is
+ * marked (`known: false`), so an absent reading never looks like a
+ * measurement — the map fades it and the tooltip says so.
+ */
+export function windArrowSize(speedKmh) {
+  const { MIN, MAX, CEIL, UNKNOWN } = WIND_ARROW
+  if (!Number.isFinite(speedKmh)) return { size: UNKNOWN, known: false }
+  const s = Math.max(0, Math.min(CEIL, speedKmh))
+  return { size: Math.round(MIN + (MAX - MIN) * Math.sqrt(s / CEIL)), known: true }
+}
+
+/**
+ * THE sentence that explains how to read the arrow — stated once.
+ *
+ * The map legend, the layer panel and the province popup all draw the same
+ * arrow. If each of them words the rule for itself, they drift: one says
+ * "longer = stronger", another says "bigger = windier", and the reader has to
+ * decide which sentence is the true one. So the rule lives here, in one
+ * place, and every surface that needs it asks for it.
+ *
+ * It is exported as a bilingual pair because the guard has to be able to read
+ * BOTH sentences without flipping the interface language.
+ */
+export const WIND_ENCODING = {
+  th: 'ลูกศรชี้ทางที่อากาศเคลื่อนไป — ยาวขึ้น = ลมแรงขึ้น',
+  en: 'arrow points where the air moves — the longer the arrow, the stronger the wind',
+}
+
+/** The encoding sentence in the reader's language. */
+export function windEncodingText() {
+  return tr(WIND_ENCODING.th, WIND_ENCODING.en)
 }
 
 /**

@@ -307,6 +307,8 @@ function drawWindField(provinces) {
     allLayerToggles: () => [],
     windArrowSvg: wind.windArrowSvg, windRowText: wind.windRowText,
     windBasisLabel: wind.windBasisLabel, windView: wind.windView,
+    windArrowSize: wind.windArrowSize, windEncodingText: wind.windEncodingText,
+    WIND_ARROW: wind.WIND_ARROW,
   })
   vm.runInContext(stripImports(file('public/js/map.js')), ctx)
   vm.runInContext('layers.hazeWind = L.layerGroup()', ctx)
@@ -335,6 +337,27 @@ check('the map no longer takes its arrows from the smoke rows',
   !/e\.detail\.wind\b/.test(file('public/js/map.js')) && !/hazeWindRows/.test(file('public/js/map.js')),
   'the arrows came from a payload that is empty on a no-fire day')
 check('the map re-paints the wind field on every snapshot', /paintWindField\(snap\.risk\)/.test(file('public/js/map.js')))
+
+// The STRENGTH has to be visible in the DRAWN arrow, not only in the source.
+// A source check would pass while every arrow came out the same size, so
+// this asks the drawn icon itself.
+const CALM = { ...ROW, province_code: '11', wind_fc_kmh: 1 }
+const GUSTY = { ...ROW, province_code: '12', wind_fc_kmh: 30 }
+const sized = drawWindField([CALM, GUSTY])
+const calmSize = sized[0]?.opts?.icon?.iconSize?.[0]
+const gustySize = sized[1]?.opts?.icon?.iconSize?.[0]
+check('the drawn arrow is LARGER when the wind is stronger',
+  Number.isFinite(calmSize) && Number.isFinite(gustySize) && gustySize > calmSize,
+  `calm ${calmSize} · gusty ${gustySize}`)
+check('the drawn arrow’s size is the scale’s own mapping, not a constant',
+  calmSize === wind.windArrowSize(1).size && gustySize === wind.windArrowSize(30).size,
+  `calm ${calmSize} vs ${wind.windArrowSize(1).size} · gusty ${gustySize} vs ${wind.windArrowSize(30).size}`)
+const noSpeed = drawWindField([{ ...ROW, wind_fc_kmh: null }])[0]
+check('a province with NO speed reading draws a faded arrow, not a calm one',
+  /no-strength/.test(noSpeed?.opts?.icon?.className ?? ''),
+  `className ${JSON.stringify(noSpeed?.opts?.icon?.className)}`)
+check('the tooltip says when the speed is missing',
+  /no wind speed reading/.test(noSpeed?.tooltip ?? ''), noSpeed?.tooltip)
 const paintSrc = file('public/js/paint.js')
 check('the province popup carries the wind', /windRowText\(p\) \|\| null/.test(paintSrc))
 check('the popup does not invent a wind when there is none', /\|\| null/.test(paintSrc))

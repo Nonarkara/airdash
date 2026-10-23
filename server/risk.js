@@ -14,7 +14,7 @@ import { CONFIG } from './config.js'
 import { forecastBias } from './forecastBias.js'
 import { hazeEvidence, shouldFloorToWatch } from './vision/hazeEvidence.js'
 import { nationalVerdict, provinceVerdict } from './verdict.js'
-import { isThaiProvinceCode } from './provinces.js'
+import { isThaiProvinceCode, allProvinces } from './provinces.js'
 import { readTwinFlood, floodByCode } from './sources/twin-flood.js'
 import { pickWindDir } from './wind.js'
 
@@ -197,7 +197,7 @@ export function createRisk(db, washout) {
         p = {
           province_code: row.province_code, province_th: row.province_th, province_en: row.province_en,
           region_th: row.region_th, region_en: row.region_en,
-          lat: row.lat, lng: row.lng,
+          lat: null, lng: null,
           pm25: null, pm25_station_th: null, pm25_station_en: null,
           aqi: null, pollutant_worst: null,
           pm25_comp: 0, pollutants_comp: 0, forecast_comp: 0,
@@ -213,6 +213,21 @@ export function createRisk(db, washout) {
           top_stations: [],
         }
         provinces.set(key, p)
+      }
+      // A province's position must not depend on WHICH station happened to
+      // mention it first. Nine provinces have exactly one station with no
+      // coordinates in the registry (Nakhon Pathom, Ratchaburi, Phetchaburi,
+      // Kanchanaburi, Prachuap Khiri Khan, Tak, Nakhon Sawan, Phangnga,
+      // Ranong), and that one row was enough to leave the whole province
+      // unplaceable — no wind arrow on the map, no centroid for any surface
+      // that places a province by its position, while the other 68 provinces
+      // showed both. Take the first station that HAS a position; the DOPA
+      // registry centroid is the safety net below.
+      if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) {
+        if (Number.isFinite(row.lat) && Number.isFinite(row.lng)) {
+          p.lat = row.lat
+          p.lng = row.lng
+        }
       }
       return p
     }
@@ -308,6 +323,17 @@ export function createRisk(db, washout) {
       if (!p) continue
       p.rain_stations += 1
       if (p.rain_obs_24h === null || row.value > p.rain_obs_24h) p.rain_obs_24h = row.value
+    }
+
+    // Safety net: a province whose stations all lack a position still gets
+    // the official centroid from the DOPA registry — the SAME point its
+    // forecast was computed at, so the arrow sits where the wind was read
+    // rather than somewhere near it.
+    const registryByCode = new Map(allProvinces().map(p => [String(p.province_code), p]))
+    for (const p of provinces.values()) {
+      if (Number.isFinite(p.lat) && Number.isFinite(p.lng)) continue
+      const reg = p.province_code ? registryByCode.get(String(p.province_code)) : null
+      if (reg) { p.lat = reg.lat; p.lng = reg.lng }
     }
 
     // Trend (leading signal) + stagnation + washout join.

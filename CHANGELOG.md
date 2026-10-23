@@ -16,6 +16,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.124] — 2026-10-23 — the wind that moves the zone
+
+**The map showed where the air was bad and not where it was going.** The province wind field was switched **off** by default, so the dashboard answered "where is the air bad" without the one thing that explains where it is going. And when it was on, every arrow was the same size: the speed was in a hover tooltip, one province at a time, so a reader scanning the country could not tell a still day from a moving one — and the speed decides whether the air carries anything.
+
+**The strength is now the arrow's SIZE.** The arrow grows with the forecast speed on a square-root scale (12 px still → 30 px at the 32 km/h ceiling), so a still hour and a moving one look different at a glance, across the whole country at once. The drawn scale lives in one place (`WIND_ARROW` in `public/js/wind.js`), and the legend's key shows the scale's *own* two ends — a reader can decode any arrow on the map by comparing it to the pair.
+
+**A missing speed is not a calm wind.** A province with no wind-speed reading draws faded, at a size of its own, and the tooltip says the speed is missing. An absent reading must never look like a measurement.
+
+**The rule is stated once.** The legend, the layer panel and the province popup used to word the encoding separately, and the legend's copy had already drifted from the layer panel's. The sentence that says "the longer the arrow, the stronger the wind" now lives in `wind.js` (`WIND_ENCODING`, in both languages) and every surface asks for it. The layer panel's note no longer restates the size rule — it says what the layer *is*; the legend says how to read it.
+
+**Nine provinces had a wind and nowhere to put it.** The province's map position was taken from whichever station row mentioned it first. Nine provinces have exactly one station with no coordinates in the registry, and that one row was enough to leave the whole province unplaceable: no arrow, no centroid, while the other 68 showed both. The position now comes from the first station that *has* one, with the DOPA registry centroid as the safety net — the same point the province's forecast was computed at. The map drew 68 arrows for 77 provinces before; it draws 77 now.
+
+**A guard that executes the scale, and one that reads the screen.** `scripts/test-wind-field.mjs` (41 checks, in `npm test`) runs the product's own size function: the scale's ends must be the sizes the function draws, the ceiling must clamp rather than scale away, a missing speed must be marked unknown, and the encoding sentence must state the size rule in *both* languages. **Thirteen mutations, thirteen caught** — among them "the arrow size stops following the wind", "the ceiling is removed", "the canonical sentence loses the size rule" and "the legend states the size rule a second time". `scripts/ops/check-wind-field.mjs` then reads the *drawn* DOM: 77 arrows, and the multiset of drawn sizes must equal the multiset the payload implies, computed with the product's own function.
+
+**A contract that changed its premise, on the record.** The layout contract used to require the arrow to be pinned at 10–19 px in CSS, so it could fit "inside a 24 px province marker". That marker is gone: the province's mark is now its *area* (the DOPA zone, on by default since 2.4.122), and the watch-score circle is a variable-radius ring that is off by default and drawn in the pane below. The contract now states what the source can actually prove — the CSS may not pin the size (that would flatten the encoding) and the arrow never grows past the drawn scale — and the composition facts are proven in the browser instead. Four mutations were planted against the new assertions; all four go red.
+
+**Verified on the live map:** 77 arrows, one per province with a bearing; the drawn sizes `{18×2, 19×5, 20×15, 21×26, 22×10, 23×13, 24×3, 25×2, 27×1}` — exactly the sizes the payload implies, across nine distinct sizes; the legend key showing a 12 px and a 30 px arrow with the rule beside it; the tooltip naming the speed; no console errors. Photographed at 1440, 1024 and 390.
+
+> **Known, and not fixed here:** with the watch-score circles switched back on, the score ring and the wind arrow share a centroid and the pair reads as a circular button. The circles are off by default (the zone carries the band), so the default map is clean; the stacking is a composition question for the score layer, not for the wind field.
+
+---
+
 ## [2.4.123] — 2026-10-23 — the zone was painted black
 
 **2.4.122 turned the zone on and painted every province black.** `bandColor` is a *function*; the layer indexed it — `bandColor[band]` — which is `undefined`, and Leaflet falls back to its default, which is black. The province areas were there, in the right shapes, at the right opacities, and every one of them was the same colour: none.

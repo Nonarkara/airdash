@@ -4380,8 +4380,13 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
    The arrow points downwind; the fire count it used to carry has its own
    layer and stays in the tooltip. */
 .haze-wind-icon {background:transparent; border:none; box-shadow:none; display:flex; align-items:center; justify-content:center;}
-.haze-wind-icon .wind-arrow {display:block; width:18px; height:18px; color:var(--th-navy); opacity:.7;}
+/* No fixed size: the arrow's own width/height is the wind SPEED (see
+   windArrowSize). Pinning it here would flatten the strength encoding. */
+.haze-wind-icon .wind-arrow {display:block; color:var(--th-navy); opacity:.7;}
 .haze-wind-icon:hover .wind-arrow {opacity:1;}
+/* A province with no wind-speed reading is not a calm wind: it is drawn
+   faded, and the tooltip says the speed is missing. */
+.haze-wind-icon.no-strength .wind-arrow {opacity:.3;}
 /* Wind — the direction the air is moving.
    ONE arrow shape for the whole dashboard: the map's province field, the
    province popup and the citizen panel all draw the same wind the same way,

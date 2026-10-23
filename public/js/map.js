@@ -1,27 +1,27 @@
-import { windArrowSvg, windBasisLabel, windRowText, windView } from './wind.js?v=2.4.123'
-import { escapeHtml } from './fmt.js?v=2.4.123'
-import { moveMap } from './mapView.js?v=2.4.123'
-import { readPreference, writePreference } from './preferences.js?v=2.4.123'
+import { windArrowSvg, windArrowSize, windBasisLabel, windEncodingText, windRowText, windView, WIND_ARROW } from './wind.js?v=2.4.124'
+import { escapeHtml } from './fmt.js?v=2.4.124'
+import { moveMap } from './mapView.js?v=2.4.124'
+import { readPreference, writePreference } from './preferences.js?v=2.4.124'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.123'
-import { tr, LEVEL_NAME, BAND, bandColor } from './i18n.js?v=2.4.123'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.123'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.123'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.123'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.123'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.123'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.123'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.123'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.123'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.123'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.123'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.123'
-import { openWindow } from './witness.js?v=2.4.123'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.123'
+import { on, store } from './state.js?v=2.4.124'
+import { tr, LEVEL_NAME, BAND, bandColor } from './i18n.js?v=2.4.124'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.124'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.124'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.124'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.124'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.124'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.124'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.124'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.124'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.124'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.124'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.124'
+import { openWindow } from './witness.js?v=2.4.124'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.124'
 
-const windToggle = {id:'hazeWind',th:'ทิศลมรายจังหวัด + จุดไฟเหนือลม',en:'Province wind field + upwind fire counts',on:false,
-  note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where wind blows. Daily dominant forecast, not current wind.',
+const windToggle = {id:'hazeWind',th:'ทิศลมรายจังหวัด + จุดไฟเหนือลม',en:'Province wind field + upwind fire counts',on:true,
+  note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where the wind blows. Daily dominant forecast, not current wind.',
   what_th:'ตัวเลขคือจำนวนจุดไฟในแนวเหนือลมของจังหวัด ไม่ใช่ตำแหน่งไฟหรือเวลาถึง',what_en:'Counts are detections upwind of the province, not fire positions or smoke arrival times.'}
 LAYER_GROUPS.unshift({id:'preparation',th:'เตรียมรับหมอกควัน',en:'HAZE PREPARATION',layers:[windToggle,{id:'hazeRain',th:'วงกลมฝนพยากรณ์วันนี้ · ใหญ่ = ปริมาณมาก',en:'Today’s model rain · larger = more mm',on:false},{id:'fireCells',th:'จุดความร้อน VIIRS 48 ชม. (รวมกริด)',en:'VIIRS detections 48h (grid cells)',on:false}]})
 
@@ -44,13 +44,16 @@ function paintWindField(risk) {
     if (!w || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue
     const name = store.lang === 'th' ? p.province_th : p.province_en
     const fires = windFires.get(String(p.province_code))
+    const size = windArrowSize(w.speedKmh)
     L.marker([p.lat, p.lng], { pane: 'windfield', icon: L.divIcon({
-      className: 'haze-wind-icon', iconSize: [20, 20], iconAnchor: [10, 10],
-      html: windArrowSvg(w.towards, { size: 18 }),
+      className: 'haze-wind-icon' + (size.known ? '' : ' no-strength'),
+      iconSize: [size.size, size.size], iconAnchor: [size.size / 2, size.size / 2],
+      html: windArrowSvg(w.towards, { size: size.size }),
     })}).bindTooltip(escapeHtml(
       `${name} · ${windRowText(p, { degrees: true })} · ${windBasisLabel(w.basis)}` +
       (fires != null ? ` · ${fires} ${tr('จุดไฟเหนือลม', 'upwind detections')}` : '') +
-      (w.updatedAt ? ` · ${w.updatedAt}` : '')
+      (w.updatedAt ? ` · ${w.updatedAt}` : '') +
+      (size.known ? '' : ` · ${tr('ไม่มีค่าความเร็วลม', 'no wind speed reading')}`)
     )).addTo(layers.hazeWind)
   }
 }
@@ -471,7 +474,12 @@ function addLegend() {
       <div class="eyebrow" style="margin-top:6px">${tr('ความเสี่ยงจังหวัด', 'PROVINCE RISK')}</div>
       <div class="lrow"><span class="lsw" style="background:#A51931;opacity:.22;border:1px solid #A51931"></span>${tr('วงกว้าง = คะแนนเฝ้าระวังสูง (เปิดชั้นวงคะแนนเพื่อดู) — พื้นที่จังหวัดแสดงระดับเดียวกันอยู่แล้ว', 'circle size = watch score (turn the score-circles layer on) — the province areas already carry the band')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ทิศลมรายจังหวัด', 'PROVINCE WIND')}</div>
-      <div class="lrow"><span class="lrow-arrow">${windArrowSvg(90, { size: 16 })}</span>${tr('ลูกศรชี้ทางที่อากาศเคลื่อนไป (ทิศลมหลักรายวัน ไม่ใช่เส้นทางควัน)', 'arrow points where the air moves (daily dominant direction, not a smoke path)')}</div>
+      <!-- The key for the wind field: the two arrows are the SCALE'S OWN ends
+           (WIND_ARROW.MIN and MAX), so the reader can decode any arrow on the
+           map by comparing it to the pair. The sentence that states the rule
+           comes from wind.js, so the legend, the layer panel and the popup
+           cannot drift into two different rules. -->
+      <div class="lrow"><span class="lrow-arrow">${windArrowSvg(90, { size: WIND_ARROW.MIN })}${windArrowSvg(90, { size: WIND_ARROW.MAX })}</span>${windEncodingText()} (${tr('ทิศลมหลักรายวัน ไม่ใช่เส้นทางควัน', 'daily dominant direction, not a smoke path)')})</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ฮีทแมป PM2.5', 'PM2.5 HEAT MAP')}</div>
       <div class="lrow">${tr('สีของแต่ละจุด = ค่า PM2.5 จริงที่สถานีนั้น ไม่ใช่ความหนาแน่นจุด', 'blob colour = the actual PM2.5 at that station, not point density')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('กล้อง CCTV', 'CCTV')}</div>
