@@ -1,31 +1,32 @@
-import { fireView, fireOpacity } from './regional-fire-view.js?v=2.4.116'
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.116'
-import { escapeHtml as esc } from './fmt.js?v=2.4.116'
-import { readPreference, writePreference } from './preferences.js?v=2.4.116'
-import { windArrowSvg, windRowText, windView } from './wind.js?v=2.4.116'
+import { createRegionalWindView } from './regional-wind-view.js?v=2.4.117'
+import { fireView, fireOpacity } from './regional-fire-view.js?v=2.4.117'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.117'
+import { escapeHtml as esc } from './fmt.js?v=2.4.117'
+import { readPreference, writePreference } from './preferences.js?v=2.4.117'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
-const map=L.map('regional-map',{minZoom:3,maxZoom:12,preferCanvas:true}).fitBounds(whole)
+const map=L.map('regional-map',{minZoom:3,maxZoom:12,preferCanvas:true,fadeAnimation:false,zoomAnimation:false,markerZoomAnimation:false}).fitBounds(whole)
 map.attributionControl.setPrefix(false)
 L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16,attribution:'Esri, HERE, Garmin · © OpenStreetMap'}).addTo(map)
 const pm=L.layerGroup().addTo(map),fire=L.layerGroup().addTo(map)
 const field=createPollutionField().addTo(map)
-const wind=L.layerGroup().addTo(map)
+
 const floods=L.layerGroup().addTo(map)
-byWindInit()
-function byWindInit(){document.getElementById('wind').onchange=()=>document.getElementById('wind').checked?wind.addTo(map):map.removeLayer(wind)}
+
 const fireBounds=L.rectangle([[4,92],[29,110]],{weight:1,dashArray:'6 6',color:'#86551c',fill:false,interactive:false}).addTo(map)
 let data=null,imagery=null,loading=false,lastError=false
 const byId=id=>document.getElementById(id)
 function clock(time){if(!time)return '—';const date=new Date(time);return Number.isFinite(date.getTime())?date.toLocaleString(lang==='th'?'th-TH':'en-GB',{timeZone:'Asia/Bangkok',hour12:false})+' ICT':'—'}
-function translate(){document.documentElement.lang=lang;for(const n of document.querySelectorAll('[data-t]')){const [th,en]=n.dataset.t.split('|');n.textContent=tr(th,en)}byId('language').textContent=lang==='th'?'EN':'ไทย';paint();setImagery()}
+const windViewUI=createRegionalWindView({map,tr,clock})
+function translate(){document.documentElement.lang=lang;byId('watch-area').setAttribute('aria-label',tr('พื้นที่เฝ้าระวัง','Watch area'));for(const n of document.querySelectorAll('[data-t]')){const [th,en]=n.dataset.t.split('|');n.textContent=tr(th,en)}byId('language').textContent=lang==='th'?'EN':'ไทย';paint();setImagery()}
 byId('language').onclick=()=>{lang=lang==='th'?'en':'th';writePreference('ad_lang',lang);translate()}
 byId('reset-map').onclick=()=>{byId('watch-area').value='region';map.fitBounds(whole)}
 const watchAreas={region:whole,mainland:[[4,92],[29,110]],myanmar:[[9,92],[29,102]],indonesia:[[-11,95],[6,142]]}
 function fitWatchArea(){map.fitBounds(watchAreas[byId('watch-area').value]??whole,{animate:false})}
-byId('watch-area').onchange=fitWatchArea
-map.on('resize',()=>requestAnimationFrame(fitWatchArea))
+fitWatchArea()
+byId('watch-area').onchange=()=>{fitWatchArea();const seeds={myanmar:[20,98],indonesia:[0,114],mainland:[20,98],region:[20,98]};windViewUI.select(...seeds[byId('watch-area').value])}
+map.on('resize',fitWatchArea)
 byId('open-directory').onclick=()=>{byId('country-directory').open=true}
 byId('floods').onchange=()=>byId('floods').checked?floods.addTo(map):map.removeLayer(floods)
 byId('fires').onchange=()=>{byId('fires').checked?fire.addTo(map):map.removeLayer(fire)}
@@ -58,7 +59,7 @@ function paintField(){
   byId('field-time').max=Math.max(0,(outlook?.frames?.length??0)-1)
   const frame=outlook?.frames?.[Number(byId('field-time').value)]
   if(fresh&&frame){points=outlook.points.map(p=>({...p,pm25:p.values[frame.index]})).filter(p=>Number.isFinite(p.pm25));byId('field-clock').textContent=clock(frame.time)}else byId('field-clock').textContent='—'
-  note=fresh?tr('แบบจำลอง CAMS ปรับด้วยสถานี เฉพาะประเทศไทย ปรุงเป็นพื้นผิวจากจุดกึ่งกลางจังหวัด ไม่ใช่กริดต้นฉบับหรือเวลาควันมาถึง','Station-adjusted CAMS, Thailand only. Surface estimated from province centroids, not the native model grid or smoke arrival time.')+' · '+tr('ดึงโมเดล','Model retrieved')+' '+clock(outlook.issued_at):tr('โมเดลรายชั่วโมงไม่พร้อมหรือเก่า ไม่สร้างภาพอนาคตขึ้นเอง','Hourly model unavailable or stale; no future field invented.')
+  note=fresh?(outlook.calibration==='raw-model'?tr('CAMS ยังไม่ปรับด้วยสถานี · ','Unadjusted CAMS model · '):'')+tr('แบบจำลอง CAMS เฉพาะประเทศไทย ปรุงเป็นพื้นผิวจากจุดกึ่งกลางจังหวัด ไม่ใช่กริดต้นฉบับหรือเวลาควันมาถึง','CAMS, Thailand only. Surface estimated from province centroids, not the native model grid or smoke arrival time.')+' · '+tr('ดึงโมเดล','Model retrieved')+' '+clock(outlook.issued_at):tr('โมเดลรายชั่วโมงไม่พร้อมหรือเก่า ไม่สร้างภาพอนาคตขึ้นเอง','Hourly model unavailable or stale; no future field invented.')
   note+=' · '+tr('หมุดคือค่ารายงานปัจจุบัน ไม่ใช่ค่าในเวลาพยากรณ์','Pins remain current reports, not observations at the forecast time.')
  }else note=tr('ซ่อนพื้นผิว แสดงหมุดต้นทาง','Field hidden; source pins remain visible.')
  field.setData(points,mode==='model'?{radiusKm:160,nearestKm:80,minPoints:3}:{radiusKm:60,nearestKm:30,minPoints:3})
@@ -71,17 +72,8 @@ function paint(){
  const bounds=data.fires?.bounds
  if(Array.isArray(bounds)&&bounds.length===4)fireBounds.setBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]])
  paintField()
- pm.clearLayers();fire.clearLayers();wind.clearLayers();paintFlood()
- const windSeen=new Set()
- for(const r of data.wind??[]){
-  const stamp=r.wind_updated_at,iso=/[zZ]|[+-]\d\d:\d\d$/.test(stamp??'')?stamp:`${stamp?.replace(' ','T')}+07:00`,age=Date.now()-Date.parse(iso)
-  const w=windView(r)
-  if(!w||!Number.isFinite(r.lat)||!Number.isFinite(r.lng)||!Number.isFinite(age)||age< -300000||age>13*3600000)continue
-  const cell=`${Math.floor(r.lat/1.5)}:${Math.floor(r.lng/1.5)}`
-  if(windSeen.has(cell))continue
-  windSeen.add(cell)
-  L.marker([r.lat,r.lng],{icon:L.divIcon({className:'regional-wind',iconSize:[26,26],html:windArrowSvg(w.towards,{size:22})})}).bindTooltip(esc(`${r.province_en} · ${tr('ทิศลมหลักรายวัน ไม่ใช่เส้นทางควัน','Daily dominant forecast, not smoke trajectory')} · ${windRowText(r,{degrees:true})} · ${clock(iso)}`)).addTo(wind)
- }
+ pm.clearLayers();fire.clearLayers();paintFlood()
+ windViewUI.update(data.regional_wind)
  const now=Date.now(),obs=data.observations.map(r=>({...r,status:now-Date.parse(r.observed_at)>90*60000?'stale':r.status}))
  for(const r of obs){const stale=r.status!=='current';L.circleMarker([r.lat,r.lng],{radius:r.country==='SG'?9:5,color:stale?'#636e75':'#086a8c',weight:2,fillOpacity:stale?.25:.7})
  .bindPopup(`<strong>${esc(r.name)} · ${esc(r.country)}</strong><br>${r.pm25} µg/m³ PM2.5<br>${esc(r.averaging_period)}<br>${esc(r.source)} · ${esc(r.source_type)}<br>${esc(clock(r.observed_at))}<br>${esc(stale?tr('ข้อมูลเก่า ไม่ใช่สภาพปัจจุบัน','Stale; not current conditions'):tr('ค่ารายงานล่าสุด ไม่ใช่การรับรองความแม่นยำ','Recent report; not a certification of accuracy'))}`).addTo(pm)}
@@ -89,7 +81,7 @@ function paint(){
  const fireStatus=byId('fire-status')
  fireStatus.classList.toggle('stale',!fireState.available)
  fireStatus.textContent=fireState.available?`${tr('ทั้งภูมิภาค','Region total')}: ${fireState.detections} ${tr('การตรวจจับ / 48 ชม. สิ้นสุด','detections / 48h ending')} ${clock(data.fires.evaluated_at)} · ${data.fires.feeds_current}/${data.fires.feeds_expected} ${tr('ฟีดมีข้อมูลใหม่','feeds with recent acquisitions')}${fireState.partial?' · '+tr('ข้อมูลไม่ครบ','Partial coverage'):''}`:tr('ข้อมูลไฟไม่พร้อม เก่า หรือรอการตรวจเวลาใหม่ — ไม่ได้แปลว่าไม่มีไฟ','Fire evidence unavailable, stale or awaiting acquisition checks — not evidence of no fires')
- for(const c of fireState.cells){L.rectangle([[c.lat-.125,c.lng-.125],[c.lat+.125,c.lng+.125]],{color:'#a44216',weight:0,fillOpacity:fireOpacity(c.detections)}).bindPopup(`${c.detections} ${tr('จุดตรวจจับ / 48 ชม. · จุดกลางกริด 0.25° ไม่ใช่พื้นที่เผา','detections / 48h · 0.25° cell centroid, not burned area')}<br>${esc(clock(c.first_observed_at))} → ${esc(clock(c.last_observed_at))}`).addTo(fire)}
+ for(const c of fireState.cells){L.rectangle([[c.lat-.125,c.lng-.125],[c.lat+.125,c.lng+.125]],{color:'#a44216',weight:0,fillOpacity:fireOpacity(c.detections)}).bindPopup(`${c.detections} ${tr('จุดตรวจจับ / 48 ชม. · จุดกลางกริด 0.25° ไม่ใช่พื้นที่เผา','detections / 48h · 0.25° cell centroid, not burned area')}<br>${esc(clock(c.first_observed_at))} → ${esc(clock(c.last_observed_at))}`).on('click',()=>windViewUI.select(c.lat,c.lng)).addTo(fire)}
  const current=obs.filter(r=>r.status==='current')
  byId('status').textContent=lastError?tr('โหลดใหม่ไม่สำเร็จ แสดงข้อมูลครั้งก่อนพร้อมเวลาเดิม','Refresh failed; showing previous evidence with its original times'):`${tr('ข้อมูล PM สดเชื่อมต่อ','Current PM feeds connected')}: ${new Set(current.map(r=>r.country)).size} / ${data.countries.length} ${tr('ประเทศ','countries')} · ${tr('สร้างภาพรวม','Overview generated')} ${clock(data.generated_at)}`
  byId('coverage').innerHTML=['TH','SG'].map(code=>{const rows=obs.filter(r=>r.country===code),fresh=rows.filter(r=>r.status==='current');return `<div class="reading"><h3>${code==='TH'?tr('ประเทศไทย','Thailand'):tr('สิงคโปร์','Singapore')}</h3><strong>${fresh.length}</strong> ${tr('จุดรายงานสด','current reporting locations')} / ${rows.length}<p>${code==='SG'?tr('PM2.5 เฉลี่ย 1 ชั่วโมง / 5 ภูมิภาค ไม่ใช่ตำแหน่งเซ็นเซอร์','One-hour PM2.5 / five regions, not individual monitor locations'):tr('ค่าตรวจวัด Air4Thai ช่วงเฉลี่ยไม่ถูกเก็บในตารางปัจจุบัน','Air4Thai reported values; averaging window not retained in our normalized table')}</p>${code==='SG'&&!data.singapore.available?`<p class="stale">${tr('แหล่งสิงคโปร์ไม่พร้อม','Singapore feed unavailable')}</p>`:''}</div>`}).join('')+`<p>${tr('ตรวจแหล่งไฟ','Fire source checked')}: ${esc(clock(data.fires?.checked_at))} · ${data.fires?.available?Number.isFinite(data.fires.feeds_ok)?`${data.fires.feeds_current} / ${data.fires.feeds_expected} ${tr('ฟีดมีข้อมูลตรวจจับใหม่ · มีช่องว่างจากเมฆและรอบโคจร','feeds with recent acquisitions · cloud and overpass gaps remain')}`:tr('ข้อมูลเก่าเฉพาะแผ่นดินใหญ่ รอเชื่อมต่อส่วนทะเล','Legacy mainland archive; maritime coverage not yet collected'):tr('ไม่พร้อมหรือเก่า','Unavailable or stale')}</p><details><summary>${tr('ค่ารายภูมิภาคของสิงคโปร์','Singapore regional readings')}</summary>${obs.filter(r=>r.country==='SG').map(r=>`<p>${esc(r.name)}: <strong>${r.pm25} µg/m³</strong><br>${esc(clock(r.observed_at))} · ${esc(r.status)}</p>`).join('')||tr('ไม่มีข้อมูล','No readings')}</details>`
@@ -113,7 +105,7 @@ function paintFlood(){
  byId('thai-flood').innerHTML=thFresh?`${esc(tr('FloodDash ประเทศไทย · ปรับปรุง ','Thailand FloodDash · Updated ')+clock(th.updated_at))}${(th.warnings??[]).map(w=>`<br>${esc((lang==='th'?w.name_th:w.name_en)||w.code)} — <strong>${esc(levelLabels[w.level]??w.level)}</strong>`).join('')}`:esc(tr('การประเมิน FloodDash ประเทศไทยไม่พร้อมหรือเก่า เปิดระบบต้นทางเพื่อตรวจสถานี','Thailand FloodDash assessment unavailable or stale. Open the source system to check gauges.'))
 }
 async function load(){if(loading)return;loading=true;byId('refresh').disabled=true
- try{const res=await fetch('/api/region',{signal:AbortSignal.timeout(20000),cache:'no-store'});if(!res.ok)throw Error();data=await res.json();lastError=false;paint()}
+ try{const res=await fetch('/api/region',{signal:AbortSignal.timeout(30000),cache:'no-store'});if(!res.ok)throw Error();data=await res.json();lastError=false;paint()}
  catch{lastError=true;if(data)paint();else byId('status').textContent=tr('โหลดภาพรวมไม่สำเร็จ ลองอีกครั้งหรือเปิด ASMC / หน่วยงานต้นทาง','Regional evidence unavailable. Retry or open ASMC / official providers.');if(!data)byId('resources').innerHTML='<a href="https://asmc.asean.org/asmc-gis-portal/">ASMC haze information portal ↗</a>'}
  finally{loading=false;byId('refresh').disabled=false}
 }

@@ -113,4 +113,50 @@ footer{display:flex;flex-wrap:wrap;gap:12px;padding:16px 20px;font-size:14px;bor
 .regional-wind-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; margin-bottom: 12px; }
 
 /* Preserve geographic contrast when browser darkening rewrites image blending. */
-#regional-map .leaflet-tile{mix-blend-mode:normal!important;color-scheme:light}
+#regional-map .leaflet-tile{mix-blend-mode:normal!important;color-scheme:only light}
+
+/* Regional operating composition: identity, choose, map; explanations follow. */
+header{padding:3px 16px;gap:16px;flex-wrap:nowrap;min-height:52px}
+header nav{gap:16px}.brand{font-size:18px}.brand small{font-size:11px}
+.scope-title{font-size:18px;font-weight:600;letter-spacing:0;margin:0}
+.region-map-toolbar{padding:3px 16px;gap:12px;align-items:center;flex-wrap:nowrap;min-height:52px;border-bottom:1px solid var(--rule)}
+.region-map-toolbar>label{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.region-map-toolbar select{display:inline-block;width:180px;min-height:44px;padding:6px 24px 6px 8px}
+.region-map-toolbar button{white-space:nowrap;padding:6px 8px;font-size:14px}
+#wind-reading{display:flex;align-items:center;gap:6px;margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:20px}
+#wind-reading strong{font-size:28px;line-height:1.1}#wind-reading small{font-size:12px;font-weight:400}#wind-reading>span{font-size:18px}
+#wind-reading .wind-arrow{color:var(--th-sage);display:block}
+.map-layout{grid-template-columns:minmax(0,1fr) 304px;align-items:start}
+#regional-map{height:calc(100dvh - 104px);min-height:460px;max-height:none}
+.instrument-panel{padding:12px 16px}.instrument-panel h2{font-size:24px;margin:0 0 12px}
+.wind-instrument label{font-size:14px}.origin-label{display:flex;align-items:center;gap:8px}.origin-label>span{white-space:nowrap}.origin-label select{font-size:14px;padding-left:6px}
+.wind-time{display:grid;grid-template-columns:1fr;gap:4px;margin:10px 0}.wind-time select{font-size:14px}.wind-time input{width:100%;min-height:32px;margin:0}.wind-time output{font-size:14px;font-variant-numeric:tabular-nums}
+#wind-position{font-size:13px;margin:4px 0 8px;color:var(--ink-mid)}
+#wind-path-summary{display:block;font-size:17px;color:var(--th-sage);line-height:1.45}
+#wind-steps{list-style:none;margin:8px 0;padding:0;font-size:13px;font-variant-numeric:tabular-nums}
+#wind-steps li{display:grid;grid-template-columns:34px 1fr;gap:0 6px;margin:6px 0}
+#wind-steps li>span:last-child{grid-column:2;color:var(--ink-mid)}#wind-steps time{font-weight:600;color:var(--th-sage)}
+.scenario-limit{font-size:13px;line-height:1.5;margin:10px 0;max-width:40ch}.wind-instrument .caption{font-size:12px;line-height:1.5;margin:6px 0}
+.layer-drawer{margin-top:14px}.layer-drawer>summary{font-size:16px;font-weight:600;cursor:pointer;min-height:44px;display:flex;align-items:center}.layer-drawer>summary::before{content:'▸';margin-right:8px}.layer-drawer[open]>summary::before{content:'▾'}
+.map-tools,.field-controls{gap:8px}.regional-wind-link{margin:0;font-size:13px}.method-note{margin:8px 0}.flood-watch{margin:18px 0}.instrument-panel .flood-watch h2,.instrument-panel>h2{font-size:18px;margin:16px 0 8px}
+.map-evidence{padding:12px 16px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px}.map-evidence #fire-status{font-size:13px;flex-basis:100%}.map-evidence #status{order:0;flex-basis:auto;max-width:none;font-size:13px}.map-evidence>a{min-height:32px;display:inline-flex;align-items:center}.map-key{padding:4px 16px 12px}
+.wind-grid-label{color:#163b50;text-align:center;font:600 12px/1 var(--font-ui);text-shadow:0 0 2px white,1px 1px white,-1px -1px white;pointer-events:none}.wind-grid-label .wind-arrow{display:block;margin:auto;filter:drop-shadow(0 0 1px white)}.wind-grid-label span{display:block}
+.wind-hour-mark{color:#fff;font:600 12px/24px var(--font-ui);text-align:center;background:#075672;border:1px solid white;white-space:nowrap}
+@media(max-width:1100px){.map-layout{grid-template-columns:minmax(0,1fr) 290px}.instrument-panel{padding:12px}.region-map-toolbar>label>span{display:none}}
+@media(max-width:700px){
+ header{padding:3px 10px;gap:10px}header nav{gap:8px}header nav a{font-size:14px}.scope-title{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .map-layout{display:block}.brand{font-size:18px}.region-map-toolbar{padding:3px 10px;gap:8px}.region-map-toolbar select{width:158px;font-size:14px}.region-map-toolbar>label{flex:0 0 auto}.region-map-toolbar button{display:none}
+ #wind-reading{font-size:14px;gap:4px}#wind-reading strong{font-size:23px}#wind-reading small{font-size:11px}#wind-reading>span{font-size:14px}#wind-reading .wind-arrow{width:24px}
+ #regional-map{height:calc(100svh - 104px);min-height:400px;max-height:none}.instrument-panel{padding:16px 14px}.wind-instrument{max-width:65ch}.wind-time{grid-template-columns:auto 1fr;gap:6px 12px;align-items:center}.wind-time input{min-height:44px}.wind-time output{grid-column:2}
+ #wind-steps li{grid-template-columns:34px 1fr auto}#wind-steps li>span:last-child{grid-column:auto}.scenario-limit{max-width:65ch}.map-evidence{padding:12px 14px}.map-tools{display:flex;gap:8px}.map-tools label:not(:first-child){grid-column:auto}
+}
+
+#focus-wind{padding:4px 0;min-height:40px;font-size:14px;text-decoration:underline;color:var(--th-sage)}
+.wind-map-key{background:#fff;color:#163b50;padding:4px 6px;font:400 12px/1.4 var(--font-ui);max-width:calc(100vw - 80px);overflow-wrap:anywhere}
+
+#wind-reading{padding:0;min-height:44px;text-decoration:none}#wind-reading:hover{background:transparent}#wind-dialog{color:var(--ink);background:var(--paper);border:1px solid var(--rule);padding:12px 16px;max-width:calc(100vw - 20px);width:400px;max-height:calc(100dvh - 24px)}#wind-dialog::backdrop{background:#0009}#wind-dialog form{text-align:right}#wind-dialog form button{padding:4px 0;min-height:44px}#wind-dialog .wind-instrument{padding:0}
+@media(max-width:700px){#wind-reading::after{content:'▾';font-size:12px;margin-left:2px}.instrument-panel:has(.wind-instrument)>.wind-instrument{display:none}.region-map-toolbar select{width:150px}}
+
+#regional-map{color-scheme:only light}
+
+.wind-map-key{white-space:pre-line}

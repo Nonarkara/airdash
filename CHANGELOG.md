@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.117] — 2026-10-23 — hourly regional wind, a map-first workspace
+
+Replaced stacked regional chrome with a 52 px identity row and compact map controls. The selected point's wind speed and movement direction are visible above the map; secondary imagery controls collapse. Regional hourly winds now ingest 63 samples at 6° spacing every six hours using the existing scheduler and quota breaker: surface 10 m, 850 hPa, geopotential height and hourly precipitation. Pressure levels intersecting terrain are masked. The map shows arrow speeds in km/h, selectable release points, a six-hour fixed-level air-movement scenario with +1/+3/+6 h markers, release-time control and a path-focus action. Missing/stale data stops paths; calm has no false bearing. Paths do not predict smoke concentration, AQI, source attribution or smoke arrival. Removed the regional endpoint's obsolete daily smoke computation and aligned the client deadline with its 30-second edge budget. Regional optical/PM and flood evidence are retained.
+
 ## [2.4.116] — 2026-10-23 — regional fire evidence integrity
 
 Preserve native VIIRS detection coordinates instead of merging 375 m pixels into 1 km keys. A bounded, resumable re-key migration avoids duplicate legacy observations; the earlier window is marked partial while native-precision coverage fills. Collector receipts now retain each satellite feed's acquisition time, and all-stale upstream files fail ingestion rather than certify a fresh source. Regional maps gate both acquisition freshness and aggregate age, show partial coverage, and use a labelled detection-count scale. Moved Myanmar/Indonesia area selection before the map on phones, exposed the regional wind reference, and restored geographic contrast when browser darkening rewrites tile blending. Optical fallback now identifies its selected station/time, rejects undated/invalid/expired signals, labels national scope before the verdict and shows only the selected language. It does not infer fire origin or smoke arrival times.
