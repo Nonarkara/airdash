@@ -1,8 +1,8 @@
-import { createRegionalWindView } from './regional-wind-view.js?v=2.4.118'
-import { fireView, fireOpacity } from './regional-fire-view.js?v=2.4.118'
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.118'
-import { escapeHtml as esc } from './fmt.js?v=2.4.118'
-import { readPreference, writePreference } from './preferences.js?v=2.4.118'
+import { createRegionalWindView } from './regional-wind-view.js?v=2.4.119'
+import { fireView, fireOpacity } from './regional-fire-view.js?v=2.4.119'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.119'
+import { escapeHtml as esc } from './fmt.js?v=2.4.119'
+import { readPreference, writePreference } from './preferences.js?v=2.4.119'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
@@ -21,12 +21,16 @@ function clock(time){if(!time)return '—';const date=new Date(time);return Numb
 const windViewUI=createRegionalWindView({map,tr,clock})
 function translate(){document.documentElement.lang=lang;byId('watch-area').setAttribute('aria-label',tr('พื้นที่เฝ้าระวัง','Watch area'));for(const n of document.querySelectorAll('[data-t]')){const [th,en]=n.dataset.t.split('|');n.textContent=tr(th,en)}byId('language').textContent=lang==='th'?'EN':'ไทย';paint();setImagery()}
 byId('language').onclick=()=>{lang=lang==='th'?'en':'th';writePreference('ad_lang',lang);translate()}
-byId('reset-map').onclick=()=>{byId('watch-area').value='region';map.fitBounds(whole)}
+byId('reset-map').onclick=()=>{windViewUI.unfocus();byId('watch-area').value='region';map.fitBounds(whole)}
 const watchAreas={region:whole,mainland:[[4,92],[29,110]],myanmar:[[9,92],[29,102]],indonesia:[[-11,95],[6,142]]}
 function fitWatchArea(){map.fitBounds(watchAreas[byId('watch-area').value]??whole,{animate:false})}
 fitWatchArea()
 byId('watch-area').onchange=()=>{fitWatchArea();const seeds={myanmar:[20,98],indonesia:[0,114],mainland:[20,98],region:[20,98]};windViewUI.select(...seeds[byId('watch-area').value])}
-map.on('resize',fitWatchArea)
+map.on('resize',e=>{
+ // Scrollbar/layout-size changes must not reset the user's geographic task.
+ if(Math.abs(e.newSize.x-e.oldSize.x)<20&&Math.abs(e.newSize.y-e.oldSize.y)<20)return
+ if(windViewUI.isFocused())windViewUI.focus();else fitWatchArea()
+})
 byId('open-directory').onclick=()=>{byId('country-directory').open=true}
 byId('floods').onchange=()=>byId('floods').checked?floods.addTo(map):map.removeLayer(floods)
 byId('fires').onchange=()=>{byId('fires').checked?fire.addTo(map):map.removeLayer(fire)}

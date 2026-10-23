@@ -1,9 +1,9 @@
-import { windAt, airPath } from './wind-transport.js?v=2.4.118'
-import { windArrowSvg } from './wind.js?v=2.4.118'
-import { escapeHtml as esc } from './fmt.js?v=2.4.118'
+import { windAt, airPath } from './wind-transport.js?v=2.4.119'
+import { windArrowSvg } from './wind.js?v=2.4.119'
+import { escapeHtml as esc } from './fmt.js?v=2.4.119'
 export function createRegionalWindView({map,tr,clock}){
  const vectors=L.layerGroup().addTo(map),track=L.layerGroup().addTo(map)
- let data=null,origin={lat:20,lng:98},offset=0,level='surface',lastPath=[]
+ let data=null,origin={lat:20,lng:98},offset=0,level='surface',lastPath=[],focusActive=false
  const key=L.control({position:'bottomleft'});let keyNode;key.onAdd=()=>{keyNode=L.DomUtil.create('div','wind-map-key');return keyNode};key.addTo(map)
  const el=id=>document.getElementById(id)
  const instrument=document.querySelector('.wind-instrument'),home=instrument.parentElement,dialog=el('wind-dialog')
@@ -38,13 +38,14 @@ export function createRegionalWindView({map,tr,clock}){
   el('wind-path-summary').textContent=`${tr('เส้นทางอากาศสมมุติ','Air-movement scenario')} · ${last.hours.toFixed(1)} h · ${Math.round(path.distance??0)} km${path.complete?'':' · '+tr('หยุดเมื่อข้อมูลขาด/พ้นกริด','stopped at data/grid gap')}`
   el('wind-steps').innerHTML=steps.filter(p=>[1,3,6].includes(p.hours)).map(p=>`<li><time>+${p.hours}h</time><span>${esc(new Date(p.time).toLocaleTimeString('en-GB',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit'})+' ICT'+(new Date(p.time+7*3600000).toISOString().slice(0,10)!==new Date(start+7*3600000).toISOString().slice(0,10)?' '+new Date(p.time+7*3600000).toISOString().slice(5,10):''))}</span><span>${p.lat.toFixed(2)}°, ${p.lng.toFixed(2)}°</span></li>`).join('')
  }
- function select(lat,lng){origin={lat,lng};el('wind-origin').value='custom';draw()}
+ function select(lat,lng){focusActive=false;origin={lat,lng};el('wind-origin').value='custom';draw()}
  map.on('click',e=>select(e.latlng.lat,e.latlng.lng))
- el('focus-wind').onclick=()=>{if(dialog.open)dialog.close();if(lastPath.length)map.fitBounds(L.latLngBounds(lastPath.map(p=>[p.lat,p.lng])).pad(1),{maxZoom:8,animate:false})}
+ function focusPath(){focusActive=true;if(dialog.open)dialog.close();if(lastPath.length)map.fitBounds(L.latLngBounds(lastPath.map(p=>[p.lat,p.lng])).pad(1),{maxZoom:8,animate:false})}
+ el('focus-wind').onclick=focusPath
  map.on('zoomend',draw)
  el('wind-hour').oninput=()=>{offset=Number(el('wind-hour').value);draw()}
  el('wind-level').onchange=()=>{level=el('wind-level').value;draw()}
  el('wind').onchange=draw
- el('wind-origin').onchange=()=>{const coords=el('wind-origin').value.split(',').map(Number);if(coords.length===2&&coords.every(Number.isFinite)){origin={lat:coords[0],lng:coords[1]};el('watch-area').value=coords[0]<6?'indonesia':coords[0]===20?'myanmar':'mainland';map.setView([origin.lat,origin.lng],6,{animate:false});draw()}}
- return {update(value){data=value;draw()},select,draw}
+ el('wind-origin').onchange=()=>{const coords=el('wind-origin').value.split(',').map(Number);if(coords.length===2&&coords.every(Number.isFinite)){focusActive=false;origin={lat:coords[0],lng:coords[1]};el('watch-area').value=coords[0]<6?'indonesia':coords[0]===20?'myanmar':'mainland';map.setView([origin.lat,origin.lng],6,{animate:false});draw()}}
+ return {isFocused:()=>focusActive,focus:focusPath,unfocus(){focusActive=false},update(value){data=value;draw()},select,draw}
 }

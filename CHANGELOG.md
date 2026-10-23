@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.119] — 2026-10-23 — preserve the map task through resize
+
+A small map-size change could reset a focused air path to the country extent, replacing the useful view during rendering. Ignore sub-20 px layout changes and preserve path focus through actual viewport changes; explicit area/reset actions clear focus. No change to physical distances, wind ingestion or forecast claims.
+
 ## [2.4.118] — 2026-10-23 — narrow-screen wind readout
 
 Final 320 px check found a two-digit wind speed pushing the reading past the screen edge. Narrowed the area selector and kept the numeric bearing in the accessible name/dialog while retaining visible direction and speed. Compact tablet selector/reset sizing preserves the same controls at 770 px. No wind calculation or ingestion change. The backend now coalesces and persists the public regional overview for five minutes, preserving its original generation timestamp, so each visitor does not repeat the same aggregate work.
