@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.4.118] — 2026-10-23 — narrow-screen wind readout
 
-Final 320 px check found a two-digit wind speed pushing the reading past the screen edge. Narrowed the area selector and kept the numeric bearing in the accessible name/dialog while retaining visible direction and speed. Compact tablet selector/reset sizing preserves the same controls at 770 px. No wind calculation or ingestion change.
+Final 320 px check found a two-digit wind speed pushing the reading past the screen edge. Narrowed the area selector and kept the numeric bearing in the accessible name/dialog while retaining visible direction and speed. Compact tablet selector/reset sizing preserves the same controls at 770 px. No wind calculation or ingestion change. The backend now coalesces and persists the public regional overview for five minutes, preserving its original generation timestamp, so each visitor does not repeat the same aggregate work.
 
 ## [2.4.117] — 2026-10-23 — hourly regional wind, a map-first workspace
 

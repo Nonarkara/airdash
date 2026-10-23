@@ -1,3 +1,4 @@
+import { createRegionalOverviewReader } from './regionalOverviewCache.js'
 import { regionalWind } from './sources/regional-wind.js'
 import { regionalFlood } from './regionalFlood.js'
 import { regionalFires } from './regionalFires.js'
@@ -322,6 +323,19 @@ function summarizeDataFreshness(sources) {
 }
 
 export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, harm, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }) {
+  const readRegionalOverview = createRegionalOverviewReader(db, async () => {
+      const sg = await readSingapore()
+      const observations = [...thailandRows(airStationsNow(db)), ...sg.readings.map(r => ({ ...r, status: observationStatus(r.observed_at) }))]
+      return {
+        generated_at: new Date().toISOString(), countries: COUNTRIES, resources: REGIONAL_RESOURCES,
+        pollution_outlook: pollutionOutlook(db, forecastBias(db, { cachedOnly: true })),
+        observations, singapore: { available: sg.available, fetched_at: sg.fetched_at, error: sg.error },
+        regional_wind: regionalWind(db),
+        fires: regionalFires(db),
+        flood: regionalFlood(db),
+        method: 'Partial regional overview, not a harmonized country ranking. Native averaging periods differ. Missing data is unknown. Stale means older than 90 minutes. No national indices are converted or blended.',
+      }
+  })
   return {
     'GET /api/sensors/health': (req, res, url) => {
       const h = sensorHealth(db)
@@ -1346,19 +1360,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
     },
 
     // Data-source catalog for integrators + JAXA / remote-sensing reference.
-    'GET /api/region': async (req, res) => {
-      const sg = await readSingapore()
-      const observations = [...thailandRows(airStationsNow(db)), ...sg.readings.map(r => ({ ...r, status: observationStatus(r.observed_at) }))]
-      json(res, 200, {
-        generated_at: new Date().toISOString(), countries: COUNTRIES, resources: REGIONAL_RESOURCES,
-        pollution_outlook: pollutionOutlook(db, forecastBias(db, { cachedOnly: true })),
-        observations, singapore: { available: sg.available, fetched_at: sg.fetched_at, error: sg.error },
-        regional_wind: regionalWind(db),
-        fires: regionalFires(db),
-        flood: regionalFlood(db),
-        method: 'Partial regional overview, not a harmonized country ranking. Native averaging periods differ. Missing data is unknown. Stale means older than 90 minutes. No national indices are converted or blended.',
-      })
-    },
+    'GET /api/region': async (req, res) => json(res, 200, await readRegionalOverview()),
 
     'GET /api/sources': (req, res) => json(res, 200, {
       updated: new Date().toISOString(),
