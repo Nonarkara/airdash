@@ -114,13 +114,27 @@ function sourceRules(s) {
     /air zone|โซนอากาศ/.test(zoneToggle) && !/Reference geometry\. Nothing here is a measurement/.test(zoneToggle),
     zoneToggle.slice(0, 120))
 
-  t('the map paints the zone through the shared style module',
-    /import \{ zoneStyle \}/.test(s.boundary) && /const style = zoneStyle\(band\)/.test(s.boundary),
+  // The style now comes from TWO shared modules: zoneStyle for the band's
+  // level at the present, changeStyle for the model's change at a horizon.
+  // The rule is the same as it was: the layer must not hand-roll a style.
+  t('the map paints the zone through the shared style modules',
+    /import \{ zoneStyle \}/.test(s.boundary) && /import \{ changeStyle/.test(s.boundary)
+      && /zoneStyle\(band\)/.test(s.boundary) && /changeStyle\(/.test(s.boundary),
     'the layer must not hand-roll the style — that is how a province ends up black')
   t('the layer resolves the band colour by calling it, never by indexing it',
     !/BAND_COLOR\[/.test(s.boundary) && /bandColor\(band\)/.test(s.boundary))
 
-  t('the legend has a zone key', /PROVINCE AIR ZONE|โซนอากาศรายจังหวัด/.test(s.map))
+  // The legend's zone eyebrow now has two branches — the present and a
+  // forecast horizon — so the rule is scoped to that expression. A
+  // whole-file check is satisfied by the OTHER branch, which is how "the
+  // legend lost its zone key" once passed a broken legend.
+  const zoneEyebrowExpr = s.map.split('const zoneEyebrow =')[1]?.split('const zoneNote =')[0] ?? ''
+  t('the legend has a zone key',
+    /PROVINCE AIR ZONE/.test(zoneEyebrowExpr) && /โซนอากาศรายจังหวัด/.test(zoneEyebrowExpr),
+    'the zone key must name the zone')
+  t('the legend names the zone at the PRESENT, not only in a forecast',
+    /tr\('โซนอากาศรายจังหวัด', 'PROVINCE AIR ZONE'\)/.test(zoneEyebrowExpr),
+    'the present is the default view; its key must name the zone')
   t('the legend key lists all four bands', /'normal',\s*'watch',\s*'elevated',\s*'high'/.test(s.map))
   t('the legend key counts the provinces in each band', /bandCounts/.test(s.map))
   t('the legend counts are written into the open legend, not baked into it',
@@ -158,7 +172,7 @@ const M = [
   ['the worst band is painted at a whisper', 'style', 'high: 0.66', 'high: 0.22'],
   ['the clean band is painted at nothing', 'style', 'normal: 0.20', 'normal: 0.02'],
   ['an unknown band borrows a colour', 'style', 'if (!band || !(band in ZONE_OPACITY)) return { ...ZONE_FALLBACK }', 'if (!band) return { ...ZONE_FALLBACK }'],
-  ['the map hand-rolls the zone style', 'boundary', 'const style = zoneStyle(band)', "const style = { color: bandColor[band], fillColor: bandColor[band], fillOpacity: 0.2 }"],
+  ['the map hand-rolls the zone style', 'boundary', "const style = changes\n        ? changeStyle(change?.state ?? 'unknown')\n        : zoneStyle(band)", "const style = { color: bandColor[band], fillColor: bandColor[band], fillOpacity: 0.2 }"],
   ['the zone layer is switched off', 'sat', "on: true, note_th: 'แต่ละจังหวัดเป็นพื้นที่หนึ่ง", "on: false, note_th: 'แต่ละจังหวัดเป็นพื้นที่หนึ่ง"],
   ['the score circles are switched back on', 'sat', "en: 'province watch-score circles (size = score)', on: false", "en: 'province watch-score circles (size = score)', on: true"],
   ['the legend loses its zone key', 'map', "tr('โซนอากาศรายจังหวัด', 'PROVINCE AIR ZONE')", "tr('nothing', 'nothing')"],

@@ -11,8 +11,8 @@
 //   2. Every parameter named here is one the handler actually reads.
 //   3. The honesty contract travels with the data.
 //   4. No invented versioning, no invented SLA, no invented auth scheme.
-import { store, on } from '../state.js?v=2.4.124'
-import { escapeHtml } from '../fmt.js?v=2.4.124'
+import { store, on } from '../state.js?v=2.4.125'
+import { escapeHtml } from '../fmt.js?v=2.4.125'
 
 function tr(th, en) { return store.lang === 'th' ? th : en }
 
@@ -198,6 +198,7 @@ function GROUPS() {
         { path: '/api/exports/latest', th: 'ไฟล์ส่งออกล่าสุด (รองรับ Range เพื่อดาวน์โหลดต่อ)', en: 'The latest export archive (Range requests honoured for resume).' },
         { path: '/api/exports/:filename', th: 'ไฟล์ส่งออกตามชื่อ', en: 'One export archive by name.' },
         { path: '/api/region', th: 'ภาพรวมเอเชียตะวันออกเฉียงใต้: PM ไทย/สิงคโปร์ จุดไฟ ลมรายชั่วโมง 10 ม./850 hPa กริด 6° และรายงานน้ำท่วม GDACS 14 วัน', en: 'Partial Southeast Asia overview: Thai/Singapore PM, fire cells, 6° hourly regional winds at 10 m/850 hPa (retrieval/valid times, not smoke arrival), 14-day GDACS flood episodes and separately timestamped Thailand FloodDash warnings. Centroids are not inundation boundaries; missing reports are not an all-clear.' },
+        { path: '/api/outlook', th: 'แบบจำลองฝุ่นรายชั่วโมงรายจังหวัด (CAMS ปรับอคติตามสถานี) สูงสุด 48 ชั่วโมง — ค่าเชิงแบบจำลองที่จุดกึ่งกลางจังหวัด ไม่ใช่กริดต้นฉบับและไม่ใช่เวลาควันมาถึง', en: 'Hourly per-province PM2.5 model outlook (CAMS, station-adjusted), up to 48 h ahead — model values at province centroids, not the native model grid and not a smoke arrival time.' },
         { path: '/api/sources', th: 'แหล่งข้อมูลและ data_chain: ดิบ → ตรวจ → ปรุง → ใช้ พร้อมที่มา ข้อจำกัดและเงื่อนไข', en: 'Source catalogue and data_chain: raw → checked → interpreted → action, lineage, limitations and reuse terms.' },
         { path: '/api/reports', th: 'รายงานจากประชาชน (LINE) ที่ผ่านการตรวจแล้ว', en: 'Moderated citizen reports (LINE).', params: [['limit', false, tr('จำนวน', 'count')], ['since', false, tr('ISO time', 'ISO time')]] },
       ],

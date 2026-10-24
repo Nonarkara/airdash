@@ -323,6 +323,21 @@ function summarizeDataFreshness(sources) {
 }
 
 export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, harm, causes, patterns, rag, faq, line, telegram, telegramBroadcaster, science, startedAt }) {
+  // The model outlook, cached in memory for ten minutes. The underlying
+  // CAMS run is issued every few hours, so a short cache costs nothing and
+  // keeps the map's horizon from re-reading the grid on every click.
+  //
+  // An UNAVAILABLE payload is not cached: the model being stale or missing
+  // is a moment, not a state, and caching the failure for ten minutes kept
+  // the map's horizon switched off long after the model came back.
+  let outlookCache = { at: 0, payload: null }
+  const readOutlook = () => {
+    if (outlookCache.payload?.available && Date.now() - outlookCache.at < 10 * 60_000) return outlookCache.payload
+    const payload = pollutionOutlook(db, forecastBias(db, { cachedOnly: true }))
+    if (payload.available) outlookCache = { at: Date.now(), payload }
+    else outlookCache = { at: 0, payload: null }
+    return payload
+  }
   const readRegionalOverview = createRegionalOverviewReader(db, async () => {
       const sg = await readSingapore()
       const observations = [...thailandRows(airStationsNow(db)), ...sg.readings.map(r => ({ ...r, status: observationStatus(r.observed_at) }))]
@@ -1361,6 +1376,16 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
 
     // Data-source catalog for integrators + JAXA / remote-sensing reference.
     'GET /api/region': async (req, res) => json(res, 200, await readRegionalOverview()),
+
+    // The hourly model outlook on its own, for the main map's horizon.
+    //
+    // It is a separate endpoint rather than another field in /api/snapshot
+    // because it is 77 provinces × 72 hours of numbers and the map only
+    // needs it when a reader actually asks for a future hour. The model is
+    // issued every few hours, so the answer is cached for ten minutes; a
+    // reader who asks twice in a minute gets the same numbers, not a
+    // different model run.
+    'GET /api/outlook': (req, res) => json(res, 200, readOutlook()),
 
     'GET /api/sources': (req, res) => json(res, 200, {
       updated: new Date().toISOString(),

@@ -1687,6 +1687,22 @@ body.mode-citizen .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .mapctl-body[hidden] { display: none; }
 
+/* The horizon control: which question the province areas are answering —
+   the band's level now, or the model's expected change at a future hour.
+   It sits under the zoom buttons in the map's own corner stack, so it
+   reads as map chrome rather than a floating pill. */
+.horizon-ctl { min-width: 104px; }
+.horizon-ctl .row .sw {
+  width: 26px; height: 9px; border: 0;
+}
+.horizon-ctl .row.on .sw { box-shadow: 0 0 0 1.5px var(--ink); }
+.horizon-ctl .row:disabled { opacity: .5; cursor: progress; }
+.mapctl-note {
+  padding: 5px 8px; font-size: 11px; line-height: 1.35; color: var(--ink-mid);
+  background: var(--well-dim); border-top: 1px solid var(--rule);
+}
+.mapctl-note[hidden] { display: none; }
+
 /* Advanced map controls stay bounded when expanded. */
 .mapctl-body { max-height: min(70vh, 640px); overflow-y: auto; overscroll-behavior: contain; }
 
@@ -4382,7 +4398,23 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .haze-wind-icon {background:transparent; border:none; box-shadow:none; display:flex; align-items:center; justify-content:center;}
 /* No fixed size: the arrow's own width/height is the wind SPEED (see
    windArrowSize). Pinning it here would flatten the strength encoding. */
-.haze-wind-icon .wind-arrow {display:block; color:var(--th-navy); opacity:.7;}
+.haze-wind-icon .wind-arrow {
+  display: block;
+  /* A FIXED deep teal, not the theme's --th-navy: the map's background is
+     the light Esri basemap in BOTH themes, and the dark theme's navy
+     (#3A8A6E sage) washed out to 1.5:1 against the province fills — the
+     arrow became a smudge exactly where the reader needs to read it. */
+  color: #0E4A5E;
+  opacity: 1;
+  /* A white halo BEHIND the arrow (paint-order), so the shape keeps its
+     edge over any fill — the red/blue change palette, a satellite basemap,
+     a pale band fill. Measured: the arrow's own ink against the change
+     fills was 1.5–2.0:1 without it. */
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
 .haze-wind-icon:hover .wind-arrow {opacity:1;}
 /* A province with no wind-speed reading is not a calm wind: it is drawn
    faded, and the tooltip says the speed is missing. */

@@ -33,7 +33,9 @@ const { windArrowSize, WIND_ARROW } = await import(`../../public/js/wind.js${TOK
 const CHROME = requireChrome()
 const PORT = 9700 + (process.pid % 200)
 const PAGE_URL = process.argv[2] ?? 'https://air.nonarkara.org/'
-const API = PAGE_URL.includes('/ops') ? PAGE_URL.replace(/\/ops\.html.*$/, '') + '/api/snapshot' : new URL('/api/snapshot', PAGE_URL).href
+// The API lives at the site root, whatever path the page is on (/ops.html
+// locally, /ops in production — the redirect is a 308, not a different API).
+const API = new URL('/api/snapshot', PAGE_URL).href
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
 const child = spawn(CHROME, ['--headless', '--disable-gpu', '--no-sandbox', '--hide-scrollbars',

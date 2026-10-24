@@ -16,6 +16,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.125] — 2026-10-23 — the zone gets a horizon
+
+**The map answered "where is the air bad" and "which way is it moving", and nothing about tomorrow.** The server already cooks an hourly, station-adjusted model outlook for every province — the same engine the regional page drives with a time slider — and the main map never asked for it. A reader preparing for haze could see where the pollution is and which way the air was moving, and nothing about which province would get worse overnight.
+
+**The horizon control.** Bottom-left of the map, beside the legend button: **now · +12 h · +24 h · +48 h**. At "now" the province areas carry the watch band, exactly as 2.4.122 shipped them. At a future hour they carry **the change the model expects** — worse (red), steady (grey), better (blue) — and the legend's key changes with them, because a key that still described bands would be describing something that is not on screen. The two meanings are never on screen together.
+
+**What it may claim, and what it may not.** The horizon compares **the model to itself**: the model's own value now against the model's own value later. It never compares the model to the ground reading, and the reason is not squeamishness. The model reads a whole 25 km cell; the band reads a station peak. Put them side by side and the map would say "everything improves tomorrow" — in the measured numbers, the 24-hour forecast's median is 12 µg/m³ against today's 16.7 — and that is an artefact of the model's smoothing, not a forecast. It is the wrong message to carry into a haze season, and it is the exact failure `server/forecastBias.js` was written to fight.
+
+**An absent reading is absent.** A province the model says nothing about is painted with the house's no-data grey, which is drawn *stronger* than "steady", and the tooltip says the model has no value for it. A horizon the model cannot reach is **nothing**, not the last frame — a "+96 h" horizon with no frame is not "+48 h, honestly".
+
+**The outlook is fetched only when a reader asks for it.** `GET /api/outlook` serves the hourly grid; the default page pays nothing for a horizon nobody used. The response is cached for ten minutes — but an *unavailable* payload is not cached, because the model being stale is a moment, not a state, and the first version of this endpoint kept the map's horizon switched off for ten minutes after the model came back.
+
+**The wind arrows were a smudge where it mattered.** The horizon's saturated fills exposed a defect the pale band fills had hidden: the arrow's ink measured **1.5–2.0 : 1** against them, below the 3 : 1 floor for a graphical mark, because the theme's `--th-navy` is a sage green in the dark theme and the map's basemap is light in *both* themes. The map's arrows now use a fixed deep teal with a white halo painted behind the shape (`paint-order: stroke`), which keeps the edge on any fill. Measured after: **3.34 : 1** on the red, **4.85 : 1** on the blue, **7.68 : 1** on the steady grey.
+
+**Two guards.** `scripts/test-horizon.mjs` (41 checks, in `npm test`) executes the product's own logic: the three states and the band around zero, the base and target frames, a horizon beyond the model, a province with no model value, and the rule that the comparison never reaches for a ground concentration. **Ten mutations, ten caught** — among them "the comparison reaches for the ground reading", "a horizon beyond the model falls back to the last frame" and "a province with no model value is painted steady". `scripts/ops/check-horizon.mjs` then reads the drawn map: the control's state, the areas' fills, the canvas pixels' hue family, the legend's counts adding up to 77, the tooltip naming the model — and then switches **back** to the present and checks the band palette returned, because a mode switch a reader cannot leave is not a feature.
+
+**My own mistakes, on the record.** The first version compared the model with itself *an hour away from now* — the base frame reached forward to "now + 1 h" instead of back to the present; the guard caught it. The legend check was scoped to the whole file, so a key that had stopped naming the change states still passed because the band branch was still there; it is now scoped to the legend's key expression. The live check's first pixel test compared a 50%-opaque fill against the pure hex with a per-channel tolerance no blended fill can satisfy; it now judges the hue family.
+
+**Verified on the live map:** the control offers now and three horizons; at +24 h the areas carry the change palette, the legend reads "expected change +24 h" and counts 23 worse / 26 steady / 28 better / 0 unknown (77 in total), every painted province pixel is a change colour, the tooltip reads "พะเยา · model 9.7 → 11 µg/m³ · +1.3 · steady", and switching back restores the band palette. Photographed at 1440, 1024 and 390.
+
+> **Still not on the map:** the province card's trajectory line (the card shows the daily 24/48/72 h forecast but not the hourly path), and the regional page's smoke path, which is a different forecast with a different question. The horizon is the province-level answer; it does not replace either.
+
+---
+
 ## [2.4.124] — 2026-10-23 — the wind that moves the zone
 
 **The map showed where the air was bad and not where it was going.** The province wind field was switched **off** by default, so the dashboard answered "where is the air bad" without the one thing that explains where it is going. And when it was on, every arrow was the same size: the speed was in a hover tooltip, one province at a time, so a reader scanning the country could not tell a still day from a moving one — and the speed decides whether the air carries anything.

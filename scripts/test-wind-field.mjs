@@ -200,7 +200,7 @@ const M = [
   ['the scale stops being exported', 'wind', 'export const WIND_ARROW = {', 'const WIND_ARROW = {'],
   ['the canonical sentence loses the size rule', 'wind', "en: 'arrow points where the air moves — the longer the arrow, the stronger the wind',", "en: 'arrow points where the air moves',"],
   ['the map draws a fixed-size arrow', 'map', 'windArrowSize(w.speedKmh)', '{ size: 18, known: true }'],
-  ['the stylesheet pins the arrow size', 'css', '.haze-wind-icon .wind-arrow {display:block; color:var(--th-navy); opacity:.7;}', '.haze-wind-icon .wind-arrow {display:block; width:18px; height:18px; color:var(--th-navy); opacity:.7;}'],
+  ['the stylesheet pins the arrow size', 'css', '.haze-wind-icon .wind-arrow {\n  display: block;', '.haze-wind-icon .wind-arrow {\n  display: block; width:18px; height:18px;'],
   ['the wind field is switched off again', 'map', "en:'Province wind field + upwind fire counts',on:true", "en:'Province wind field + upwind fire counts',on:false"],
   ['the legend stops explaining the size', 'map', '</span>${windEncodingText()} (', "</span>${'arrow points where the air moves'} ("],
   ['the layer panel states the size rule a second time', 'map', "note_en:'Arrows point where the wind blows. Daily dominant forecast, not current wind.'", "note_en:'Arrows point where the wind blows; the longer the arrow, the stronger the wind. Daily dominant forecast, not current wind.'"],

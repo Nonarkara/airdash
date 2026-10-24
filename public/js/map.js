@@ -1,24 +1,25 @@
-import { windArrowSvg, windArrowSize, windBasisLabel, windEncodingText, windRowText, windView, WIND_ARROW } from './wind.js?v=2.4.124'
-import { escapeHtml } from './fmt.js?v=2.4.124'
-import { moveMap } from './mapView.js?v=2.4.124'
-import { readPreference, writePreference } from './preferences.js?v=2.4.124'
+import { windArrowSvg, windArrowSize, windBasisLabel, windEncodingText, windRowText, windView, WIND_ARROW } from './wind.js?v=2.4.125'
+import { CHANGE_COLOR, HORIZONS, changeCaption, horizonLabel, outlookByProvince, stateLabel } from './horizon.js?v=2.4.125'
+import { escapeHtml } from './fmt.js?v=2.4.125'
+import { moveMap } from './mapView.js?v=2.4.125'
+import { readPreference, writePreference } from './preferences.js?v=2.4.125'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, store } from './state.js?v=2.4.124'
-import { tr, LEVEL_NAME, BAND, bandColor } from './i18n.js?v=2.4.124'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.124'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.124'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.124'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.124'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.124'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.124'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.124'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.124'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.124'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.124'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.124'
-import { openWindow } from './witness.js?v=2.4.124'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.124'
+import { on, emit, store } from './state.js?v=2.4.125'
+import { tr, LEVEL_NAME, BAND, bandColor } from './i18n.js?v=2.4.125'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.125'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.125'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.125'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.125'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.125'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.125'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.125'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.125'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.125'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.125'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.125'
+import { openWindow } from './witness.js?v=2.4.125'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.125'
 
 const windToggle = {id:'hazeWind',th:'ทิศลมรายจังหวัด + จุดไฟเหนือลม',en:'Province wind field + upwind fire counts',on:true,
   note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where the wind blows. Daily dominant forecast, not current wind.',
@@ -205,11 +206,12 @@ export function initMap() {
 
   addLayerControl()
   addLegend()
+  addHorizonControl()
   // Expose for testing/devtools — never used by app code.
   window.__airdash = { map, layers, osmBuildingsApi }
 
   on('snapshot', renderAll)
-  on('lang', () => { addLegend(); addLayerControl(); renderAll(store.snapshot) })
+  on('lang', () => { addLegend(); addLayerControl(); addHorizonControl(); renderAll(store.snapshot) })
   // Drought risk is a separate (weekly) feed, not part of the snapshot
   // pipeline — fetch it once at boot and on every snapshot tick so a
   // long-running tab picks up next week's polygons without a manual
@@ -288,6 +290,98 @@ function updateRadarClock() {
     elClock.textContent = (f.kind==='nowcast' ? tr('คาดระยะสั้น ', 'nowcast ') : tr('ตรวจพบ ', 'observed ')) + new Date(f.time * 1000).toLocaleString('en-GB',
       { day:'2-digit', month:'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })
   }
+}
+
+// ── The horizon: when will the air get worse? ─────────────────────────────
+//
+// The zone answers "where is the air bad". The wind answers "which way is
+// it moving". Neither answered "and tomorrow?" — even though the server
+// already cooks an hourly, station-adjusted model outlook for every province.
+//
+// The horizon picks WHICH question the areas answer. At "now" they carry the
+// band's LEVEL; at "+24 h" they carry the model's expected CHANGE. The two
+// are never on screen together, and the legend says which meaning is live.
+//
+// The outlook is fetched the first time a reader asks for a future hour —
+// the default page pays nothing for a horizon nobody used.
+let horizonCtl
+let horizonBusy = false
+let horizonNote = ''
+
+async function setHorizon(hours) {
+  if (hours === (store.horizon ?? 0)) return
+  if (hours > 0 && !store.outlook) {
+    if (horizonBusy) return
+    horizonBusy = true
+    horizonCtl?.paint?.()
+    try {
+      // Bounded: a hung request must not leave the control stuck on
+      // "loading" forever. The reader gets the present instead, and a note.
+      const res = await fetch('/api/outlook', { signal: AbortSignal.timeout(15000) })
+      store.outlook = await res.json()
+    } catch {
+      store.outlook = null
+    }
+    horizonBusy = false
+  }
+  if (hours > 0 && !store.outlook?.available) {
+    // No model, no future field invented. Say so and stay on the present.
+    horizonNote = tr('แบบจำลองไม่พร้อม — ไม่สร้างภาพอนาคตขึ้นเอง', 'model unavailable — no future field invented')
+    horizonCtl?.paint?.()
+    return
+  }
+  horizonNote = ''
+  store.horizon = hours
+  emit('horizon', hours)
+  addLegend()
+  refreshZoneCounts()
+  horizonCtl?.paint?.()
+}
+
+function addHorizonControl() {
+  horizonCtl?.remove()
+  // BOTTOM-left, beside the legend button: on a phone the map's top-left
+  // corner holds the north-west provinces, and the control was sitting on
+  // top of them. The bottom-left corner is open sea on both viewports, and
+  // it puts the mode next to the key that explains it.
+  horizonCtl = L.control({ position: 'bottomleft' })
+  horizonCtl.onAdd = () => {
+    const div = L.DomUtil.create('div', 'mapctl horizon-ctl')
+    L.DomEvent.disableClickPropagation(div)
+    const head = L.DomUtil.create('div', 'mapctl-group', div)
+    head.textContent = tr('โซน: ตอนนี้ / อนาคต', 'ZONE: NOW / FUTURE')
+    const body = L.DomUtil.create('div', 'mapctl-body', div)
+    for (const h of HORIZONS) {
+      const row = L.DomUtil.create('button', 'row', body)
+      row.type = 'button'
+      row.dataset.horizon = String(h)
+      row.innerHTML = `<span class="sw"></span><span class="lbl">${escapeHtml(horizonLabel(h))}</span>`
+      row.onclick = () => setHorizon(h)
+    }
+    const note = L.DomUtil.create('div', 'mapctl-note', div)
+    note.textContent = horizonNote
+    const paint = () => {
+      for (const row of body.querySelectorAll('.row')) {
+        const h = Number(row.dataset.horizon)
+        row.classList.toggle('on', h === (store.horizon ?? 0))
+        // The swatch shows what the areas will carry: the band colours at
+        // "now", the diverging change palette in a forecast horizon.
+        const sw = row.querySelector('.sw')
+        sw.style.background = h === 0
+          ? 'linear-gradient(90deg,#00933C,#B58800,#E86A10,#A51931)'
+          : `linear-gradient(90deg,${CHANGE_COLOR.worse},${CHANGE_COLOR.steady},${CHANGE_COLOR.better})`
+        row.disabled = horizonBusy
+      }
+      note.textContent = horizonBusy
+        ? tr('กำลังโหลดแบบจำลอง…', 'loading the model…')
+        : horizonNote
+      note.hidden = !note.textContent
+    }
+    paint()
+    horizonCtl.paint = paint
+    return div
+  }
+  horizonCtl.addTo(map)
 }
 
 // ── Layer control (grouped toggles) ─────────────────────────────────────────
@@ -423,11 +517,32 @@ function addLayerControl() {
 // worse than no key.
 function refreshZoneCounts() {
   const counts = store.snapshot?.risk?.national?.bandCounts ?? {}
-  for (const el of document.querySelectorAll('.legend-body .zcount')) {
+  for (const el of document.querySelectorAll('.legend-body .zcount[data-band]')) {
     el.textContent = String(counts[el.dataset.band] ?? 0)
+  }
+  // In a forecast horizon the zone carries the model's change, so the key
+  // counts provinces by CHANGE, not by band.
+  const horizon = store.horizon ?? 0
+  const changeCounts = horizon ? countChanges() : null
+  for (const el of document.querySelectorAll('.legend-body .zcount[data-change]')) {
+    el.textContent = String(changeCounts?.[el.dataset.change] ?? 0)
   }
 }
 
+/** How many provinces the model expects to get worse / stay / get better. */
+function countChanges() {
+  const h = store.horizon ?? 0
+  if (!h || !store.outlook) return null
+  const rows = outlookByProvince(store.outlook, h)
+  const out = { worse: 0, steady: 0, better: 0, unknown: 0 }
+  for (const p of store.snapshot?.risk?.provinces ?? []) {
+    const row = rows.get(String(p.province_code))
+    out[row?.state ?? 'unknown']++
+  }
+  return out
+}
+
+let legendOpen = false
 function addLegend() {
   legendCtl?.remove()
   legendCtl = L.control({ position: 'bottomleft' })
@@ -447,14 +562,28 @@ function addLegend() {
     // The zone key: the four bands the province areas are filled with, and
     // how many provinces are in each. A key that names the colours is what
     // makes the map readable; a key that omits them makes it decoration.
-    const zoneKey = ['normal', 'watch', 'elevated', 'high'].map(b => {
-      const name = store.lang === 'th' ? BAND[b].noun_th : BAND[b].noun_en
-      return `<div class="lrow"><span class="lsw" style="background:${bandColor(b)}"></span>${name} · <span class="zcount" data-band="${b}">0</span> ${tr('จังหวัด', 'provinces')}</div>`
-    }).join('')
+    //
+    // In a forecast horizon the areas carry the model's expected CHANGE
+    // instead, so the key changes with them: a key that still described
+    // bands would be a key describing something that is not on screen.
+    const horizon = store.horizon ?? 0
+    const zoneKey = horizon
+      ? ['worse', 'steady', 'better', 'unknown'].map(s =>
+        `<div class="lrow"><span class="lsw" style="background:${CHANGE_COLOR[s]}"></span>${escapeHtml(stateLabel(s))} · <span class="zcount" data-change="${s}">0</span> ${tr('จังหวัด', 'provinces')}</div>`).join('')
+      : ['normal', 'watch', 'elevated', 'high'].map(b => {
+        const name = store.lang === 'th' ? BAND[b].noun_th : BAND[b].noun_en
+        return `<div class="lrow"><span class="lsw" style="background:${bandColor(b)}"></span>${name} · <span class="zcount" data-band="${b}">0</span> ${tr('จังหวัด', 'provinces')}</div>`
+      }).join('')
+    const zoneEyebrow = horizon
+      ? tr(`โซนอากาศรายจังหวัด · เปลี่ยนแปลงที่คาด +${horizon} ชม.`, `PROVINCE AIR ZONE · EXPECTED CHANGE +${horizon} H`)
+      : tr('โซนอากาศรายจังหวัด', 'PROVINCE AIR ZONE')
+    const zoneNote = horizon
+      ? `${changeCaption()} · ${tr('แบบจำลองอ่านทั้งเซลล์ จังหวัดอาจดีขึ้นในแบบจำลองแต่แย่กว่าที่ถนนของคุณ', 'the model reads a whole cell — a province can improve in the model and be worse at your street')}`
+      : tr('สีพื้นที่ = ระดับเฝ้าระวังของจังหวัด (ดัชนีรวมหลายปัจจัย ไม่ใช่ค่าความเข้มข้น) กดพื้นที่เพื่อดูการ์ดของจังหวัด', 'Area colour = the province’s watch band (a multi-factor composite, not a concentration). Click an area for its card.')
     body.innerHTML = `
-      <div class="eyebrow">${tr('โซนอากาศรายจังหวัด', 'PROVINCE AIR ZONE')}</div>
+      <div class="eyebrow">${zoneEyebrow}</div>
       ${zoneKey}
-      <div class="lrow">${tr('สีพื้นที่ = ระดับเฝ้าระวังของจังหวัด (ดัชนีรวมหลายปัจจัย ไม่ใช่ค่าความเข้มข้น) กดพื้นที่เพื่อดูการ์ดของจังหวัด', 'Area colour = the province’s watch band (a multi-factor composite, not a concentration). Click an area for its card.')}</div>
+      <div class="lrow">${zoneNote}</div>
       <div class="eyebrow">${tr('PM2.5 (AQI ไทย 2566)', 'PM2.5 (THAI AQI 2023)')}</div>
       ${[5, 4, 3, 2, 1].map(lv).join('')}
       <div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#2c97ae,#68b9a0,#cbd75c,#f0ad36,#cf4b35,#813e83,#472656)"></span>${tr('พื้นผิวประมาณ PM2.5: 0 · 15 · 25 · 37.5 · 75 · 150 · 300 µg/m³ ไม่ใช่ AQI ช่องว่าง = ข้อมูลไม่พอ','Estimated PM surface: 0 · 15 · 25 · 37.5 · 75 · 150 · 300 µg/m³, not AQI. Blank = unsupported.')}</div>
@@ -495,6 +624,7 @@ function addLegend() {
     close.type = 'button'
     close.textContent = tr('ปิดคำอธิบาย ✕', 'Close legend ✕')
     const setOpen = (open) => {
+      legendOpen = open
       if (open) {
         // Fit the body inside the ACTUAL map strip. The CSS max-height
         // (min(48vh,340px)) alone wasn't enough on mobile: the map area
@@ -510,6 +640,10 @@ function addLegend() {
     }
     head.onclick = () => setOpen(body.hidden)
     close.onclick = () => setOpen(false)
+    // The legend is rebuilt when the horizon changes (its key changes with
+    // what the areas carry). A reader who had it open should not have it
+    // slammed shut by their own click.
+    if (legendOpen) setOpen(true)
     return div
   }
   legendCtl.addTo(map)
