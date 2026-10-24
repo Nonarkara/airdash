@@ -197,10 +197,11 @@ await sleep(4000)
 for (const [w, h] of [[1440, 900], [1024, 768], [390, 844]]) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 500 })
   await sleep(2500)
-  if (w < 500) {
-    await evaluate(`(() => { const b = document.querySelector('#sheettabs button[data-sheet="map"]'); if (b) b.click(); return 1 })()`)
-    await sleep(3500)
-  }
+  // The map lives behind the MAP tab at every width below the desktop
+  // layout — 1024 included. A photograph of the ranking panel is not
+  // evidence about the map.
+  const tab = await evaluate(`(() => { const b = document.querySelector('#sheettabs button[data-sheet="map"]'); if (!b) return 'no map tab'; b.click(); return 'map tab' })()`)
+  if (tab === 'map tab') await sleep(3500)
   const shot = await send('Page.captureScreenshot', { format: 'png' })
   const file = `/tmp/horizon-${w}.png`
   writeFileSync(file, Buffer.from(shot.data, 'base64'))
