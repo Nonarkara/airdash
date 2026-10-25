@@ -572,6 +572,49 @@ export function openDb(path = CONFIG.dbPath) {
   return wrap(db)
 }
 
+/**
+ * Run `fn` inside a transaction.
+ *
+ * WHY THIS IS NOT INLINE (2026-10-26 incident). The old code was
+ *   BEGIN; try { fn(); COMMIT } catch { ROLLBACK; throw }
+ * — ONE catch for TWO different failures. When the COMMIT itself failed (the
+ * disk was full: SQLITE_FULL on commit), the catch ran a ROLLBACK against a
+ * transaction that no longer existed, and that ROLLBACK threw
+ * "cannot rollback - no transaction is active", which REPLACED the real
+ * cause. The nightly hot-tier trim logged a rollback complaint instead of
+ * "disk full", and the operator read the wrong problem for a day.
+ *
+ * Rules, in order:
+ *   1. The error that is thrown out is the FIRST failure (the work, or the
+ *      commit) — never a secondary cleanup error.
+ *   2. A failing ROLLBACK is swallowed; the connection is left in whatever
+ *      state SQLite thinks it is in, and the original error still surfaces.
+ *   3. `exec` is injected so a guard can EXECUTE this against a stub — a
+ *      check that cannot make COMMIT fail proves nothing about a commit
+ *      failure.
+ */
+export function runInTx(exec, fn) {
+  exec('BEGIN')
+  let r
+  try {
+    r = fn()
+  } catch (e) {
+    // The work failed. Roll back so the connection is usable again, but a
+    // failing ROLLBACK must never replace the real error.
+    try { exec('ROLLBACK') } catch { /* keep the original error */ }
+    throw e
+  }
+  try {
+    exec('COMMIT')
+  } catch (e) {
+    // The COMMIT failed (e.g. the disk filled). Surface THAT error, and try
+    // to clean up the transaction without hiding it.
+    try { exec('ROLLBACK') } catch { /* no open transaction to roll back */ }
+    throw e
+  }
+  return r
+}
+
 function wrap(db) {
   const stmts = new Map()
   const prep = (sql) => {
@@ -588,9 +631,7 @@ function wrap(db) {
     run: (sql, ...args) => prep(sql).run(...args),
     exec: (sql) => db.exec(sql),
     tx(fn) {
-      db.exec('BEGIN')
-      try { const r = fn(); db.exec('COMMIT'); return r }
-      catch (e) { db.exec('ROLLBACK'); throw e }
+      return runInTx((sql) => db.exec(sql), fn)
     },
 
     upsertStation(s) {

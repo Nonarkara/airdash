@@ -113,7 +113,10 @@ export default {
       if (index !== null) scored++
       if (signal.status === 'blank') blank++
       let preview = 0
-      try { await savePreview(key, buf); preview = 1 } catch (e) { log('warn', 'camera preview unavailable', { camera: key, error: String(e) }) }
+      // savePreview returns false when the disk guard sheds the frame (the
+      // disk is nearly full). That is a deliberate drop, not a failure, so it
+      // is counted as "no preview" and does not spam the error log.
+      try { preview = (await savePreview(key, buf)) ? 1 : 0 } catch (e) { log('warn', 'camera preview unavailable', { camera: key, error: String(e) }) }
       // tint_hint is written again (2026-10-15 audit). Commit 18444ed replaced
       // it with a literal null at the same time it moved the VERDICT to a
       // per-camera baseline — correct for the verdict, wrong for the record:

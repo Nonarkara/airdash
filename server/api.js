@@ -52,6 +52,7 @@ import { indexLatestFrames, withVision, pictureFlags, summarizeLooks, describeVi
 import { sensorHealth } from './sensors.js'
 import { harmPayload, HARM_METHOD } from './harm.js'
 import { watchdogStatus, dbOnExternalVolume, archiveStatus } from './opsSentinel.js'
+import { diskStatus } from './diskGuard.js'
 import { futureRejects, badObsRejects, SERIES_INDEX } from './db.js'
 import { forecastBias } from './forecastBias.js'
 import { computeSmoke, SMOKE_METHOD } from './smoke.js'
@@ -496,6 +497,7 @@ export function buildRoutes({ db, bus, scheduler, riskEngine, washout, danger, h
         db: { ...dbStats, size_mb: Math.round(dbSize / 1048576 * 10) / 10, on_external_volume: dbOnExternalVolume(CONFIG.dbPath), future_obs_rejected: Object.fromEntries(futureRejects), bad_obs_time_rejected: Object.fromEntries(badObsRejects) },
         archive: archiveStatus(),
         watchdog: watchdogStatus(),
+        disk: diskStatus(),
         sources,
         data_freshness,
         observation_coverage: pmObservationCoverage(db),

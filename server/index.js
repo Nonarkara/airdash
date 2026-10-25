@@ -22,6 +22,7 @@ import { scheduleRetention } from './retention.js'
 import { startHttp } from './http.js'
 import { buildRoutes } from './api.js'
 import { startOpsSentinel } from './opsSentinel.js'
+import { startDiskGuard } from './diskGuard.js'
 
 import air4thai from './sources/air4thai.js'
 import openmeteo from './sources/openmeteo.js'
@@ -96,6 +97,12 @@ setQuotaStore({
 scheduler.start()
 scheduleRetention(db)
 startOpsSentinel({ startedAt })
+// Disk headroom: the server measures the free space of the volume it writes
+// to and sheds optional writes (camera preview frames) before the disk can
+// fill. On 2026-10-24 a full disk produced 132 ENOSPC errors a minute and
+// the machine died half an hour later. The hourly watchdog can see a full
+// disk; only this can keep one from happening.
+startDiskGuard({ alerts })
 
 // LINE push tick — every 5 min, check subscribers and push to anyone whose
 // province crossed into elevated/high. Self-throttles to one push per
