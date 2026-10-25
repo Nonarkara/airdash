@@ -26,6 +26,7 @@ import { log } from './util.js'
 const LINE_MIN_GAP_MS = 30 * 60_000
 const MAX_LINES_PER_PUSH = 6
 const RETRY_DELAY_MS = 60_000        // reschedule after a fully-failed send
+const MAX_QUEUE_AGE_MS = 60 * 60_000 // never deliver an old episode as a current warning
 const MAX_QUEUE = 200                // backstop: never grow unbounded if LINE is down for days
 
 // Bilingual section headers for the broadcast groups — same severity
@@ -95,8 +96,26 @@ export function createLine(db) {
   let timerAt = 0                   // absolute ms when the pending timer fires
   let sending = false               // guard: never run two broadcasts at once
   let pushProbe = { at: 0, ok: false } // cached result of the "can this token push?" check
+  // While the MONTHLY message quota is spent, the broadcaster does not try
+  // again until the quota month turns over. It is persisted so a restart
+  // does not spend another attempt (and another log line) on a limit that
+  // resets on the 1st.
+  let quotaParkedUntil = Number(db.kvGet('line_quota_parked_until') ?? 0) || 0
 
   const token = () => db.kvGet('line_channel_token')
+
+  /**
+   * When LINE's monthly broadcast quota resets. The quota is per calendar
+   * month, so the next one starts on the 1st at 00:05 — five minutes past
+   * the hour, because a retry at exactly 00:00 can still see the old month.
+   */
+  function monthlyQuotaReset(now = Date.now()) {
+    // LINE accounting months use UTC+9 (Japan), independent of the host timezone.
+    const d = new Date(now + 9 * 3600_000)
+    const thisReset = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 5) - 9 * 3600_000
+    if (now < thisReset) return thisReset
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1, 0, 5) - 9 * 3600_000
+  }
 
   // Mint a fresh 30-day channel access token from the stored channel id/secret.
   // Returns the token string or null (missing creds / mint failed).
@@ -167,6 +186,9 @@ export function createLine(db) {
   // retry) must not block a sooner one (a fresh critical alert), and a later
   // request must not delay an already-sooner timer.
   function schedule(delayMs) {
+    // Node clamps delays above its signed 32-bit limit to 1 ms. Wake in
+    // bounded chunks while retaining the exact persisted quota deadline.
+    delayMs = Math.max(1, Math.min(delayMs, 2_147_483_647))
     const at = Date.now() + delayMs
     if (timer && at >= timerAt) return
     if (timer) clearTimeout(timer)
@@ -245,7 +267,21 @@ export function createLine(db) {
 
   async function flush() {
     if (sending) { schedule(RETRY_DELAY_MS); return } // a send is already in flight
+    const before = queue.length
+    queue = queue.filter(a => Date.now() - a._queuedAt < MAX_QUEUE_AGE_MS)
+    if (queue.length < before) log('info', 'LINE expired queued alerts', { expired: before - queue.length })
     if (queue.length === 0) return
+    // The monthly quota is spent: waiting is the only thing a retry can do.
+    if (quotaParkedUntil && Date.now() < quotaParkedUntil) {
+      schedule(quotaParkedUntil - Date.now())
+      return
+    }
+    if (quotaParkedUntil) {
+      // The quota month turned over. Clear the park and try again.
+      quotaParkedUntil = 0
+      db.kvSet('line_quota_parked_until', '')
+      log('info', 'LINE broadcast un-parked — the monthly quota month turned over')
+    }
     const t = await ensureFreshToken()
     // Token mint/refresh failed (or creds rotated away): don't sit on the
     // batch silently — severe alerts are sitting in a memory-only queue.
@@ -298,7 +334,28 @@ export function createLine(db) {
             log('error', 'LINE auth rejected — will re-probe/re-mint; batch dropped', { status: res.status, dropped: batch.length })
             return
           }
-          log('warn', 'LINE broadcast failed', { status: res.status, body: (await res.text()).slice(0, 200), attempt })
+          const responseBody = (await res.text()).slice(0, 200)
+          if (res.status === 429 && /monthly limit/i.test(responseBody)) {
+            // The MONTHLY broadcast quota is spent. This is not a rate limit
+            // a retry can fix: the quota resets on the 1st, and retrying every
+            // few minutes for days cannot help — it only burns requests and
+            // writes to the error log. Park until the quota month turns over, keep the
+            // batch, and say so once.
+            const until = monthlyQuotaReset()
+            quotaParkedUntil = until
+            db.kvSet('line_quota_parked_until', String(until))
+            // Put the batch back FIRST so the log line reports the queue that
+            // is actually kept. (Logging before the unshift said "queued: 0" —
+            // the batch was already spliced out at that point.)
+            queue.unshift(...batch)
+            if (queue.length > MAX_QUEUE) queue.length = MAX_QUEUE
+            log('error', 'LINE broadcast parked — the monthly message quota is spent; the quota resets on the 1st', {
+              queued: queue.length, resumes_at: new Date(until).toISOString(),
+            })
+            schedule(until - Date.now())
+            return
+          }
+          log('warn', 'LINE broadcast failed', { status: res.status, body: responseBody, attempt })
         } catch (err) {
           log('warn', 'LINE broadcast error', { error: String(err?.message ?? err), attempt })
         }
@@ -319,10 +376,10 @@ export function createLine(db) {
   function notifyAlert(alert) {
     if (!token() && !db.kvGet('line_channel_id')) return // not configured — free no-op
     if ((alert.severity ?? 0) < 2) return
-    queue.push(alert)
+    queue.push({ ...alert, _queuedAt: Date.now() })
     if (queue.length > MAX_QUEUE) queue.shift() // drop oldest; keep bounded
     const last = Number(db.kvGet('line_last_push') ?? 0)
-    schedule(Math.max(5_000, LINE_MIN_GAP_MS - (Date.now() - last)))
+    schedule(Math.max(5_000, quotaParkedUntil - Date.now(), LINE_MIN_GAP_MS - (Date.now() - last)))
   }
 
   // Refresh the token proactively once a day so it's never near expiry when an
@@ -349,6 +406,8 @@ export function createLine(db) {
       probe_ok: pushProbe.ok,
       probe_age_s: pushProbe.at ? Math.round((Date.now() - pushProbe.at) / 1000) : null,
       queue_depth: queue.length,
+      quota_parked: quotaParkedUntil > Date.now(),
+      quota_parked_until: quotaParkedUntil > Date.now() ? new Date(quotaParkedUntil).toISOString() : null,
     }),
   }
 }

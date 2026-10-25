@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 2026-10-26 — backend recovery: LINE quota backoff
+
+Backend-only; frontend asset token remains **2.4.125**. Completed the interrupted quota guard: monthly-limit responses persist a pause through LINE's UTC+9 accounting reset (five-minute grace), while ordinary rate limits retain transient retries. Timers are bounded to Node's supported range. Queued warnings expire after one hour so recovery cannot broadcast an old haze episode as current. Admin LINE status exposes the pause deadline. Fixed a request-body shadowing error in the draft that prevented broadcasts from reaching the API. Deterministic API/clock tests cover reset, restart, rollover, stale warnings and retry recovery without messaging followers.
+
 ## [2.4.125] — 2026-10-23 — the zone gets a horizon
 
 **The map answered "where is the air bad" and "which way is it moving", and nothing about tomorrow.** The server already cooks an hourly, station-adjusted model outlook for every province — the same engine the regional page drives with a time slider — and the main map never asked for it. A reader preparing for haze could see where the pollution is and which way the air was moving, and nothing about which province would get worse overnight.
