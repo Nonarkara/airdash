@@ -22,6 +22,7 @@
 //      are the product; a preview JPEG is a picture of it. When the disk is
 //      nearly full we keep the product and drop the pictures.
 import { statfs } from 'node:fs/promises'
+import { execFile } from 'node:child_process'
 import { CONFIG } from './config.js'
 import { log } from './util.js'
 
@@ -104,23 +105,37 @@ export async function saveGuarded(path, data, writeFn) {
   return true
 }
 
+/**
+ * Tell the OPERATOR, not the subscribers.
+ *
+ * This was wrong the first time: the guard raised a normal alert, which
+ * fanned out to every Telegram subscriber as if the disk were a haze
+ * episode. Subscribers follow AirDash for air-quality warnings; a note
+ * about the server's free space is housekeeping and belongs to the person
+ * who runs the machine — a Notification Center message, and only on a
+ * transition to critical (it is rare, so it can be loud).
+ */
+export function notifyOperator(text) {
+  try {
+    const script = `display notification "${String(text).replace(/"/g, '\\"')}" with title "AirDash" sound name "Basso"`
+    execFile('/usr/bin/osascript', ['-e', script], () => {})
+  } catch { /* a failed notification must never take the server down */ }
+}
+
 // ── The watcher ──────────────────────────────────────────────────────────
 const CHECK_INTERVAL_MS = 5 * 60_000
-const ALERT_COOLDOWN_MS = 6 * 3600_000
 
 /**
  * Watch the disk and act: shed optional writes when it is critical, and
- * tell the operator (alert → Telegram, LINE when its quota allows) when the
- * level changes. The alert is a SYSTEM alert about the machine, not about a
- * province, so it carries a synthetic station.
+ * tell the operator when the level changes. No subscriber alert — see
+ * notifyOperator.
  */
-export function startDiskGuard({ alerts = null, intervalMs = CHECK_INTERVAL_MS, path = CONFIG.root } = {}) {
+export function startDiskGuard({ notify = notifyOperator, readState = readDiskState, intervalMs = CHECK_INTERVAL_MS, path = CONFIG.root } = {}) {
   let lastLevel = null
   let timer = null
 
   const check = async () => {
-    const state = await readDiskState(path)
-    const prev = current
+    const state = await readState(path)
     setDiskState(state)
     if (state.level === lastLevel) return
     lastLevel = state.level
@@ -137,30 +152,15 @@ export function startDiskGuard({ alerts = null, intervalMs = CHECK_INTERVAL_MS, 
         ? 'disk headroom CRITICAL — optional writes are being shed (camera preview frames); readings and the database keep running'
         : 'disk headroom low',
       { free_gb: state.freeGb, used_pct: state.usedPct, level: state.level })
-    if (!alerts) return
-    const critical = state.level === 'critical'
-    try {
-      alerts.raise({
-        rule: 'server_disk_headroom',
-        source: 'server',
-        station: {
-          station_key: 'system:disk', name_th: 'พื้นที่จัดเก็บข้อมูลเซิร์ฟเวอร์', name_en: 'Server disk',
-          province_th: 'ระบบ', province_en: 'System',
-        },
-        metric: 'disk_free_gb',
-        value: state.freeGb,
-        severity: critical ? 3 : 2,
-        message_th: critical
-          ? `พื้นที่จัดเก็บข้อมูลของเซิร์ฟเวอร์เหลือ ${state.freeGb} GB — ระบบพักการบันทึกภาพกล้องชั่วคราว (ข้อมูลฝุ่นและฐานข้อมูลยังทำงานปกติ)`
-          : `พื้นที่จัดเก็บข้อมูลของเซิร์ฟเวอร์เหลือ ${state.freeGb} GB — ควรตรวจสอบพื้นที่ว่าง`,
-        message_en: critical
-          ? `Server disk has ${state.freeGb} GB left — camera preview writes are paused (air-quality data and the database keep running)`
-          : `Server disk has ${state.freeGb} GB left — check free space`,
-        cooldownMs: ALERT_COOLDOWN_MS,
-        cooldownScope: 'system',
-      })
-    } catch (err) {
-      log('warn', 'disk headroom alert failed', { error: String(err?.message ?? err) })
+    // Only the emergency reaches the operator's desktop. The warning level
+    // is in the log and in /api/health.disk — the hourly watchdog already
+    // notifies the operator about a disk over 92 %.
+    if (state.level === 'critical') {
+      try {
+        notify(`AirDash: the server disk has ${state.freeGb} GB left — camera preview writes are paused`)
+      } catch (err) {
+        log('warn', 'disk headroom notification failed', { error: String(err?.message ?? err) })
+      }
     }
   }
 

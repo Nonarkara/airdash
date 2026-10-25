@@ -117,5 +117,42 @@ const GB = 1073741824
   check('the health endpoint reports the disk level', /disk: diskStatus\(\)/.test(api))
 }
 
+// ── 6 · the operator is told; the subscribers are NOT ───────────────────
+// The first version raised a normal alert, which fanned out to every
+// Telegram subscriber as if the disk were a haze episode. Subscribers
+// follow AirDash for air quality; free space is the operator's business.
+{
+  const { startDiskGuard } = await import('../server/diskGuard.js')
+  const notices = []
+  let level = 'warn'
+  const guard = startDiskGuard({
+    notify: (t) => notices.push(t),
+    readState: async () => ({ level, freeGb: level === 'critical' ? 1.5 : 12, usedPct: 95, reason: null }),
+    intervalMs: 3600_000,
+  })
+  await guard.checkNow()
+  check('a warning-level disk does NOT disturb the operator', notices.length === 0,
+    notices.join(' | '))
+  level = 'critical'
+  await guard.checkNow()
+  check('a critical disk tells the operator once', notices.length === 1,
+    notices.join(' | '))
+  await guard.checkNow()
+  check('a still-critical disk does not notify again', notices.length === 1,
+    notices.join(' | '))
+  level = 'ok'
+  await guard.checkNow()
+  check('a recovered disk does not notify', notices.length === 1, notices.join(' | '))
+  guard.stop()
+
+  const guardSrc = readFileSync(join(ROOT, 'server/diskGuard.js'), 'utf8')
+  check('the disk guard never raises a subscriber alert',
+    !/alerts\.raise/.test(guardSrc) && !/telegramBroadcaster/.test(guardSrc),
+    'the disk guard still fans out to subscribers')
+  const indexSrc = readFileSync(join(ROOT, 'server/index.js'), 'utf8')
+  check('the server starts the disk guard without an alert engine',
+    /startDiskGuard\(\)/.test(indexSrc))
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)
