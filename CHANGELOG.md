@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.126] — 2026-10-26 — the controls and the evidence agree
+
+- Regional wind scenarios now read restored origin, altitude and release-hour controls before drawing. An 850 hPa selector cannot label a 10 m path; unavailable winds clear the accessible reading too.
+- Regional fire freshness and limited PM coverage sit immediately above the map, visible with the picture on the first phone screen. Map remains dominant; diagrams, numeric winds, hour marks and flood reports remain available.
+- Air Story's hero no longer reserves an extra full viewport. Its breathing motif stays beside its value on phones, its status fits its content, and parallel figures share a deliberate row. Research chapter navigation retains its native disclosure marker.
+- English map-popup headings retain the province score instead of being swapped with the Thai subtitle. Missing scores show an em dash. News-popup callers follow the same selected-language heading contract.
+- Specific open/agricultural-burning terms replace the bare Thai verb “เผา” at news intake and in burning attribution. Unrelated cremation/cooking/crime stories already archived are filtered from public briefings without deleting archive rows; real dust and agricultural-burning reports remain eligible.
+- Startup awaits the disk guard's first measurement before scheduled writers begin. Reviewed the unfinished province-card probe: failed readiness and wrong-province popups fail explicitly, and a programmatic fallback is identified as such.
+
+Validation and operating constraints are recorded in `docs/audits/PROFESSIONAL-AUDIT-2026-10-26.md`. This release does not turn coarse air-movement scenarios into smoke-arrival or AQI predictions.
+
 ## 2026-10-26 — the disk cannot kill the box again
 
 Backend-only; frontend asset token remains **2.4.125**.

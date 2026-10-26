@@ -8,12 +8,12 @@
 // The panel is injected into the left rail (#rail-left) below the place card,
 // and auto-refreshes every 5 minutes. It degrades gracefully — if the city
 // detail fetch fails, it shows the blurb from the manifest and nothing else.
-import { store, on, emit } from '../state.js?v=2.4.125'
-import { tr } from '../i18n.js?v=2.4.125'
-import { getJson } from '../cache.js?v=2.4.125'
-import { fmtNum } from '../fmt.js?v=2.4.125'
-import { riskCi } from '../confidence.js?v=2.4.125'
-import { focusById } from './focus.js?v=2.4.125'
+import { store, on, emit } from '../state.js?v=2.4.126'
+import { tr } from '../i18n.js?v=2.4.126'
+import { getJson } from '../cache.js?v=2.4.126'
+import { fmtNum } from '../fmt.js?v=2.4.126'
+import { riskCi } from '../confidence.js?v=2.4.126'
+import { focusById } from './focus.js?v=2.4.126'
 
 const REFRESH_MS = 5 * 60_000
 const FETCH_TTL = 60_000 // city detail cache — 1 min (data moves on ingest cadence)

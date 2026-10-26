@@ -72,7 +72,7 @@
   #research-content .rp-index-head h2 { font-size: 18px; margin: 0; }
   #research-content .rp-index-head p { display: none; }
   #research-content .rp-language { margin: 0; }
-  #research-content .rp-toc summary { display: block; padding: 10px 0; }
+  #research-content .rp-toc summary { display: list-item; list-style-position: inside; padding: 10px 0; }
   #research-content .rp-toc details[open] { max-height: 40dvh; overflow-y: auto; }
   #research-content .rp-reading { padding: 16px 16px 48px; }
   #research-content .research-svg { min-width: 560px; }

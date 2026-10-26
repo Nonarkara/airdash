@@ -17,9 +17,9 @@
 // province-name substring match against the headline), so this only ever
 // shows a SUBSET of the news feed: headlines that name a single place. The
 // full, ungeotagged feed stays in the NEWS panel.
-import { tr } from '../i18n.js?v=2.4.125'
-import { ago, escapeHtml } from '../fmt.js?v=2.4.125'
-import { popupHtml, pm25Color } from '../paint.js?v=2.4.125'
+import { tr } from '../i18n.js?v=2.4.126'
+import { ago, escapeHtml } from '../fmt.js?v=2.4.126'
+import { popupHtml, pm25Color } from '../paint.js?v=2.4.126'
 
 export function createNewsFireLayer() {
   const group = L.layerGroup([], { pane: 'data' })
@@ -90,7 +90,7 @@ export function createNewsFireLayer() {
           [tr('เวลาข่าว', 'Published'), ago(n.published_at ?? n.fetched_at)],
         ]
         if (named) rows.splice(1, 0, [tr('สถานที่ในข่าว', 'Place named'), named])
-        marker.bindPopup(() => popupHtml(n.title, n.title_en ?? n.title, rows) + (precision ? `<div class="newsfire-precision">${escapeHtml(precision)}</div>` : '') + linkRow)
+        marker.bindPopup(() => popupHtml(tr(n.title, n.title_en ?? n.title), tr(n.title_en ?? n.title, n.title), rows) + (precision ? `<div class="newsfire-precision">${escapeHtml(precision)}</div>` : '') + linkRow)
         marker.bindTooltip(() => `${icon} ${escapeHtml(named || where)}`,
           { direction: 'top', offset: [0, -10] })
         marker.addTo(group)

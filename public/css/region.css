@@ -162,3 +162,10 @@ header nav{gap:16px}.brand{font-size:18px}.brand small{font-size:11px}
 .wind-map-key{white-space:pre-line}
 @media(max-width:360px){.region-map-toolbar select{width:120px}#wind-reading>span>small{display:none}}
 @media(min-width:701px) and (max-width:900px){.region-map-toolbar select{width:150px}.region-map-toolbar #reset-map{font-size:13px;padding-inline:4px}}
+
+/* Keep the source receipt with the picture it qualifies, inside the first screen. */
+.regional-view{display:grid;grid-template-rows:auto auto minmax(350px,1fr);height:calc(100dvh - 52px)}
+.regional-view #regional-map{height:100%;min-height:350px}
+.regional-view .map-evidence{padding:6px 16px;border-bottom:1px solid var(--rule);gap:2px 12px}
+.regional-view .map-evidence>a{min-height:28px}
+@media(max-width:700px){.regional-view .map-evidence{padding:6px 10px}.regional-view .map-evidence #fire-status,.regional-view .map-evidence #status{font-size:13px;line-height:1.5}}

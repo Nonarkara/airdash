@@ -94,9 +94,6 @@ setQuotaStore({
   save: (m) => { try { db.kvSet('api_quota_blocks_v1', JSON.stringify(m)) } catch { /* best effort */ } },
 })
 
-scheduler.start()
-scheduleRetention(db)
-startOpsSentinel({ startedAt })
 // Disk headroom: the server measures the free space of the volume it writes
 // to and sheds optional writes (camera preview frames) before the disk can
 // fill. On 2026-10-24 a full disk produced 132 ENOSPC errors a minute and
@@ -104,7 +101,10 @@ startOpsSentinel({ startedAt })
 // disk; only this can keep one from happening. It tells the OPERATOR (a
 // desktop notification on the emergency), never the subscribers — a note
 // about free space is housekeeping, not an air-quality warning.
-startDiskGuard()
+await startDiskGuard().ready
+scheduler.start()
+scheduleRetention(db)
+startOpsSentinel({ startedAt })
 
 // LINE push tick — every 5 min, check subscribers and push to anyone whose
 // province crossed into elevated/high. Self-throttles to one push per

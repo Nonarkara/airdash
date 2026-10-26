@@ -1,3 +1,4 @@
+import { isAirHeadline, isFireHeadline } from '../newsRelevance.js'
 // Air-quality news: Google News RSS (Thai PM2.5/haze query) + Khaosod general
 // feed filtered to dust keywords. Tiny regex RSS parser — feeds are simple RSS 2.0.
 import { CONFIG } from '../config.js'
@@ -12,21 +13,6 @@ const FEEDS = [
     preFiltered: true,
   },
   { id: 'khaosod', url: 'https://www.khaosod.co.th/feed', preFiltered: false },
-]
-
-const AIR_KEYWORDS = ['pm2.5', 'pm 2.5', 'pm10', 'ฝุ่น', 'หมอกควัน', 'ค่าฝุ่น', 'คุณภาพอากาศ', 'เผา', 'ไฟป่า', 'จุดความร้อน', 'haze', 'air quality', 'smog']
-
-// Subset of AIR_KEYWORDS that specifically names an open-burning/fire source
-// (as opposed to just discussing the resulting dust) — these get the red
-// "fire" map-marker treatment. Deliberately NOT the bare verb "เผา" ("to
-// burn") — it's Thai's everyday word for burning anything (cremation, crime
-// reporting, cooking) and matches far too much unrelated news; only the
-// compound forms below are specific to open burning / wildfire. Checked
-// against the raw (non-lowercased) title for the Thai terms since Thai has
-// no case; the English ones are checked against the lowercased string.
-const FIRE_KEYWORDS = [
-  'ไฟป่า', 'ไหม้ป่า', 'จุดความร้อน', 'เผาป่า', 'เผาไร่', 'เผาตอซัง', 'เผาในที่โล่ง',
-  'wildfire', 'hotspot', 'open burning', 'agricultural burning',
 ]
 
 function decodeEntities(s) {
@@ -81,7 +67,7 @@ export default {
       const items = parseRss(res.value)
 
       for (const item of items) {
-        if (!feed.preFiltered && !AIR_KEYWORDS.some((k) => item.title.toLowerCase().includes(k))) continue
+        if (!feed.preFiltered && !isAirHeadline(item.title)) continue
         seen += 1
         const published = item.pubDate ? new Date(item.pubDate) : null
         // Scheme-validate the link at ingest: a spoofed/compromised feed
@@ -92,9 +78,8 @@ export default {
         // Every place the headline names (server/newsPlaces.js). The first
         // place is the row's pin; places_json keeps the rest so a story
         // about three provinces is not drawn as one.
-        const titleLower = item.title.toLowerCase()
         const geo = geotagHeadline(item.title)
-        const isFire = FIRE_KEYWORDS.some((k) => titleLower.includes(k))
+        const isFire = isFireHeadline(item.title)
         const isNew = db.insertNews({
           feed: feed.id,
           guid: item.guid,

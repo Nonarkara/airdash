@@ -1,7 +1,7 @@
-import { windAt, airPath } from './wind-transport.js?v=2.4.125'
-import { windArrowSvg } from './wind.js?v=2.4.125'
-import { escapeHtml as esc } from './fmt.js?v=2.4.125'
-import { HOUR_STEPS, MARK_SEPARATION_PX, clusterMarks, minSeparationPx, zoomForSeparation, focusZoom } from './hour-marks.js?v=2.4.125'
+import { windAt, airPath } from './wind-transport.js?v=2.4.126'
+import { windArrowSvg } from './wind.js?v=2.4.126'
+import { escapeHtml as esc } from './fmt.js?v=2.4.126'
+import { HOUR_STEPS, MARK_SEPARATION_PX, clusterMarks, minSeparationPx, zoomForSeparation, focusZoom } from './hour-marks.js?v=2.4.126'
 export function createRegionalWindView({map,tr,clock}){
  const vectors=L.layerGroup().addTo(map),track=L.layerGroup().addTo(map)
  let data=null,origin={lat:20,lng:98},offset=0,level='surface',lastPath=[],focusActive=false
@@ -22,7 +22,7 @@ export function createRegionalWindView({map,tr,clock}){
   el('wind-receipt').textContent=data?.fetched_at?tr('ดึงพยากรณ์','Forecast retrieved')+' '+clock(data.fetched_at):tr('ยังไม่มีลมรายชั่วโมง','No hourly wind receipt')
   el('wind-level-note').textContent=level==='surface'?tr('10 ม. เหนือพื้นดิน · กริดห่าง 6° ไม่เห็นลมหุบเขา','10 m above ground · 6° samples cannot resolve valley winds'):tr('850 hPa ≈ 1.5 กม. เหนือทะเล อาจอยู่ใต้ภูเขา ไม่ใช่ความสูงควัน','850 hPa ≈ 1.5 km above sea level; may intersect terrain. Not smoke height.')
   el('wind-position').textContent=`${origin.lat.toFixed(2)}°, ${origin.lng.toFixed(2)}°`
-  if(!w){el('wind-rain').textContent='';el('wind-reading').textContent=tr('ไม่มีลมรายชั่วโมง','Wind unavailable');el('wind-path-summary').textContent=tr('ไม่วาดเส้นทางเมื่อข้อมูลขาดหรือเก่า','No path drawn with missing or stale winds');el('wind-steps').innerHTML='';return}
+  if(!w){el('wind-reading').setAttribute('aria-label',tr('รายละเอียดลม · ไม่มีข้อมูล','Wind details · unavailable'));el('wind-rain').textContent='';el('wind-reading').textContent=tr('ไม่มีลมรายชั่วโมง','Wind unavailable');el('wind-path-summary').textContent=tr('ไม่วาดเส้นทางเมื่อข้อมูลขาดหรือเก่า','No path drawn with missing or stale winds');el('wind-steps').innerHTML='';return}
   el('wind-reading').setAttribute('aria-label',tr('รายละเอียดลม','Wind details')+` · ${Math.round(w.speed)} km/h · ${w.speed<.5?tr('ลมสงบ','calm'):compass(w.towards)+' '+Math.round(w.towards)+'°'} · ${level==='surface'?'10 m':'850 hPa'}`)
   el('wind-reading').innerHTML=w.speed<.5?`<strong>0 <small>km/h</small></strong><span>${tr('ลมสงบ','Calm')}</span>`:`${windArrowSvg(w.towards,{size:32})}<strong>${Math.round(w.speed)} <small>km/h</small></strong><span>→ ${compass(w.towards)} <small>${Math.round(w.towards)}°</small></span>`
   if(el('wind').checked)for(const p of data.points){const v=windAt(data,p.lat,p.lng,start,level,now);if(!v||v.speed<.5)continue
@@ -78,5 +78,13 @@ export function createRegionalWindView({map,tr,clock}){
  el('wind-level').onchange=()=>{level=el('wind-level').value;draw()}
  el('wind').onchange=draw
  el('wind-origin').onchange=()=>{const coords=el('wind-origin').value.split(',').map(Number);if(coords.length===2&&coords.every(Number.isFinite)){focusActive=false;origin={lat:coords[0],lng:coords[1]};el('watch-area').value=coords[0]<6?'indonesia':coords[0]===20?'myanmar':'mainland';map.setView([origin.lat,origin.lng],6,{animate:false});draw()}}
- return {isFocused:()=>focusActive,focus:focusPath,unfocus(){focusActive=false},update(value){data=value;draw()},select,draw}
+ // Browsers restore form values on navigation. Read those same values when
+ // evidence arrives so the selected level/origin never labels a different path.
+ function readControls(){
+  level=el('wind-level').value==='aloft'?'aloft':'surface'
+  offset=Math.max(0,Math.min(12,Number(el('wind-hour').value)||0))
+  const coords=el('wind-origin').value.split(',').map(Number)
+  if(coords.length===2&&coords.every(Number.isFinite))origin={lat:coords[0],lng:coords[1]}
+ }
+ return {isFocused:()=>focusActive,focus:focusPath,unfocus(){focusActive=false},update(value){data=value;readControls();draw()},select,draw}
 }

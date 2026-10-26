@@ -154,5 +154,22 @@ const GB = 1073741824
     /startDiskGuard\(\)/.test(indexSrc))
 }
 
+
+// Awaitable first read closes the reboot window before scheduled writers start.
+{
+  const { startDiskGuard } = await import('../server/diskGuard.js')
+  let release
+  const pending = new Promise(resolve => { release = resolve })
+  const guard = startDiskGuard({ readState: () => pending, notify: () => {}, intervalMs: 60_000 })
+  check('startup exposes the first disk measurement promise', typeof guard.ready?.then === 'function')
+  release({ level: 'critical', freeGb: 1, usedPct: 99 })
+  await guard.ready
+  check('awaiting readiness activates shedding before writers start', shouldShedWrites())
+  guard.stop()
+  const index = readFileSync(join(ROOT, 'server/index.js'), 'utf8')
+  check('ingestion starts only after the first disk measurement',
+    index.indexOf('await startDiskGuard().ready') >= 0 && index.indexOf('await startDiskGuard().ready') < index.indexOf('scheduler.start()'))
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

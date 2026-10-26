@@ -27,8 +27,7 @@ body.story {
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; gap: 10px;
   padding: 10px 16px;
-  background: color-mix(in srgb, var(--paper) 88%, transparent);
-  backdrop-filter: blur(6px);
+  background: var(--paper);
   border-bottom: 1px solid var(--rule);
 }
 .story-chrome .brand {
@@ -423,3 +422,28 @@ body.story {
 
 .region-entry{padding:10px 16px;text-align:center;border-bottom:1px solid var(--rule)}
 .region-entry a{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border:1px solid var(--rule);border-radius:8px;max-width:100%;overflow-wrap:anywhere;color:var(--ink);font-weight:600;text-decoration:none}
+
+/* The first answer earns the space; the story does not reserve a whole extra screen. */
+.hero{min-height:0;justify-content:flex-start;padding:24px 22px 32px}
+.hero h1 .en-sub{letter-spacing:normal;line-height:1.5;text-transform:none;font-size:13px}
+.hero .loc-line{margin-bottom:16px}
+.hero .breath-stage{display:grid;grid-template-columns:clamp(88px,18vw,128px) minmax(0,1fr);gap:20px}
+.hero .breath{width:100%;height:auto;aspect-ratio:1}
+.hero .bandchip{align-self:flex-start}
+.hero .numrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media(max-width:520px){
+ .story-chrome{padding:4px 10px;gap:6px}
+ .story-chrome .brand>span{white-space:nowrap}
+ .story-chrome .ops-link{padding:8px 6px}
+ .hero{padding:20px 18px 28px}
+}
+
+@media(max-width:520px){.story-chrome .langtoggle button{min-width:44px;padding:8px}.story-chrome .ops-link{white-space:nowrap}}
+@media(max-width:360px){.story-chrome .airdash-mark{display:none}}
+@media(max-width:360px){.story-chrome{padding-inline:6px}.story-chrome .spacer{display:none}}
+.story-chrome{padding-block:4px}
+.region-entry{max-width:760px;margin:0 auto;padding:0 22px;text-align:left}
+.region-entry a{border:0;border-radius:0;padding:8px 0}
+@media(max-width:520px){.region-entry{padding-inline:18px}}
+
+@media (prefers-reduced-motion: reduce){.breath,.scrollcue .arrow{animation:none;transform:none}html.story{scroll-behavior:auto}}

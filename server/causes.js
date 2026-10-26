@@ -1,3 +1,4 @@
+import { isFireHeadline } from './newsRelevance.js'
 // Cause Attribution engine — "WHY is the air bad HERE?" Per province, a
 // ranked list of cause HYPOTHESES with confidence scores, computed only from
 // data the system already holds (season window, region, PM2.5/PM10 ratio,
@@ -51,7 +52,6 @@ const SOUTH_HAZE_CODES = new Set(['90', '91', '94', '95', '96'])
 // Bangkok + vicinity — the traffic/urban-combustion signature region.
 const METRO_CODES = new Set(['10', '11', '12', '13', '73', '74'])
 
-const BURN_KEYWORDS = ['เผา', 'ไฟป่า', 'จุดความร้อน', 'หมอกควัน', 'hotspot', 'wildfire']
 
 export const CAUSE_LABELS = {
   burning: { th: 'เผาในที่โล่ง/ไฟป่า', en: 'Open burning / wildfire smoke' },
@@ -114,7 +114,7 @@ export function createCauses(db, { riskEngine }) {
     )
     const burnTitles = rows
       .map((r) => r.title)
-      .filter((t) => BURN_KEYWORDS.some((k) => t.toLowerCase().includes(k)))
+      .filter(isFireHeadline)
     const perProvince = new Map()
     for (const p of provinces) {
       if (!p.province_th) continue

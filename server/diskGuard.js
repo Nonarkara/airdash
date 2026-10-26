@@ -165,12 +165,12 @@ export function startDiskGuard({ notify = notifyOperator, readState = readDiskSt
   }
 
   const tick = () => {
-    check().catch((err) => log('warn', 'disk headroom check failed', { error: String(err?.message ?? err) }))
+    return check().catch((err) => log('warn', 'disk headroom check failed', { error: String(err?.message ?? err) }))
   }
   timer = setInterval(tick, intervalMs)
   timer.unref?.()
   // Measure once at boot: the server must know its disk state before the
   // first camera cycle writes a frame.
-  setTimeout(tick, 5_000).unref?.()
-  return { stop: () => { if (timer) clearInterval(timer) }, checkNow: tick, lastState: () => current }
+  const ready = tick()
+  return { ready, stop: () => { if (timer) clearInterval(timer) }, checkNow: tick, lastState: () => current }
 }

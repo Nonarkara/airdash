@@ -1,10 +1,10 @@
 // Pure data-paint functions — accept a target layers object + snapshot slice.
 // Imported by map.js so the map renders risk/air/rain widgets straight from
 // the /api/snapshot stream with its own layer groups. No module-level state.
-import { emit, store } from './state.js?v=2.4.125'
-import { tr, pick, BAND, LEVEL_NAME, pm25Level, bandColor, pmColorFor, PM_COLORS } from './i18n.js?v=2.4.125'
-import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.4.125'
-import { windRowText } from './wind.js?v=2.4.125'
+import { emit, store } from './state.js?v=2.4.126'
+import { tr, pick, BAND, LEVEL_NAME, pm25Level, bandColor, pmColorFor, PM_COLORS } from './i18n.js?v=2.4.126'
+import { fmtNum, fmtClock, escapeHtml } from './fmt.js?v=2.4.126'
+import { windRowText } from './wind.js?v=2.4.126'
 
 const BAND_COLOR = bandColor // theme-aware; single source of truth in i18n.js
 
@@ -20,15 +20,15 @@ export function pm25Color(ug) {
   return lv === null ? PM_NONE : PM_COLOR[lv]
 }
 
-export function popupHtml(title_th, title_en, rows) {
+export function popupHtml(title, subtitle, rows) {
   // title/sub and row values ultimately trace back to government API station
   // names — escape before innerHTML so a malformed/compromised upstream feed
   // can't inject markup into the page.
   const kv = rows.filter(([, v]) => v !== null && v !== undefined && v !== '—')
     .map(([k, v]) => `<div class="pop-kv"><span>${k}</span><span class="v">${escapeHtml(v)}</span></div>`).join('')
-  const isEn = store.lang === 'en'
-  const title = isEn ? (title_en || title_th) : title_th
-  const sub = isEn ? title_th : (title_en ?? '')
+  // Callers supply the selected-language heading and the opposite-language
+  // subtitle. Swapping them here again hid the province score in English.
+  const sub = subtitle ?? ''
   return `<div class="pop-name">${escapeHtml(title)}</div><div class="pop-en">${escapeHtml(sub)}</div>${kv}`
 }
 
@@ -54,7 +54,7 @@ export function provinceCardRows(p) {
 export function provinceCard(p) {
   const th = store.lang === 'th'
   return popupHtml(
-    `${tr('จ.', 'Prov. ')}${tr(p.province_th, p.province_en)} — ${p.score}/100 ${BAND[p.band][store.lang]}`,
+    `${tr('จ.', 'Prov. ')}${tr(p.province_th, p.province_en)} — ${fmtNum(p.score, 0)}/100 ${BAND[p.band][store.lang]}`,
     `${th ? (p.province_en ?? '') : (p.province_th ?? '')} · ${BAND[p.band].en}`,
     provinceCardRows(p),
   )

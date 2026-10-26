@@ -1,3 +1,4 @@
+import { relevantNewsRow } from './newsRelevance.js'
 import { createRegionalOverviewReader } from './regionalOverviewCache.js'
 import { regionalWind } from './sources/regional-wind.js'
 import { regionalFlood } from './regionalFlood.js'
@@ -163,7 +164,7 @@ async function loadHazeEyes(db, { limit = 12, minPm25 = 25, includeDown = false 
 // Attach places[] (every province/district the headline names) and drop the
 // raw JSON column. A row not yet retagged falls back to its single stored pin.
 function withNewsPlaces(rows) {
-  return rows.map((n) => {
+  return rows.filter(relevantNewsRow).map((n) => {
     let places = null
     if (n.places_json) {
       try {
