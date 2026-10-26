@@ -95,3 +95,11 @@ The full 2.4.128 gate caught a randomized hour-chip collision, **not a successfu
 Fresh full `npm test` on the completed changes exited **0**, **1,762 PASS lines**, **zero FAIL/not-ok lines**. The earlier failed randomized geometry run remains recorded above. The final suite includes the bounded refresh test, pane attachment/order test, deterministic rectangular chip tests and popup language checks. Syntax/consistency/release guards are also run by the deployment command.
 
 2.4.128 is a frontend-only follow-up. The running backend remains the verified 2.4.127 code; no additional backend restart is required for these renderer/label changes. A matching frontend/backend token is not substituted for process/code provenance.
+
+### Published receipt and monitoring
+
+2.4.128 deployed successfully to both production domains; the deploy gate verified HTML and asset content, fingerprint `6eba441e27c3`, source commit `97916a4`. A freshly navigated public `/ops?v=2.4.128` loaded `boot.js?v=2.4.128`, rendered all 77 ranking rows at 390×844 and had no document horizontal overflow. The final attempt to repeat the desktop native click was **unverified**: the browser viewport capability left this tab at 390px, so the desktop coordinate was rejected. Earlier real local-preview province/station interactions and the three-width rendered evidence remain the interaction proof; asset convergence does not replace a post-deploy native-click test.
+
+Observed the slow-refresh recovery in production: HTTP200 in 1.057235s with `overview_status: refreshing`, preserving `generated_at: 2026-10-26T04:04:51.341Z` and 175 observations. The last-known response does not pretend the data is newly measured.
+
+Reactivated the existing four-hour AirDash monitor with current instructions, replacing the expired away-window prompt. It stays quiet on unchanged/non-actionable state and preserves existing ingestion, watchdog and backup schedules. Shared-host CPU saturation, roughly 10GiB internal disk headroom, parked LINE quota and PM coverage in only 2/11 regional countries remain operational/coverage limits. No smoke-arrival or AQI-arrival prediction is claimed.
