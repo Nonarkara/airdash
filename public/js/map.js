@@ -1,25 +1,25 @@
-import { windArrowSvg, windArrowSize, windBasisLabel, windEncodingText, windRowText, windView, WIND_ARROW } from './wind.js?v=2.4.127'
-import { CHANGE_COLOR, HORIZONS, changeCaption, horizonLabel, outlookByProvince, stateLabel } from './horizon.js?v=2.4.127'
-import { escapeHtml } from './fmt.js?v=2.4.127'
-import { moveMap } from './mapView.js?v=2.4.127'
-import { readPreference, writePreference } from './preferences.js?v=2.4.127'
+import { windArrowSvg, windArrowSize, windBasisLabel, windEncodingText, windRowText, windView, WIND_ARROW } from './wind.js?v=2.4.128'
+import { CHANGE_COLOR, HORIZONS, changeCaption, horizonLabel, outlookByProvince, stateLabel } from './horizon.js?v=2.4.128'
+import { escapeHtml } from './fmt.js?v=2.4.128'
+import { moveMap } from './mapView.js?v=2.4.128'
+import { readPreference, writePreference } from './preferences.js?v=2.4.128'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, emit, store } from './state.js?v=2.4.127'
-import { tr, LEVEL_NAME, BAND, bandColor } from './i18n.js?v=2.4.127'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.127'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.127'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.127'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.127'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.127'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.127'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.127'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.127'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.127'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.127'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.127'
-import { openWindow } from './witness.js?v=2.4.127'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.127'
+import { on, emit, store } from './state.js?v=2.4.128'
+import { tr, LEVEL_NAME, BAND, bandColor } from './i18n.js?v=2.4.128'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.128'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.128'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.128'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.128'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.128'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.128'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.128'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.128'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.128'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.128'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.128'
+import { openWindow } from './witness.js?v=2.4.128'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.128'
 
 const windToggle = {id:'hazeWind',th:'ทิศลมรายจังหวัด + จุดไฟเหนือลม',en:'Province wind field + upwind fire counts',on:true,
   note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where the wind blows. Daily dominant forecast, not current wind.',
@@ -132,11 +132,11 @@ export function initMap() {
   layers.hazeRain = L.layerGroup()
   window.addEventListener('airdash:haze-wind', e => {windFires=new Map(e.detail.fires??[]);paintWindField(store.snapshot?.risk);layers.fireCells.clearLayers();layers.hazeRain.clearLayers();
     for (const r of e.detail.rain) {
-      L.circleMarker([r.lat,r.lng],{pane:'vectors',radius:4+Math.min(40,Math.max(0,r.mm))/4,color:'#257caa',weight:1,fillColor:'#257caa',fillOpacity:0.25+Math.min(100,Math.max(0,r.prob))/200}).bindTooltip(escapeHtml(`${r.name} · ${tr('พยากรณ์ฝนวันนี้','Today’s model rain')} ${r.mm} mm / ${r.prob}% · ${tr('ไม่ใช่ฝนตรวจวัด','not observed rain')}`)).addTo(layers.hazeRain)
+      L.circleMarker([r.lat,r.lng],{pane:'data',radius:4+Math.min(40,Math.max(0,r.mm))/4,color:'#257caa',weight:1,fillColor:'#257caa',fillOpacity:0.25+Math.min(100,Math.max(0,r.prob))/200}).bindTooltip(escapeHtml(`${r.name} · ${tr('พยากรณ์ฝนวันนี้','Today’s model rain')} ${r.mm} mm / ${r.prob}% · ${tr('ไม่ใช่ฝนตรวจวัด','not observed rain')}`)).addTo(layers.hazeRain)
     }
     for (const c of e.detail.fireCells) {
       if (!Number.isFinite(c.lat)||!Number.isFinite(c.lng)) continue
-      L.circleMarker([c.lat,c.lng],{pane:'vectors',radius:5,color:'#a32f20',weight:1,fillOpacity:0.8}).bindTooltip(escapeHtml(`${c.detections} VIIRS detections / 48h · 0.25° cell centroid, not burned area`)).addTo(layers.fireCells)
+      L.circleMarker([c.lat,c.lng],{pane:'data',radius:5,color:'#a32f20',weight:1,fillOpacity:0.8}).bindTooltip(escapeHtml(`${c.detections} VIIRS detections / 48h · 0.25° cell centroid, not burned area`)).addTo(layers.fireCells)
     }})
   window.addEventListener('airdash:haze-view', e => {
     const view=e.detail.view

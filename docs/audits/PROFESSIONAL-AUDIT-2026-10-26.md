@@ -1,6 +1,6 @@
 # Frontend/backend audit — 26 October 2026
 
-Releases: **2.4.126**, followed by **2.4.127** after a production failure was caught. Audit baseline: **db9216a**, frontend 2.4.125.
+Releases: **2.4.126**, **2.4.127** (regional refresh resilience), **2.4.128** (real map hit-testing). Audit baseline: **db9216a**, frontend 2.4.125.
 
 ## Design brief
 
@@ -73,3 +73,25 @@ Monitoring: updated the existing paused four-hour heartbeat to the current AirDa
 Independent review caught a client-side follow-up issue: a last-known response would otherwise remain on the open page after the rebuild completed. The client now makes at most three 5-second follow-up reads only while the server reports refreshing; it stops on refresh_failed. A visible Refresh button sits with the receipt, and the caption does not promise perpetual progress. Both controls use 44px targets. A separate real-load-function test proves replacement, bounded requests and failure stop. Independent source review found no remaining regression in that fix.
 
 The full suite was rerun for the follow-up and exited 0; the final bounded-client test was added/executed separately after that run. Final 2.4.127 live receipts are appended below.
+
+### 2.4.127 live receipt
+
+Committed/pushed as **eaebfca**, selector-width follow-up **a50ddfb**. Canonical/custom HTML and asset contents verified under 2.4.127; asset fingerprint **f764d6431206**. Public regional request returned HTTP 200 in **1.24s**, generated 10:38:14 Bangkok with 180 observations and 3/3 fire feeds. Public health returned ok:true/version 2.4.127 in 3.21s. A subsequent request to an existing fresh cache still took 25.7s during host pressure: the bounded refresh repair cannot guarantee event-loop latency on a saturated machine. One Air4Thai fetch failed upstream; retained observations and their actual ages remained visible. No forced source retry bypassed its cadence.
+
+Production screenshots at `2026-10-26/region-390.png`, `region-390-en.png`, `region-1024.png`, `region-1440.png` have populated data and zero pending tiles. Final 44px recovery actions increased the mobile receipt to 139px: map y243–844, **601px / 71.2% screen height**. At 1024 the map is 726×671.5; at 1440 it is 1128×717.5 (**62.4% viewport area**). These supersede the earlier intermediate geometry table. No document horizontal overflow observed. The full Myanmar/Burma selector is 176px at 390 and still fits beside the wind reading.
+
+### 2.4.128 real map interaction follow-up
+
+The final native map click exposed a defect the source-only popup check could not prove: a full-size station-data canvas in pane450 intercepted the province canvas in pane350, including transparent pixels. Repeated actual clicks on a visible province produced no popup. Sharing the interactive data canvas fixes the hit-test stack without switching thousands of markers to SVG. Province fills restore backdrop order on each **attachment**, not just draw, so off/on toggles and detached redraws cannot put them above station targets. Optional interactive fire/rain/building paths use the same canvas.
+
+Real browser before/after: the same click at (645,235) changed from no popup to **“Prov. Lampang — 6/100 ALL CLEAR”**. After province OFF→ON it still opened that card. After closing the popup and hiding the overlapping wind annotation, a real click on the station at its tile-derived position (659,221) opened **“Meteorological stations, Lampang”**, PM2.5 17, AQI30, 10:00 observation. This proves station targets remain above province fills. The English popup is fully opaque/readable (dark background, light text), not an opening-transition screenshot. Its proof is `2026-10-26/province-popup-english.png`.
+
+A separate reviewer caught the first ordering patch's off/on lifecycle gap; it was fixed and independently re-reviewed. `test-map-hit-pane.mjs` executes the real layer with controlled Leaflet wiring and checks initial draw, redraw, reattachment, detached draw then attach, station hit priority and popup binding. Separate-pane and lost-order mutations fail. Actual Leaflet hit-testing is proved by the native browser interactions above, not by this wiring fixture alone.
+
+The full 2.4.128 gate caught a randomized hour-chip collision, **not a successful run**: 45.1px separation was less than the widened labels' combined half-width. Reproduced with fixed points (0,0), (0,40), (44,20), then fixed by iteratively merging groups after their displayed footprint changes. Also fixed closest-pair measurement to include non-adjacent hours on returning paths. Replaced non-reproducible geometry sampling with a seeded generator; added fixed fixtures and mutations for both defects. Independent review then rejected a circular approximation: labels are rectangular. The final predicate checks both axis-aligned bounds using a shared 24px height also used by Leaflet icons, including diagonal collisions. The seeded tests check actual rectangles. The focused hour-mark suite passes 47 checks, including 12 caught mutations. A fresh full gate is required below; the failed run is not relabelled as success.
+
+### Final gate
+
+Fresh full `npm test` on the completed changes exited **0**, **1,762 PASS lines**, **zero FAIL/not-ok lines**. The earlier failed randomized geometry run remains recorded above. The final suite includes the bounded refresh test, pane attachment/order test, deterministic rectangular chip tests and popup language checks. Syntax/consistency/release guards are also run by the deployment command.
+
+2.4.128 is a frontend-only follow-up. The running backend remains the verified 2.4.127 code; no additional backend restart is required for these renderer/label changes. A matching frontend/backend token is not substituted for process/code provenance.

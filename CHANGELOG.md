@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.128] — 2026-10-26 — the visible province responds to the click
+
+A real map interaction after the release found that the station-data canvas (pane 450) swallowed clicks on the province canvas beneath it (pane 350), even where the upper canvas painted nothing. Province polygons, stations and optional interactive map paths now share the same canvas hit-test stack. Province fills are sent behind the point targets on every redraw. Canvas performance, station selection, overlays and the bilingual popup remain. The same real click that previously did nothing now opens the Lampang province card with its English score heading. A behavioural wiring test executes the province layer and rejects both a separate-pane mutation and a lost backdrop-order mutation. Includes the 2.4.126–127 fixes; this follow-up is frontend-only.
+
+The final gate also reproduced an hour-label collision: merging two nearby marks widens their chip into a third. Clustering now rechecks the resulting footprints until stable; curved-path focus measures every pair rather than adjacent steps only. The geometry fuzz is seeded and the failing coordinates are pinned, with both regressions mutation-checked.
+
 ## [2.4.127] — 2026-10-26 — a slow refresh does not erase the regional picture
 
 A production browser check after 2.4.126 caught a regional cache miss exceeding the Pages proxy's 30-second limit. Regional overviews now retain a valid previous payload for at most 20 minutes while one background rebuild runs. The original generation and source timestamps remain unchanged, and the interface explicitly labels last-known evidence as refreshing or refresh-failed. Refresh work is deferred until the previous response can flush; failures back off for one minute. Beyond the bounded window, or with corrupt/future data, the system still requires a fresh result and reports failure honestly. No provider cooldowns or observation freshness gates are relaxed.

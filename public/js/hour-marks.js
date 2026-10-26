@@ -21,6 +21,7 @@
 // browser and so the map and the tests cannot drift apart.
 export const HOUR_STEPS = [1, 3, 6]
 export const MARK_SEPARATION_PX = 42
+export const CHIP_HEIGHT_PX = 24
 
 // A chip is 30 px wide for one hour and grows with the hours it names.
 // The width estimate has one job: the chip's background box has to be wide
@@ -46,8 +47,8 @@ export function hoursInLabel(label) {
 // decides whether the marks can be read separately.
 export function minSeparationPx(points) {
   let min = Infinity
-  for (let i = 1; i < points.length; i++) {
-    min = Math.min(min, Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y))
+  for (let i = 0; i < points.length; i++) {
+    for (let j = 0; j < i; j++) min = Math.min(min, Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y))
   }
   return min
 }
@@ -64,11 +65,22 @@ const centroid = members => ({
 // separation of any member already in it, so a chain of marks that each
 // nearly touches the next ends up as one chip.
 export function clusterMarks(items, sep = MARK_SEPARATION_PX) {
-  const groups = []
-  for (const item of [...items].sort((a, b) => a.hours - b.hours)) {
-    const g = groups.find(g => g.members.some(m => Math.hypot(m.x - item.x, m.y - item.y) < sep))
-    if (g) g.members.push(item)
-    else groups.push({ members: [item] })
+  const groups = [...items].sort((a, b) => a.hours - b.hours).map(item => ({ members: [item] }))
+  // Merging widens a chip and moves its centre. Recheck the resulting
+  // footprint, not only the original point distances, until it is stable.
+  let merged = true
+  while (merged) {
+    merged = false
+    outer: for (let i = 0; i < groups.length; i++) for (let j = i + 1; j < groups.length; j++) {
+      const a = groups[i].members, b = groups[j].members
+      const ca = centroid(a), cb = centroid(b)
+      const near = a.some(x => b.some(y => Math.hypot(x.x-y.x, x.y-y.y) < sep))
+      const wide = Math.abs(ca.x-cb.x) < (chipWidth(a.map(m=>m.hours))+chipWidth(b.map(m=>m.hours)))/2
+        && Math.abs(ca.y-cb.y) < CHIP_HEIGHT_PX
+      if (near || wide) {
+        a.push(...b); groups.splice(j, 1); merged = true; break outer
+      }
+    }
   }
   return groups.map(g => {
     const members = [...g.members].sort((a, b) => a.hours - b.hours)

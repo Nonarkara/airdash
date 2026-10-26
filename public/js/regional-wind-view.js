@@ -1,7 +1,7 @@
-import { windAt, airPath } from './wind-transport.js?v=2.4.127'
-import { windArrowSvg } from './wind.js?v=2.4.127'
-import { escapeHtml as esc } from './fmt.js?v=2.4.127'
-import { HOUR_STEPS, MARK_SEPARATION_PX, clusterMarks, minSeparationPx, zoomForSeparation, focusZoom } from './hour-marks.js?v=2.4.127'
+import { windAt, airPath } from './wind-transport.js?v=2.4.128'
+import { windArrowSvg } from './wind.js?v=2.4.128'
+import { escapeHtml as esc } from './fmt.js?v=2.4.128'
+import { HOUR_STEPS, MARK_SEPARATION_PX, CHIP_HEIGHT_PX, clusterMarks, minSeparationPx, zoomForSeparation, focusZoom } from './hour-marks.js?v=2.4.128'
 export function createRegionalWindView({map,tr,clock}){
  const vectors=L.layerGroup().addTo(map),track=L.layerGroup().addTo(map)
  let data=null,origin={lat:20,lng:98},offset=0,level='surface',lastPath=[],focusActive=false
@@ -41,7 +41,7 @@ export function createRegionalWindView({map,tr,clock}){
   const groups=clusterMarks(marks)
   for(const g of groups){
    const tip=g.hours.length===1?clock(g.times[0]):g.hours.map((h,i)=>`+${h}h ${clock(g.times[i])}`).join(' · ')
-   L.marker(map.containerPointToLatLng([g.x,g.y]),{icon:L.divIcon({className:'wind-hour-mark',iconSize:[g.width,24],iconAnchor:[g.width/2,12],html:`<span>${g.label}</span>`})}).bindTooltip(tip).addTo(track)
+   L.marker(map.containerPointToLatLng([g.x,g.y]),{icon:L.divIcon({className:'wind-hour-mark',iconSize:[g.width,CHIP_HEIGHT_PX],iconAnchor:[g.width/2,CHIP_HEIGHT_PX/2],html:`<span>${g.label}</span>`})}).bindTooltip(tip).addTo(track)
   }
   // When the marks cannot be read apart, the map says so instead of
   // pretending there is only one of them.

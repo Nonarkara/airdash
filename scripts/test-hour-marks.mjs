@@ -50,6 +50,8 @@ const check = (name, cond, why = '') => {
 // a deliberately broken copy.
 function assertions(M) {
   const out = []
+  let seed = 0x1badb002
+  const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 2**32 }
   const t = (name, cond, why = '') => out.push({ name, ok: !!cond, why })
   const { HOUR_STEPS, MARK_SEPARATION_PX, clusterMarks, minSeparationPx, zoomForSeparation, focusZoom, chipLabel, chipWidth, hoursInLabel } = M
 
@@ -74,7 +76,7 @@ function assertions(M) {
   // ── no hour is ever dropped, whatever the geometry ───────────────────────
   let dropped = null
   for (let n = 0; n < 500 && !dropped; n++) {
-    const pts = HOUR_STEPS.map(h => ({ hours: h, x: Math.random() * 900, y: Math.random() * 600 }))
+    const pts = HOUR_STEPS.map(h => ({ hours: h, x: random() * 900, y: random() * 600 }))
     const seen = clusterMarks(pts).flatMap(g => g.hours).sort().join()
     if (seen !== HOUR_STEPS.join()) dropped = seen
   }
@@ -83,16 +85,25 @@ function assertions(M) {
   // ── two chips never overlap on screen ───────────────────────────────────
   let overlap = null
   for (let n = 0; n < 500 && !overlap; n++) {
-    const pts = HOUR_STEPS.map(h => ({ hours: h, x: Math.random() * 900, y: Math.random() * 600 }))
+    const pts = HOUR_STEPS.map(h => ({ hours: h, x: random() * 900, y: random() * 600 }))
     const gs = clusterMarks(pts)
     for (let i = 0; i < gs.length && !overlap; i++) {
       for (let j = i + 1; j < gs.length; j++) {
-        const d = Math.hypot(gs[i].x - gs[j].x, gs[i].y - gs[j].y)
-        if (d < (gs[i].width + gs[j].width) / 2) overlap = `${d.toFixed(1)}px between ${gs[i].label} and ${gs[j].label}`
+        const dx = Math.abs(gs[i].x - gs[j].x), dy = Math.abs(gs[i].y - gs[j].y)
+        if (dx < (gs[i].width + gs[j].width) / 2 && dy < M.CHIP_HEIGHT_PX) overlap = `${dx.toFixed(1)}px horizontal / ${dy.toFixed(1)}px vertical between ${gs[i].label} and ${gs[j].label}`
       }
     }
   }
   t('two chips never overlap on screen', overlap === null, overlap ?? '')
+
+  // A pair is individually near enough to merge; the third point is not
+  // near either original member, but the widened pair's label overlaps it.
+  const widened = clusterMarks([{hours:1,x:0,y:0},{hours:3,x:0,y:40},{hours:6,x:44,y:20}])
+  t('a widened cluster cannot collide with the remaining mark', widened.length===1 && widened[0].hours.join()==='1,3,6')
+  const diagonal = clusterMarks([{hours:1,x:0,y:0},{hours:3,x:0,y:40},{hours:6,x:44,y:40}])
+  t('diagonal rectangular chip overlap is also merged', diagonal.length===1 && diagonal[0].hours.join()==='1,3,6')
+  t('chip height matches the displayed label', M.CHIP_HEIGHT_PX===24)
+  t('a returning path checks non-adjacent hour marks too', M.minSeparationPx([{x:0,y:0},{x:100,y:100},{x:1,y:0}])===1)
 
   // ── the separation zoom ─────────────────────────────────────────────────
   t('the closest pair is the smallest gap between marks',
@@ -148,7 +159,9 @@ const MUTATIONS = [
   ['the focus zoom ignores the separation', 'Math.max(fit, sep)', 'fit'],
   ['the focus zoom ignores the map maximum', 'Math.min(hi, Math.max(fit, sep))', 'Math.max(fit, sep)'],
   ['the cluster drops the last hour of a group', 'const hours = members.map(m => m.hours)', 'const hours = members.slice(0, 1).map(m => m.hours)'],
-  ['every mark gets its own chip', 'const g = groups.find(', 'const g = null && groups.find('],
+  ['every mark gets its own chip', 'if (near || wide)', 'if (false)'],
+  ['widened clusters are not rechecked', 'if (near || wide)', 'if (near)'],
+  ['non-adjacent marks are ignored', 'for (let j = 0; j < i; j++)', 'for (let j = Math.max(0, i - 1); j < i; j++)'],
   ['the chip is always 30 px wide', 'return Math.max(CHIP_MIN_PX, Math.ceil(chipLabel(hours).length * CHAR_PX) + CHIP_PAD_PX)', 'return CHIP_MIN_PX'],
 ]
 

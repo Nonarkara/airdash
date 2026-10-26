@@ -1,4 +1,4 @@
-import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.127'
+import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.128'
 // Citizen-mode panel — what ordinary people need to see in 30 seconds.
 // Surfaces the four questions that matter during a dust episode:
 //   1. Am I safe right now?          → JMA verb at the top
@@ -16,20 +16,20 @@ import { readPreference, writePreference, removePreference } from '../preference
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.127'
-import { tr, BAND } from '../i18n.js?v=2.4.127'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.127'
-import { getJson } from '../cache.js?v=2.4.127'
-import { flyToProvince } from '../map.js?v=2.4.127'
-import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.127'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.127'
+import { on, store, emit } from '../state.js?v=2.4.128'
+import { tr, BAND } from '../i18n.js?v=2.4.128'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.128'
+import { getJson } from '../cache.js?v=2.4.128'
+import { flyToProvince } from '../map.js?v=2.4.128'
+import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.128'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.128'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare, renderNoiseTrends,
-} from './citizenLife.js?v=2.4.127'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.127'
-import { windBadgeHtml, windCaveatText } from '../wind.js?v=2.4.127'
+} from './citizenLife.js?v=2.4.128'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.128'
+import { windBadgeHtml, windCaveatText } from '../wind.js?v=2.4.128'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -86,7 +86,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.127').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.128').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }

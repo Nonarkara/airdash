@@ -10,13 +10,13 @@
 // provinces recede and the bad ones shout. The numbers live here, and the
 // map legend reads them from here, so the key and the map can never drift
 // apart.
-import { getJson } from '../cache.js?v=2.4.127'
-import { store, on } from '../state.js?v=2.4.127'
-import { tr, bandColor } from '../i18n.js?v=2.4.127'
-import { escapeHtml } from '../fmt.js?v=2.4.127'
-import { provinceCard } from '../paint.js?v=2.4.127'
-import { zoneStyle } from '../zone-style.js?v=2.4.127'
-import { changeStyle, outlookByProvince, stateLabel } from '../horizon.js?v=2.4.127'
+import { getJson } from '../cache.js?v=2.4.128'
+import { store, on } from '../state.js?v=2.4.128'
+import { tr, bandColor } from '../i18n.js?v=2.4.128'
+import { escapeHtml } from '../fmt.js?v=2.4.128'
+import { provinceCard } from '../paint.js?v=2.4.128'
+import { zoneStyle } from '../zone-style.js?v=2.4.128'
+import { changeStyle, outlookByProvince, stateLabel } from '../horizon.js?v=2.4.128'
 
 export function createProvinceBoundariesLayer() {
   const group = L.layerGroup()
@@ -81,7 +81,9 @@ export function createProvinceBoundariesLayer() {
         : zoneStyle(band)
       try {
         const layer = L.geoJSON(feat, {
-          pane: 'vectors',
+          // Share the station canvas: a separate full-map canvas above this
+          // one intercepts clicks even where it has no painted marker.
+          pane: 'data',
           style,
           onEachFeature: (f, lyr) => {
             const name = tr(p.pro_th, p.pro_en)
@@ -106,6 +108,9 @@ export function createProvinceBoundariesLayer() {
             })
           },
         })
+        // Reapply on attachment too: toggling a detached group back on
+        // appends its paths after stations unless it restores their order.
+        layer.on('add', () => layer.bringToBack())
         group.addLayer(layer)
       } catch { /* skip malformed feature */ }
     }
