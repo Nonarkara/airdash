@@ -1,6 +1,6 @@
 # Frontend/backend audit — 26 October 2026
 
-Release: **2.4.126**. Audit baseline: **db9216a**, frontend 2.4.125.
+Releases: **2.4.126**, followed by **2.4.127** after a production failure was caught. Audit baseline: **db9216a**, frontend 2.4.125.
 
 ## Design brief
 
@@ -64,4 +64,12 @@ Monitoring: updated the existing paused four-hour heartbeat to the current AirDa
 
 ## Release verification
 
-Pending canonical/custom-domain asset checks and final backend reload; append receipts below before declaring this release shipped.
+2.4.126 was committed/pushed as **b7a7e1a**. Backend PID 65071 logs the first disk read before scheduler startup. The deploy gate verified HTML and asset contents on both canonical and custom domains; asset fingerprint **c197b49e3607**. Public health returned version 2.4.126/ok:true (12.6s under host pressure), public news returned 27 headlines and excluded the observed unrelated cremation headline (4.6s). The archived original was not deleted.
+
+**The final browser did not pass:** public `/api/region` returned HTTP 504 at **30.06s** on an expired cache, while the backend remained responsive; a subsequent local request served the newly built result in 0.27s. No loading/error screenshot was certified as a live visual pass. This exposed the need for the bounded follow-up below.
+
+2.4.127 adds an explicitly labelled last-known overview between the 5-minute fresh cache and a **20-minute absolute maximum cache age**. One deferred rebuild runs in the background; the old response resolves before CPU/SQLite work starts, and failures back off one minute. Original generated_at and all observation/provider timestamps are preserved. Existing client age checks still govern PM, wind, fire, model and flood evidence. Outside the window, future/corrupt or absent cache is not shown as valid evidence. Deterministic tests exercise stalled rebuild, coalescing, preserved timestamp, success, failure cooldown and expiry.
+
+Independent review caught a client-side follow-up issue: a last-known response would otherwise remain on the open page after the rebuild completed. The client now makes at most three 5-second follow-up reads only while the server reports refreshing; it stops on refresh_failed. A visible Refresh button sits with the receipt, and the caption does not promise perpetual progress. Both controls use 44px targets. A separate real-load-function test proves replacement, bounded requests and failure stop. Independent source review found no remaining regression in that fix.
+
+The full suite was rerun for the follow-up and exited 0; the final bounded-client test was added/executed separately after that run. Final 2.4.127 live receipts are appended below.

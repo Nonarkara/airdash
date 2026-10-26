@@ -24,7 +24,7 @@
 // Three states, one per province: worse, steady, better. A province with no
 // model value is UNKNOWN and paints nothing — an absent reading must never
 // look like a measurement, and "no change" is a reading.
-import { tr } from './i18n.js?v=2.4.126'
+import { tr } from './i18n.js?v=2.4.127'
 
 /** The horizons on offer, in hours from now. 0 is the present. */
 export const HORIZONS = [0, 12, 24, 48]

@@ -167,5 +167,5 @@ header nav{gap:16px}.brand{font-size:18px}.brand small{font-size:11px}
 .regional-view{display:grid;grid-template-rows:auto auto minmax(350px,1fr);height:calc(100dvh - 52px)}
 .regional-view #regional-map{height:100%;min-height:350px}
 .regional-view .map-evidence{padding:6px 16px;border-bottom:1px solid var(--rule);gap:2px 12px}
-.regional-view .map-evidence>a{min-height:28px}
+.regional-view .map-evidence>a{min-height:44px}
 @media(max-width:700px){.regional-view .map-evidence{padding:6px 10px}.regional-view .map-evidence #fire-status,.regional-view .map-evidence #status{font-size:13px;line-height:1.5}}

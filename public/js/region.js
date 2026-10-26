@@ -1,8 +1,8 @@
-import { createRegionalWindView } from './regional-wind-view.js?v=2.4.126'
-import { fireView, fireOpacity } from './regional-fire-view.js?v=2.4.126'
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.126'
-import { escapeHtml as esc } from './fmt.js?v=2.4.126'
-import { readPreference, writePreference } from './preferences.js?v=2.4.126'
+import { createRegionalWindView } from './regional-wind-view.js?v=2.4.127'
+import { fireView, fireOpacity } from './regional-fire-view.js?v=2.4.127'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.127'
+import { escapeHtml as esc } from './fmt.js?v=2.4.127'
+import { readPreference, writePreference } from './preferences.js?v=2.4.127'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]
@@ -15,7 +15,7 @@ const field=createPollutionField().addTo(map)
 const floods=L.layerGroup().addTo(map)
 
 const fireBounds=L.rectangle([[4,92],[29,110]],{weight:1,dashArray:'6 6',color:'#86551c',fill:false,interactive:false}).addTo(map)
-let data=null,imagery=null,loading=false,lastError=false
+let data=null,imagery=null,loading=false,lastError=false,refreshFollowups=0,refreshFollowupTimer=null
 const byId=id=>document.getElementById(id)
 function clock(time){if(!time)return '—';const date=new Date(time);return Number.isFinite(date.getTime())?date.toLocaleString(lang==='th'?'th-TH':'en-GB',{timeZone:'Asia/Bangkok',hour12:false})+' ICT':'—'}
 const windViewUI=createRegionalWindView({map,tr,clock})
@@ -92,6 +92,7 @@ function paint(){
  for(const c of fireState.cells){L.rectangle([[c.lat-.125,c.lng-.125],[c.lat+.125,c.lng+.125]],{color:'#a44216',weight:0,fillOpacity:fireOpacity(c.detections)}).bindPopup(`${c.detections} ${tr('จุดตรวจจับ / 48 ชม. · จุดกลางกริด 0.25° ไม่ใช่พื้นที่เผา','detections / 48h · 0.25° cell centroid, not burned area')}<br>${esc(clock(c.first_observed_at))} → ${esc(clock(c.last_observed_at))}`).on('click',()=>windViewUI.select(c.lat,c.lng)).addTo(fire)}
  const current=obs.filter(r=>r.status==='current')
  byId('status').textContent=lastError?tr('โหลดใหม่ไม่สำเร็จ แสดงข้อมูลครั้งก่อนพร้อมเวลาเดิม','Refresh failed; showing previous evidence with its original times'):`${tr('ข้อมูล PM สดเชื่อมต่อ','Current PM feeds connected')}: ${new Set(current.map(r=>r.country)).size} / ${data.countries.length} ${tr('ประเทศ','countries')} · ${tr('สร้างภาพรวม','Overview generated')} ${clock(data.generated_at)}`
+ if(!lastError&&data.overview_status)byId('status').textContent=(data.overview_status==='refresh_failed'?tr('อัปเดตไม่สำเร็จ แสดงภาพรวมครั้งก่อน · ','Refresh failed; last known overview · '):tr('ภาพรวมครั้งก่อน · ใช้ปุ่มอัปเดตเพื่อดูค่าล่าสุด · ','Last known overview · use Refresh for latest · '))+byId('status').textContent
  byId('coverage').innerHTML=['TH','SG'].map(code=>{const rows=obs.filter(r=>r.country===code),fresh=rows.filter(r=>r.status==='current');return `<div class="reading"><h3>${code==='TH'?tr('ประเทศไทย','Thailand'):tr('สิงคโปร์','Singapore')}</h3><strong>${fresh.length}</strong> ${tr('จุดรายงานสด','current reporting locations')} / ${rows.length}<p>${code==='SG'?tr('PM2.5 เฉลี่ย 1 ชั่วโมง / 5 ภูมิภาค ไม่ใช่ตำแหน่งเซ็นเซอร์','One-hour PM2.5 / five regions, not individual monitor locations'):tr('ค่าตรวจวัด Air4Thai ช่วงเฉลี่ยไม่ถูกเก็บในตารางปัจจุบัน','Air4Thai reported values; averaging window not retained in our normalized table')}</p>${code==='SG'&&!data.singapore.available?`<p class="stale">${tr('แหล่งสิงคโปร์ไม่พร้อม','Singapore feed unavailable')}</p>`:''}</div>`}).join('')+`<p>${tr('ตรวจแหล่งไฟ','Fire source checked')}: ${esc(clock(data.fires?.checked_at))} · ${data.fires?.available?Number.isFinite(data.fires.feeds_ok)?`${data.fires.feeds_current} / ${data.fires.feeds_expected} ${tr('ฟีดมีข้อมูลตรวจจับใหม่ · มีช่องว่างจากเมฆและรอบโคจร','feeds with recent acquisitions · cloud and overpass gaps remain')}`:tr('ข้อมูลเก่าเฉพาะแผ่นดินใหญ่ รอเชื่อมต่อส่วนทะเล','Legacy mainland archive; maritime coverage not yet collected'):tr('ไม่พร้อมหรือเก่า','Unavailable or stale')}</p><details><summary>${tr('ค่ารายภูมิภาคของสิงคโปร์','Singapore regional readings')}</summary>${obs.filter(r=>r.country==='SG').map(r=>`<p>${esc(r.name)}: <strong>${r.pm25} µg/m³</strong><br>${esc(clock(r.observed_at))} · ${esc(r.status)}</p>`).join('')||tr('ไม่มีข้อมูล','No readings')}</details>`
  byId('countries').innerHTML=data.countries.map(c=>{const rows=obs.filter(r=>r.country===c.code);return `<article><button data-country="${c.code}">${esc(lang==='th'?c.name_th:c.name_en)}</button><p class="status-label">${rows.length?`${rows.filter(r=>r.status==='current').length} ${tr('จุดสด','current')} / ${rows.length} ${tr('จุดรายงาน','reporting locations')}`:tr('ยังไม่เชื่อมต่อค่าตัวเลข','Numeric feed not connected')}</p><p>${esc(c.note_en)}</p><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.agency)} ↗</a></article>`}).join('')
  for(const b of document.querySelectorAll('[data-country]'))b.onclick=()=>{const c=data.countries.find(c=>c.code===b.dataset.country);map.setView([c.lat,c.lng],c.code==='SG'?10:c.code==='ID'?4:6);byId('regional-map').scrollIntoView({block:'center',behavior:'instant'})}
@@ -115,9 +116,14 @@ function paintFlood(){
 async function load(){if(loading)return;loading=true;byId('refresh').disabled=true
  try{const res=await fetch('/api/region',{signal:AbortSignal.timeout(30000),cache:'no-store'});if(!res.ok)throw Error();data=await res.json();lastError=false;paint()}
  catch{lastError=true;if(data)paint();else byId('status').textContent=tr('โหลดภาพรวมไม่สำเร็จ ลองอีกครั้งหรือเปิด ASMC / หน่วยงานต้นทาง','Regional evidence unavailable. Retry or open ASMC / official providers.');if(!data)byId('resources').innerHTML='<a href="https://asmc.asean.org/asmc-gis-portal/">ASMC haze information portal ↗</a>'}
- finally{loading=false;byId('refresh').disabled=false}
+ finally{loading=false;byId('refresh').disabled=false
+  // Three coalesced follow-up reads at most. No permanent provider polling
+  // loop; a failed rebuild remains labelled last-known with a manual action.
+  if(data?.overview_status==='refreshing'&&refreshFollowups<3){refreshFollowups++;refreshFollowupTimer=setTimeout(()=>{refreshFollowupTimer=null;load()},5000)}
+  else if(!data?.overview_status)refreshFollowups=0
+ }
 }
-byId('refresh').onclick=load
+byId('refresh').onclick=()=>{if(refreshFollowupTimer)clearTimeout(refreshFollowupTimer);refreshFollowups=0;load()}
 translate();load()
 // Only reclassify age between explicit refreshes; no background upstream loop.
 setInterval(()=>{if(data&&!document.hidden)paint()},60000)

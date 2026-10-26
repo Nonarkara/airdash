@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.127] — 2026-10-26 — a slow refresh does not erase the regional picture
+
+A production browser check after 2.4.126 caught a regional cache miss exceeding the Pages proxy's 30-second limit. Regional overviews now retain a valid previous payload for at most 20 minutes while one background rebuild runs. The original generation and source timestamps remain unchanged, and the interface explicitly labels last-known evidence as refreshing or refresh-failed. Refresh work is deferred until the previous response can flush; failures back off for one minute. Beyond the bounded window, or with corrupt/future data, the system still requires a fresh result and reports failure honestly. No provider cooldowns or observation freshness gates are relaxed.
+
+The regression test blocks a rebuild and proves that the previous response resolves first, concurrency produces one rebuild, timestamps are retained, failure cooldown applies and expired/corrupt/future caches are rejected. Includes the 2.4.126 frontend/backend audit repairs.
+
 ## [2.4.126] — 2026-10-26 — the controls and the evidence agree
 
 - Regional wind scenarios now read restored origin, altitude and release-hour controls before drawing. An 850 hPa selector cannot label a 10 m path; unavailable winds clear the accessible reading too.
