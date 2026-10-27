@@ -1,8 +1,8 @@
 // Preparation aid: observed/estimated PM, model outlook and upwind-fire evidence
 // stay separate. No smoke arrival time or clean-air destination is invented.
-import { store } from '../state.js?v=2.4.129'
-import { escapeHtml as esc } from '../fmt.js?v=2.4.129'
-import { windBasisLabel, windRowText } from '../wind.js?v=2.4.129'
+import { store } from '../state.js?v=2.4.130'
+import { escapeHtml as esc } from '../fmt.js?v=2.4.130'
+import { windBasisLabel, windRowText } from '../wind.js?v=2.4.130'
 const tr = (th,en) => store.lang === 'th' ? th : en
 const num = v => Number.isFinite(v) ? v.toLocaleString('en-GB',{maximumFractionDigits:1}) : '—'
 export function planningState(pm, forecast, fires) {

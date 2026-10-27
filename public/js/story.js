@@ -1,4 +1,4 @@
-import { readPreference, writePreference } from './preferences.js?v=2.4.129'
+import { readPreference, writePreference } from './preferences.js?v=2.4.130'
 // ────────────────────────────────────────────────────────────────────────────
 // AIR STORY — the new front door. A scroll narrative about TODAY's air for
 // smart kids and curious adults. Not a dashboard: one question per chapter,
@@ -6,11 +6,11 @@ import { readPreference, writePreference } from './preferences.js?v=2.4.129'
 // back to /api/science. Unavailable readings stay unknown while the page
 // retries; reference formulas remain available for explanation.
 // ────────────────────────────────────────────────────────────────────────────
-import { store, on, setLang, emit } from './state.js?v=2.4.129'
-import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.129'
-import { getJson } from './cache.js?v=2.4.129'
-import { fmtNum, escapeHtml } from './fmt.js?v=2.4.129'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.129'
+import { store, on, setLang, emit } from './state.js?v=2.4.130'
+import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.130'
+import { getJson } from './cache.js?v=2.4.130'
+import { fmtNum, escapeHtml } from './fmt.js?v=2.4.130'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.130'
 
 const $ = (sel) => document.querySelector(sel)
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches

@@ -442,8 +442,10 @@ a { color: var(--ink); }
    blurs the word shapes a reader segments by. Eyebrow, kicker, unit and tag
    classes were tuned for UPPERCASE ENGLISH and carried 0.3–2.4px of tracking
    into 54 Thai labels across the story page and dashboard (audit 2026-10-27).
-   English sub-labels keep their tracking. */
-html[lang="th"] body :not(.en-lbl):not([lang="en"]) { letter-spacing: normal !important; }
+   English sub-labels, Latin numerals and the version badges keep theirs
+   (independent review 2026-10-27: an unscoped rule flattened the tight
+   tracking on .bignum / .win-num / .numcell .n and the boot badge). */
+html[lang="th"] body :not(.en-lbl, .en-lbl *, [lang="en"], [lang="en"] *, .ver, .bignum, .win-num, .numcell .n, #boot *) { letter-spacing: normal !important; }
 
 /* Numbers align in columns everywhere (STYLE.md: tabular numerals). */
 body { font-variant-numeric: tabular-nums; }

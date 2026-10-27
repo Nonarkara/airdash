@@ -1,9 +1,9 @@
 // The running tap: every pipeline event streams in here live. DOM capped so
 // weeks of uptime can't bloat the page; auto-scroll pauses when the operator
 // scrolls up to read.
-import { on, store } from '../state.js?v=2.4.129'
-import { tr } from '../i18n.js?v=2.4.129'
-import { el } from '../fmt.js?v=2.4.129'
+import { on, store } from '../state.js?v=2.4.130'
+import { tr } from '../i18n.js?v=2.4.130'
+import { el } from '../fmt.js?v=2.4.130'
 
 const MAX_ROWS = 300
 const SOURCE_LABEL = {

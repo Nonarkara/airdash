@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.130] — 2026-10-27 — review follow-up: Thai untracked, Latin numerals keep theirs
+
+Independent review of 2.4.129 found the Thai letter-spacing rule broader than intended: as `!important` on every element it also flattened the tight tracking of large Latin numerals (`.bignum`, `.win-num`, `.numcell .n`), the version badges and children of English sub-labels. Those are now exempt; Thai text stays untracked. The Air Story region link reads "ดูทั้งภูมิภาค →" (a verb, so it is not mistaken for a third picker option), and its accessible name is its visible text again (WCAG 2.5.3).
+
 ## [2.4.129] — 2026-10-27 — one type family, untracked Thai, records not tiles
 
 A rendered audit at 390, 1024 and 1440 px found the landing page off the house style and four spatial defects.
