@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.129] — 2026-10-27 — one type family, untracked Thai, records not tiles
+
+A rendered audit at 390, 1024 and 1440 px found the landing page off the house style and four spatial defects.
+
+- **The Air Story page shipped in the legacy faces.** `tokens.css` still set Sarabun, JetBrains Mono and Manrope; the dashboard and regional pages overrode them, the landing page did not. Every page now uses Jost + Prompt with tabular numerals (STYLE.md). Manrope is gone from the witness panel and the boot wordmark.
+- **Thai is never letter-spaced.** 54 Thai labels (chapter kickers, eyebrows, KPI labels, units) carried 0.3–2.4 px of tracking meant for uppercase English. One rule in `tokens.css` removes it for Thai; English sub-labels keep theirs.
+- **Haze preparation: records, not tiles.** Four 145 px tiles were stretched to 181 px (tile 1 held 98 px of content) and their explanations wrapped at ~14 Thai characters. Each fact is now one record — label and value on a line, explanation beneath at full width. The three map-view buttons sit in one row; "rain map" is no longer orphaned.
+- **Air Story header.** The Southeast Asia link left its own 45 px band under the sticky header and joined the place picker as a third scope ("ทั้งประเทศ ▾ · ทั้งภูมิภาค →"); the verdict moved up ~45 px on a phone. The scroll cue no longer overlaps the live band chip.
+
+Not done: at 820–1100 px the dashboard still shows one sheet at a time, so the ranking stretches across the width. A two-pane tablet layout (ranking beside the map) is the right fix and is left for a verified follow-up.
+
 ## [2.4.128] — 2026-10-26 — the visible province responds to the click
 
 A real map interaction after the release found that the station-data canvas (pane 450) swallowed clicks on the province canvas beneath it (pane 350), even where the upper canvas painted nothing. Province polygons, stations and optional interactive map paths now share the same canvas hit-test stack. Province fills are sent behind the point targets on every redraw. Canvas performance, station selection, overlays and the bilingual popup remain. The same real click that previously did nothing now opens the Lampang province card with its English score heading. A behavioural wiring test executes the province layer and rejects both a separate-pane mutation and a lost backdrop-order mutation. Includes the 2.4.126–127 fixes; this follow-up is frontend-only.
