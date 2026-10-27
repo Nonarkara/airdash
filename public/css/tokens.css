@@ -1,10 +1,12 @@
 /* ────────────────────────────────────────────────────────────────────────────
    AIRDASH design core — clean-air instrument panel, not a flood warning board.
    Light sky ground, deep teal ink, AQI gradient as the only colored stripe.
-   Sharp corners. No shadows. Manrope for the wordmark, JetBrains Mono for
-   the numbers, Sarabun still owns the Thai glyphs.
+   Sharp corners. No shadows. One type family everywhere (STYLE.md): Jost for
+   Latin, Prompt for Thai, tabular numerals. Until 2026-10-27 this file still
+   set the legacy Sarabun / JetBrains Mono / Manrope faces, and the Air Story
+   landing page — the only page that did not override them — shipped in them.
    ──────────────────────────────────────────────────────────────────────────── */
-@import url('/fonts/fonts.css');
+@import url('/fonts/region-faces.css');
 
 :root {
   /* Ground — soft sky gradient (top brighter, bottom cooler). The page never
@@ -55,9 +57,9 @@
   --aqi:  #0E4A5E;   /* primary brand teal */
 
   /* Fonts */
-  --font-ui:    'Sarabun', 'Thonburi', 'Helvetica Neue', sans-serif;
-  --font-num:   'JetBrains Mono', ui-monospace, 'IBM Plex Mono', monospace;
-  --font-display: 'Manrope', 'Sarabun', system-ui, sans-serif;
+  --font-ui:    'Jost', 'Prompt', sans-serif;
+  --font-num:   'Jost', 'Prompt', sans-serif;   /* + tabular-nums, below */
+  --font-display: 'Jost', 'Prompt', sans-serif;
 
   /* ── ONE-LINE HEADER (2026-08-16) ─────────────────────────────────────
      FloodDash was reported directly: "so much space in the middle of the
@@ -434,3 +436,15 @@ a { color: var(--ink); }
     color: var(--ink) !important;
   }
 }
+
+/* Thai is never letter-spaced. Tracking is a Latin small-caps device; Thai
+   has no capitals and no spaces between words, so spreading its glyphs apart
+   blurs the word shapes a reader segments by. Eyebrow, kicker, unit and tag
+   classes were tuned for UPPERCASE ENGLISH and carried 0.3–2.4px of tracking
+   into 54 Thai labels across the story page and dashboard (audit 2026-10-27).
+   English sub-labels keep their tracking. */
+html[lang="th"] body :not(.en-lbl):not([lang="en"]) { letter-spacing: normal !important; }
+
+/* Numbers align in columns everywhere (STYLE.md: tabular numerals). */
+body { font-variant-numeric: tabular-nums; }
+

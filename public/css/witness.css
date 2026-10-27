@@ -12,7 +12,7 @@
     #07141C;
   color: #E7F0F4;
   display: flex; flex-direction: column;
-  font-family: 'Sarabun', var(--font-ui), sans-serif;
+  font-family: var(--font-ui);
 }
 
 .win-bar {
@@ -22,12 +22,12 @@
 }
 .win-brand { min-width: 0; }
 .win-brand h2 {
-  margin: 0; font-family: Manrope, 'Sarabun', sans-serif;
+  margin: 0; font-family: var(--font-display);
   font-weight: 800; font-size: 22px; letter-spacing: -0.02em; line-height: 1.05;
 }
 .win-brand h2 span { color: #E2A15A; }
 .win-kicker {
-  margin: 2px 0 0; font-family: 'JetBrains Mono', ui-monospace, monospace;
+  margin: 2px 0 0; font-family: var(--font-num);
   font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
   color: rgba(231, 240, 244, 0.55);
 }
@@ -70,7 +70,7 @@
 .win-picture .cctv-video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
 .win-picture .cctv-live {
   position: absolute; top: 14px; left: 36px; z-index: 2;
-  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.12em;
+  font-family: var(--font-num); font-size: 10px; letter-spacing: 0.12em;
   color: #fff; background: rgba(200, 69, 58, 0.92); padding: 2px 6px;
 }
 .win-picture .cctv-linkout, .win-picture .cctv-air-none {
@@ -87,7 +87,7 @@
   border-top: 3px solid var(--air, #E2A15A);
 }
 .win-num {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-num);
   font-weight: 700; font-size: 64px; line-height: 0.85; letter-spacing: -0.04em;
   color: var(--air, #E7F0F4);
 }
@@ -96,7 +96,7 @@
   font-size: 11px; letter-spacing: 0.08em; font-weight: 500; color: rgba(231, 240, 244, 0.7);
 }
 .win-place {
-  font-family: Manrope, 'Sarabun', sans-serif;
+  font-family: var(--font-display);
   font-weight: 800; font-size: 26px; line-height: 1.05; letter-spacing: -0.02em;
 }
 .win-meta { margin-top: 3px; font-size: 13px; color: rgba(231, 240, 244, 0.72); }
@@ -120,13 +120,13 @@
 }
 .win-sec { padding: 12px 16px 4px; }
 .win-sec h3 {
-  margin: 0; font-family: 'JetBrains Mono', ui-monospace, monospace;
+  margin: 0; font-family: var(--font-num);
   font-size: 10px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
   color: #E2A15A;
 }
 .win-sec h3 b {
   display: block; margin-top: 2px;
-  font-family: Manrope, 'Sarabun', sans-serif;
+  font-family: var(--font-display);
   font-size: 16px; font-weight: 750; letter-spacing: 0; text-transform: none; color: #E7F0F4;
 }
 .win-card {
@@ -138,7 +138,7 @@
 .win-card a:hover { text-decoration: underline; }
 .win-credit {
   display: block; margin-top: 3px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-num);
   font-size: 10px; letter-spacing: 0.04em; color: rgba(231, 240, 244, 0.5);
 }
 .win-chip {
@@ -165,7 +165,7 @@
 }
 .win-cell.on { background: rgba(231, 240, 244, 0.06); border-color: var(--air, #E2A15A); }
 .win-cell .n {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-num);
   font-size: 20px; font-weight: 700; line-height: 1; color: var(--air, #E7F0F4);
 }
 .win-cell .p { display: block; margin-top: 3px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

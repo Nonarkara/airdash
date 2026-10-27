@@ -11,7 +11,7 @@
 // to the SVG default and paints every province BLACK — which is exactly
 // what shipped in 2.4.122, and exactly what a pattern-matching guard
 // cannot see. So the style lives here, pure, and the guard EXECUTES it.
-import { bandColor } from './i18n.js?v=2.4.128'
+import { bandColor } from './i18n.js?v=2.4.129'
 
 // The fill opacity per band: the normal provinces recede, the bad ones
 // shout. A tint has to be light enough for the basemap to show through

@@ -1,7 +1,7 @@
 /* ────────────────────────────────────────────────────────────────────────────
    AIRDASH · AIR STORY — the new front door.
    A scroll narrative, not a dashboard: generous whitespace, huge Sarabun
-   headlines, JetBrains Mono numbers, one accent per section, and a slow
+   headlines, tabular Jost numbers, one accent per section, and a slow
    "breathing" motif (a circle that inhales/exhales on a ~5s cycle, tinted
    by the live Thai AQI band color via --breath).
    Reuses the token core (tokens.css) so dark mode + reduced motion invert
@@ -125,6 +125,10 @@ body.story {
 }
 .hero .loc-line { color: var(--ink-mid); font-size: 15px; margin: 10px 0 30px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .hero .loc-line select { font-family: inherit; font-size: 14px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--rule-strong); background: var(--well); color: var(--ink); }
+/* The region is a third scope beside nation and province, so it sits with
+   the place picker instead of in its own band under the header (that band
+   was 45px of chrome on a phone for one link). */
+.hero .loc-line .region-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 
 .breath-stage { display: flex; align-items: center; gap: clamp(20px, 6vw, 56px); flex-wrap: wrap; margin: 6px 0 18px; }
 .breath {
@@ -203,12 +207,16 @@ body.story {
    headline number while it is waiting. */
 .verdict[data-state="unknown"] { opacity: 0.72; border-color: var(--rule); }
 .verdict[data-state="unknown"] .v-head { font-size: clamp(17px, 3.6vw, 21px); }
+/* In flow under the band chip. It was absolutely centred on the hero's
+   bottom edge — exactly where the chip ends — so once live data filled the
+   chip ("ตอนนี้อากาศ: ดี · PM2.5 16 µg/m³") the two overlapped. */
 .scrollcue {
-  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px; margin-top: 8px;
   color: var(--ink-low); font-family: var(--font-num); font-size: 11px; letter-spacing: 0.2em;
-  text-transform: uppercase; text-align: center; text-decoration: none;
+  text-transform: uppercase; text-decoration: none;
 }
-.scrollcue .arrow { display: block; font-size: 18px; animation: cuebob 2.2s ease-in-out infinite; }
+.scrollcue .arrow { display: inline-block; font-size: 18px; animation: cuebob 2.2s ease-in-out infinite; }
 @keyframes cuebob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
 
 /* ── 2 · PERSONA ─────────────────────────────────────────────────────────── */
@@ -420,8 +428,6 @@ body.story {
 .persona-chips button { border-radius: 999px; }
 .numcell .n { letter-spacing: -0.02em; }
 
-.region-entry{padding:10px 16px;text-align:center;border-bottom:1px solid var(--rule)}
-.region-entry a{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border:1px solid var(--rule);border-radius:8px;max-width:100%;overflow-wrap:anywhere;color:var(--ink);font-weight:600;text-decoration:none}
 
 /* The first answer earns the space; the story does not reserve a whole extra screen. */
 .hero{min-height:0;justify-content:flex-start;padding:24px 22px 32px}
@@ -442,8 +448,5 @@ body.story {
 @media(max-width:360px){.story-chrome .airdash-mark{display:none}}
 @media(max-width:360px){.story-chrome{padding-inline:6px}.story-chrome .spacer{display:none}}
 .story-chrome{padding-block:4px}
-.region-entry{max-width:760px;margin:0 auto;padding:0 22px;text-align:left}
-.region-entry a{border:0;border-radius:0;padding:8px 0}
-@media(max-width:520px){.region-entry{padding-inline:18px}}
 
 @media (prefers-reduced-motion: reduce){.breath,.scrollcue .arrow{animation:none;transform:none}html.story{scroll-behavior:auto}}

@@ -4380,12 +4380,24 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .haze-plan p {font-size:12px; line-height:1.6; overflow-wrap:anywhere;}
 .haze-plan-verdict {font-weight:700; border-bottom:1px solid var(--rule); padding-bottom:10px;}
 .haze-plan-verdict[data-state="protect"], .haze-plan-verdict[data-state="prepare"] {color:var(--th-red);}
-.haze-plan-grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
-.haze-plan-grid article {padding:10px; background:var(--well-dim); min-width:0;}
+/* Four evidence RECORDS, not four tiles (STYLE.md: no metric tiles or
+   per-value boxes; explanations open below the record at full width). The
+   2×2 tile grid squeezed each explanation into a 145px column (~14 Thai
+   characters a line) and stretched every tile to the tallest one: tile 1 was
+   181px tall around 98px of content. Now: label and value share one line,
+   the explanation reads beneath at the rail's full measure. */
+.haze-plan-grid {display:flex; flex-direction:column;}
+.haze-plan-grid article {display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:12px; align-items:baseline; padding:10px 0; border-top:1px solid var(--rule); min-width:0;}
+.haze-plan-grid article:first-child {border-top:0; padding-top:4px;}
+.haze-plan-grid article > h4 {margin:0;}
+.haze-plan-grid article > strong {text-align:right; white-space:nowrap;}
+.haze-plan-grid article > p, .haze-plan-grid article > details {grid-column:1 / -1; margin:4px 0 0;}
 .haze-plan h4 {font-size:12px; margin:0 0 8px;}
 .haze-plan strong {font-size:17px; font-variant-numeric:tabular-nums;}
-.haze-plan-maps {display:flex; flex-wrap:wrap; gap:6px; margin:12px 0;}
-.haze-plan-maps button {min-height:44px; padding:8px; background:var(--well); color:var(--ink); border:1px solid var(--rule); cursor:pointer;}
+/* Three views of one decision — one row of equal choices. flex-wrap broke
+   them 2 + 1 and left "rain map" orphaned on its own line. */
+.haze-plan-maps {display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin:12px 0;}
+.haze-plan-maps button {min-height:44px; padding:6px 8px; line-height:1.25; background:var(--well); color:var(--ink); border:1px solid var(--rule); cursor:pointer;}
 .haze-plan summary {cursor:pointer; min-height:44px; padding:10px 0; font-size:12px;}
 /* Wind arrows on the map.
    They were a 44px white badge per province — the same badge shape as the
@@ -4443,7 +4455,6 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 .wind-badge-meta {font-size:12px; line-height:1.4; color:var(--ink-low);}
 .citizen-wind {margin:6px 10px; padding:8px 10px; border-left:3px solid var(--th-navy); background:var(--well-dim); border-radius:4px;}
 .citizen-wind-note {font-size:11.5px; line-height:1.45; color:var(--ink-low); margin-top:4px;}
-@media (max-width:360px) {.haze-plan-grid {grid-template-columns:1fr;}}
 /* Aerosol size strip — the particle-size signal that the PM2.5 advice above
    cannot give. The left border carries the mode so it reads at a glance
    without a legend: sand for coarse dust, clay for mixed, smoke for fine. */

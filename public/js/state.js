@@ -1,4 +1,4 @@
-import { readPreference, writePreference } from './preferences.js?v=2.4.128'
+import { readPreference, writePreference } from './preferences.js?v=2.4.129'
 // Tiny pub/sub store shared by panels and map layers.
 const listeners = new Map() // topic → Set<fn>
 
