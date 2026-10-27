@@ -103,3 +103,11 @@ Fresh full `npm test` on the completed changes exited **0**, **1,762 PASS lines*
 Observed the slow-refresh recovery in production: HTTP200 in 1.057235s with `overview_status: refreshing`, preserving `generated_at: 2026-10-26T04:04:51.341Z` and 175 observations. The last-known response does not pretend the data is newly measured.
 
 Reactivated the existing four-hour AirDash monitor with current instructions, replacing the expired away-window prompt. It stays quiet on unchanged/non-actionable state and preserves existing ingestion, watchdog and backup schedules. Shared-host CPU saturation, roughly 10GiB internal disk headroom, parked LINE quota and PM coverage in only 2/11 regional countries remain operational/coverage limits. No smoke-arrival or AQI-arrival prediction is claimed.
+
+### Monitor — 2026-10-28 01:20 Asia/Bangkok
+
+Tree initially clean, HEAD936fa99 (other agents’ 2.4.130 work preserved). Local, canonical and custom health HTTP200, correct AirDash identity/version2.4.130; data_ok true,20/21 configured pipelines current. Python urllib initially received403 on public checks; normal browser-user-agent curl returned200 on canonical then custom, so this was not diagnosed as an outage. Air4Thai actual observations:146/175 within90minutes, newest01:00Bangkok; GISTDA77/77 older than90minutes, newest23:00. Successful GISTDA polling is not relabelled as fresh observations. ENSO and METAR each have one fetch failure; retain cadence/backoff, no forced source requests. IMERG/DustBoy remain explicitly unconfigured.
+
+Archive receipt10.1hours old, not stale; external device available, archive17.95GB. Existing watchdog19minutes old; latest run reports service/backup/offsite healthy and ongoing shared-host CPU/memory saturation (already known). Disk guard now ok with38GiB free at its last sample. October27 backup quick_check passed and USB publication byte-verified; encrypted offsite upload197248484bytes succeeded03:50. October28 jobs are not yet due. No duplicate schedule or service restart.
+
+Bounded backend review reconfirmed regional cache single-flight rebuild,20-minute absolute age limit, preserved generated_at, rejection of future/corrupt cache, and60-second failure cooldown. No newly evidenced code fault, mutation, release or expensive test run justified. No new UI verification claimed.
