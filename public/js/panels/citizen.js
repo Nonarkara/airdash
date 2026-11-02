@@ -1,4 +1,4 @@
-import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.130'
+import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.131'
 // Citizen-mode panel — what ordinary people need to see in 30 seconds.
 // Surfaces the four questions that matter during a dust episode:
 //   1. Am I safe right now?          → JMA verb at the top
@@ -16,20 +16,20 @@ import { readPreference, writePreference, removePreference } from '../preference
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.130'
-import { tr, BAND } from '../i18n.js?v=2.4.130'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.130'
-import { getJson } from '../cache.js?v=2.4.130'
-import { flyToProvince } from '../map.js?v=2.4.130'
-import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.130'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.130'
+import { on, store, emit } from '../state.js?v=2.4.131'
+import { tr, BAND } from '../i18n.js?v=2.4.131'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.131'
+import { getJson } from '../cache.js?v=2.4.131'
+import { flyToProvince } from '../map.js?v=2.4.131'
+import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.131'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.131'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare, renderNoiseTrends,
-} from './citizenLife.js?v=2.4.130'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.130'
-import { windBadgeHtml, windCaveatText } from '../wind.js?v=2.4.130'
+} from './citizenLife.js?v=2.4.131'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.131'
+import { windBadgeHtml, windCaveatText } from '../wind.js?v=2.4.131'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -86,7 +86,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.130').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.131').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -166,7 +166,13 @@ function nearestProvince(lat, lng) {
 
 function paint(box) {
   const province = readMyProvince()
+  const focusedSection = document.activeElement?.matches('summary') ? document.activeElement.parentElement?.dataset.citizenSection : null
+  const expanded = new Set([...box.querySelectorAll('details[data-citizen-section][open]')].map(n => n.dataset.citizenSection))
   box.replaceChildren(...render(province))
+  for (const node of box.querySelectorAll('details[data-citizen-section]')) {
+    node.open = expanded.has(node.dataset.citizenSection)
+    if (node.dataset.citizenSection === focusedSection) node.querySelector('summary')?.focus({ preventScroll: true })
+  }
 }
 
 function readMyProvince() {
@@ -189,8 +195,7 @@ export function setMyProvince(p) {
   emit('my-province-changed', p)
 }
 
-/** Render the full citizen panel. Compact by design — no scrolling needed
- *  on a phone; everything fits in a single screen view. */
+/** Current evidence first; reference tools expand in place without a second scroller. */
 function render(province) {
   if (!province) return renderEmpty()
   return renderForProvince(province)
@@ -513,27 +518,21 @@ function renderForProvince(province) {
       el('span', { class: 'citizen-loading-dot' }),
       el('span', { class: 'citizen-loading-text' },
         tr('กำลังค้นหาสถานีวัดฝุ่นใกล้คุณ…', 'Looking up AQ stations near you…'))))
-  // Render shell first, fill in async so the page is interactive immediately
-  // Life-saving additions live in the order the user is most likely to
-  // scan: persona first (so they can pick themselves), then the
-  // action timeline (the most concrete "what do I do right now"
-  // answer), then mask guide + symptom checker + time-of-day forecast,
-  // then the standard AQ-stations row, then migrant-worker phrases
-  // (only at elevated+ bands, when they're needed).
+  // Current evidence and actions stay together; reference tools expand in place.
   const out = [
-    head, why, windBlock, smokeWrap, weatherWrap, reliefWrap,
-    tomorrowHost,
-    personaHost,
-    useTimeline ? renderActionTimeline(band) : null,
-    todHost,
-    adviceHead, advice,
-    mask,
+    head, why,
+    useTimeline ? renderActionTimeline(band) : adviceHead,
+    useTimeline ? null : advice,
+    el('div', { class: 'citizen-transport' }, ...[windBlock, smokeWrap].filter(Boolean)),
+    todHost, reliefWrap, tomorrowHost,
+    citizenDisclosure('weather', tr('อากาศและพยากรณ์ 5 วัน', 'Weather & five-day forecast'), weatherWrap),
+  ].filter(Boolean)
+  const tools = [
+    citizenDisclosure('personal', tr('คำแนะนำตามกลุ่มของคุณ', 'Advice for your group'), personaHost),
     stationHead, stationList,
+    citizenDisclosure('protection', tr('หน้ากากและการป้องกัน', 'Masks & protection'), mask, ...(useTimeline ? [adviceHead, advice] : [])),
     symptom,
-    pet,
-    noise,
-    migrant,
-    tellFamily,
+    citizenDisclosure('context', tr('สัตว์เลี้ยง เสียง และคำแนะนำหลายภาษา', 'Pets, noise & language guidance'), pet, noise, migrant),
   ].filter(Boolean)
   if (province.lat != null && province.lng != null) {
     getJson(`/api/stations/nearest?lat=${province.lat}&lng=${province.lng}&limit=3`, 60_000)
@@ -614,7 +613,17 @@ function renderForProvince(province) {
       el('div', { class: 'citizen-help-lbl' }, tr('เกี่ยวกับ', 'About'))),
   )
 
-  return [...out, shareHead, shareRow, lineHead, lineCard, telegramForm, helpHead, helpRow, renderPickerCollapsed()]
+  return [el('div', { class: 'citizen-current' }, ...out),
+    el('div', { class: 'citizen-tools' }, ...tools, shareHead, shareRow,
+    citizenDisclosure('family', tr('ข้อความสำหรับครอบครัว', 'Family message templates'), tellFamily),
+    citizenDisclosure('alerts', tr('รับการแจ้งเตือน', 'Get alerts'), lineHead, lineCard, telegramForm),
+    helpHead, helpRow, renderPickerCollapsed())]
+}
+
+// Native disclosure keeps every reference tool reachable by keyboard and touch.
+function citizenDisclosure(key, label, ...content) {
+  return el('details', { class: 'citizen-reference', 'data-citizen-section': key },
+    el('summary', {}, label), ...content.filter(Boolean))
 }
 
 // Thai AQI 2023 colour anchor for a PM2.5 value (µg/m³).

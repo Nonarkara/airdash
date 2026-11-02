@@ -4490,3 +4490,53 @@ body.tv-mode .place-warning { font-size: clamp(11px, 1.1vw, 15px); padding: 12px
 @media (max-width: 1100px) {
   .rail-tool > :is(.forecast-strip, .whatif-box) { max-height: none; overflow: visible; }
 }
+
+/* My Area: decision → action → evidence. Rows size to their content. */
+#citizen .citizen-why { padding: 0 10px 8px; }
+#citizen .citizen-section-head { background: transparent; padding: 8px 10px 4px; }
+#citizen .citizen-timeline { display: block; padding: 0 10px 8px; }
+#citizen .citizen-timeline-stage {
+  display: grid; grid-template-columns: 88px minmax(0,1fr); gap: 8px;
+  align-items: baseline; padding: 6px 0; border: 0; border-radius: 0;
+  background: transparent;
+}
+#citizen .citizen-timeline-stage + .citizen-timeline-stage { border-top: 1px solid var(--rule); }
+#citizen .citizen-timeline-what { margin: 0; }
+#citizen .citizen-transport { padding: 0 10px; }
+#citizen .citizen-wind, #citizen .citizen-smoke {
+  margin: 0; padding: 8px 0; background: transparent; border: 0; border-radius: 0;
+}
+#citizen .citizen-transport .citizen-section-head { padding: 0 0 4px; border: 0; }
+#citizen .citizen-reference { border-top: 1px solid var(--rule); }
+#citizen .citizen-reference > summary {
+  padding: 10px; min-height: 44px; box-sizing: border-box; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.6;
+}
+#citizen .citizen-reference > summary:focus-visible { outline: 2px solid var(--th-navy); outline-offset: -3px; }
+#citizen .citizen-reference[open] > summary { color: var(--th-navy); }
+#citizen .citizen-reference .citizen-section-head:first-child { border-top: 0; }
+#citizen .citizen-mask-grid { display: block; }
+#citizen .citizen-mask-card {
+  display: grid; grid-template-columns: 20px minmax(0,1fr); column-gap: 8px;
+  padding: 8px 0; background: transparent; border: 0; border-radius: 0;
+}
+#citizen .citizen-mask-card + .citizen-mask-card { border-top: 1px solid var(--rule); }
+#citizen .citizen-mask-verdict { grid-row: span 3; }
+#citizen .citizen-mask-filter, #citizen .citizen-mask-price { grid-column: 2; }
+#citizen .citizen-change { min-width: 44px; min-height: 44px; }
+#citizen .citizen-tell-btn { flex-direction: row; align-items: baseline; gap: 8px; }
+#citizen .citizen-tell-btn-lbl { flex: 0 0 64px; }
+#citizen .citizen-persona-pills { flex-wrap: wrap; overflow: visible; }
+#citizen .citizen-persona-pill { flex-direction: row; border-radius: 0; min-height: 44px; }
+#citizen .citizen-persona-lbl { font-size: 12px; }
+
+/* A full-width tablet is two reading tasks, not metre-wide text rows.
+   Container sizing keeps the narrow desktop rail in its single-column form. */
+#pane-citizen { container-type: inline-size; }
+#citizen .citizen-current, #citizen .citizen-tools { min-width: 0; }
+@container (min-width: 650px) {
+  #citizen:has(> .citizen-current) { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; }
+  #citizen .citizen-tools { border-left: 1px solid var(--rule); }
+}
+
+#citizen:not(:has(> .citizen-current)) { max-width: 65ch; }

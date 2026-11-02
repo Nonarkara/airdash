@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > it solved. If a feature is in the code but not in this log, it is in the
 > wrong place.
 
+## [2.4.131] — 2026-11-03
+
+- My Area now puts current evidence and immediate actions before reference material. Wind/fire context and action steps use content-sized rows instead of nested cards; mask comparisons use aligned rows.
+- Weather, personal advice, protection, context, family templates and alert setup remain available through native keyboard-accessible disclosures. Live repaint preserves their open state and focused summary.
+- Wide tablet My Area uses two reading columns determined by the panel's actual width; narrow desktop rails and phones remain one column. No data/scoring/health wording changes.
+
 ---
 
 ---
