@@ -1,16 +1,17 @@
 {
  "slug": "nobody-owns-the-haze",
- "version": "v1",
+ "version": "v2",
  "date": "2026-11-04",
+ "status": "corrected draft; all-author approval pending; not peer reviewed",
  "pages": 11,
  "pdf": {
-  "file": "nobody-owns-the-haze-v1.pdf",
-  "bytes": 469158,
-  "sha256": "774936f3e9eb63b0c0721d4c2f305cf3635c53b97d456beb343811c4a0a44eb9"
+  "file": "nobody-owns-the-haze-v2.pdf",
+  "bytes": 478886,
+  "sha256": "cbaee2f2de92a42fd98f5413c2f63af130db961a8a77a9e32ecf73409b7d35fc"
  },
  "supplement": {
-  "file": "nobody-owns-the-haze-v1-supplement.zip",
-  "bytes": 190538,
-  "sha256": "7efc261a0346f4e89db1accf079c2679da05b159307b95620915b8b8dec12f08"
+  "file": "nobody-owns-the-haze-v2-supplement.zip",
+  "bytes": 527721,
+  "sha256": "8cc664042bc0becc63e3701ffc04b98a11a07e900a070ac73d3adfde1a1c7a23"
  }
 }

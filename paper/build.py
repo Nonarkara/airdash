@@ -8,10 +8,11 @@ Every number in the text is written as {{a4.leads.0.raw.mae|f2}} and filled from
 paper/data/*.json at build time; a missing path stops the build, so a figure in
 the prose cannot drift from the analysis. Citations are \\citep{key} against
 refs.json; the bibliography is numbered in order of first citation."""
-import json, os, re, shutil, subprocess, sys
+import json, math, os, re, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DATA, SRC, BUILD = (os.path.join(HERE, d) for d in ('data', 'src', 'build'))
+DATA, SRC = (os.path.join(HERE, d) for d in ('data', 'src'))
+BUILD = os.environ.get('AIRDASH_PAPER_BUILD_DIR', os.path.join(HERE, 'build'))
 
 def load_data():
     d = {}
@@ -31,6 +32,8 @@ def thousands(n):
     return f'{int(round(n)):,}'
 
 def fmt(value, how):
+    if value is None or isinstance(value, float) and not math.isfinite(value):
+        raise ValueError('Missing or non-finite manuscript value')
     if how == 'len': return str(len(value))
     neg = isinstance(value, (int, float)) and value < 0
     v = abs(value) if isinstance(value, (int, float)) else value
@@ -68,13 +71,16 @@ def render(text, D):
     text = RANGE.sub(lambda m: fmt(lookup(D, m.group(1)), m.group(3)) + '--' + fmt(lookup(D, m.group(2)), m.group(3)), text)
     return TOKEN.sub(lambda m: fmt(lookup(D, m.group(1)), m.group(2)), text)
 
-def bibliography(tex, refs):
+def bibliography(tex, refs, ledger=None):
     keys = []
     for m in re.finditer(r'\\cite[pt]?\*?(?:\[[^\]]*\])?\{([^}]+)\}', tex):
         for k in (x.strip() for x in m.group(1).split(',')):
             if k not in keys: keys.append(k)
     missing = [k for k in keys if k not in refs]
     if missing: raise SystemExit(f'build: cited but not in refs.json: {missing}')
+    if ledger is not None:
+        unchecked = [k for k in keys if not ledger.get(k, {}).get('verified')]
+        if unchecked: raise SystemExit(f'build: cited references lack ledger verification: {unchecked}')
     items = []
     for k in keys:
         r = refs[k]; items.append(f"\\bibitem{{{k}}} {format_ref(r)}")
@@ -119,7 +125,8 @@ def main():
     refs = json.load(open(os.path.join(HERE, 'refs', 'refs.json'))) if os.path.exists(os.path.join(HERE, 'refs', 'refs.json')) else {}
     src = open(os.path.join(SRC, 'main.tex.in')).read()
     tex = render(src, D).replace('%%TABLE_CENSUS%%', census_table(D))
-    biblio, keys, unused = bibliography(tex, refs)
+    ledger = {r['key']: r for r in (json.loads(line) for line in open(os.path.join(HERE, 'refs', 'entries.jsonl')) if line.strip())}
+    biblio, keys, unused = bibliography(tex, refs, ledger)
     tex = tex.replace('%%BIBLIOGRAPHY%%', biblio)
     os.makedirs(BUILD, exist_ok=True)
     for f in os.listdir(os.path.join(HERE, 'figures')):

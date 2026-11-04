@@ -8,7 +8,7 @@
 // analysis they were computed from. This checks all three — the last by
 // rendering the manuscript template, which stops on any missing data path or
 // missing reference.
-import { readFileSync, existsSync, statSync } from 'node:fs'
+import { readFileSync, existsSync, statSync, mkdtempSync, rmSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -47,12 +47,19 @@ const redirects = rd('public/_redirects')
 ok(/^\/paper\/\*\s+\/paper\/:splat\s+200/m.test(redirects) && /^\/lib\/\*\s+\/lib\/:splat\s+200/m.test(redirects), '_redirects passes /paper and /lib through (the catch-all would serve ops.html for the PDF)')
 
 // The paper's numbers come from the analysis: rendering the template stops on any gap.
-const py = spawnSync('python3', ['paper/build.py', '--no-pdf'], { cwd: ROOT, encoding: 'utf8' })
-if (py.error) console.log('· python3 unavailable — skipped the manuscript render check')
+const buildDir = process.env.AIRDASH_PAPER_BUILD_DIR || mkdtempSync('/Volumes/Data/agent-scratch/airdash-paper-check-')
+const py = spawnSync('python3', ['paper/build.py', '--no-pdf'], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, AIRDASH_PAPER_BUILD_DIR: buildDir } })
+if (!process.env.AIRDASH_PAPER_BUILD_DIR) rmSync(buildDir, { recursive: true, force: true })
+if (py.error) ok(false, 'python3 is required to verify the manuscript')
 else {
   ok(py.status === 0, `manuscript renders from data and references (${(py.stderr || py.stdout).trim().split('\n').pop()})`)
   ok(/(\d+) references cited/.test(py.stdout) && !/Missing|missing/.test(py.stdout), 'every citation resolves to a verified reference')
 }
+
+const methods = spawnSync('python3', ['scripts/test-paper-methods.py'], { cwd: ROOT, encoding: 'utf8' })
+ok(methods.status === 0, `paper methods: behavioral failure paths and missing-outcome denominators (${methods.stderr.trim().split('\n').pop()})`)
+const bundle = spawnSync('python3', ['-c', `import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); required=['build.py','src/preamble.tex','src/main.tex.in','figures/fig1_chain.pdf','data/inputs/station_daily.json','refs/entries.jsonl','CORRECTIONS.md']; assert all(p in z.namelist() for p in required), 'incomplete supplement'`, join(ROOT, 'public/paper', man.supplement.file)], { encoding: 'utf8' })
+ok(bundle.status === 0, 'supplement includes nested frozen inputs, preamble, figures and correction record')
 
 console.log(`${failed ? '✗' : '✓'} preprint: ${passed} checks passed${failed ? `, ${failed} FAILED` : ''}`)
 process.exit(failed ? 1 : 0)

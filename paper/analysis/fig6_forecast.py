@@ -13,13 +13,14 @@ def build():
     fig = plt.figure(figsize=(W2, 2.45))
     gs = fig.add_gridspec(1, 4, width_ratios=[1, 1, 1.28, 1.0], wspace=0.55)
     L0 = a4['leads']['0']
+    lim = max(50, 10 * np.ceil(max(obs.max(), raw.max(), cor.max()) / 10))
     for k, (fc, lab, key) in enumerate(((raw, 'CAMS as published', 'raw'), (cor, 'CAMS, bias-corrected', 'cor'))):
         ax = fig.add_subplot(gs[k]); panel(ax, 'ab'[k], dx=-0.2)
-        ax.hist2d(obs, fc, bins=[np.linspace(0, 50, 51)] * 2, cmap='Greys', norm=LogNorm(vmin=1, vmax=60), rasterized=True)
-        ax.plot([0, 50], [0, 50], color=VERMIL, lw=0.7); ax.set_xlim(0, 50); ax.set_ylim(0, 50); ax.set_aspect('equal')
+        ax.hist2d(obs, fc, bins=[np.linspace(0, lim, 61)] * 2, cmap='Greys', norm=LogNorm(vmin=1, vmax=60), rasterized=True)
+        ax.plot([0, lim], [0, lim], color=VERMIL, lw=0.7); ax.set_xlim(0, lim); ax.set_ylim(0, lim); ax.set_aspect('equal')
         ax.set_xlabel('observed (µg m$^{-3}$)'); ax.set_ylabel(f'{lab}\n(µg m$^{{-3}}$)', linespacing=0.78)
         m = L0[key]
-        ax.text(1.5, 48.5, f"bias {m['bias']:+.1f}\nMAE {m['mae']:.1f}", fontsize=6.4, va='top', linespacing=0.78)
+        ax.text(1.5, lim * .97, f"bias {m['bias']:+.1f}\nMAE {m['mae']:.1f}", fontsize=6.4, va='top', linespacing=0.78)
     # (c) paired MAE differences
     ax = fig.add_subplot(gs[2]); panel(ax, 'c', dx=-0.3)
     rows = []
@@ -51,7 +52,7 @@ def build():
     ax.plot([30, 50], [30, 50], color=GREY, lw=0.6); ax.axhline(37.5, color=GREY, lw=0.5, ls=(0, (2, 2)))
     ax.set_xlim(34, 50); ax.set_ylim(10, 50); ax.set_xlabel('forecast warned on (µg m$^{-3}$)', fontsize=6.6); ax.set_ylabel('highest station that day (µg m$^{-3}$)', fontsize=6.6)
     u = a4['warnings_unique']
-    ax.text(34.8, 49, f"{u['any_station_gt37_5']} of {u['evaluable']} warned province-days\nreached 37.5 at any station", fontsize=6.2, va='top', linespacing=0.78)
+    ax.text(34.8, 49, f"{u['any_station_gt37_5']} of {u['evaluable']} warned days\nabove 37.5 at a\nstation-day mean", fontsize=6.2, va='top', linespacing=0.78)
     save(fig, 'fig6_forecast')
 
 if __name__ == '__main__': build()

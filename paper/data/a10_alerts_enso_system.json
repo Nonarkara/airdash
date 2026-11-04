@@ -11,15 +11,6 @@
     "n": 70,
     "share": 0.9
    },
-   "day_mean_gt37_5": {
-    "ci": [
-     0.18759616606541468,
-     0.3734195973957731
-    ],
-    "k": 23,
-    "n": 85,
-    "share": 0.27058823529411763
-   },
    "evaluable": 85,
    "persistent_ge3h_of_6": {
     "ci": [
@@ -58,7 +49,19 @@
     }
    ],
    "top5_share": 0.3516483516483517,
-   "units_alerted": 37
+   "units_alerted": 37,
+   "withdrawn_day_mean_gt37_5": {
+    "legacy_result": {
+     "ci": [
+      0.18759616606541468,
+      0.3734195973957731
+     ],
+     "k": 23,
+     "n": 85,
+     "share": 0.27058823529411763
+    },
+    "status": "withdrawn: missing complete-day outcomes counted as non-hits; corrected denominator not reconstructed"
+   }
   },
   "alert_rules_all": {
    "aqi_level": 128,
@@ -81,15 +84,6 @@
     "k": 0,
     "n": 0,
     "share": null
-   },
-   "day_mean_gt37_5": {
-    "ci": [
-     0.0,
-     0.009535907480734128
-    ],
-    "k": 0,
-    "n": 399,
-    "share": 0.0
    },
    "evaluable": 399,
    "persistent_ge3h_of_6": {
@@ -129,7 +123,19 @@
     }
    ],
    "top5_share": 0.2315270935960591,
-   "units_alerted": 66
+   "units_alerted": 66,
+   "withdrawn_day_mean_gt37_5": {
+    "legacy_result": {
+     "ci": [
+      0.0,
+      0.009535907480734128
+     ],
+     "k": 0,
+     "n": 399,
+     "share": 0.0
+    },
+    "status": "withdrawn: missing complete-day outcomes counted as non-hits; corrected denominator not reconstructed"
+   }
   },
   "pm25_level_by_source": {
    "air4thai": 91,

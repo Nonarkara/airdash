@@ -1,10 +1,10 @@
 // The Air Library — bilingual reference reader: the air-bible sections and
 // the knowledge/ research notes, all searchable from one tab. TOC by default,
 // full-text search on 3+ chars, and a full-screen reader overlay for the docs.
-import { getJson } from '../cache.js?v=2.4.134'
-import { store, on, emit } from '../state.js?v=2.4.134'
-import { tr, pick } from '../i18n.js?v=2.4.134'
-import { el } from '../fmt.js?v=2.4.134'
+import { getJson } from '../cache.js?v=2.4.135'
+import { store, on, emit } from '../state.js?v=2.4.135'
+import { tr, pick } from '../i18n.js?v=2.4.135'
+import { el } from '../fmt.js?v=2.4.135'
 
 let toc = null
 let query = ''

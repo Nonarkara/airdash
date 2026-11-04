@@ -35,9 +35,9 @@ def build():
     names = [r['province'] for r in top]; fs = np.array([r['mean_foreign_share'] or 0 for r in top])
     y = np.arange(len(top))[::-1]
     ax.barh(y, 100 * fs, color=VERMIL, height=0.62, lw=0); ax.barh(y, 100 * (1 - fs), left=100 * fs, color='#C9CED3', height=0.62, lw=0)
-    ax.set_yticks(y); ax.set_yticklabels(names, fontsize=6.3); ax.set_xlim(0, 100); ax.set_xlabel('share of upwind fire power (%)')
+    ax.set_yticks(y); ax.set_yticklabels(names, fontsize=6.3); ax.set_xlim(0, 100); ax.set_xlabel('unweighted cell proxy share (%)')
     ax.text(0, len(top) - 0.35, 'outside Thailand', color=VERMIL, fontsize=6.3, fontweight='medium', va='bottom'); ax.text(100, len(top) - 0.35, 'inside', color=GREY, fontsize=6.3, ha='right', va='bottom')
-    ax.set_title('the ten provinces with most upwind fire', fontsize=6.6, loc='left', pad=12)
+    ax.set_title('top ten by weighted source index', fontsize=6.6, loc='left', pad=12)
     save(fig, 'fig5_geography')
 
 if __name__ == '__main__': build()

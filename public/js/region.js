@@ -1,8 +1,8 @@
-import { createRegionalWindView } from './regional-wind-view.js?v=2.4.134'
-import { fireView, fireOpacity } from './regional-fire-view.js?v=2.4.134'
-import { createPollutionField } from './layers/pollution-field.js?v=2.4.134'
-import { escapeHtml as esc } from './fmt.js?v=2.4.134'
-import { readPreference, writePreference } from './preferences.js?v=2.4.134'
+import { createRegionalWindView } from './regional-wind-view.js?v=2.4.135'
+import { fireView, fireOpacity } from './regional-fire-view.js?v=2.4.135'
+import { createPollutionField } from './layers/pollution-field.js?v=2.4.135'
+import { escapeHtml as esc } from './fmt.js?v=2.4.135'
+import { readPreference, writePreference } from './preferences.js?v=2.4.135'
 let lang=readPreference('ad_lang')==='th'?'th':'en'
 const tr=(th,en)=>lang==='th'?th:en
 const whole=[[-11,92],[28,142]]

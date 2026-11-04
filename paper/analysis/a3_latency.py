@@ -1,8 +1,8 @@
 """A3 — The clock from the field to the phone.
 
-Three hops, each measured from stored timestamps:
+Separate timestamp comparisons (notification delivery is not measured):
   1. PCD publication + our poll:   reading obs hour  ->  first time we saw it
-  2. Alert -> push batching:       alert raised     ->  Telegram broadcast sent
+  2. Alert -> next logged broadcast proxy:       alert raised     ->  Telegram broadcast sent
   3. Satellite fire availability:  VIIRS acquisition ->  first time we saw it"""
 import json, datetime as dt, re, os
 from common import *
@@ -43,6 +43,7 @@ def run():
         if 'Telegram broadcast sent' in line:
             try:
                 j = json.loads(line)
+                if j['ts'] >= CUT_UTC: continue
                 sends.append((utc(j['ts']), j.get('alerts', 0), j.get('chats', 0), j.get('failed', 0)))
             except Exception:
                 pass
@@ -56,7 +57,7 @@ def run():
             delays.append((st[i] - t).total_seconds() / 60)
         else:
             undelivered += 1
-    res['alert_to_telegram'] = {'alerts': len(alerts), 'delivered_within_3h': len(delays), 'no_broadcast_within_3h': undelivered,
+    res['alert_to_telegram'] = {'alerts': len(alerts), 'next_broadcast_within_3h': len(delays), 'no_broadcast_within_3h': undelivered,
                                  'broadcasts': len(sends), 'log_start': sends[0][0].isoformat() if sends else None,
                                  'median_min': quantile(delays, .5), 'p90_min': quantile(delays, .9), 'p95_min': quantile(delays, .95),
                                  'max_min': max(delays) if delays else None, 'share_le_5min': sum(1 for d in delays if d <= 5) / max(1, len(delays)),
@@ -76,12 +77,7 @@ def run():
             fl.append(m)
     res['firms_lag_ecdf'] = [[q, quantile(fl, q)] for q in [i / 100 for i in range(1, 100)]]
     res['firms_lag_min'] = {'n': len(fl), 'p05': quantile(fl, .05), 'median': quantile(fl, .5), 'p90': quantile(fl, .9), 'p95': quantile(fl, .95)}
-    # ---- end-to-end: median-of-sums is not the sum of medians, so simulate by pairing
-    # a random PCD lag with a random alert delay (they are independent hops).
-    import random
-    rng = random.Random(5)
-    tot = [rng.choice(lags) + rng.choice(delays) for _ in range(20000)] if delays else []
-    res['pm25_chain_total_min'] = {'median': quantile(tot, .5), 'p90': quantile(tot, .9), 'p95': quantile(tot, .95)} if tot else None
+    res['method_correction_v2'] = {'alert_to_telegram': 'Next logged broadcast timing only; no alert membership or recipient success join. Not hand-off or delivery latency.', 'pm25_chain_total_min': 'Withdrawn: independent random pairing does not reconstruct an alert chain.'}
     return res
 
 if __name__ == '__main__':

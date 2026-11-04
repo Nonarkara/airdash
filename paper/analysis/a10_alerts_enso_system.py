@@ -10,9 +10,11 @@ def km(a, b):
 
 def alerts():
     db = live(); res = {}
-    meta = json.load(open(os.path.join(INPUTS, 'station_meta.json')))
+    with open(os.path.join(INPUTS, 'station_meta.json')) as f:
+        meta = json.load(f)
     pos = {s: (m[3], m[4]) for s, m in meta.items() if m[3] is not None}
-    sd = {(s, d): v for s, d, v in json.load(open(os.path.join(INPUTS, 'station_daily.json')))}
+    with open(os.path.join(INPUTS, 'station_daily.json')) as f:
+        sd = {(s, d): v for s, d, v in json.load(f)}
     allrows = db.execute("select ts, station_key, severity, value, source from alerts where rule='pm25_level' and ts >= '2026-07-16T17:00' and ts < '2026-11-03T17:00' order by ts").fetchall()
     res['alert_rules_all'] = dict(collections.Counter(r[0] for r in db.execute("select rule from alerts where ts >= '2026-07-16T17:00' and ts < '2026-11-03T17:00'").fetchall()))
     res['pm25_level_by_source'] = dict(collections.Counter(r[4] for r in allrows))
@@ -26,7 +28,7 @@ def alerts():
         bys = collections.Counter(r[1] for r in rows)
         out['top5_share'] = sum(c for _, c in bys.most_common(5)) / max(1, len(rows))
         out['top5'] = [{'key': k, 'name': (meta.get(k) or [0, 0, k])[2], 'alerts': c} for k, c in bys.most_common(5)]
-        persist = corro = has_nb = dhit = n = 0
+        persist = corro = has_nb = dhit = daily_n = n = 0
         for ts, st, sev, val, _ in rows:
             t = dt.datetime.fromisoformat(ts.replace('Z', '+00:00')) + dt.timedelta(hours=7)
             h0 = t.replace(minute=0, second=0, microsecond=0, tzinfo=None)
@@ -43,11 +45,13 @@ def alerts():
             if dv is None and src == 'gistda_pm25':
                 dd_ = [v for h, v in hourly.get(st, {}).items() if h[:10] == h0.strftime('%Y-%m-%d')]
                 dv = sum(dd_) / len(dd_) if len(dd_) >= a1.MIN_HOURS else None
-            dhit += 1 if (dv is not None and dv > 37.5) else 0
+            if dv is not None:
+                daily_n += 1
+                dhit += int(dv > 37.5)
         out['evaluable'] = n
         out['persistent_ge3h_of_6'] = {'k': persist, 'n': n, 'share': persist / n if n else None, 'ci': wilson(persist, n) if n else None}
         out['corroborated_by_neighbor_ge25'] = {'k': corro, 'n': has_nb, 'share': corro / has_nb if has_nb else None, 'ci': wilson(corro, has_nb) if has_nb else None}
-        out['day_mean_gt37_5'] = {'k': dhit, 'n': n, 'share': dhit / n if n else None, 'ci': wilson(dhit, n) if n else None}
+        out['day_mean_gt37_5'] = {'k': dhit, 'n': daily_n, 'missing': n - daily_n, 'share': dhit / daily_n if daily_n else None, 'ci': wilson(dhit, daily_n) if daily_n else None, 'target': 'same calendar day; includes time before alert'}
         res[src] = out
     return res
 

@@ -10,9 +10,9 @@ INPUTS = os.path.join(OUT, 'inputs')   # frozen extracts the scripts below read 
 
 # Thresholds used throughout (sources in the manuscript's references).
 WHO_24H = 15.0       # WHO 2021 air quality guideline, 24-h PM2.5
-THAI_24H = 37.5      # Thai national 24-h PM2.5 standard since 2023-01-01
+THAI_24H = 37.5      # Thai national 24-h PM2.5 standard since 2023-06-01
 VERY_UNHEALTHY = 75.0
-FAULT_UG = 500.0     # readings at or above this are instrument faults, not air
+FAULT_UG = 500.0     # readings at or above this are screening exclusions, not diagnosed instrument faults
 MIN_HOURS = 18       # a station-day needs >= 18 of 24 hourly values
 # DATA CUTOFF: every analysis stops at midnight Bangkok, 3/4 November 2026, so a
 # rerun reproduces the numbers in the manuscript instead of chasing new rows.

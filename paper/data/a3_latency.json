@@ -1321,5 +1321,9 @@
  "telegram_chats_reached": [
   1,
   2
- ]
+ ],
+ "method_correction_v2": {
+  "alert_to_telegram": "Legacy key: next logged broadcast timing only; no alert membership or recipient success join. Not hand-off or delivery latency.",
+  "pm25_chain_total_min": "Withdrawn simulated independent-hop sum, not observed end-to-end latency."
+ }
 }

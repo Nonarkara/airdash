@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > it solved. If a feature is in the code but not in this log, it is in the
 > wrong place.
 
+## [2.4.135] — 2026-11-04 — Correct the preprint's scientific and reproducibility claims
+
+- Corrected preprint v2 preserves v1 and withdraws unsupported Telegram hand-off/simulated end-to-end latency and daily alert hit rates with invalid missing-outcome denominators. The extraction now separates valid daily outcomes; historical corrected rates remain uncomputed.
+- Forecast results are labelled retrospective, without reconstructed issue-time availability. Corrected extinction physics, legally binding treaty status, ground-feed/averaging caveats, fire-index units and foreign-share interpretation. Proposed seasonal tests are not described as executable preregistration.
+- Regenerated four figures, included all forecast pairs, and repaired the supplement with nested inputs, figure PDFs, preamble and build source. A PDF rebuilt from the extracted supplement; full statistical reproduction still requires unreleased databases/logs.
+- First page and bilingual viewer label this a corrected draft, not peer reviewed, with all-author approval pending. Contributions and funding remain author tasks. See `paper/CORRECTIONS.md` for the correction record.
+- Validation: 24 preprint guards (including behavioral failure paths and missing-day fixture), scoped frontend checks, independent review of PDF pages 1/5/8/10. No claim that all references were read in full.
+
+---
+
 ## [2.4.134] — 2026-11-04 — Preprint tab sizes itself when the drawer opens from a link
 
 - The Preprint viewer measured its width before the About drawer had been laid out when opened from `/#paper`, so every page came out zero-wide. It now re-sizes the pages as soon as the pane has a real width and whenever the window changes, unless the reader has chosen a zoom.
@@ -15,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [2.4.133] — 2026-11-04 — the preprint, and a Preprint tab to read it in
+
+> Scientific and reproducibility claims in this historical entry were corrected in 2.4.135 / preprint v2; the original daily-alert percentage and delivery implications are withdrawn.
 
 - New **Preprint** tab in the About drawer (`/#paper` deep link): "Nobody owns the haze", a two-column scientific preprint (Thiengburanathum & Arkaraprasertkul) built from this system's own 110-day record — source census, reliability incidents, forecast verification, upwind-fire replay, cameras and airport visibility, alert quality, and seven tests fixed before the 2026–27 season. The PDF is drawn on canvases by vendored pdf.js (`public/lib/pdfjs-4.10.38`, loaded only when the tab opens) because the CSP and `X-Frame-Options` forbid a native PDF frame. One 48 px sticky toolbar carries zoom, page, **Download PDF**, **Data & code** (zip of every number's source) and open-in-new-tab; phones open at 250 % with sideways panning; Thai readers get a two-line summary above the English PDF.
 - `paper/` holds the whole pipeline (analyses → `paper/data/*.json` → every number in the text → LaTeX → PDF) and the verified reference ledger. `_redirects` now passes `/paper/*` and `/lib/*` through the SPA catch-all; the server types `.mjs`, `.pdf` and `.zip`.

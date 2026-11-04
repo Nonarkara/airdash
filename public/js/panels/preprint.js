@@ -8,7 +8,7 @@
 //
 // /paper/manifest.json names the files and their sha256, written by
 // paper/publish.py; scripts/test-preprint.mjs proves it matches the bytes.
-import { store, on } from '../state.js?v=2.4.134'
+import { store, on } from '../state.js?v=2.4.135'
 
 const tr = (th, en) => (store.lang === 'th' ? th : en)
 const PDFJS = '/lib/pdfjs-4.10.38/pdf.min.mjs'
@@ -19,7 +19,7 @@ const MAX_CANVAS_PX = 3000      // device px: caps memory at high zoom on phones
 const NARROW = 700              // below this the two-column page is unreadable at fit-width
 
 const SUMMARY = {
-  th: 'พรีพรินต์ (ภาษาอังกฤษ) ถามว่าทีมเล็ก ๆ จะสร้างระบบเตือนหมอกควันแบบครบวงจรจากข้อมูลสาธารณะได้หรือไม่ และตรวจสอบข้อมูล 110 วันก่อนฤดูฝุ่น รวมถึงข้อบกพร่องของระบบเอง',
+  th: 'เอกสารอังกฤษ: ตรวจสอบข้อมูล 110 วันก่อนฤดูฝุ่น พร้อมข้อจำกัดของระบบและการพยากรณ์',
   en: '',
 }
 
@@ -45,7 +45,7 @@ function shell(root, m) {
   const btn = (cls, href, glyph, label, extra = {}) =>
     el('a', { class: `pp-btn ${cls}`, href, 'aria-label': label, title: label, ...extra }, el('span', { class: 'pp-glyph', 'aria-hidden': 'true' }, glyph), el('span', { class: 'pp-lbl' }, label))
   const bar = el('div', { class: 'pp-bar', role: 'toolbar', 'aria-label': tr('ตัวควบคุมเอกสาร', 'Document controls') },
-    el('p', { class: 'pp-id' }, el('b', {}, 'Nobody owns the haze'), ` · ${tr('พรีพรินต์', 'preprint')} ${m.version} · ${m.date} · ${tr('ยังไม่ผ่านการทบทวนโดยผู้ทรงคุณวุฒิ', 'not peer reviewed')}`),
+    el('p', { class: 'pp-id' }, el('b', {}, 'Nobody owns the haze'), ` · ${tr('พรีพรินต์', 'preprint')} ${m.version} · ${m.date} · ${tr('ฉบับแก้ไข · รอผู้เขียนทุกคนอนุมัติ · ยังไม่ผ่านผู้ทรงคุณวุฒิ', 'corrected draft · author approval pending · not peer reviewed')}`),
     el('button', { class: 'pp-tool', id: 'pp-out', 'aria-label': tr('ย่อ', 'Zoom out') }, '−'),
     el('output', { class: 'pp-zoom', id: 'pp-zoom', 'aria-live': 'polite' }),
     el('button', { class: 'pp-tool', id: 'pp-in', 'aria-label': tr('ขยาย', 'Zoom in') }, '+'),
@@ -55,7 +55,7 @@ function shell(root, m) {
     btn('', pdfUrl, '↗', open, { target: '_blank', rel: 'noopener' }),
   )
   // The PDF is English. Thai readers get the question and the finding up front.
-  const note = store.lang === 'th' ? el('p', { class: 'pp-note' }, SUMMARY.th) : null
+  const note = el('p', { class: 'pp-note' }, tr('ฉบับแก้ไข · รอผู้เขียนทุกคนอนุมัติ · ยังไม่ผ่านผู้ทรงคุณวุฒิ. ', 'Corrected draft · all-author approval pending · not peer reviewed. '), ...(store.lang === 'th' ? [SUMMARY.th] : []))
   const view = el('div', { class: 'pp-view', id: 'pp-view', tabindex: '0', role: 'document', 'aria-label': tr('เอกสาร PDF', 'PDF document') })
   const status = el('p', { class: 'pp-load', id: 'pp-load', role: 'status' }, tr('กำลังโหลดเอกสาร…', 'Loading the paper…'))
   root.replaceChildren(bar, ...(note ? [note] : []), status, view)
