@@ -8,7 +8,7 @@
 //
 // /paper/manifest.json names the files and their sha256, written by
 // paper/publish.py; scripts/test-preprint.mjs proves it matches the bytes.
-import { store, on } from '../state.js?v=2.4.133'
+import { store, on } from '../state.js?v=2.4.134'
 
 const tr = (th, en) => (store.lang === 'th' ? th : en)
 const PDFJS = '/lib/pdfjs-4.10.38/pdf.min.mjs'
@@ -63,7 +63,7 @@ function shell(root, m) {
   root.querySelector('#pp-in').addEventListener('click', () => zoomBy(1))
 }
 
-const columnWidth = () => Math.min(MAX_COLUMN, document.getElementById('pp-view')?.clientWidth || MAX_COLUMN)
+const columnWidth = () => Math.min(MAX_COLUMN, document.getElementById('pp-view')?.clientWidth || window.innerWidth || MAX_COLUMN)
 const baseZoomIndex = () => (columnWidth() < NARROW ? ZOOMS.indexOf(2.5) : 0)
 
 function paintZoom() {
@@ -117,7 +117,7 @@ function observe() {
 function zoomBy(step) {
   const next = Math.max(0, Math.min(ZOOMS.length - 1, state.zoom + step))
   if (next === state.zoom) return
-  state.zoom = next
+  state.zoom = next; state.userZoomed = true
   paintZoom(); sizeSlots(); observe()
 }
 
@@ -143,6 +143,15 @@ async function start() {
     state.zoom = baseZoomIndex()
     document.getElementById('pp-load').remove()
     paintZoom(); sizeSlots(); observe()
+    // The pane can be laid out after this runs (the drawer opens from a link, or the window is resized):
+    // when the viewer's real width arrives or changes, size the pages again.
+    state.lastWidth = view.clientWidth
+    new ResizeObserver(() => {
+      if (!view.clientWidth || view.clientWidth === state.lastWidth) return
+      state.lastWidth = view.clientWidth
+      if (!state.userZoomed) state.zoom = baseZoomIndex()
+      paintZoom(); sizeSlots(); observe()
+    }).observe(view)
   } catch (err) {
     state.started = false
     const m = state.manifest

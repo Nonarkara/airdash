@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > it solved. If a feature is in the code but not in this log, it is in the
 > wrong place.
 
+## [2.4.134] — 2026-11-04 — Preprint tab sizes itself when the drawer opens from a link
+
+- The Preprint viewer measured its width before the About drawer had been laid out when opened from `/#paper`, so every page came out zero-wide. It now re-sizes the pages as soon as the pane has a real width and whenever the window changes, unless the reader has chosen a zoom.
+
+---
+
 ## [2.4.133] — 2026-11-04 — the preprint, and a Preprint tab to read it in
 
 - New **Preprint** tab in the About drawer (`/#paper` deep link): "Nobody owns the haze", a two-column scientific preprint (Thiengburanathum & Arkaraprasertkul) built from this system's own 110-day record — source census, reliability incidents, forecast verification, upwind-fire replay, cameras and airport visibility, alert quality, and seven tests fixed before the 2026–27 season. The PDF is drawn on canvases by vendored pdf.js (`public/lib/pdfjs-4.10.38`, loaded only when the tab opens) because the CSP and `X-Frame-Options` forbid a native PDF frame. One 48 px sticky toolbar carries zoom, page, **Download PDF**, **Data & code** (zip of every number's source) and open-in-new-tab; phones open at 250 % with sideways panning; Thai readers get a two-line summary above the English PDF.
