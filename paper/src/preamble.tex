@@ -1,0 +1,61 @@
+\documentclass[10pt,twocolumn,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[scaled=.93]{helvet}
+\usepackage{microtype}
+\usepackage[a4paper,top=19mm,bottom=20mm,left=17mm,right=17mm,columnsep=7mm,headsep=6mm,footskip=9mm]{geometry}
+\usepackage[numbers,sort&compress,square]{natbib}
+\usepackage{booktabs,graphicx,xcolor,amsmath,array,tabularx,etoolbox,ragged2e,float}
+\usepackage[colorlinks=true,linkcolor=teal,citecolor=teal,urlcolor=teal,bookmarksnumbered=true,
+  pdftitle={Nobody owns the haze: an open, end-to-end warning system for Thailand, and its first 110 days},
+  pdfauthor={Pun Thiengburanathum; Non Arkaraprasertkul},
+  pdfsubject={Transboundary haze, PM2.5 monitoring and warning, Thailand},
+  pdfkeywords={haze; PM2.5; Thailand; early warning; transboundary pollution; open data; biomass burning},
+  pdfcreator={pdfLaTeX},pdflang={en}]{hyperref}
+\definecolor{teal}{HTML}{0E4A5E}\definecolor{vermil}{HTML}{C75300}\definecolor{ink}{HTML}{1B1F23}\definecolor{grey}{HTML}{5F6670}\definecolor{rule}{HTML}{C9CED3}
+\makeatletter
+% ---------- type
+\renewcommand\normalsize{\@setfontsize\normalsize{9.6}{11.7}}
+\renewcommand\small{\@setfontsize\small{8.6}{10.4}}
+\renewcommand\footnotesize{\@setfontsize\footnotesize{7.8}{9.4}}
+\setlength{\parindent}{1.15em}\setlength{\parskip}{0pt}
+\widowpenalty=10000\clubpenalty=10000\brokenpenalty=2000
+\raggedbottom
+\sloppy\emergencystretch=1.5em
+% ---------- headings
+\renewcommand\section{\@startsection{section}{1}{\z@}{-2.7ex \@plus -.5ex \@minus -.2ex}{.9ex \@plus .15ex}{\sffamily\bfseries\color{ink}\fontsize{9.9}{12}\selectfont}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}{-1.9ex \@plus -.4ex \@minus -.2ex}{-.55em}{\sffamily\bfseries\color{teal}\fontsize{8.7}{10.4}\selectfont}}
+\renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}{-1.4ex}{-.5em}{\sffamily\bfseries\fontsize{8.4}{10}\selectfont}}
+\renewcommand\thesection{\arabic{section}}
+\renewcommand\thesubsection{\thesection.\arabic{subsection}}
+\renewcommand\@seccntformat[1]{\csname the#1\endcsname\hspace{.55em}}
+\renewcommand\figurename{Fig.}
+% ---------- captions (sans, small, bold label)
+\setlength\abovecaptionskip{4pt}\setlength\belowcaptionskip{0pt}
+\long\def\@makecaption#1#2{\vskip\abovecaptionskip{\sffamily\fontsize{7.7}{9.3}\selectfont\color{ink}\textbf{#1.}\hspace{.3em}#2\par}\vskip\belowcaptionskip}
+\renewcommand\fnum@figure{\textbf{Fig.~\thefigure}}
+\renewcommand\fnum@table{\textbf{Table~\thetable}}
+\setlength\textfloatsep{9pt plus 2pt minus 2pt}\setlength\dbltextfloatsep{9pt plus 2pt minus 2pt}\setlength\intextsep{8pt}
+\renewcommand\topfraction{.9}\renewcommand\dbltopfraction{.9}\renewcommand\textfraction{.07}\renewcommand\floatpagefraction{.8}\renewcommand\dblfloatpagefraction{.8}
+% ---------- lists (rare)
+\def\@listi{\leftmargin\leftmargini\parsep 0pt\topsep 3pt\itemsep 1pt}
+% ---------- bibliography
+\renewcommand\bibfont{\sffamily\fontsize{7.2}{8.6}\selectfont}
+\setlength\bibsep{1.2pt}
+\renewenvironment{thebibliography}[1]{\section*{References}\begingroup\sffamily\fontsize{7.1}{8.5}\selectfont\list{\@biblabel{\@arabic\c@enumiv}}{\settowidth\labelwidth{\@biblabel{99}}\leftmargin\labelwidth\advance\leftmargin\labelsep\itemsep0pt\parsep0pt\usecounter{enumiv}\let\p@enumiv\@empty\renewcommand\theenumiv{\@arabic\c@enumiv}}\sloppy\clubpenalty4000\@clubpenalty\clubpenalty\widowpenalty4000\sfcode`\.\@m}{\def\@noitemerr{\@latex@warning{Empty `thebibliography' environment}}\endlist\endgroup}
+% ---------- running heads and feet
+\def\ps@sci{\let\@mkboth\@gobbletwo
+  \def\@oddhead{\sffamily\fontsize{7}{8}\selectfont\color{grey}\textbf{AirDash} preprint\hfill Nobody owns the haze}
+  \def\@evenhead{\sffamily\fontsize{7}{8}\selectfont\color{grey}Thiengburanathum \& Arkaraprasertkul\hfill Nobody owns the haze}
+  \def\@oddfoot{\sffamily\fontsize{7}{8}\selectfont\color{grey}Version 1 \textperiodcentered{} 4 November 2026 \textperiodcentered{} not peer reviewed\hfill\thepage}
+  \def\@evenfoot{\sffamily\fontsize{7}{8}\selectfont\color{grey}\thepage\hfill Version 1 \textperiodcentered{} 4 November 2026 \textperiodcentered{} not peer reviewed}}
+\def\ps@first{\let\@mkboth\@gobbletwo
+  \def\@oddhead{\sffamily\fontsize{7.4}{9}\selectfont\color{vermil}\textbf{PREPRINT}\hspace{.6em}\color{grey}Not peer reviewed. Posted on air.nonarkara.org, 4 November 2026.\hfill\color{grey}Version 1}
+  \def\@evenhead{\@oddhead}
+  \def\@oddfoot{\sffamily\fontsize{7}{8}\selectfont\color{grey}\hfill\thepage}\def\@evenfoot{\@oddfoot}}
+\pagestyle{sci}
+\makeatother
+\Urlmuskip=0mu plus 2mu
+\def\UrlBreaks{\do\/\do\-\do\.\do\:\do\=\do\?\do\&\do\_\do\0\do\1\do\2\do\3\do\4\do\5\do\6\do\7\do\8\do\9\do\a\do\b\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m\do\n\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z}
+\newcommand{\pmu}{\textmu g\,m\textsuperscript{$-$3}}

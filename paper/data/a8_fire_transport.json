@@ -1,0 +1,298 @@
+{
+ "active_all_foreign": 163,
+ "active_mostly_foreign": 287,
+ "active_mostly_foreign_ci": [
+  0.42613427414427174,
+  0.5046048873842087
+ ],
+ "active_mostly_foreign_share": 0.4651539708265802,
+ "active_province_days": 617,
+ "active_share": 0.7284533648170012,
+ "box_detections": 13779,
+ "box_share_of_region": 0.07016319983705477,
+ "by_day": {
+  "2026-10-21": {
+   "frp_inside_mw": 414.14000000000016,
+   "frp_outside_mw": 3890.879999999995,
+   "inside": 96,
+   "outside": 767
+  },
+  "2026-10-22": {
+   "frp_inside_mw": 556.3299999999999,
+   "frp_outside_mw": 4639.679999999998,
+   "inside": 142,
+   "outside": 1029
+  },
+  "2026-10-23": {
+   "frp_inside_mw": 638.7400000000005,
+   "frp_outside_mw": 6836.490000000013,
+   "inside": 145,
+   "outside": 1392
+  },
+  "2026-10-24": {
+   "frp_inside_mw": 733.08,
+   "frp_outside_mw": 9975.39999999999,
+   "inside": 164,
+   "outside": 1744
+  },
+  "2026-10-25": {
+   "frp_inside_mw": 393.3799999999998,
+   "frp_outside_mw": 5351.289999999999,
+   "inside": 76,
+   "outside": 1186
+  },
+  "2026-10-26": {
+   "frp_inside_mw": 28.260000000000005,
+   "frp_outside_mw": 5495.009999999997,
+   "inside": 14,
+   "outside": 1078
+  },
+  "2026-10-27": {
+   "frp_inside_mw": 264.50000000000006,
+   "frp_outside_mw": 2725.94,
+   "inside": 64,
+   "outside": 645
+  },
+  "2026-10-28": {
+   "frp_inside_mw": 434.5499999999999,
+   "frp_outside_mw": 3894.0499999999997,
+   "inside": 105,
+   "outside": 929
+  },
+  "2026-10-29": {
+   "frp_inside_mw": 322.5100000000001,
+   "frp_outside_mw": 2913.309999999998,
+   "inside": 87,
+   "outside": 631
+  },
+  "2026-10-30": {
+   "frp_inside_mw": 280.43,
+   "frp_outside_mw": 2741.9500000000025,
+   "inside": 69,
+   "outside": 666
+  },
+  "2026-10-31": {
+   "frp_inside_mw": 360.10999999999984,
+   "frp_outside_mw": 2989.4599999999996,
+   "inside": 81,
+   "outside": 754
+  },
+  "2026-11-01": {
+   "frp_inside_mw": 542.7899999999998,
+   "frp_outside_mw": 3772.470000000004,
+   "inside": 119,
+   "outside": 703
+  },
+  "2026-11-02": {
+   "frp_inside_mw": 408.83,
+   "frp_outside_mw": 1940.1000000000004,
+   "inside": 86,
+   "outside": 453
+  },
+  "2026-11-03": {
+   "frp_inside_mw": 405.8199999999998,
+   "frp_outside_mw": 1659.8099999999988,
+   "inside": 100,
+   "outside": 454
+  }
+ },
+ "by_satellite": {
+  "N": 4242,
+  "N20": 4935,
+  "N21": 4602
+ },
+ "cell_days_inside_ci_day_bootstrap": [
+  0.1110881716393993,
+  0.15654601756735093
+ ],
+ "cell_days_inside_share": 0.13646055437100213,
+ "cell_days_total": 5159,
+ "cells_by_day": {
+  "2026-10-21": {
+   "inside": 54,
+   "outside": 314
+  },
+  "2026-10-22": {
+   "inside": 70,
+   "outside": 382
+  },
+  "2026-10-23": {
+   "inside": 69,
+   "outside": 419
+  },
+  "2026-10-24": {
+   "inside": 80,
+   "outside": 461
+  },
+  "2026-10-25": {
+   "inside": 47,
+   "outside": 384
+  },
+  "2026-10-26": {
+   "inside": 5,
+   "outside": 375
+  },
+  "2026-10-27": {
+   "inside": 29,
+   "outside": 260
+  },
+  "2026-10-28": {
+   "inside": 60,
+   "outside": 324
+  },
+  "2026-10-29": {
+   "inside": 45,
+   "outside": 262
+  },
+  "2026-10-30": {
+   "inside": 34,
+   "outside": 264
+  },
+  "2026-10-31": {
+   "inside": 36,
+   "outside": 274
+  },
+  "2026-11-01": {
+   "inside": 66,
+   "outside": 270
+  },
+  "2026-11-02": {
+   "inside": 51,
+   "outside": 227
+  },
+  "2026-11-03": {
+   "inside": 58,
+   "outside": 239
+  }
+ },
+ "days": [
+  "2026-10-21",
+  "2026-10-22",
+  "2026-10-23",
+  "2026-10-24",
+  "2026-10-25",
+  "2026-10-26",
+  "2026-10-27",
+  "2026-10-28",
+  "2026-10-29",
+  "2026-10-30",
+  "2026-10-31",
+  "2026-11-01",
+  "2026-11-02",
+  "2026-11-03"
+ ],
+ "detections": 13779,
+ "frp_outside_ci_day_bootstrap": [
+  0.8886094963897446,
+  0.9295924035438453
+ ],
+ "frp_outside_share": 0.9104855012381342,
+ "inside_share": 0.09783003120690907,
+ "inside_share_ci_iid_wilson": [
+  0.09298111385625149,
+  0.10290312865903845
+ ],
+ "inside_thailand": 1348,
+ "level_counts": {
+  "high": 3,
+  "low": 427,
+  "moderate": 187,
+  "none": 230
+ },
+ "next_day_pm25_vs_upwind_log": {
+  "ci_cluster_bootstrap": [
+   0.06985269228002612,
+   0.4858980944231297
+  ],
+  "days": 9,
+  "pairs": 527,
+  "provinces": 59,
+  "rho_province_centred_only": 0.26503067731134466,
+  "rho_within_province": 0.2817665456959185
+ },
+ "next_day_pm25_vs_upwind_rest": {
+  "ci": [
+   0.012122649903911013,
+   0.4608021564887509
+  ],
+  "days": 9,
+  "provinces": 51,
+  "rho": 0.24141906694020018,
+  "rho_province_centred_only": 0.28682295089343723
+ },
+ "next_day_pm25_vs_upwind_upper_north": {
+  "ci": [
+   0.09978506180085624,
+   0.7279257659948628
+  ],
+  "days": 9,
+  "provinces": 8,
+  "rho": 0.531757209926224,
+  "rho_province_centred_only": 0.07236753856472167
+ },
+ "province_days": 847,
+ "region_detections_all": 196385,
+ "top_provinces_by_upwind": [
+  {
+   "active_days": 11,
+   "mean_foreign_share": 0.4756529958946608,
+   "mean_mw": 186.64437984932482,
+   "province": "Phrae"
+  },
+  {
+   "active_days": 11,
+   "mean_foreign_share": 0.7341442935008476,
+   "mean_mw": 177.26586576472326,
+   "province": "Nan"
+  },
+  {
+   "active_days": 11,
+   "mean_foreign_share": 0.6778976307690144,
+   "mean_mw": 176.5290649256791,
+   "province": "Chiang Rai"
+  },
+  {
+   "active_days": 9,
+   "mean_foreign_share": 0.9661480066473752,
+   "mean_mw": 173.5184084173363,
+   "province": "Amnat Charoen"
+  },
+  {
+   "active_days": 9,
+   "mean_foreign_share": 0.7964293338744446,
+   "mean_mw": 170.44512846602916,
+   "province": "Yasothon"
+  },
+  {
+   "active_days": 11,
+   "mean_foreign_share": 0.999089138576154,
+   "mean_mw": 165.39469064633263,
+   "province": "Bueng Kan"
+  },
+  {
+   "active_days": 11,
+   "mean_foreign_share": 0.9634777563712749,
+   "mean_mw": 162.30110369754277,
+   "province": "Nong Khai"
+  },
+  {
+   "active_days": 11,
+   "mean_foreign_share": 0.5695482941557474,
+   "mean_mw": 161.31737815201916,
+   "province": "Lampang"
+  },
+  {
+   "active_days": 11,
+   "mean_foreign_share": 0.4087503149984771,
+   "mean_mw": 160.96240416789564,
+   "province": "Mae Hong Son"
+  },
+  {
+   "active_days": 11,
+   "mean_foreign_share": 0.28234395086217157,
+   "mean_mw": 159.29394062927483,
+   "province": "Tak"
+  }
+ ],
+ "weighted_foreign_share": 0.49525711122434823
+}

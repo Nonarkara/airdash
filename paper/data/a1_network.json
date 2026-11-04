@@ -1,0 +1,678 @@
+{
+ "by_month": {
+  "2026-07": {
+   "gt15": 771,
+   "gt37_5": 0,
+   "mean": 14.166635828957922,
+   "station_days": 1898
+  },
+  "2026-08": {
+   "gt15": 803,
+   "gt37_5": 1,
+   "mean": 11.4085487602461,
+   "station_days": 4155
+  },
+  "2026-09": {
+   "gt15": 1147,
+   "gt37_5": 5,
+   "mean": 12.975101552339348,
+   "station_days": 3731
+  },
+  "2026-10": {
+   "gt15": 2507,
+   "gt37_5": 24,
+   "mean": 17.271987708773345,
+   "station_days": 4141
+  },
+  "2026-11": {
+   "gt15": 255,
+   "gt37_5": 1,
+   "mean": 17.299848057147265,
+   "station_days": 432
+  }
+ },
+ "by_region": {
+  "rest": {
+   "median": 13.413636363636364,
+   "n": 13365,
+   "q90": 21.602500000000003,
+   "share_gt37_5": 0.0023194912083800974
+  },
+  "upper_north": {
+   "median": 11.554166666666667,
+   "n": 992,
+   "q90": 18.952765151515152,
+   "share_gt37_5": 0.0
+  }
+ },
+ "completeness": {
+  "max": 0.9917855598789451,
+  "median": 0.969303934284479,
+  "min": 0.00432338953739732,
+  "n_ge_90pct": 132,
+  "n_lt_50pct": 17,
+  "q25": 0.9074794638996974,
+  "q75": 0.9783830523130134
+ },
+ "completeness_by_station": {
+  "02t": 0.9287,
+  "03t": 0.2655,
+  "05t": 0.3277,
+  "08t": 0.9589,
+  "100t": 0.8867,
+  "101t": 0.9823,
+  "102t": 0.949,
+  "103t": 0.9395,
+  "104t": 0.9671,
+  "105t": 0.9888,
+  "106t": 0.9888,
+  "107t": 0.9823,
+  "108t": 0.9784,
+  "109t": 0.9658,
+  "110t": 0.9879,
+  "111t": 0.949,
+  "112t": 0.9749,
+  "113t": 0.9615,
+  "114t": 0.971,
+  "115t": 0.9849,
+  "116t": 0.9771,
+  "117t": 0.9775,
+  "118t": 0.9827,
+  "119t": 0.9814,
+  "120t": 0.9767,
+  "121t": 0.9801,
+  "12t": 0.3476,
+  "13t": 0.9399,
+  "14t": 0.9797,
+  "16t": 0.9745,
+  "17t": 0.9862,
+  "18t": 0.4522,
+  "19t": 0.7168,
+  "20t": 0.9343,
+  "21t": 0.8573,
+  "22t": 0.9654,
+  "24t": 0.7648,
+  "25t": 0.9633,
+  "26t": 0.5581,
+  "27t": 0.8054,
+  "28t": 0.9131,
+  "29t": 0.8158,
+  "30t": 0.9291,
+  "31t": 0.9269,
+  "32t": 0.0043,
+  "33t": 0.9153,
+  "34t": 0.7428,
+  "35t": 0.9831,
+  "36t": 0.9918,
+  "37t": 0.4738,
+  "38t": 0.4777,
+  "39t": 0.4786,
+  "40t": 0.9827,
+  "41t": 0.46,
+  "42t": 0.4674,
+  "43t": 0.4877,
+  "44t": 0.4855,
+  "46t": 0.9715,
+  "47t": 0.978,
+  "50t": 0.9135,
+  "52t": 0.9602,
+  "53t": 0.9581,
+  "54t": 0.3822,
+  "57t": 0.9498,
+  "58t": 0.9814,
+  "59t": 0.9883,
+  "60t": 0.8833,
+  "61t": 0.987,
+  "62t": 0.511,
+  "63t": 0.5102,
+  "67t": 0.946,
+  "68t": 0.9888,
+  "69t": 0.9762,
+  "70t": 0.9676,
+  "71t": 0.8867,
+  "72t": 0.6874,
+  "73t": 0.9568,
+  "74t": 0.5171,
+  "75t": 0.5919,
+  "76t": 0.265,
+  "77t": 0.9109,
+  "78t": 0.8232,
+  "79t": 0.7505,
+  "80t": 0.4682,
+  "81t": 0.8444,
+  "82t": 0.9866,
+  "83t": 0.9715,
+  "84t": 0.9862,
+  "85t": 0.9801,
+  "86t": 0.8188,
+  "87t": 0.9831,
+  "88t": 0.8923,
+  "89t": 0.4639,
+  "90t": 0.9477,
+  "91t": 0.9745,
+  "92t": 0.8967,
+  "93t": 0.9144,
+  "94t": 0.9883,
+  "95t": 0.9767,
+  "96t": 0.9654,
+  "97t": 0.9857,
+  "98t": 0.9836,
+  "99t": 0.962,
+  "bkp100t": 0.9762,
+  "bkp101t": 0.9792,
+  "bkp102t": 0.9792,
+  "bkp103t": 0.9382,
+  "bkp104t": 0.9784,
+  "bkp105t": 0.9555,
+  "bkp114t": 0.7406,
+  "bkp115t": 0.9706,
+  "bkp116t": 0.981,
+  "bkp117t": 0.9676,
+  "bkp118t": 0.888,
+  "bkp119t": 0.9533,
+  "bkp120t": 0.9801,
+  "bkp121t": 0.9745,
+  "bkp122t": 0.9741,
+  "bkp123t": 0.9628,
+  "bkp124t": 0.978,
+  "bkp125t": 0.8785,
+  "bkp126t": 0.9771,
+  "bkp127t": 0.9667,
+  "bkp128t": 0.7415,
+  "bkp129t": 0.9607,
+  "bkp130t": 0.9762,
+  "bkp131t": 0.9719,
+  "bkp133t": 0.9563,
+  "bkp56t": 0.9767,
+  "bkp57t": 0.952,
+  "bkp58t": 0.9784,
+  "bkp59t": 0.9754,
+  "bkp60t": 0.9784,
+  "bkp61t": 0.9784,
+  "bkp62t": 0.971,
+  "bkp63t": 0.9784,
+  "bkp64t": 0.9758,
+  "bkp65t": 0.9693,
+  "bkp66t": 0.9252,
+  "bkp67t": 0.978,
+  "bkp69t": 0.9715,
+  "bkp70t": 0.9784,
+  "bkp71t": 0.978,
+  "bkp72t": 0.9792,
+  "bkp73t": 0.9697,
+  "bkp74t": 0.978,
+  "bkp75t": 0.9818,
+  "bkp76t": 0.8435,
+  "bkp77t": 0.978,
+  "bkp78t": 0.978,
+  "bkp79t": 0.978,
+  "bkp80t": 0.9788,
+  "bkp81t": 0.9792,
+  "bkp82t": 0.978,
+  "bkp83t": 0.9788,
+  "bkp84t": 0.9784,
+  "bkp85t": 0.9775,
+  "bkp86t": 0.9788,
+  "bkp87t": 0.9754,
+  "bkp88t": 0.962,
+  "bkp89t": 0.9792,
+  "bkp90t": 0.9788,
+  "bkp91t": 0.978,
+  "bkp92t": 0.9771,
+  "bkp93t": 0.9788,
+  "bkp94t": 0.9148,
+  "bkp95t": 0.9788,
+  "bkp96t": 0.9801,
+  "bkp97t": 0.9555,
+  "bkp98t": 0.9784,
+  "bkp99t": 0.9792,
+  "o10": 0.9447,
+  "o61": 0.9645,
+  "o63": 0.904,
+  "o72": 0.0463
+ },
+ "completeness_unconditional_median": 0.8643939393939394,
+ "daily_mean": {
+  "max": 151.84782608695653,
+  "median": 13.3,
+  "q90": 21.39572463768116,
+  "q99": 30.600111111111115
+ },
+ "exceed_37_5_corroborated": 13,
+ "exceed_37_5_detail": [
+  {
+   "day": "2026-10-09",
+   "isolated": false,
+   "neighbor_median": 26.2,
+   "neighbors": 82,
+   "pm25": 42.2,
+   "station": "08t"
+  },
+  {
+   "day": "2026-10-09",
+   "isolated": false,
+   "neighbor_median": 40.2,
+   "neighbors": 1,
+   "pm25": 39.9,
+   "station": "121t"
+  },
+  {
+   "day": "2026-10-09",
+   "isolated": false,
+   "neighbor_median": 26.3,
+   "neighbors": 66,
+   "pm25": 40.9,
+   "station": "27t"
+  },
+  {
+   "day": "2026-10-10",
+   "isolated": false,
+   "neighbor_median": 21.9,
+   "neighbors": 64,
+   "pm25": 40.8,
+   "station": "27t"
+  },
+  {
+   "day": "2026-10-17",
+   "isolated": true,
+   "neighbor_median": 19.1,
+   "neighbors": 64,
+   "pm25": 41.6,
+   "station": "27t"
+  },
+  {
+   "day": "2026-10-23",
+   "isolated": false,
+   "neighbor_median": 25.7,
+   "neighbors": 46,
+   "pm25": 39.8,
+   "station": "27t"
+  },
+  {
+   "day": "2026-11-03",
+   "isolated": false,
+   "neighbor_median": 24.9,
+   "neighbors": 65,
+   "pm25": 43.2,
+   "station": "27t"
+  },
+  {
+   "day": "2026-09-24",
+   "isolated": true,
+   "neighbor_median": 13.7,
+   "neighbors": 6,
+   "pm25": 39.3,
+   "station": "28t"
+  },
+  {
+   "day": "2026-10-03",
+   "isolated": true,
+   "neighbor_median": 17.0,
+   "neighbors": 6,
+   "pm25": 42.6,
+   "station": "28t"
+  },
+  {
+   "day": "2026-10-23",
+   "isolated": false,
+   "neighbor_median": 21.5,
+   "neighbors": 4,
+   "pm25": 38.2,
+   "station": "29t"
+  },
+  {
+   "day": "2026-10-31",
+   "isolated": true,
+   "neighbor_median": 15.3,
+   "neighbors": 5,
+   "pm25": 37.8,
+   "station": "29t"
+  },
+  {
+   "day": "2026-09-12",
+   "isolated": true,
+   "neighbor_median": 12.8,
+   "neighbors": 5,
+   "pm25": 55.9,
+   "station": "31t"
+  },
+  {
+   "day": "2026-09-30",
+   "isolated": true,
+   "neighbor_median": 21.6,
+   "neighbors": 3,
+   "pm25": 48.7,
+   "station": "31t"
+  },
+  {
+   "day": "2026-10-01",
+   "isolated": true,
+   "neighbor_median": 17.3,
+   "neighbors": 3,
+   "pm25": 42.7,
+   "station": "31t"
+  },
+  {
+   "day": "2026-10-03",
+   "isolated": true,
+   "neighbor_median": 18.4,
+   "neighbors": 5,
+   "pm25": 43.6,
+   "station": "31t"
+  },
+  {
+   "day": "2026-10-04",
+   "isolated": true,
+   "neighbor_median": 18.3,
+   "neighbors": 4,
+   "pm25": 59.1,
+   "station": "31t"
+  },
+  {
+   "day": "2026-09-07",
+   "isolated": true,
+   "neighbor_median": 12.9,
+   "neighbors": 7,
+   "pm25": 151.8,
+   "station": "33t"
+  },
+  {
+   "day": "2026-09-08",
+   "isolated": true,
+   "neighbor_median": 13.7,
+   "neighbors": 6,
+   "pm25": 110.3,
+   "station": "33t"
+  },
+  {
+   "day": "2026-10-09",
+   "isolated": false,
+   "neighbor_median": null,
+   "neighbors": 0,
+   "pm25": 40.3,
+   "station": "62t"
+  },
+  {
+   "day": "2026-10-09",
+   "isolated": false,
+   "neighbor_median": 39.9,
+   "neighbors": 1,
+   "pm25": 40.2,
+   "station": "63t"
+  },
+  {
+   "day": "2026-08-22",
+   "isolated": true,
+   "neighbor_median": 13.1,
+   "neighbors": 6,
+   "pm25": 43.8,
+   "station": "74t"
+  },
+  {
+   "day": "2026-10-09",
+   "isolated": false,
+   "neighbor_median": null,
+   "neighbors": 0,
+   "pm25": 40.0,
+   "station": "78t"
+  },
+  {
+   "day": "2026-10-13",
+   "isolated": false,
+   "neighbor_median": null,
+   "neighbors": 0,
+   "pm25": 37.8,
+   "station": "79t"
+  },
+  {
+   "day": "2026-10-12",
+   "isolated": false,
+   "neighbor_median": null,
+   "neighbors": 0,
+   "pm25": 46.2,
+   "station": "88t"
+  },
+  {
+   "day": "2026-10-13",
+   "isolated": false,
+   "neighbor_median": 25.6,
+   "neighbors": 80,
+   "pm25": 38.1,
+   "station": "bkp100t"
+  },
+  {
+   "day": "2026-10-09",
+   "isolated": false,
+   "neighbor_median": 26.3,
+   "neighbors": 81,
+   "pm25": 37.8,
+   "station": "bkp105t"
+  },
+  {
+   "day": "2026-10-09",
+   "isolated": false,
+   "neighbor_median": 26.2,
+   "neighbors": 82,
+   "pm25": 37.6,
+   "station": "bkp65t"
+  },
+  {
+   "day": "2026-10-02",
+   "isolated": false,
+   "neighbor_median": 24.2,
+   "neighbors": 76,
+   "pm25": 38.8,
+   "station": "bkp69t"
+  },
+  {
+   "day": "2026-10-09",
+   "isolated": false,
+   "neighbor_median": 26.2,
+   "neighbors": 82,
+   "pm25": 45.4,
+   "station": "bkp69t"
+  },
+  {
+   "day": "2026-10-02",
+   "isolated": false,
+   "neighbor_median": 24.2,
+   "neighbors": 76,
+   "pm25": 40.3,
+   "station": "bkp73t"
+  },
+  {
+   "day": "2026-10-09",
+   "isolated": false,
+   "neighbor_median": 26.2,
+   "neighbors": 82,
+   "pm25": 37.8,
+   "station": "bkp81t"
+  }
+ ],
+ "exceed_37_5_isolated": 12,
+ "exceed_37_5_unverifiable": 6,
+ "exceed_gt_75": {
+  "ci": [
+   3.8203250540098325e-05,
+   0.0005078273496686757
+  ],
+  "k": 2,
+  "n": 14357,
+  "share": 0.00013930486870516125
+ },
+ "exceed_gt_thai37_5": {
+  "ci": [
+   0.0015216362083888273,
+   0.0030631549453758503
+  ],
+  "k": 31,
+  "n": 14357,
+  "share": 0.0021592254649299993
+ },
+ "exceed_gt_us35": {
+  "k": 51,
+  "n": 14357,
+  "share": 0.0035522741519816116
+ },
+ "exceed_gt_who15": {
+  "ci": [
+   0.37398955540753104,
+   0.38988221981474364
+  ],
+  "k": 5483,
+  "n": 14357,
+  "share": 0.38190429755519956
+ },
+ "feed_alive_hours": 2313,
+ "feed_alive_share": 0.8761363636363636,
+ "pm25_clean_max": 460.9,
+ "pm25_fault_by_station": {
+  "24t": 3,
+  "33t": 8
+ },
+ "pm25_fault_share": 2.9937838161490142e-05,
+ "pm25_fault_stations": 2,
+ "pm25_fault_values": 11,
+ "pm25_raw_max": 950.0,
+ "pm25_to_pm10_ratio": {
+  "median": 0.4575757575757576,
+  "median_pm25_ge25": 0.47735849056603774,
+  "n": 144381,
+  "n_pm25_ge25": 5710,
+  "q25": 0.3631578947368421,
+  "q75": 0.5291666666666667
+ },
+ "pm25_values_total": 367428,
+ "province_day_max_n": 5996,
+ "province_days_gt37_5": 25,
+ "provinces_with_pm10_station": 36,
+ "provinces_with_pm25_station": 74,
+ "share_pm25_stations_without_pm10": 0.6171428571428572,
+ "station_days": 14357,
+ "stations_both": 67,
+ "stations_pm10": 67,
+ "stations_pm25": 175,
+ "stations_with_any_gt37_5": 19,
+ "stations_with_daily_data": 161,
+ "thai_aqi_category_counts": {
+  "affects_37_5_75": 29,
+  "excellent_le15": 8874,
+  "good_15_25": 4903,
+  "moderate_25_37_5": 549,
+  "worse_gt75": 2
+ },
+ "top_station_days": [
+  {
+   "day": "2026-09-07",
+   "name": "Health Promotion Hospital Bankhaohin",
+   "pm25": 151.8,
+   "province": "Chon Buri",
+   "station": "33t"
+  },
+  {
+   "day": "2026-09-08",
+   "name": "Health Promotion Hospital Bankhaohin",
+   "pm25": 110.3,
+   "province": "Chon Buri",
+   "station": "33t"
+  },
+  {
+   "day": "2026-10-04",
+   "name": "Field Crop Research Center, Rayong",
+   "pm25": 59.1,
+   "province": "Rayong",
+   "station": "31t"
+  },
+  {
+   "day": "2026-09-12",
+   "name": "Field Crop Research Center, Rayong",
+   "pm25": 55.9,
+   "province": "Rayong",
+   "station": "31t"
+  },
+  {
+   "day": "2026-09-30",
+   "name": "Field Crop Research Center, Rayong",
+   "pm25": 48.7,
+   "province": "Rayong",
+   "station": "31t"
+  },
+  {
+   "day": "2026-10-12",
+   "name": "Meteorological stations, Nakhon Phanom",
+   "pm25": 46.2,
+   "province": "Nakhon Phanom",
+   "station": "88t"
+  },
+  {
+   "day": "2026-10-09",
+   "name": "Bank of Ayuthaya Head Office Yan Nawa, Bangkok",
+   "pm25": 45.4,
+   "province": "Bangkok",
+   "station": "bkp69t"
+  },
+  {
+   "day": "2026-08-22",
+   "name": "Government Complex, Rayong",
+   "pm25": 43.8,
+   "province": "Rayong",
+   "station": "74t"
+  },
+  {
+   "day": "2026-10-03",
+   "name": "Field Crop Research Center, Rayong",
+   "pm25": 43.6,
+   "province": "Rayong",
+   "station": "31t"
+  },
+  {
+   "day": "2026-11-03",
+   "name": "Samut Sakhon Wittayalai School",
+   "pm25": 43.2,
+   "province": "Samut Sakhon",
+   "station": "27t"
+  },
+  {
+   "day": "2026-10-01",
+   "name": "Field Crop Research Center, Rayong",
+   "pm25": 42.7,
+   "province": "Rayong",
+   "station": "31t"
+  },
+  {
+   "day": "2026-10-03",
+   "name": "Pluakdaeng District Health Office",
+   "pm25": 42.6,
+   "province": "Rayong",
+   "station": "28t"
+  }
+ ],
+ "window": {
+  "days": 110,
+  "end": "2026-11-03T23:00:00",
+  "hours": 2640,
+  "start": "2026-07-17T00:00:00"
+ },
+ "worst_day_provinces_gt37_5": [
+  [
+   "2026-10-09",
+   6
+  ],
+  [
+   "2026-10-13",
+   2
+  ],
+  [
+   "2026-10-23",
+   2
+  ],
+  [
+   "2026-10-02",
+   1
+  ],
+  [
+   "2026-10-10",
+   1
+  ]
+ ]
+}

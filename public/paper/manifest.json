@@ -1,0 +1,16 @@
+{
+ "slug": "nobody-owns-the-haze",
+ "version": "v1",
+ "date": "2026-11-04",
+ "pages": 11,
+ "pdf": {
+  "file": "nobody-owns-the-haze-v1.pdf",
+  "bytes": 469158,
+  "sha256": "774936f3e9eb63b0c0721d4c2f305cf3635c53b97d456beb343811c4a0a44eb9"
+ },
+ "supplement": {
+  "file": "nobody-owns-the-haze-v1-supplement.zip",
+  "bytes": 190538,
+  "sha256": "7efc261a0346f4e89db1accf079c2679da05b159307b95620915b8b8dec12f08"
+ }
+}

@@ -1,0 +1,402 @@
+{
+ "intervals_ms": {
+  "cctv_health": 1800000,
+  "haze_vision": 1800000,
+  "dustboy": 3600000,
+  "citizen_social": 1200000,
+  "air4thai": 900000,
+  "openmeteo": 21600000,
+  "openmeteo_aq": 21600000,
+  "thaiwater_rain": 600000,
+  "enso": 43200000,
+  "twin_flood": 600000,
+  "tmd_relay": 900000,
+  "burnArea": 86400000,
+  "firmsRegional": 21600000,
+  "aeronet": 86400000,
+  "news": 1800000,
+  "imerg": 1800000,
+  "gistda_pm25": 3600000,
+  "pcd_noise": 1800000,
+  "cropsdrought": 21600000
+ },
+ "adapter_lines": {
+  "aeronet": 214,
+  "air4thai": 119,
+  "aq-history": 104,
+  "burn-area": 162,
+  "cctvHealth": 204,
+  "cctvHealthStore": 50,
+  "cctvRegistry": 365,
+  "citizen-social": 443,
+  "cropsdrought": 184,
+  "dustboy": 248,
+  "enso": 81,
+  "firms-regional": 165,
+  "gdacs-flood": 63,
+  "gistda-pm25": 118,
+  "imerg": 164,
+  "iticCctv": 277,
+  "metarVisibility": 386,
+  "news": 143,
+  "openmeteo-aq": 150,
+  "openmeteo": 132,
+  "pcd-noise": 233,
+  "regional-wind": 36,
+  "thaiwater-common": 73,
+  "thaiwater-rain": 133,
+  "tmd-relay": 60,
+  "twin-flood": 83
+ },
+ "sources": [
+  {
+   "id": "regional_wind",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "Regional hourly winds",
+   "agency_en": "Open-Meteo",
+   "cadence_en": "6-hourly retrieval / hourly valid times",
+   "url": "https://open-meteo.com/en/docs",
+   "metrics": [
+    "wind_speed_10m",
+    "wind_direction_10m",
+    "wind_speed_850hPa",
+    "wind_direction_850hPa",
+    "precipitation",
+    "geopotential_height_850hPa"
+   ]
+  },
+  {
+   "id": "air4thai",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "Air4Thai AQI / PM2.5 (PCD)",
+   "agency_en": "Pollution Control Department (PCD)",
+   "cadence_en": "hourly reports; checked every 15 minutes",
+   "url": "https://air4thai.pcd.go.th/",
+   "metrics": [
+    "pm25",
+    "pm10",
+    "o3",
+    "co",
+    "no2",
+    "so2",
+    "aqi"
+   ]
+  },
+  {
+   "id": "openmeteo",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "Open-Meteo weather forecast (rain/wind)",
+   "agency_en": "Open-Meteo (77 province centroids)",
+   "cadence_en": "every 3 hours",
+   "url": "https://open-meteo.com/",
+   "metrics": [
+    "precip_fc_d0",
+    "precip_fc_d1",
+    "precip_fc_d2",
+    "precip_fc_48h",
+    "precip_prob_d0",
+    "precip_prob_d1",
+    "precip_prob_d2",
+    "precip_prob_24h",
+    "precip_prob_48h",
+    "wind_fc_kmh",
+    "wind_fc_d1"
+   ]
+  },
+  {
+   "id": "openmeteo_aq",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "CAMS air-quality forecast (Open-Meteo AQ API)",
+   "agency_en": "Copernicus CAMS via Open-Meteo",
+   "cadence_en": "every 3 hours (12-hourly model cycles upstream)",
+   "url": "https://open-meteo.com/en/docs/air-quality-api",
+   "metrics": [
+    "pm25_fc_24h",
+    "pm25_fc_48h",
+    "pm25_fc_72h",
+    "pm10_fc_24h",
+    "dust_fc_24h"
+   ]
+  },
+  {
+   "id": "thaiwater_rain",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "Multi-agency rain gauges (ThaiWater)",
+   "agency_en": "Multi-agency via HII",
+   "cadence_en": "every 10 minutes",
+   "url": "https://www.thaiwater.net/",
+   "metrics": [
+    "rain_24h",
+    "rain_1h"
+   ]
+  },
+  {
+   "id": "imerg",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "GPM IMERG satellite rain (NASA)",
+   "agency_en": "NASA GES DISC · Global Precipitation Measurement",
+   "cadence_en": "every 30 minutes (IMERG Early ~4h latency)",
+   "url": "https://gpm.nasa.gov/data",
+   "metrics": [
+    "sat_rain_mmh"
+   ]
+  },
+  {
+   "id": "enso",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "ENSO / ONI ocean state (NOAA)",
+   "agency_en": "NOAA Climate Prediction Center",
+   "cadence_en": "every 12 hours",
+   "url": "https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php",
+   "metrics": [
+    "oni_anom"
+   ]
+  },
+  {
+   "id": "news",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "Dust / PM2.5 news RSS",
+   "agency_en": "Google News TH · Khaosod",
+   "cadence_en": "every 30 minutes",
+   "url": "https://news.google.com/",
+   "metrics": []
+  },
+  {
+   "id": "gistda_pm25",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "GISTDA PM2.5 satellite–ground fusion",
+   "agency_en": "GISTDA",
+   "cadence_en": "hourly",
+   "url": "https://pm25.gistda.or.th/",
+   "metrics": [
+    "pm25",
+    "pm25_avg24h"
+   ]
+  },
+  {
+   "id": "firms_regional",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "NASA FIRMS regional fire detections",
+   "agency_en": "NASA",
+   "cadence_en": "every 6 hours",
+   "url": "https://firms.modaps.eosdis.nasa.gov/",
+   "metrics": [
+    "frp"
+   ]
+  },
+  {
+   "id": "dustboy",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "DustBoy · CMU community sensors",
+   "agency_en": "Chiang Mai University",
+   "cadence_en": "hourly when configured",
+   "url": "https://open-api.cmuccdc.org/",
+   "metrics": [
+    "pm25"
+   ]
+  },
+  {
+   "id": "gsmap",
+   "kind": "satellite",
+   "stored": false,
+   "name_en": "GSMaP satellite precipitation (JAXA/GPM)",
+   "agency_en": "JAXA Earth Observation Research Center · GPM",
+   "cadence_en": "hourly · 0.1° global",
+   "url": "https://earth.jaxa.jp/en/data/index.html",
+   "metrics": [
+    "precipitation_rate"
+   ]
+  },
+  {
+   "id": "himawari",
+   "kind": "satellite",
+   "stored": false,
+   "name_en": "Himawari-9 cloud & haze imagery (JAXA/JMA)",
+   "agency_en": "JAXA Himawari Monitor (P-Tree) · JMA",
+   "cadence_en": "10-minute full disk",
+   "url": "https://www.eorc.jaxa.jp/ptree/",
+   "metrics": []
+  },
+  {
+   "id": "modis",
+   "kind": "satellite",
+   "stored": false,
+   "name_en": "MODIS Terra true colour (NASA)",
+   "agency_en": "NASA Global Imagery Browse Services",
+   "cadence_en": "daily",
+   "url": "https://gibs.earthdata.nasa.gov/",
+   "metrics": []
+  },
+  {
+   "id": "aod",
+   "kind": "satellite",
+   "stored": false,
+   "name_en": "Aerosol Optical Depth (MODIS Terra+Aqua)",
+   "agency_en": "NASA Global Imagery Browse Services · MODIS combined",
+   "cadence_en": "daily (processed overnight · shows yesterday)",
+   "url": "https://gibs.earthdata.nasa.gov/",
+   "metrics": []
+  },
+  {
+   "id": "nightlights",
+   "kind": "satellite",
+   "stored": false,
+   "name_en": "VIIRS Day/Night Band night lights (NASA)",
+   "agency_en": "NASA Global Imagery Browse Services · Suomi-NPP VIIRS",
+   "cadence_en": "nightly (processed ~2 days behind)",
+   "url": "https://gibs.earthdata.nasa.gov/",
+   "metrics": []
+  },
+  {
+   "id": "rainviewer",
+   "kind": "satellite",
+   "stored": false,
+   "name_en": "RainViewer weather radar mosaic",
+   "agency_en": "RainViewer (regional radar composite)",
+   "cadence_en": "~10 min · animated",
+   "url": "https://www.rainviewer.com/",
+   "metrics": []
+  },
+  {
+   "id": "servir_aq",
+   "kind": "reference",
+   "stored": false,
+   "name_en": "SERVIR-Mekong Air Quality Explorer",
+   "agency_en": "ADPC · NASA · USAID",
+   "cadence_en": "daily (satellite + model)",
+   "url": "https://aqatmekong-servir.adpc.net/",
+   "metrics": []
+  },
+  {
+   "id": "openaq",
+   "kind": "reference",
+   "stored": false,
+   "name_en": "OpenAQ open air-quality API",
+   "agency_en": "OpenAQ (global aggregator of official monitors)",
+   "cadence_en": "hourly",
+   "url": "https://openaq.org/",
+   "metrics": []
+  },
+  {
+   "id": "gdacs_flood",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "GDACS regional flood reports",
+   "agency_en": "GDACS / European Commission JRC / UN OCHA",
+   "cadence_en": "every 30 minutes",
+   "url": "https://www.gdacs.org/",
+   "metrics": [
+    "flood_event",
+    "alertlevel",
+    "event_period"
+   ]
+  },
+  {
+   "id": "twin_flood",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "FloodDash twin — per-province flood verdict",
+   "agency_en": "FloodDash (flood.nonarkara.org) · upstream HII, RID, TMD, GISTDA",
+   "cadence_en": "every 10 minutes",
+   "url": "https://flood.nonarkara.org/api/twin",
+   "metrics": [
+    "level",
+    "stations_l5",
+    "rain_24h_mm",
+    "wetness_band",
+    "eta_hours"
+   ]
+  },
+  {
+   "id": "tmd_relay",
+   "kind": "pipeline",
+   "stored": true,
+   "name_en": "TMD weather — 7-day forecast + 125 synoptic stations (via the FloodDash twin)",
+   "agency_en": "Thai Meteorological Department · ingested once by FloodDash",
+   "cadence_en": "every 15 min (3-hourly upstream)",
+   "url": "https://flood.nonarkara.org/api/weather",
+   "metrics": [
+    "tmax",
+    "tmin",
+    "rain_pct",
+    "cond",
+    "temp_c",
+    "rh_pct",
+    "wind_kmh",
+    "visibility_km",
+    "rain_24h_mm"
+   ]
+  },
+  {
+   "id": "waqi",
+   "kind": "reference",
+   "stored": false,
+   "name_en": "WAQI — World Air Quality Index",
+   "agency_en": "World Air Quality Index Project",
+   "cadence_en": "hourly",
+   "url": "https://aqicn.org/",
+   "metrics": []
+  },
+  {
+   "id": "pcd_history",
+   "kind": "reference",
+   "stored": false,
+   "name_en": "PCD historical open-data catalog",
+   "agency_en": "PCD / GD Catalog",
+   "cadence_en": "provider-dependent",
+   "url": "https://gdcatalog.go.th/organization/a87accea-8395-4e8c-a17a-17614794b803",
+   "metrics": []
+  },
+  {
+   "id": "bma",
+   "kind": "reference",
+   "stored": false,
+   "name_en": "BMA local alerts and monitoring",
+   "agency_en": "Bangkok Metropolitan Administration",
+   "cadence_en": "provider-dependent",
+   "url": "https://greener.bangkok.go.th/en/pm2-5/",
+   "metrics": []
+  },
+  {
+   "id": "airgradient",
+   "kind": "reference",
+   "stored": false,
+   "name_en": "AirGradient community sensors",
+   "agency_en": "AirGradient",
+   "cadence_en": "provider-dependent",
+   "url": "https://www.airgradient.com/",
+   "metrics": []
+  },
+  {
+   "id": "era5",
+   "kind": "reference",
+   "stored": false,
+   "name_en": "ERA5 meteorological reanalysis",
+   "agency_en": "Copernicus / ECMWF",
+   "cadence_en": "provider-dependent",
+   "url": "https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels",
+   "metrics": []
+  },
+  {
+   "id": "hysplit",
+   "kind": "reference",
+   "stored": false,
+   "name_en": "NOAA HYSPLIT transport model",
+   "agency_en": "NOAA ARL",
+   "cadence_en": "provider-dependent",
+   "url": "https://www.ready.noaa.gov/HYSPLIT.php",
+   "metrics": []
+  }
+ ]
+}

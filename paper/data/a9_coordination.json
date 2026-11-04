@@ -1,0 +1,112 @@
+{
+ "above_25.0": {
+  "both": 42,
+  "gistda": 144,
+  "n": 5748,
+  "pcd": 93
+ },
+ "above_37.5": {
+  "both": 0,
+  "gistda": 0,
+  "n": 5748,
+  "pcd": 7
+ },
+ "adapter_lines": {
+  "aeronet": 214,
+  "air4thai": 119,
+  "aq-history": 104,
+  "burn-area": 162,
+  "cctvHealth": 204,
+  "cctvHealthStore": 50,
+  "cctvRegistry": 365,
+  "citizen-social": 443,
+  "cropsdrought": 184,
+  "dustboy": 248,
+  "enso": 81,
+  "firms-regional": 165,
+  "gdacs-flood": 63,
+  "gistda-pm25": 118,
+  "imerg": 164,
+  "iticCctv": 277,
+  "metarVisibility": 386,
+  "news": 143,
+  "openmeteo": 132,
+  "openmeteo-aq": 150,
+  "pcd-noise": 233,
+  "regional-wind": 36,
+  "thaiwater-common": 73,
+  "thaiwater-rain": 133,
+  "tmd-relay": 60,
+  "twin-flood": 83
+ },
+ "cams_pooled_ratio_obs_over_cams": 1.6199595339863515,
+ "category_agreement": {
+  "cross_tab": {
+   "0->0": 3342,
+   "0->1": 924,
+   "0->2": 7,
+   "1->0": 235,
+   "1->1": 1052,
+   "1->2": 95,
+   "2->0": 5,
+   "2->1": 41,
+   "2->2": 40,
+   "3->0": 1,
+   "3->1": 4,
+   "3->2": 2
+  },
+  "gistda_higher": 0.17849686847599164,
+  "gistda_lower": 0.05010438413361169,
+  "kappa": 0.4939089472290125,
+  "same_category": 0.7713987473903967
+ },
+ "gistda_province_days": 7392,
+ "gistda_provinces": 77,
+ "paired_province_days": 5748,
+ "paired_provinces": 68,
+ "pcd_province_days": 5996,
+ "pcd_vs_gistda": {
+  "gistda_median": 13.324388677610552,
+  "loa": [
+   -4.769087322001791,
+   8.690254772393104
+  ],
+  "mae": 3.0601820184599005,
+  "mean_diff_gistda_minus_pcd": 1.9605837251956557,
+  "pcd_median": 11.48975,
+  "rho": 0.7574550269869755,
+  "rho_ci_cluster": [
+   0.7240952367246529,
+   0.7915521623915726
+  ],
+  "sd": 3.4335056363252283
+ },
+ "provinces_total": 77,
+ "provinces_with_pm10": 36,
+ "provinces_without_station": [
+  "76",
+  "82",
+  "85"
+ ],
+ "stations_per_province": {
+  "bangkok_count": 79,
+  "bangkok_share": 0.4514285714285714,
+  "max": 79,
+  "max_province": "10",
+  "median": 1.0,
+  "provinces_with_station": 74,
+  "total": 175,
+  "with_exactly_1": 60
+ },
+ "top3_province_station_share": 0.5142857142857142,
+ "upper_north_stations": {
+  "50": 2,
+  "51": 1,
+  "52": 4,
+  "54": 1,
+  "55": 2,
+  "56": 1,
+  "57": 2,
+  "58": 1
+ }
+}

@@ -1,0 +1,150 @@
+{
+ "aerosol_attributed_hours": 0,
+ "airports": 18,
+ "airports_in_station_table": 34,
+ "airports_with_pcd_station_within_25km": 15,
+ "causes": {
+  "clear": 27,
+  "precip": 4,
+  "unknown": 3
+ },
+ "metar_first": "2026-10-11T02",
+ "metar_hours": 6543,
+ "metar_last": "2026-11-03T23",
+ "p_reduced_by_band": [
+  {
+   "ci": [
+    0.17990489467535595,
+    0.2314489498421297
+   ],
+   "hi": 10,
+   "lo": 0,
+   "n": 939,
+   "reduced": 192,
+   "share": 0.20447284345047922
+  },
+  {
+   "ci": [
+    0.16857397351345557,
+    0.2074086843052694
+   ],
+   "hi": 15,
+   "lo": 10,
+   "n": 1549,
+   "reduced": 290,
+   "share": 0.18721755971594578
+  },
+  {
+   "ci": [
+    0.18515217155648037,
+    0.22272665249244675
+   ],
+   "hi": 25,
+   "lo": 15,
+   "n": 1761,
+   "reduced": 358,
+   "share": 0.20329358319136853
+  },
+  {
+   "ci": [
+    0.5819065869074816,
+    0.6956262611516731
+   ],
+   "hi": 37.5,
+   "lo": 25,
+   "n": 270,
+   "reduced": 173,
+   "share": 0.6407407407407407
+  },
+  {
+   "ci": [
+    0.3156688550440403,
+    0.6143055184171362
+   ],
+   "hi": 500,
+   "lo": 37.5,
+   "n": 39,
+   "reduced": 18,
+   "share": 0.46153846153846156
+  }
+ ],
+ "p_reduced_by_band_cluster": [
+  {
+   "airports": 10,
+   "ci": [
+    0.10712751595483554,
+    0.2416241294864927
+   ],
+   "hi": 10,
+   "hours": 939,
+   "largest_airport_hour_share": 0.3972310969116081,
+   "lo": 0,
+   "share": 0.20447284345047922,
+   "share_without_largest": 0.18197879858657243
+  },
+  {
+   "airports": 13,
+   "ci": [
+    0.08721865014309928,
+    0.3151930818124406
+   ],
+   "hi": 15,
+   "hours": 1549,
+   "largest_airport_hour_share": 0.197546804389929,
+   "lo": 10,
+   "share": 0.18721755971594578,
+   "share_without_largest": 0.2252614641995173
+  },
+  {
+   "airports": 14,
+   "ci": [
+    0.10334644034962293,
+    0.34668665213499594
+   ],
+   "hi": 25,
+   "hours": 1761,
+   "largest_airport_hour_share": 0.18057921635434412,
+   "lo": 15,
+   "share": 0.20329358319136853,
+   "share_without_largest": 0.2286902286902287
+  },
+  {
+   "airports": 5,
+   "ci": [
+    0.2537313432835821,
+    0.7238095238095238
+   ],
+   "hi": 37.5,
+   "hours": 270,
+   "largest_airport_hour_share": 0.762962962962963,
+   "lo": 25,
+   "share": 0.6407407407407407,
+   "share_without_largest": 0.328125
+  },
+  {
+   "airports": 2,
+   "ci": null,
+   "hi": 500,
+   "hours": 39,
+   "largest_airport_hour_share": 0.7692307692307693,
+   "lo": 37.5,
+   "share": 0.46153846153846156,
+   "share_without_largest": 0.5555555555555556
+  }
+ ],
+ "pair_airports": 14,
+ "pair_pm25_max": 51.1,
+ "pair_pm25_median": 14.4,
+ "pairs": 4558,
+ "pairs_below_ceiling": 1031,
+ "share_at_ceiling_ge9_9": 0.8144581996026288,
+ "share_below_5km": 0.02185541800397371,
+ "spearman_vis_vs_pm25_below_ceiling": {
+  "airports": 14,
+  "ci_cluster_bootstrap_by_airport": [
+   -0.06998524418316139,
+   0.24418232465576234
+  ],
+  "rho": 0.1765494039816632
+ }
+}

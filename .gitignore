@@ -39,3 +39,4 @@ data/cctv-frames/
 # the provenance + column dictionary lives in knowledge/tableau-datasets.md,
 # which IS committed. Re-download with the session trick in that file.
 data/research/
+paper/build/

@@ -1,0 +1,197 @@
+{
+ "alerts": {
+  "air4thai": {
+   "alerts": 91,
+   "corroborated_by_neighbor_ge25": {
+    "ci": [
+     0.8076708506230581,
+     0.9507106988263228
+    ],
+    "k": 63,
+    "n": 70,
+    "share": 0.9
+   },
+   "day_mean_gt37_5": {
+    "ci": [
+     0.18759616606541468,
+     0.3734195973957731
+    ],
+    "k": 23,
+    "n": 85,
+    "share": 0.27058823529411763
+   },
+   "evaluable": 85,
+   "persistent_ge3h_of_6": {
+    "ci": [
+     0.6390772468503565,
+     0.8224190018186512
+    ],
+    "k": 63,
+    "n": 85,
+    "share": 0.7411764705882353
+   },
+   "top5": [
+    {
+     "alerts": 8,
+     "key": "31t",
+     "name": "Field Crop Research Center, Rayong"
+    },
+    {
+     "alerts": 7,
+     "key": "28t",
+     "name": "Pluakdaeng District Health Office"
+    },
+    {
+     "alerts": 6,
+     "key": "bkp62t",
+     "name": "Odeon Circus"
+    },
+    {
+     "alerts": 6,
+     "key": "27t",
+     "name": "Samut Sakhon Wittayalai School"
+    },
+    {
+     "alerts": 5,
+     "key": "bkp65t",
+     "name": "Samyan Mitrtown"
+    }
+   ],
+   "top5_share": 0.3516483516483517,
+   "units_alerted": 37
+  },
+  "alert_rules_all": {
+   "aqi_level": 128,
+   "pm25_all_clear": 512,
+   "pm25_forecast": 21,
+   "pm25_level": 497,
+   "pm25_spike_suppressed": 4,
+   "washout_rain": 45811
+  },
+  "alert_value_median": 39.54262337266709,
+  "alerts_per_day": {
+   "days_with_alerts": 74,
+   "max": 41,
+   "median": 3.0
+  },
+  "gistda_pm25": {
+   "alerts": 406,
+   "corroborated_by_neighbor_ge25": {
+    "ci": null,
+    "k": 0,
+    "n": 0,
+    "share": null
+   },
+   "day_mean_gt37_5": {
+    "ci": [
+     0.0,
+     0.009535907480734128
+    ],
+    "k": 0,
+    "n": 399,
+    "share": 0.0
+   },
+   "evaluable": 399,
+   "persistent_ge3h_of_6": {
+    "ci": [
+     0.37114310071682954,
+     0.4675030997499565
+    ],
+    "k": 167,
+    "n": 399,
+    "share": 0.41854636591478694
+   },
+   "top5": [
+    {
+     "alerts": 24,
+     "key": "pv_74",
+     "name": "pv_74"
+    },
+    {
+     "alerts": 18,
+     "key": "pv_11",
+     "name": "pv_11"
+    },
+    {
+     "alerts": 18,
+     "key": "pv_21",
+     "name": "pv_21"
+    },
+    {
+     "alerts": 17,
+     "key": "pv_12",
+     "name": "pv_12"
+    },
+    {
+     "alerts": 17,
+     "key": "pv_73",
+     "name": "pv_73"
+    }
+   ],
+   "top5_share": 0.2315270935960591,
+   "units_alerted": 66
+  },
+  "pm25_level_by_source": {
+   "air4thai": 91,
+   "gistda_pm25": 406
+  }
+ },
+ "enso": {
+  "jjas2026": {
+   "ASO": 2.46,
+   "JAS": 2.16,
+   "JJA": 1.8,
+   "MJJ": 1.39
+  },
+  "latest": {
+   "anom": 2.46,
+   "season": "ASO",
+   "year": 2026
+  },
+  "max_ASO": [
+   2.46,
+   2026
+  ],
+  "n_ASO_years": 77,
+  "rank_of_latest_among_all_ASO": 77,
+  "seasons": {
+   "2024": {
+    "DJF": 1.84,
+    "FMA": 1.18,
+    "JFM": 1.53,
+    "MAM": 0.77
+   },
+   "2025": {
+    "DJF": -0.46,
+    "FMA": -0.08,
+    "JFM": -0.22,
+    "MAM": 0.02
+   },
+   "2026": {
+    "DJF": -0.39,
+    "FMA": 0.11,
+    "JFM": -0.21,
+    "MAM": 0.46
+   }
+  }
+ },
+ "system": {
+  "api_routes": 85,
+  "authors": [
+   "298 Dr Non Arkaraprasertkul",
+   "  44 Mavis",
+   "   3 Dr Non Arkara",
+   "   2 Cursor Agent",
+   "   2 Agentic AI Research (Axiom)"
+  ],
+  "commits": 349,
+  "db_mb": 1474,
+  "first_commit": "2026-07-16",
+  "loc_css": 9390,
+  "loc_frontend_js": 29372,
+  "loc_server": 30009,
+  "loc_tests": 10064,
+  "npm_dependencies": 0,
+  "test_files": 97
+ }
+}

@@ -1,0 +1,454 @@
+{
+ "by_month_km2": {
+  "202401": 5600.1504,
+  "202402": 6802.990400000001,
+  "202403": 5822.334400000001,
+  "202404": 5228.4624,
+  "202411": 817.9344,
+  "202412": 2696.6528000000003,
+  "202501": 3475.8064,
+  "202502": 3144.6464,
+  "202503": 5720.7344,
+  "202504": 1662.7328,
+  "202511": 78.912,
+  "202512": 1215.3792,
+  "202601": 6070.715200000001,
+  "202602": 4594.3792,
+  "202603": 3939.9072,
+  "202604": 3754.3520000000003
+ },
+ "concentration": {
+  "2024": {
+   "gini": 0.5710443380290968,
+   "provinces_with_burning": 62,
+   "top10_share": 0.520814551838835,
+   "top5": [
+    [
+     "Lop Buri",
+     2481.4336000000003
+    ],
+    [
+     "Nakhon Ratchasima",
+     2181.8352
+    ],
+    [
+     "Nakhon Sawan",
+     2068.4224
+    ],
+    [
+     "Phetchabun",
+     1268.5536
+    ],
+    [
+     "Udon Thani",
+     748.2304
+    ]
+   ],
+   "top5_share": 0.37300667159615875
+  },
+  "2025": {
+   "gini": 0.6392397188695,
+   "provinces_with_burning": 62,
+   "top10_share": 0.6032216122342887,
+   "top5": [
+    [
+     "Nakhon Sawan",
+     1815.856
+    ],
+    [
+     "Lop Buri",
+     1769.1712
+    ],
+    [
+     "Nakhon Ratchasima",
+     1278.7968
+    ],
+    [
+     "Phetchabun",
+     894.2496
+    ],
+    [
+     "Phichit",
+     622.7136
+    ]
+   ],
+   "top5_share": 0.45564293426412034
+  },
+  "2026": {
+   "gini": 0.5830842098436828,
+   "provinces_with_burning": 62,
+   "top10_share": 0.5339348766614528,
+   "top5": [
+    [
+     "Lop Buri",
+     1979.5728000000001
+    ],
+    [
+     "Nakhon Sawan",
+     1840.5504
+    ],
+    [
+     "Nakhon Ratchasima",
+     1719.056
+    ],
+    [
+     "Phichit",
+     912.0576000000001
+    ],
+    [
+     "Phetchabun",
+     906.5168
+    ]
+   ],
+   "top5_share": 0.4007632164130223
+  }
+ },
+ "crop_mix_elsewhere": {
+  "cane": 0.4335966300986127,
+  "corn": 0.079269744471068,
+  "mixed": 0.002283472310881205,
+  "paddy": 0.4848501531194381
+ },
+ "crop_mix_jan_apr": {
+  "2024": {
+   "cane": 0.41055096863564605,
+   "corn": 0.10773791774733808,
+   "mixed": 0.0038381955957791924,
+   "paddy": 0.47787291802123666
+  },
+  "2025": {
+   "cane": 0.44011779558866376,
+   "corn": 0.11788722014978663,
+   "mixed": 0.00408308530754246,
+   "paddy": 0.4379118989540072
+  },
+  "2026": {
+   "cane": 0.3827444556653672,
+   "corn": 0.10871642016851835,
+   "mixed": 0.0036873629363508745,
+   "paddy": 0.5048517612297636
+  }
+ },
+ "crop_mix_upper_north": {
+  "cane": 0.04539311004655738,
+  "corn": 0.570308832876294,
+  "mixed": 0.026831245774912017,
+  "paddy": 0.3574668113022367
+ },
+ "jan_apr_km2": {
+  "2024": 23453.9376,
+  "2025": 14003.92,
+  "2026": 18359.353600000002
+ },
+ "jan_apr_months": {
+  "2024": [
+   "202401",
+   "202402",
+   "202403",
+   "202404"
+  ],
+  "2025": [
+   "202501",
+   "202502",
+   "202503",
+   "202504"
+  ],
+  "2026": [
+   "202601",
+   "202602",
+   "202603",
+   "202604"
+  ]
+ },
+ "month_matrix_km2": {
+  "1": {
+   "2024": 5600.1504,
+   "2025": 3475.8064,
+   "2026": 6070.715200000001
+  },
+  "2": {
+   "2024": 6802.990400000001,
+   "2025": 3144.6464,
+   "2026": 4594.3792
+  },
+  "3": {
+   "2024": 5822.334400000001,
+   "2025": 5720.7344,
+   "2026": 3939.9072
+  },
+  "4": {
+   "2024": 5228.4624,
+   "2025": 1662.7328,
+   "2026": 3754.3520000000003
+  }
+ },
+ "months": [
+  "202401",
+  "202402",
+  "202403",
+  "202404",
+  "202411",
+  "202412",
+  "202501",
+  "202502",
+  "202503",
+  "202504",
+  "202511",
+  "202512",
+  "202601",
+  "202602",
+  "202603",
+  "202604"
+ ],
+ "peak_month": "202402",
+ "province_totals_km2": {
+  "2024": {
+   "Amnat Charoen": 113.1952,
+   "Ang Thong": 86.6944,
+   "Bangkok": 13.860800000000001,
+   "Bueng Kan": 70.5472,
+   "Buri Ram": 474.8976,
+   "Chachoengsao": 111.328,
+   "Chai Nat": 503.8768,
+   "Chaiyaphum": 664.7984,
+   "Chanthaburi": 15.4688,
+   "Chiang Mai": 251.3776,
+   "Chiang Rai": 266.648,
+   "Chon Buri": 33.419200000000004,
+   "Kalasin": 232.0944,
+   "Kamphaeng Phet": 553.4576000000001,
+   "Kanchanaburi": 732.4448,
+   "Khon Kaen": 650.5872,
+   "Lampang": 293.576,
+   "Lamphun": 38.675200000000004,
+   "Loei": 468.5792,
+   "Lop Buri": 2481.4336000000003,
+   "Mae Hong Son": 53.668800000000005,
+   "Maha Sarakham": 217.1808,
+   "Mukdahan": 62.2224,
+   "Nakhon Nayok": 230.8048,
+   "Nakhon Pathom": 80.32000000000001,
+   "Nakhon Phanom": 197.8064,
+   "Nakhon Ratchasima": 2181.8352,
+   "Nakhon Sawan": 2068.4224,
+   "Nan": 103.3968,
+   "Nong Bua Lam Phu": 545.0576,
+   "Nong Khai": 197.11200000000002,
+   "Nonthaburi": 22.6752,
+   "Pathum Thani": 70.4768,
+   "Phayao": 223.4128,
+   "Phetchabun": 1268.5536,
+   "Phetchaburi": 0.0,
+   "Phichit": 680.3696,
+   "Phitsanulok": 373.9008,
+   "Phra Nakhon Si Ayutthaya": 329.96000000000004,
+   "Phrae": 164.1088,
+   "Prachin Buri": 382.35360000000003,
+   "Ratchaburi": 1.0944,
+   "Rayong": 2.7984,
+   "Roi Et": 567.4352,
+   "Sa Kaeo": 575.1168,
+   "Sakon Nakhon": 340.12960000000004,
+   "Samut Prakan": 1.1504,
+   "Samut Sakhon": 1.1968,
+   "Samut Songkhram": 0.8912,
+   "Saraburi": 439.0384,
+   "Si Sa Ket": 293.8032,
+   "Sing Buri": 118.86240000000001,
+   "Sukhothai": 196.5728,
+   "Suphan Buri": 738.4768,
+   "Surin": 298.73920000000004,
+   "Tak": 545.272,
+   "Trat": 0.9008,
+   "Ubon Ratchathani": 353.1184,
+   "Udon Thani": 748.2304,
+   "Uthai Thani": 245.50240000000002,
+   "Uttaradit": 258.0912,
+   "Yasothon": 216.91840000000002
+  },
+  "2025": {
+   "Amnat Charoen": 45.4112,
+   "Ang Thong": 25.7408,
+   "Bangkok": 1.2176,
+   "Bueng Kan": 21.5216,
+   "Buri Ram": 132.9728,
+   "Chachoengsao": 24.5424,
+   "Chai Nat": 157.71200000000002,
+   "Chaiyaphum": 491.10880000000003,
+   "Chanthaburi": 9.4,
+   "Chiang Mai": 149.2304,
+   "Chiang Rai": 161.5568,
+   "Chon Buri": 21.460800000000003,
+   "Kalasin": 199.6112,
+   "Kamphaeng Phet": 222.0976,
+   "Kanchanaburi": 459.0688,
+   "Khon Kaen": 413.5104,
+   "Lampang": 172.9952,
+   "Lamphun": 22.233600000000003,
+   "Loei": 269.9536,
+   "Lop Buri": 1769.1712,
+   "Mae Hong Son": 22.8896,
+   "Maha Sarakham": 116.74560000000001,
+   "Mukdahan": 22.9616,
+   "Nakhon Nayok": 159.13920000000002,
+   "Nakhon Pathom": 17.0688,
+   "Nakhon Phanom": 118.1744,
+   "Nakhon Ratchasima": 1278.7968,
+   "Nakhon Sawan": 1815.856,
+   "Nan": 73.2176,
+   "Nong Bua Lam Phu": 279.30400000000003,
+   "Nong Khai": 68.8288,
+   "Nonthaburi": 0.6864,
+   "Pathum Thani": 5.1968000000000005,
+   "Phayao": 167.44480000000001,
+   "Phetchabun": 894.2496,
+   "Phetchaburi": 0.0,
+   "Phichit": 622.7136,
+   "Phitsanulok": 197.0704,
+   "Phra Nakhon Si Ayutthaya": 52.988800000000005,
+   "Phrae": 142.2048,
+   "Prachin Buri": 222.9344,
+   "Ratchaburi": 0.4496,
+   "Rayong": 3.0176000000000003,
+   "Roi Et": 312.66560000000004,
+   "Sa Kaeo": 320.6976,
+   "Sakon Nakhon": 139.3424,
+   "Samut Prakan": 0.40640000000000004,
+   "Samut Sakhon": 0.2544,
+   "Samut Songkhram": 0.6512,
+   "Saraburi": 263.5792,
+   "Si Sa Ket": 104.2304,
+   "Sing Buri": 31.942400000000003,
+   "Sukhothai": 98.872,
+   "Suphan Buri": 342.488,
+   "Surin": 115.63680000000001,
+   "Tak": 245.8128,
+   "Trat": 0.3584,
+   "Ubon Ratchathani": 202.16320000000002,
+   "Udon Thani": 360.504,
+   "Uthai Thani": 126.2848,
+   "Uttaradit": 159.1088,
+   "Yasothon": 126.46560000000001
+  },
+  "2026": {
+   "Amnat Charoen": 93.1952,
+   "Ang Thong": 48.8752,
+   "Bangkok": 4.8144,
+   "Bueng Kan": 46.1888,
+   "Buri Ram": 364.3456,
+   "Chachoengsao": 116.5712,
+   "Chai Nat": 323.7296,
+   "Chaiyaphum": 475.7024,
+   "Chanthaburi": 10.713600000000001,
+   "Chiang Mai": 247.16160000000002,
+   "Chiang Rai": 264.808,
+   "Chon Buri": 36.964800000000004,
+   "Kalasin": 202.4016,
+   "Kamphaeng Phet": 422.6528,
+   "Kanchanaburi": 494.6048,
+   "Khon Kaen": 473.35360000000003,
+   "Lampang": 245.17280000000002,
+   "Lamphun": 27.854400000000002,
+   "Loei": 203.2032,
+   "Lop Buri": 1979.5728000000001,
+   "Mae Hong Son": 45.496,
+   "Maha Sarakham": 148.0128,
+   "Mukdahan": 37.611200000000004,
+   "Nakhon Nayok": 179.488,
+   "Nakhon Pathom": 48.723200000000006,
+   "Nakhon Phanom": 146.8656,
+   "Nakhon Ratchasima": 1719.056,
+   "Nakhon Sawan": 1840.5504,
+   "Nan": 67.89280000000001,
+   "Nong Bua Lam Phu": 366.2448,
+   "Nong Khai": 82.5888,
+   "Nonthaburi": 12.164800000000001,
+   "Pathum Thani": 23.6368,
+   "Phayao": 218.8512,
+   "Phetchabun": 906.5168,
+   "Phetchaburi": 0.0,
+   "Phichit": 912.0576000000001,
+   "Phitsanulok": 380.68800000000005,
+   "Phra Nakhon Si Ayutthaya": 174.3744,
+   "Phrae": 138.1824,
+   "Prachin Buri": 322.44480000000004,
+   "Ratchaburi": 0.6688000000000001,
+   "Rayong": 3.7264000000000004,
+   "Roi Et": 578.6320000000001,
+   "Sa Kaeo": 376.5984,
+   "Sakon Nakhon": 140.67680000000001,
+   "Samut Prakan": 2.2976,
+   "Samut Sakhon": 0.5168,
+   "Samut Songkhram": 1.0176,
+   "Saraburi": 360.976,
+   "Si Sa Ket": 345.832,
+   "Sing Buri": 89.06400000000001,
+   "Sukhothai": 210.85600000000002,
+   "Suphan Buri": 415.4288,
+   "Surin": 342.368,
+   "Tak": 314.98240000000004,
+   "Trat": 0.7904,
+   "Ubon Ratchathani": 393.0864,
+   "Udon Thani": 353.59200000000004,
+   "Uthai Thani": 148.1344,
+   "Uttaradit": 250.76160000000002,
+   "Yasothon": 176.0144
+  }
+ },
+ "provinces": 62,
+ "rank_stability": {
+  "2024_vs_2025": {
+   "n": 62,
+   "rho": 0.9559819697313087
+  },
+  "2024_vs_2026": {
+   "n": 62,
+   "rho": 0.96494674019793
+  },
+  "2025_vs_2026": {
+   "n": 62,
+   "rho": 0.9455062828939085
+  }
+ },
+ "rank_stability_ci_2024_2026": [
+  0.9226919959980517,
+  0.983922152613614
+ ],
+ "rows": 992,
+ "top10_all_three": [
+  "Chaiyaphum",
+  "Kanchanaburi",
+  "Khon Kaen",
+  "Lop Buri",
+  "Nakhon Ratchasima",
+  "Nakhon Sawan",
+  "Phetchabun",
+  "Phichit"
+ ],
+ "top10_overlap": {
+  "2024_2025": 10,
+  "2025_2026": 8,
+  "all_three": 8
+ },
+ "total_km2": 60626.0896,
+ "upper_north_km2_jan_apr": {
+  "2024": 1394.864,
+  "2025": 911.7728000000001,
+  "2026": 1255.4192
+ },
+ "upper_north_provinces_present": [
+  "Chiang Mai",
+  "Chiang Rai",
+  "Lampang",
+  "Lamphun",
+  "Mae Hong Son",
+  "Nan",
+  "Phayao",
+  "Phrae"
+ ],
+ "upper_north_share_jan_apr": {
+  "2024": 0.059472487042005265,
+  "2025": 0.06510839821992699,
+  "2026": 0.06838035953509823
+ }
+}

@@ -14,6 +14,8 @@
 /fonts/* /fonts/:splat 200
 /geo/*   /geo/:splat  200
 /vendor/* /vendor/:splat 200
+/lib/* /lib/:splat 200
+/paper/* /paper/:splat 200
 /photos/* /photos/:splat 200
 /sw.js                  /sw.js                  200
 # Never register /sw.js?v=… — query strings miss this rule and SPA-fallback to ops.html.

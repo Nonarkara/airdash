@@ -1,0 +1,1060 @@
+{
+ "leads": {
+  "0": {
+   "cor": {
+    "bias": -1.2212370178754717,
+    "mae": 3.825494107597022,
+    "n": 4199,
+    "rho": 0.5787541265746592,
+    "rmse": 5.116321713967894
+   },
+   "events": {
+    "25.0": {
+     "cor": {
+      "correct_negatives": 4039,
+      "csi": 0.16875,
+      "false_alarms": 71,
+      "far": 0.7244897959183674,
+      "far_ci": [
+       0.6288396113673135,
+       0.8032044744434109
+      ],
+      "hits": 27,
+      "misses": 62,
+      "pod": 0.30337078651685395,
+      "pod_ci": [
+       0.21764190792883575,
+       0.40537134044385703
+      ]
+     },
+     "events_observed": 89,
+     "pers": {
+      "correct_negatives": 4057,
+      "csi": 0.18309859154929578,
+      "false_alarms": 53,
+      "far": 0.6708860759493671,
+      "far_ci": [
+       0.5614657660362604,
+       0.7644579968309345
+      ],
+      "hits": 26,
+      "misses": 63,
+      "pod": 0.29213483146067415,
+      "pod_ci": [
+       0.20783608860004774,
+       0.39363505967965595
+      ]
+     },
+     "raw": {
+      "correct_negatives": 4030,
+      "csi": 0.10059171597633136,
+      "false_alarms": 80,
+      "far": 0.8247422680412371,
+      "far_ci": [
+       0.737143588228657,
+       0.8875994559408991
+      ],
+      "hits": 17,
+      "misses": 72,
+      "pod": 0.19101123595505617,
+      "pod_ci": [
+       0.12281956445071364,
+       0.28477268299208913
+      ]
+     }
+    },
+    "37.5": {
+     "cor": {
+      "correct_negatives": 4192,
+      "csi": 0.0,
+      "false_alarms": 2,
+      "far": 1.0,
+      "far_ci": [
+       0.3423802239546494,
+       1.0
+      ],
+      "hits": 0,
+      "misses": 5,
+      "pod": 0.0,
+      "pod_ci": [
+       0.0,
+       0.43448246865939283
+      ]
+     },
+     "events_observed": 5,
+     "pers": {
+      "correct_negatives": 4190,
+      "csi": 0.1111111111111111,
+      "false_alarms": 4,
+      "far": 0.8,
+      "far_ci": [
+       0.375534627029995,
+       0.9637758917743693
+      ],
+      "hits": 1,
+      "misses": 4,
+      "pod": 0.2,
+      "pod_ci": [
+       0.03622410822563066,
+       0.6244653729700049
+      ]
+     },
+     "raw": {
+      "correct_negatives": 4190,
+      "csi": 0.0,
+      "false_alarms": 4,
+      "far": 1.0,
+      "far_ci": [
+       0.5101091596030786,
+       0.9999999999999999
+      ],
+      "hits": 0,
+      "misses": 5,
+      "pod": 0.0,
+      "pod_ci": [
+       0.0,
+       0.43448246865939283
+      ]
+     }
+    }
+   },
+   "mae_diff_cor_minus_persistence": {
+    "ci": [
+     1.2384832198393314,
+     1.6836710117729174
+    ],
+    "mean": 1.4502030089984679
+   },
+   "mae_diff_cor_minus_raw": {
+    "ci": [
+     -2.807546417234274,
+     -2.002023870538511
+    ],
+    "mean": -2.4087584993706854
+   },
+   "n_pairs": 4199,
+   "obs_mean": 12.732596447717352,
+   "pers": {
+    "bias": -0.1313998628793197,
+    "mae": 2.375291098598554,
+    "n": 4199,
+    "rho": 0.8039703350229606,
+    "rmse": 3.5402617410777277
+   },
+   "raw": {
+    "bias": -4.872772680153647,
+    "mae": 6.234252606967708,
+    "n": 4199,
+    "rho": 0.45544857214460527,
+    "rmse": 7.597636643692397
+   }
+  },
+  "1": {
+   "cor": {
+    "bias": -1.8144733691416683,
+    "mae": 4.041783656968495,
+    "n": 4030,
+    "rho": 0.5771286917058651,
+    "rmse": 5.347231773603727
+   },
+   "events": {
+    "25.0": {
+     "cor": {
+      "correct_negatives": 3873,
+      "csi": 0.1337579617834395,
+      "false_alarms": 71,
+      "far": 0.7717391304347826,
+      "far_ci": [
+       0.6761168163624053,
+       0.8455780804350993
+      ],
+      "hits": 21,
+      "misses": 65,
+      "pod": 0.2441860465116279,
+      "pod_ci": [
+       0.16561965007791438,
+       0.3446287302591027
+      ]
+     },
+     "events_observed": 86,
+     "pers": {
+      "correct_negatives": 3879,
+      "csi": 0.09271523178807947,
+      "false_alarms": 65,
+      "far": 0.8227848101265823,
+      "far_ci": [
+       0.7242380403619035,
+       0.8913957339427983
+      ],
+      "hits": 14,
+      "misses": 72,
+      "pod": 0.16279069767441862,
+      "pod_ci": [
+       0.09952131008083677,
+       0.2548970094543221
+      ]
+     },
+     "raw": {
+      "correct_negatives": 3889,
+      "csi": 0.1347517730496454,
+      "false_alarms": 55,
+      "far": 0.7432432432432432,
+      "far_ci": [
+       0.6334555577703962,
+       0.8290229275686061
+      ],
+      "hits": 19,
+      "misses": 67,
+      "pod": 0.22093023255813954,
+      "pod_ci": [
+       0.1462490770571196,
+       0.3194764287650808
+      ]
+     }
+    },
+    "37.5": {
+     "cor": {
+      "correct_negatives": 4017,
+      "csi": 0.07692307692307693,
+      "false_alarms": 6,
+      "far": 0.8571428571428571,
+      "far_ci": [
+       0.486872167860775,
+       0.9743203759421759
+      ],
+      "hits": 1,
+      "misses": 6,
+      "pod": 0.14285714285714285,
+      "pod_ci": [
+       0.025679624057823897,
+       0.5131278321392249
+      ]
+     },
+     "events_observed": 7,
+     "pers": {
+      "correct_negatives": 4016,
+      "csi": 0.0,
+      "false_alarms": 7,
+      "far": 1.0,
+      "far_ci": [
+       0.6456695613241317,
+       1.0
+      ],
+      "hits": 0,
+      "misses": 7,
+      "pod": 0.0,
+      "pod_ci": [
+       -2.7755575615628914e-17,
+       0.35433043867586833
+      ]
+     },
+     "raw": {
+      "correct_negatives": 4018,
+      "csi": 0.0,
+      "false_alarms": 5,
+      "far": 1.0,
+      "far_ci": [
+       0.5655175313406071,
+       1.0
+      ],
+      "hits": 0,
+      "misses": 7,
+      "pod": 0.0,
+      "pod_ci": [
+       -2.7755575615628914e-17,
+       0.35433043867586833
+      ]
+     }
+    }
+   },
+   "mae_diff_cor_minus_persistence": {
+    "ci": [
+     0.3784206905827079,
+     0.8930372511369414
+    ],
+    "mean": 0.6321080337177238
+   },
+   "mae_diff_cor_minus_raw": {
+    "ci": [
+     -2.763938102569804,
+     -1.9741742540512017
+    ],
+    "mean": -2.3778353847014384
+   },
+   "n_pairs": 4030,
+   "obs_mean": 12.780216951467816,
+   "pers": {
+    "bias": -0.1613482545634134,
+    "mae": 3.409675623250772,
+    "n": 4030,
+    "rho": 0.6069611241374885,
+    "rmse": 4.909083220438525
+   },
+   "raw": {
+    "bias": -5.2761722864554095,
+    "mae": 6.419619041669933,
+    "n": 4030,
+    "rho": 0.46597188620241486,
+    "rmse": 7.763475482091061
+   }
+  },
+  "2": {
+   "cor": {
+    "bias": -2.0326687801994536,
+    "mae": 4.285905965398158,
+    "n": 3833,
+    "rho": 0.5687595542304419,
+    "rmse": 5.627933517405279
+   },
+   "events": {
+    "25.0": {
+     "cor": {
+      "correct_negatives": 3677,
+      "csi": 0.09615384615384616,
+      "false_alarms": 75,
+      "far": 0.8333333333333334,
+      "far_ci": [
+       0.7430611361623974,
+       0.896315113048482
+      ],
+      "hits": 15,
+      "misses": 66,
+      "pod": 0.18518518518518517,
+      "pod_ci": [
+       0.11556289962386272,
+       0.28331589533703605
+      ]
+     },
+     "events_observed": 81,
+     "pers": {
+      "correct_negatives": 3685,
+      "csi": 0.0945945945945946,
+      "false_alarms": 67,
+      "far": 0.8271604938271605,
+      "far_ci": [
+       0.7305386239929015,
+       0.894155961635968
+      ],
+      "hits": 14,
+      "misses": 67,
+      "pod": 0.1728395061728395,
+      "pod_ci": [
+       0.10584403836403176,
+       0.26946137600709835
+      ]
+     },
+     "raw": {
+      "correct_negatives": 3702,
+      "csi": 0.10687022900763359,
+      "false_alarms": 50,
+      "far": 0.78125,
+      "far_ci": [
+       0.6656721594362567,
+       0.8649768064562686
+      ],
+      "hits": 14,
+      "misses": 67,
+      "pod": 0.1728395061728395,
+      "pod_ci": [
+       0.10584403836403176,
+       0.26946137600709835
+      ]
+     }
+    },
+    "37.5": {
+     "cor": {
+      "correct_negatives": 3826,
+      "csi": 0.0,
+      "false_alarms": 2,
+      "far": 1.0,
+      "far_ci": [
+       0.3423802239546494,
+       1.0
+      ],
+      "hits": 0,
+      "misses": 5,
+      "pod": 0.0,
+      "pod_ci": [
+       0.0,
+       0.43448246865939283
+      ]
+     },
+     "events_observed": 5,
+     "pers": {
+      "correct_negatives": 3823,
+      "csi": 0.0,
+      "false_alarms": 5,
+      "far": 1.0,
+      "far_ci": [
+       0.5655175313406071,
+       1.0
+      ],
+      "hits": 0,
+      "misses": 5,
+      "pod": 0.0,
+      "pod_ci": [
+       0.0,
+       0.43448246865939283
+      ]
+     },
+     "raw": {
+      "correct_negatives": 3823,
+      "csi": 0.0,
+      "false_alarms": 5,
+      "far": 1.0,
+      "far_ci": [
+       0.5655175313406071,
+       1.0
+      ],
+      "hits": 0,
+      "misses": 5,
+      "pod": 0.0,
+      "pod_ci": [
+       0.0,
+       0.43448246865939283
+      ]
+     }
+    }
+   },
+   "mae_diff_cor_minus_persistence": {
+    "ci": [
+     0.18644427673145847,
+     0.8115570081582788
+    ],
+    "mean": 0.49636553995604965
+   },
+   "mae_diff_cor_minus_raw": {
+    "ci": [
+     -2.617975748016682,
+     -1.877712057273923
+    ],
+    "mean": -2.247961702947459
+   },
+   "n_pairs": 3833,
+   "obs_mean": 12.768484619820688,
+   "pers": {
+    "bias": -0.06705250968895858,
+    "mae": 3.7895404254421092,
+    "n": 3833,
+    "rho": 0.5207342505448745,
+    "rmse": 5.234493831703454
+   },
+   "raw": {
+    "bias": -5.39308675913715,
+    "mae": 6.533867668345618,
+    "n": 3833,
+    "rho": 0.46321665036637566,
+    "rmse": 7.8836649691049265
+   }
+  }
+ },
+ "national_ratio_median": 1.5396131986373722,
+ "pooled_ratio_obs_over_cams": 1.6199595339863515,
+ "province_bias_ratio_whole_window": {
+  "10": {
+   "n": 75,
+   "ratio": 1.134141021359578
+  },
+  "11": {
+   "n": 69,
+   "ratio": 1.161591963603528
+  },
+  "12": {
+   "n": 73,
+   "ratio": 0.5607751149047931
+  },
+  "13": {
+   "n": 64,
+   "ratio": 1.1343066495695184
+  },
+  "14": {
+   "n": 50,
+   "ratio": 1.0115458734813574
+  },
+  "15": {
+   "n": 67,
+   "ratio": 1.1302778581765556
+  },
+  "16": {
+   "n": 67,
+   "ratio": 1.3166528530443102
+  },
+  "17": {
+   "n": 64,
+   "ratio": 1.0334238289492195
+  },
+  "18": {
+   "n": 65,
+   "ratio": 1.6875292805354154
+  },
+  "19": {
+   "n": 69,
+   "ratio": 1.8107063478700116
+  },
+  "20": {
+   "n": 69,
+   "ratio": 1.8880909455128205
+  },
+  "21": {
+   "n": 69,
+   "ratio": 2.9898774357647873
+  },
+  "22": {
+   "n": 44,
+   "ratio": 2.1605378704720084
+  },
+  "23": {
+   "n": 69,
+   "ratio": 3.0736454388984513
+  },
+  "24": {
+   "n": 56,
+   "ratio": 2.315680299385191
+  },
+  "25": {
+   "n": 64,
+   "ratio": 2.264849348534202
+  },
+  "26": {
+   "n": 69,
+   "ratio": 1.1815211535414358
+  },
+  "27": {
+   "n": 56,
+   "ratio": 1.267868117797695
+  },
+  "30": {
+   "n": 68,
+   "ratio": 2.520296112115732
+  },
+  "31": {
+   "n": 67,
+   "ratio": 2.0211090573012944
+  },
+  "32": {
+   "n": 62,
+   "ratio": 1.741646734130635
+  },
+  "33": {
+   "n": 64,
+   "ratio": 1.6322070015220695
+  },
+  "34": {
+   "n": 66,
+   "ratio": 1.9183159828536442
+  },
+  "35": {
+   "n": 68,
+   "ratio": 2.1324782478247832
+  },
+  "36": {
+   "n": 63,
+   "ratio": 1.9349082073434132
+  },
+  "37": {
+   "n": 67,
+   "ratio": 2.729914231257942
+  },
+  "38": {
+   "n": 69,
+   "ratio": 1.172337582236842
+  },
+  "39": {
+   "n": 69,
+   "ratio": 1.5093983103235111
+  },
+  "40": {
+   "n": 61,
+   "ratio": 2.680694794771842
+  },
+  "41": {
+   "n": 68,
+   "ratio": 1.8893030369237493
+  },
+  "42": {
+   "n": 38,
+   "ratio": 1.9339019792648446
+  },
+  "43": {
+   "n": 69,
+   "ratio": 1.5654478273721546
+  },
+  "44": {
+   "n": 66,
+   "ratio": 2.0401140142517815
+  },
+  "45": {
+   "n": 65,
+   "ratio": 2.240677727784026
+  },
+  "46": {
+   "n": 65,
+   "ratio": 2.2588092756644094
+  },
+  "47": {
+   "n": 61,
+   "ratio": 1.7311976384593772
+  },
+  "48": {
+   "n": 70,
+   "ratio": 2.5451589061345157
+  },
+  "49": {
+   "n": 65,
+   "ratio": 2.983703927492446
+  },
+  "50": {
+   "n": 69,
+   "ratio": 1.0374388919065727
+  },
+  "51": {
+   "n": 69,
+   "ratio": 2.5114410226612436
+  },
+  "52": {
+   "n": 68,
+   "ratio": 1.4080370774263906
+  },
+  "53": {
+   "n": 57,
+   "ratio": 1.9647372929754439
+  },
+  "54": {
+   "n": 69,
+   "ratio": 1.6121086261980837
+  },
+  "55": {
+   "n": 62,
+   "ratio": 2.3522424667133834
+  },
+  "56": {
+   "n": 63,
+   "ratio": 1.7277905944986696
+  },
+  "57": {
+   "n": 69,
+   "ratio": 1.8440740740740738
+  },
+  "58": {
+   "n": 66,
+   "ratio": 2.0925136798905615
+  },
+  "61": {
+   "n": 68,
+   "ratio": 1.8130683555361438
+  },
+  "62": {
+   "n": 68,
+   "ratio": 1.5073470512584977
+  },
+  "64": {
+   "n": 68,
+   "ratio": 1.3350272198235398
+  },
+  "65": {
+   "n": 56,
+   "ratio": 1.342960180315552
+  },
+  "66": {
+   "n": 68,
+   "ratio": 1.11604891661195
+  },
+  "67": {
+   "n": 69,
+   "ratio": 1.5299562135112592
+  },
+  "70": {
+   "n": 30,
+   "ratio": 4.84148936170213
+  },
+  "71": {
+   "n": 49,
+   "ratio": 5.659079089924159
+  },
+  "72": {
+   "n": 67,
+   "ratio": 1.266942559178944
+  },
+  "73": {
+   "n": 53,
+   "ratio": 1.2771104135893643
+  },
+  "74": {
+   "n": 69,
+   "ratio": 1.191827742772424
+  },
+  "75": {
+   "n": 69,
+   "ratio": 1.5185719557195574
+  },
+  "77": {
+   "n": 60,
+   "ratio": 3.544706214689266
+  },
+  "81": {
+   "n": 67,
+   "ratio": 1.5598200899550234
+  },
+  "86": {
+   "n": 67,
+   "ratio": 2.0372212633759057
+  },
+  "92": {
+   "n": 67,
+   "ratio": 1.6692048791506657
+  },
+  "93": {
+   "n": 65,
+   "ratio": 1.6366838218840905
+  },
+  "94": {
+   "n": 69,
+   "ratio": 1.345837845342219
+  },
+  "95": {
+   "n": 28,
+   "ratio": 0.7213457129756993
+  }
+ },
+ "province_ratio": {
+  "median": 1.8880017604485884,
+  "n": 5082,
+  "q10": 1.0067421524279496,
+  "q90": 3.0,
+  "share_at_cap_3": 0.14423455332546242,
+  "share_at_floor_0_5": 0.005312868949232586
+ },
+ "provinces": 68,
+ "ratio_scope_counts": {
+  "national": 344,
+  "none": 63,
+  "province": 5082
+ },
+ "warnings": [
+  {
+   "code": "13",
+   "forecast": 39.0,
+   "hit_max_gt25": false,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": false,
+   "hit_mean_gt37_5": false,
+   "lead_days": 2,
+   "obs_province_mean": 24.905,
+   "obs_station_max": 24.905,
+   "province": "Pathum Thani",
+   "target_day": "2026-10-02",
+   "ts": "2026-09-30T04:08:24.439Z"
+  },
+  {
+   "code": "12",
+   "forecast": 43.0,
+   "hit_max_gt25": false,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": false,
+   "hit_mean_gt37_5": false,
+   "lead_days": 2,
+   "obs_province_mean": 17.936500000000002,
+   "obs_station_max": 18.741,
+   "province": "Nonthaburi",
+   "target_day": "2026-10-02",
+   "ts": "2026-09-30T15:26:35.526Z"
+  },
+  {
+   "code": "14",
+   "forecast": 43.0,
+   "hit_max_gt25": false,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": false,
+   "hit_mean_gt37_5": false,
+   "lead_days": 2,
+   "obs_province_mean": 21.413,
+   "obs_station_max": 21.413,
+   "province": "Phra Nakhon Si Ayutthaya",
+   "target_day": "2026-10-02",
+   "ts": "2026-09-30T15:26:35.529Z"
+  },
+  {
+   "code": "13",
+   "forecast": 46.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": false,
+   "lead_days": 2,
+   "obs_province_mean": 29.465,
+   "obs_station_max": 29.465,
+   "province": "Pathum Thani",
+   "target_day": "2026-10-03",
+   "ts": "2026-10-01T03:35:12.480Z"
+  },
+  {
+   "code": "13",
+   "forecast": 40.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": false,
+   "lead_days": 1,
+   "obs_province_mean": 29.465,
+   "obs_station_max": 29.465,
+   "province": "Pathum Thani",
+   "target_day": "2026-10-03",
+   "ts": "2026-10-01T21:01:22.422Z"
+  },
+  {
+   "code": "12",
+   "forecast": 42.0,
+   "hit_max_gt25": false,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": false,
+   "hit_mean_gt37_5": false,
+   "lead_days": 1,
+   "obs_province_mean": 19.819,
+   "obs_station_max": 21.086,
+   "province": "Nonthaburi",
+   "target_day": "2026-10-03",
+   "ts": "2026-10-02T03:01:32.573Z"
+  },
+  {
+   "code": "14",
+   "forecast": 40.0,
+   "hit_max_gt25": false,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": false,
+   "hit_mean_gt37_5": false,
+   "lead_days": 1,
+   "obs_province_mean": 22.52,
+   "obs_station_max": 22.52,
+   "province": "Phra Nakhon Si Ayutthaya",
+   "target_day": "2026-10-03",
+   "ts": "2026-10-02T03:01:32.574Z"
+  },
+  {
+   "code": "74",
+   "forecast": 38.0,
+   "hit_max_gt25": false,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": false,
+   "hit_mean_gt37_5": false,
+   "lead_days": 2,
+   "obs_province_mean": 16.414,
+   "obs_station_max": 18.805,
+   "province": "Samut Sakhon",
+   "target_day": "2026-10-05",
+   "ts": "2026-10-02T20:49:48.382Z"
+  },
+  {
+   "code": "74",
+   "forecast": 41.0,
+   "hit_max_gt25": false,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": false,
+   "hit_mean_gt37_5": false,
+   "lead_days": 2,
+   "obs_province_mean": 16.414,
+   "obs_station_max": 18.805,
+   "province": "Samut Sakhon",
+   "target_day": "2026-10-05",
+   "ts": "2026-10-03T09:03:40.286Z"
+  },
+  {
+   "code": "74",
+   "forecast": 38.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": true,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": false,
+   "lead_days": 2,
+   "obs_province_mean": 32.802,
+   "obs_station_max": 40.85,
+   "province": "Samut Sakhon",
+   "target_day": "2026-10-09",
+   "ts": "2026-10-06T22:26:52.840Z"
+  },
+  {
+   "code": "96",
+   "forecast": 39.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": true,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": true,
+   "lead_days": 1,
+   "obs_province_mean": 40.325,
+   "obs_station_max": 40.325,
+   "province": "Narathiwat",
+   "target_day": "2026-10-09",
+   "ts": "2026-10-07T22:19:19.467Z"
+  },
+  {
+   "code": "74",
+   "forecast": 42.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": true,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": false,
+   "lead_days": 2,
+   "obs_province_mean": 32.5,
+   "obs_station_max": 39.806,
+   "province": "Samut Sakhon",
+   "target_day": "2026-10-23",
+   "ts": "2026-10-21T10:20:05.729Z"
+  },
+  {
+   "code": "10",
+   "forecast": 38.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": false,
+   "lead_days": 1,
+   "obs_province_mean": 26.068549019607843,
+   "obs_station_max": 35.889,
+   "province": "Bangkok",
+   "target_day": "2026-10-23",
+   "ts": "2026-10-21T22:54:30.362Z"
+  },
+  {
+   "code": "11",
+   "forecast": 38.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": false,
+   "lead_days": 1,
+   "obs_province_mean": 27.099999999999998,
+   "obs_station_max": 31.1,
+   "province": "Samut Prakan",
+   "target_day": "2026-10-23",
+   "ts": "2026-10-21T22:54:30.881Z"
+  },
+  {
+   "code": "74",
+   "forecast": 46.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": true,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": false,
+   "lead_days": 1,
+   "obs_province_mean": 32.5,
+   "obs_station_max": 39.806,
+   "province": "Samut Sakhon",
+   "target_day": "2026-10-23",
+   "ts": "2026-10-21T22:54:30.910Z"
+  },
+  {
+   "code": "10",
+   "forecast": 38.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": false,
+   "lead_days": 1,
+   "obs_province_mean": 26.068549019607843,
+   "obs_station_max": 35.889,
+   "province": "Bangkok",
+   "target_day": "2026-10-23",
+   "ts": "2026-10-22T16:54:40.745Z"
+  },
+  {
+   "code": "11",
+   "forecast": 38.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": false,
+   "lead_days": 1,
+   "obs_province_mean": 27.099999999999998,
+   "obs_station_max": 31.1,
+   "province": "Samut Prakan",
+   "target_day": "2026-10-23",
+   "ts": "2026-10-22T16:54:40.783Z"
+  },
+  {
+   "code": "74",
+   "forecast": 43.0,
+   "hit_max_gt25": true,
+   "hit_max_gt37_5": true,
+   "hit_mean_gt25": true,
+   "hit_mean_gt37_5": false,
+   "lead_days": 1,
+   "obs_province_mean": 32.5,
+   "obs_station_max": 39.806,
+   "province": "Samut Sakhon",
+   "target_day": "2026-10-23",
+   "ts": "2026-10-22T16:54:40.787Z"
+  },
+  {
+   "code": "13",
+   "forecast": 43.0,
+   "hit_max_gt25": null,
+   "hit_max_gt37_5": null,
+   "hit_mean_gt25": null,
+   "hit_mean_gt37_5": null,
+   "lead_days": 1,
+   "obs_province_mean": null,
+   "obs_station_max": null,
+   "province": "Pathum Thani",
+   "target_day": "2026-10-24",
+   "ts": "2026-10-22T22:54:50.517Z"
+  },
+  {
+   "code": "13",
+   "forecast": 41.0,
+   "hit_max_gt25": null,
+   "hit_max_gt37_5": null,
+   "hit_mean_gt25": null,
+   "hit_mean_gt37_5": null,
+   "lead_days": 1,
+   "obs_province_mean": null,
+   "obs_station_max": null,
+   "province": "Pathum Thani",
+   "target_day": "2026-10-24",
+   "ts": "2026-10-23T12:38:48.099Z"
+  },
+  {
+   "code": "74",
+   "forecast": 42.0,
+   "hit_max_gt25": false,
+   "hit_max_gt37_5": false,
+   "hit_mean_gt25": false,
+   "hit_mean_gt37_5": false,
+   "lead_days": 2,
+   "obs_province_mean": 17.1565,
+   "obs_station_max": 20.8,
+   "province": "Samut Sakhon",
+   "target_day": "2026-11-02",
+   "ts": "2026-10-30T17:02:35.134Z"
+  }
+ ],
+ "warnings_summary": {
+  "evaluable": 19,
+  "first": "2026-09-30T04:08:24.439Z",
+  "hit_province_mean_gt25": 11,
+  "hit_province_mean_gt37_5": 1,
+  "hit_station_max_gt25": 11,
+  "hit_station_max_gt37_5": 5,
+  "last": "2026-10-30T17:02:35.134Z",
+  "provinces": 7,
+  "sent": 21
+ },
+ "warnings_unique": {
+  "any_station_gt25": 6,
+  "any_station_gt37_5": 3,
+  "distinct_target_days": 6,
+  "evaluable": 13,
+  "median_forecast": 41.0,
+  "median_observed_province_mean": 24.905,
+  "median_observed_station_max": 24.905,
+  "province_days": 14,
+  "province_mean_gt25": 6,
+  "province_mean_gt37_5": 1,
+  "wilson_any_station_gt37_5": [
+   0.08179528654269594,
+   0.5025637616051964
+  ]
+ },
+ "window": [
+  "2026-08-07",
+  "2026-11-03"
+ ]
+}

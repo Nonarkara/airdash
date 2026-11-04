@@ -148,3 +148,36 @@
   #research-content .rp-evidence-flow strong { margin-bottom: 4px; }
   #research-content .rp-evidence-flow small { margin-top: 4px; }
 }
+
+/* Preprint pane — the PDF is the content, so there is no header band above it:
+   one 48px sticky toolbar carries identity, zoom, page and the three downloads. */
+#about-overlay .about-pane[data-about-pane="preprint"] { padding: 0; max-width: none; margin: 0; }
+.pp-bar {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 2px;
+  min-height: 48px; padding: 0 clamp(4px, 3vw, 32px);
+  background: var(--paper); border-bottom: 1px solid var(--rule);
+}
+.pp-id { flex: 1 1 0; min-width: 0; margin: 0 8px 0 0; font-size: 13px; line-height: 1.3; color: var(--ink-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-id b { color: var(--ink); font-weight: 600; }
+.pp-tool {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px;
+  border: 0; background: none; color: var(--ink); font: 600 20px/1 var(--font-ui); cursor: pointer;
+}
+.pp-tool:disabled { opacity: .35; cursor: default; }
+.pp-zoom, .pp-page { min-width: 3.2em; text-align: center; font: 500 13px/1 var(--font-num, var(--font-ui)); font-variant-numeric: tabular-nums; color: var(--ink-mid); }
+.pp-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 12px; box-sizing: border-box;
+  color: var(--ink); font: 600 13px/1.2 var(--font-ui); text-decoration: none; white-space: nowrap;
+}
+.pp-btn:hover { background: var(--well); }
+.pp-primary, .pp-primary:hover { background: var(--ink); color: var(--ink-inv); }
+.pp-glyph { font: 600 15px/1 var(--font-ui); }
+.pp-tool:focus-visible, .pp-btn:focus-visible, .pp-view:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }
+.pp-note { margin: 0; padding: 10px clamp(12px, 4vw, 48px); font-size: 14px; line-height: 1.55; color: var(--ink); border-bottom: 1px solid var(--rule); }
+.pp-load { margin: 0; padding: 16px clamp(12px, 4vw, 48px); font-size: 14px; color: var(--ink-mid); }
+.pp-view { overflow-x: auto; padding: 12px clamp(8px, 3vw, 32px) 48px; background: var(--rule); }
+.pp-page-slot { margin: 0 auto 12px; background: #fff; box-shadow: 0 1px 3px rgba(14, 74, 94, .3); }
+.pp-page-slot canvas { display: block; }
+.pp-page-slot:empty::after { content: attr(data-label); display: block; padding-top: 12px; text-align: center; font: 500 13px/1 var(--font-ui); color: var(--ink-low); }
+@media (max-width: 899px) { .pp-lbl { display: none; } .pp-btn { padding: 0; } }
+@media (max-width: 699px) { .pp-id { display: none; } .pp-page { margin-left: auto; } }

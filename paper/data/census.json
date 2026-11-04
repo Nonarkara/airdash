@@ -1,0 +1,258 @@
+{
+ "distinct_interfaces": 8,
+ "needing_token": [
+  "Satellite rain (IMERG)",
+  "Low-cost PM2.5 sensors, northern Thailand"
+ ],
+ "providers": 15,
+ "rows": [
+  {
+   "auth": "none",
+   "interface": "JSON",
+   "interval": "15 min",
+   "ok": 3839,
+   "owner": "Pollution Control Dept. (PCD)",
+   "pulls": 3865,
+   "rows_new": 1158432,
+   "sources": [
+    "air4thai"
+   ],
+   "stream": "PM2.5, PM10, gases, 175 ground stations",
+   "success": 0.9932729624838292
+  },
+  {
+   "auth": "none",
+   "interface": "JSON",
+   "interval": "1 h",
+   "ok": 2501,
+   "owner": "GISTDA",
+   "pulls": 2549,
+   "rows_new": 350504,
+   "sources": [
+    "gistda_pm25"
+   ],
+   "stream": "PM2.5 fused with satellite, 77 provinces",
+   "success": 0.9811690859160455
+  },
+  {
+   "auth": "none",
+   "interface": "HTML page, parsed",
+   "interval": "30 min",
+   "ok": 5009,
+   "owner": "PCD (Noise4Thai)",
+   "pulls": 5038,
+   "rows_new": 80303,
+   "sources": [
+    "pcd_noise"
+   ],
+   "stream": "Noise level, 27 stations",
+   "success": 0.9942437475188567
+  },
+  {
+   "auth": "none",
+   "interface": "JSON",
+   "interval": "10 min",
+   "ok": 14566,
+   "owner": "HII, for several agencies",
+   "pulls": 14701,
+   "rows_new": 19887857,
+   "sources": [
+    "thaiwater_rain"
+   ],
+   "stream": "Rain gauges, about 4,200",
+   "success": 0.9908169512278077
+  },
+  {
+   "auth": "none",
+   "interface": "JSON via sibling relay",
+   "interval": "15 min",
+   "ok": 4158,
+   "owner": "Thai Meteorological Dept.",
+   "pulls": 4235,
+   "rows_new": 0,
+   "sources": [
+    "tmd_relay"
+   ],
+   "stream": "Weather forecast and stations",
+   "success": 0.9818181818181818
+  },
+  {
+   "auth": "none",
+   "interface": "JSON",
+   "interval": "6 h",
+   "ok": 1528,
+   "owner": "Open-Meteo (CAMS, weather models)",
+   "pulls": 1657,
+   "rows_new": 1181803,
+   "sources": [
+    "openmeteo",
+    "openmeteo_aq",
+    "openmeteo_aq_hist",
+    "regional_wind"
+   ],
+   "stream": "Wind, rain and PM2.5 model forecast",
+   "success": 0.9221484610742305
+  },
+  {
+   "auth": "free token",
+   "interface": "OPeNDAP",
+   "interval": "30 min",
+   "ok": 5077,
+   "owner": "NASA GES DISC",
+   "pulls": 5077,
+   "rows_new": 0,
+   "sources": [
+    "imerg"
+   ],
+   "stream": "Satellite rain (IMERG)",
+   "success": 1.0
+  },
+  {
+   "auth": "none",
+   "interface": "text file",
+   "interval": "12 h",
+   "ok": 322,
+   "owner": "NOAA CPC",
+   "pulls": 342,
+   "rows_new": 25,
+   "sources": [
+    "enso"
+   ],
+   "stream": "El Niño index (ONI)",
+   "success": 0.9415204678362573
+  },
+  {
+   "auth": "none",
+   "interface": "JSON",
+   "interval": "daily",
+   "ok": 102,
+   "owner": "HII and Kasetsart Univ.",
+   "pulls": 105,
+   "rows_new": 98828,
+   "sources": [
+    "burn_area"
+   ],
+   "stream": "Agricultural burn scars by crop",
+   "success": 0.9714285714285714
+  },
+  {
+   "auth": "none",
+   "interface": "JSON (GeoJSON)",
+   "interval": "6 h",
+   "ok": 226,
+   "owner": "GISTDA",
+   "pulls": 230,
+   "rows_new": 34804,
+   "sources": [
+    "cropsdrought"
+   ],
+   "stream": "Drought risk, crop water use",
+   "success": 0.9826086956521739
+  },
+  {
+   "auth": "none",
+   "interface": "CSV",
+   "interval": "6 h",
+   "ok": 182,
+   "owner": "NASA FIRMS",
+   "pulls": 196,
+   "rows_new": 258334,
+   "sources": [
+    "firms_regional"
+   ],
+   "stream": "Fire detections, three VIIRS satellites",
+   "success": 0.9285714285714286
+  },
+  {
+   "auth": "none",
+   "interface": "CSV",
+   "interval": "daily",
+   "ok": 45,
+   "owner": "NASA AERONET",
+   "pulls": 46,
+   "rows_new": 19703,
+   "sources": [
+    "aeronet"
+   ],
+   "stream": "Aerosol optical depth, 5 sites",
+   "success": 0.9782608695652174
+  },
+  {
+   "auth": "none",
+   "interface": "JSON",
+   "interval": "30 min",
+   "ok": 1545,
+   "owner": "NOAA Aviation Weather Center",
+   "pulls": 1578,
+   "rows_new": 15839,
+   "sources": [
+    "metarVisibility"
+   ],
+   "stream": "Airport visibility and weather codes",
+   "success": 0.9790874524714829
+  },
+  {
+   "auth": "free token",
+   "interface": "JSON",
+   "interval": "1 h",
+   "ok": 831,
+   "owner": "Chiang Mai Univ. (DustBoy)",
+   "pulls": 831,
+   "rows_new": 0,
+   "sources": [
+    "dustboy"
+   ],
+   "stream": "Low-cost PM2.5 sensors, northern Thailand",
+   "success": 1.0
+  },
+  {
+   "auth": "none",
+   "interface": "HLS, MJPEG, JPEG",
+   "interval": "30 min",
+   "ok": 3341,
+   "owner": "GISTDA, iTIC, DWR, volunteer aggregator",
+   "pulls": 3370,
+   "rows_new": 104598,
+   "sources": [
+    "cctvHealth",
+    "hazeVision"
+   ],
+   "stream": "About 1,000 public cameras",
+   "success": 0.9913946587537092
+  },
+  {
+   "auth": "none",
+   "interface": "RSS",
+   "interval": "20-30 min",
+   "ok": 7407,
+   "owner": "News outlets (RSS)",
+   "pulls": 7474,
+   "rows_new": 1324,
+   "sources": [
+    "news",
+    "citizen_social"
+   ],
+   "stream": "Haze news and citizen reports",
+   "success": 0.991035590045491
+  },
+  {
+   "auth": "none",
+   "interface": "JSON, local",
+   "interval": "10 min",
+   "ok": 6302,
+   "owner": "FloodDash",
+   "pulls": 6398,
+   "rows_new": 0,
+   "sources": [
+    "twin_flood"
+   ],
+   "stream": "Flood verdicts (sibling system)",
+   "success": 0.9849953110346984
+  }
+ ],
+ "silent_success": [
+  "Satellite rain (IMERG)",
+  "Low-cost PM2.5 sensors, northern Thailand"
+ ],
+ "streams": 17
+}
