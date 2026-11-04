@@ -113,7 +113,7 @@ console.log('\n── normalizeMetar: three metrics, and the third is the point 
 {
   const st = THAI_STATIONS.find((s) => s.icao === 'VTCL')
   check('the station list has a Lampang entry with Thai and English names',
-    !!st && st.name_th === 'ลำปาง' && st.name_en === 'Lamping')
+    !!st && st.name_th === 'ลำปาง' && st.name_en === 'Lampang')
   check('the three dust corridors are all in the list',
     ['VTPM', 'VTBO', 'VTUW'].every((i) => THAI_STATIONS.some((s) => s.icao === i)))
 
@@ -151,6 +151,28 @@ console.log('\n── normalizeMetar: three metrics, and the third is the point 
       THAI_STATIONS.find((s) => s.icao === 'VTBS')) === null)
   check('coordinates fall back to the station when upstream omits them',
     normalizeMetar({ icaoId: 'VTCL', rawOb: 'METAR VTCL 291100Z 27005KT 5000 RA 25/24 Q1010' }, st).lat === 18.277)
+}
+
+console.log('\n── station table: the ICAO must be the airport it claims to be ──')
+{
+  // 2026-11-04: 10 of 28 codes were dead (Chiang Mai is VTCC, not VTCM) and three
+  // were filed under another city (VTBU = U-Tapao, not Udon Thani). The table is
+  // verified live by scripts/ops/check-metar-stations.mjs; these checks keep the
+  // known mistakes from coming back without needing the network.
+  const at = (icao) => THAI_STATIONS.find((s) => s.icao === icao)
+  const near = (icao, lat, lng, km = 25) => {
+    const s = at(icao); if (!s) return false
+    const dLat = (s.lat - lat) * 111, dLng = (s.lng - lng) * 111 * Math.cos(lat * Math.PI / 180)
+    return Math.hypot(dLat, dLng) <= km
+  }
+  check('Chiang Mai is VTCC at Chiang Mai', near('VTCC', 18.77, 98.96) && !at('VTCM'))
+  check('Mae Hong Son (the haze valley) has a station', near('VTCH', 19.30, 97.97))
+  check('VTBU is U-Tapao (Rayong), not Udon Thani', near('VTBU', 12.68, 101.00) && /Rayong|U-Tapao/.test(at('VTBU').name_en))
+  check('VTUV is Roi Et, VTUD is Udon Thani, VTUI is Sakon Nakhon', near('VTUV', 16.12, 103.77) && near('VTUD', 17.38, 102.80) && near('VTUI', 17.20, 104.12))
+  check('VTSP is Phuket and VTSS is Hat Yai', near('VTSP', 8.11, 98.31) && near('VTSS', 6.93, 100.39))
+  check('codes that never answered are gone',
+    ['VTCM', 'VTMW', 'VTYK', 'VTPU', 'VTPR', 'VTSZ', 'VTUB', 'VTUR', 'VTKT', 'VTYJ'].every((i) => !at(i)))
+  check('ICAO codes are unique', new Set(THAI_STATIONS.map((s) => s.icao)).size === THAI_STATIONS.length)
 }
 
 console.log('\n── normalizeMetars: unknown stations are counted, not silently kept ──')

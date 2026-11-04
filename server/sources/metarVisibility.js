@@ -111,40 +111,51 @@ function provinceFields(lat, lng) {
   return { province_th: reg?.province_th ?? hit.province_th, province_en: reg?.province_en ?? hit.province_en, province_code: reg?.province_code ?? null }
 }
 
+/** Verified against aviationweather.gov on 2026-11-04: every ICAO below returned
+ *  a METAR in the preceding 72 h, and its name and coordinates are the SERVICE's
+ *  own. The previous list was typed from memory: 10 of its 28 codes returned no
+ *  data at all (Chiang Mai is VTCC, not VTCM), VTBU (U-Tapao, Rayong) was filed
+ *  as Udon Thani 559 km away, VTUV (Roi Et) as Sakon Nakhon, VTSP (Phuket) as Hat
+ *  Yai. A haze report from the wrong place is worse than none. */
 export const THAI_STATIONS = [
-  // northern border belt — the dust-import gateways
-  { icao: 'VTPM', name_th: 'แม่สอด', name_en: 'Mae Sot', lat: 16.703, lng: 98.542 },
+  // northern border belt — the dust-import gateways and the burning heartland
+  { icao: 'VTCC', name_th: 'เชียงใหม่', name_en: 'Chiang Mai', lat: 18.771, lng: 98.963 },
   { icao: 'VTCT', name_th: 'เชียงราย', name_en: 'Chiang Rai', lat: 19.961, lng: 99.881 },
-  { icao: 'VTCM', name_th: 'เชียงใหม่', name_en: 'Chiang Mai', lat: 18.7669, lng: 98.9626 },
+  { icao: 'VTCH', name_th: 'แม่ฮ่องสอน', name_en: 'Mae Hong Son', lat: 19.302, lng: 97.972 },
+  { icao: 'VTPM', name_th: 'แม่สอด', name_en: 'Mae Sot', lat: 16.703, lng: 98.542 },
   { icao: 'VTCN', name_th: 'น่าน', name_en: 'Nan', lat: 18.807, lng: 100.787 },
-  { icao: 'VTCL', name_th: 'ลำปาง', name_en: 'Lamping', lat: 18.277, lng: 99.502 },
+  { icao: 'VTCL', name_th: 'ลำปาง', name_en: 'Lampang', lat: 18.277, lng: 99.502 },
   { icao: 'VTCP', name_th: 'แพร่', name_en: 'Phrae', lat: 18.129, lng: 100.162 },
+  { icao: 'VTPO', name_th: 'สุโขทัย', name_en: 'Sukhothai', lat: 17.238, lng: 99.818 },
+  { icao: 'VTPP', name_th: 'พิษณุโลก', name_en: 'Phitsanulok', lat: 16.792, lng: 100.274 },
   { icao: 'VTPB', name_th: 'เพชรบูรณ์', name_en: 'Phetchabun', lat: 16.676, lng: 101.195 },
-  { icao: 'VTMW', name_th: 'พระมหาลาภินิยม', name_en: 'Mae Fah Luang', lat: 17.238, lng: 99.817 },
-  { icao: 'VTYK', name_th: 'ตาก', name_en: 'Tak', lat: 16.892, lng: 99.12 },
-  { icao: 'VTPU', name_th: 'กำแพงเพชร', name_en: 'Kamphaeng Phet', lat: 14.102, lng: 99.517 },
-  // central
+  // central and Gulf
   { icao: 'VTBS', name_th: 'สุวรรณภูมิ', name_en: 'Suvarnabhumi', lat: 13.686, lng: 100.767 },
   { icao: 'VTBD', name_th: 'ดอนเมือง', name_en: 'Don Mueang', lat: 13.913, lng: 100.607 },
-  { icao: 'VTBU', name_th: 'อุดมธุร', name_en: 'Udon Thani', lat: 17.398, lng: 102.788 },
-  { icao: 'VTKT', name_th: 'โคราช', name_en: 'Nakhon Ratchasima', lat: 14.932, lng: 102.139 },
-  { icao: 'VTYJ', name_th: 'ระยอง', name_en: 'Rayong', lat: 12.681, lng: 101.253 },
-  { icao: 'VTPR', name_th: 'เพชรบุรี', name_en: 'Phetchaburi', lat: 13.172, lng: 100.991 },
-  // east / Isan — Trat is the Gulf biomass-burn corridor, Nakhon Phanom the
-  // Laos overland route
+  { icao: 'VTBU', name_th: 'อู่ตะเภา', name_en: 'U-Tapao (Rayong)', lat: 12.680, lng: 101.001 },
+  { icao: 'VTPH', name_th: 'หัวหิน', name_en: 'Hua Hin', lat: 12.633, lng: 99.951 },
   { icao: 'VTBO', name_th: 'ตราด', name_en: 'Trat', lat: 12.275, lng: 102.319 },
-  { icao: 'VTUU', name_th: 'อุบลราชธานี', name_en: 'Ubon Ratchathani', lat: 15.251, lng: 104.87 },
+  // Isan — the Laos overland route
+  { icao: 'VTUD', name_th: 'อุดรธานี', name_en: 'Udon Thani', lat: 17.382, lng: 102.799 },
+  { icao: 'VTUK', name_th: 'ขอนแก่น', name_en: 'Khon Kaen', lat: 16.462, lng: 102.786 },
+  { icao: 'VTUL', name_th: 'เลย', name_en: 'Loei', lat: 17.445, lng: 101.725 },
+  { icao: 'VTUI', name_th: 'สกลนคร', name_en: 'Sakon Nakhon', lat: 17.195, lng: 104.119 },
   { icao: 'VTUW', name_th: 'นครพนม', name_en: 'Nakhon Phanom', lat: 17.384, lng: 104.643 },
-  { icao: 'VTUB', name_th: 'บุรีรัมย์', name_en: 'Buriram', lat: 15.666, lng: 103.501 },
-  { icao: 'VTUR', name_th: 'ร้อยเอ็ด', name_en: 'Roi Et', lat: 16.136, lng: 103.172 },
-  { icao: 'VTUV', name_th: 'สกลนคร', name_en: 'Sakon Nakhon', lat: 17.699, lng: 104.12 },
-  { icao: 'VTSZ', name_th: 'สระแก้ว', name_en: 'Sa Kaeo', lat: 13.682, lng: 102.093 },
+  { icao: 'VTUV', name_th: 'ร้อยเอ็ด', name_en: 'Roi Et', lat: 16.117, lng: 103.772 },
+  { icao: 'VTUO', name_th: 'บุรีรัมย์', name_en: 'Buriram', lat: 15.227, lng: 103.244 },
+  { icao: 'VTUQ', name_th: 'นครราชสีมา', name_en: 'Nakhon Ratchasima', lat: 14.950, lng: 102.313 },
+  { icao: 'VTUU', name_th: 'อุบลราชธานี', name_en: 'Ubon Ratchathani', lat: 15.251, lng: 104.870 },
   // south — the Andaman dust belt
-  { icao: 'VTSP', name_th: 'หาดใหญ่', name_en: 'Hat Yai', lat: 8.105, lng: 98.308 },
-  { icao: 'VTSG', name_th: 'กระบี่', name_en: 'Krabi', lat: 8.099, lng: 98.986 },
+  { icao: 'VTSE', name_th: 'ชุมพร', name_en: 'Chumphon', lat: 10.711, lng: 99.362 },
   { icao: 'VTSB', name_th: 'สุราษฎร์ธานี', name_en: 'Surat Thani', lat: 9.133, lng: 99.152 },
+  { icao: 'VTSM', name_th: 'สมุย', name_en: 'Samui', lat: 9.548, lng: 100.062 },
+  { icao: 'VTSF', name_th: 'นครศรีธรรมราช', name_en: 'Nakhon Si Thammarat', lat: 8.546, lng: 99.940 },
+  { icao: 'VTSG', name_th: 'กระบี่', name_en: 'Krabi', lat: 8.099, lng: 98.986 },
+  { icao: 'VTSP', name_th: 'ภูเก็ต', name_en: 'Phuket', lat: 8.105, lng: 98.308 },
   { icao: 'VTSR', name_th: 'ระนอง', name_en: 'Ranong', lat: 9.773, lng: 98.587 },
   { icao: 'VTST', name_th: 'ตรัง', name_en: 'Trang', lat: 7.512, lng: 99.621 },
+  { icao: 'VTSS', name_th: 'หาดใหญ่', name_en: 'Hat Yai', lat: 6.933, lng: 100.393 },
+  { icao: 'VTSC', name_th: 'นราธิวาส', name_en: 'Narathiwat', lat: 6.520, lng: 101.743 },
 ]
 
 /** Koschmieder constant: the contrast fraction at which an object is "barely
@@ -310,7 +321,7 @@ export default {
   label_en: 'Airport visibility (METAR) — an optical dust/haze detector',
   intervalMs: 30 * 60_000, // METAR files every 30 min; polling faster re-reads the same report
   enabled: true,
-  version: 2, // bump when the parser changes → runs at next boot
+  version: 3, // 3: station table verified against the service (was 10/28 dead, 3 mislabelled)
 
   async run({ db }) {
     const { rows, unknownStation } = normalizeMetars(
