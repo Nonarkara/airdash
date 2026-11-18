@@ -38,5 +38,11 @@ check('header.js no longer ranks provinces by danger.score for the headline', !/
 const ops = readFileSync(new URL('../public/ops.html', import.meta.url), 'utf8')
 check('the chip label says PM2.5, not DANGER', /id="danger-kind">PM2\.5</.test(ops) && !/data-i18n="ดัชนีอันตราย\|DANGER"/.test(ops))
 
+// The story page's banner speaks about the air now, measured — not about any alert in 24 h.
+const story = readFileSync(new URL('../public/js/story.js', import.meta.url), 'utf8')
+const strip = story.slice(story.indexOf('async function renderAlertStrip'), story.indexOf('// ── 2 · PERSONA'))
+check('the story banner no longer turns red on any 24-h alert', !/\/api\/alerts/.test(strip), 'it said "Hazardous" on a calm evening')
+check('the story banner is driven by current PM2.5 above the 37.5 standard', /p\.pm25 > 37\.5/.test(strip) && /p\.pm25 > 75/.test(strip))
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

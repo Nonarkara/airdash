@@ -1,4 +1,4 @@
-import { readPreference, writePreference } from './preferences.js?v=2.4.139'
+import { readPreference, writePreference } from './preferences.js?v=2.4.140'
 // ────────────────────────────────────────────────────────────────────────────
 // AIR STORY — the new front door. A scroll narrative about TODAY's air for
 // smart kids and curious adults. Not a dashboard: one question per chapter,
@@ -6,11 +6,11 @@ import { readPreference, writePreference } from './preferences.js?v=2.4.139'
 // back to /api/science. Unavailable readings stay unknown while the page
 // retries; reference formulas remain available for explanation.
 // ────────────────────────────────────────────────────────────────────────────
-import { store, on, setLang, emit } from './state.js?v=2.4.139'
-import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.139'
-import { getJson } from './cache.js?v=2.4.139'
-import { fmtNum, escapeHtml } from './fmt.js?v=2.4.139'
-import { initDataFreshness } from './dataFreshness.js?v=2.4.139'
+import { store, on, setLang, emit } from './state.js?v=2.4.140'
+import { tr, paintChrome, LEVEL_NAME, pm25Level } from './i18n.js?v=2.4.140'
+import { getJson } from './cache.js?v=2.4.140'
+import { fmtNum, escapeHtml } from './fmt.js?v=2.4.140'
+import { initDataFreshness } from './dataFreshness.js?v=2.4.140'
 
 const $ = (sel) => document.querySelector(sel)
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -224,37 +224,43 @@ function freshnessLine() {
 }
 
 // ── Alert strip (under the hero) ─────────────────────────────────────────
-// Shows a slim bilingual banner when /api/alerts has any active sev≥2 alert
-// in the last 24h, or when the viewed province/national band is ≥ unhealthy
-// (Thai AQI level 4+). The message links to /ops.html for details; the
-// trailing CTA jumps to the subscribe links in the ACT chapter. 5-min TTL
-// via getJson keeps it cheap; failures leave the strip hidden.
+// Shows a slim bilingual banner when any province's CURRENT measured PM2.5 is
+// above the Thai 24-hour standard (37.5), or when the viewed province is at
+// Thai AQI level 4+. Red only above 75. The trailing CTA jumps to the
+// subscribe links in the ACT chapter. Reads the science payload already loaded.
 async function renderAlertStrip() {
   const strip = $('#alert-strip')
   const msg = $('#alert-strip-msg')
   if (!strip || !msg) return
 
-  let severe = false
-  try {
-    const data = await getJson('/api/alerts?limit=20&min_severity=2', 300_000)
-    const cutoff = Date.now() - 24 * 3600_000
-    severe = (data?.alerts ?? []).some((a) =>
-      (a.severity ?? 0) >= 2 && Date.parse(a.ts ?? '') > cutoff)
-  } catch { severe = false }
-
+  // The strip speaks about the air NOW, measured (2026-11-18). It used to
+  // turn red — "Hazardous air in some areas" — whenever any severity-2 alert
+  // had fired in the last 24 h. Most of those are single-hour station or
+  // satellite-fusion peaks (the preprint found only about a quarter of
+  // station alerts, and none of the GISTDA ones, were followed by a bad
+  // day), so on a calm evening the front page said "Hazardous" while every
+  // measured number said "moderate". Now: the provinces whose current PM2.5
+  // is above the Thai 24-hour standard (37.5), or above 75 for red.
+  const provinces = (science?.provinces ?? []).filter((p) => Number.isFinite(p.pm25))
+  const over = provinces.filter((p) => p.pm25 > 37.5).sort((a, b) => b.pm25 - a.pm25)
+  const red = over.filter((p) => p.pm25 > 75)
+  const here = currentPm25()
   const unhealthyHere = currentLevel() >= 4
-  if (!severe && !unhealthyHere) { strip.hidden = true; return }
+  if (!over.length && !unhealthyHere) { strip.hidden = true; return }
 
+  const severe = red.length > 0 || currentLevel() >= 5
   strip.classList.toggle('severe', severe)
-  // The strip used to point at /ops.html — the operator console with ~2,000
-  // live points and layer controls. A person who was just told the air is
-  // hazardous does not need that; they need the advice for their own
-  // profile, which is the chapter immediately below. Mission Control is still
-  // reachable, but it is labelled in the act chapter for the audience it is
-  // actually for.
-  setText(msg, severe
-    ? tr('🔴 อากาศอันตรายในบางพื้นที่ — ดูว่าควรทำอะไร', '🔴 Hazardous air in some areas — what to do now')
-    : tr('🟠 อากาศมีผลต่อสุขภาพในพื้นที่นี้ — ดูว่าควรทำอะไร', '🟠 Unhealthy air in this area — what to do now'))
+  const name = (p) => tr(p.name_th, p.name_en)
+  const list = over.length === 1 ? name(over[0])
+    : over.length === 2 ? `${name(over[0])} ${tr('และ', 'and')} ${name(over[1])}`
+    : tr(`${over.length} จังหวัด`, `${over.length} provinces`)
+  // A person who was just told the air is bad needs the advice for their own
+  // profile — the chapter immediately below — not the operator console.
+  setText(msg, unhealthyHere
+    ? tr(`${severe ? '🔴' : '🟠'} ฝุ่นที่นี่เกินมาตรฐานสุขภาพของไทยตอนนี้ (PM2.5 ${Math.round(here)}) — ดูว่าควรทำอะไร`,
+         `${severe ? '🔴' : '🟠'} The air here is above the Thai health standard right now (PM2.5 ${Math.round(here)}) — what to do`)
+    : tr(`${severe ? '🔴' : '🟠'} ${list} ฝุ่นเกินมาตรฐานสุขภาพของไทยตอนนี้ — ดูว่าควรทำอะไร`,
+         `${severe ? '🔴' : '🟠'} ${list}: above the Thai health standard right now — what to do`))
   strip.hidden = false
 }
 

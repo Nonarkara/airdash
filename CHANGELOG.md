@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > it solved. If a feature is in the code but not in this log, it is in the
 > wrong place.
 
+## [2.4.140] — 2026-11-18 — the front page stops calling a calm evening "Hazardous"
+
+- **Air Story banner now describes the measured air now.** It turned red — "🔴 Hazardous air in some areas" — whenever any severity-2 alert had fired anywhere in 24 h. Most of those are single-hour station or satellite-fusion peaks; the preprint found only about a quarter of station alerts and none of the GISTDA ones were followed by a bad day. On 18 Nov it said "Hazardous" while the same page said "Right now: good · PM2.5 19". It now names the provinces whose current PM2.5 is above the Thai 24-hour standard (37.5), orange, and turns red only above 75 ("🟠 Nakhon Pathom: above the Thai health standard right now — what to do"). Guard added to `scripts/test-headline.mjs`.
+- The visibility unit on the story page followed Thai in English ("24 กม."); it now follows the language.
+
+---
+
 ## [2.4.139] — 2026-11-18 — My Area leads with the measured PM2.5
 
 - The My Area card showed its verdict with a bare Watch score ("ALL CLEAR · 7/100") and no PM2.5 anywhere in that row. It now shows the province's measured PM2.5 ("ALL CLEAR · PM2.5 8 µg/m³"), the same quantity as the top bar and the picker; the Watch score is in the tooltip.
