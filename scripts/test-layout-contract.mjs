@@ -138,9 +138,15 @@ check('the unit sits on the column it measures',
 check('the caption no longer repeats the unit',
   !/PM2\.5: µg\/m³/.test(rankingJs),
   'the unit is on the column header; saying it twice is noise')
-check('the phone caption is dropped — the hero carries that caveat',
-  /@media \(max-width: 620px\)[\s\S]*?\.rank-method\s*\{\s*display:\s*none/.test(css),
-  'on a phone the danger chip already says "not a clinical index"')
+// 2026-11-18: the caption became the legend for Watch / Social / Index, and
+// the header chip now shows measured PM2.5 instead of a composite, so nothing
+// else on a phone says what those numbers mean or that they are not clinical.
+check('the column legend explains the three scores',
+  /Watch: 0–100/.test(rankingJs) && /Social: how vulnerable/.test(rankingJs) && /not? .*clinical/i.test(rankingJs),
+  'four numbers with one-word headings are unreadable without it')
+check('the column legend is not hidden on a phone',
+  !/@media \(max-width: 620px\)[\s\S]*?\.rank-method\s*\{\s*display:\s*none/.test(css),
+  'the phone is where a reader most needs to know what Watch, Social and Index are')
 check('the phone action card is ONE block, not two bordered boxes',
   /@media \(max-width: 620px\)[\s\S]*?\.rnc-action\s*\{[^}]*border:\s*0[^}]*\}/.test(css),
   'one idea, two borders — and the task-relevant line was the dashed one')

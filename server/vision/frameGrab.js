@@ -95,7 +95,14 @@ export function grabUrlOf(cam) {
  * bucket and the box stops serving. We hold 3 in flight per host and 12
  * overall, the same numbers cctvHealth.js uses.
  */
-export async function grabMany(cameras, { concurrency = 12, perHost = 3, hostLimits = {}, ...opts } = {}) {
+//
+// `deadline` (epoch ms): no grab STARTS after it, and the cameras not yet
+// started are left out of the result (not marked failed). The scheduler kills
+// a run at 10 minutes and throws its work away; on 15–17 Nov a slow
+// volunteer host made the daylight panel overrun 4–5 times a day, so every
+// frame of those runs was lost. A deadline turns that into a smaller run.
+// `grab` is injectable for tests.
+export async function grabMany(cameras, { concurrency = 12, perHost = 3, hostLimits = {}, deadline = Infinity, grab = grabFrame, ...opts } = {}) {
   const limitOf = (h) => { for (const [k, v] of Object.entries(hostLimits)) if (h === k || h.endsWith('.' + k)) return v; return perHost }
   const queue = cameras.filter((c) => grabUrlOf(c))
   const busy = new Map()
@@ -105,28 +112,28 @@ export async function grabMany(cameras, { concurrency = 12, perHost = 3, hostLim
   await new Promise((resolve) => {
     let active = 0
     const pump = () => {
-      while (active < concurrency) {
+      while (active < concurrency && Date.now() < deadline) {
         const i = queue.findIndex((c) => (busy.get(hostOf(c)) ?? 0) < limitOf(hostOf(c)))
         if (i < 0) break
         const cam = queue.splice(i, 1)[0]
         const host = hostOf(cam)
         busy.set(host, (busy.get(host) ?? 0) + 1)
         active++
-        grabFrame(grabUrlOf(cam), { ...opts, seekSeconds: cam.stream_kind === 'snapshot' ? 0 : (opts.seekSeconds ?? 2) })
+        grab(grabUrlOf(cam), { ...opts, seekSeconds: cam.stream_kind === 'snapshot' ? 0 : (opts.seekSeconds ?? 2) })
           .then((buf) => out.set(cam, buf))
           .catch(() => out.set(cam, null))
           .finally(() => { busy.set(host, busy.get(host) - 1); active--; pump() })
       }
-      if (!active && !queue.length) resolve()
+      if (!active && (!queue.length || Date.now() >= deadline)) resolve()
     }
     pump()
   })
   // A second phase keeps fallback JPEG hosts under the same concurrency cap.
-  const fallbacks = cameras.filter(c => !out.get(c) && c.snapshot_url && c.snapshot_url !== grabUrlOf(c))
+  const fallbacks = Date.now() >= deadline ? [] : cameras.filter(c => out.has(c) && !out.get(c) && c.snapshot_url && c.snapshot_url !== grabUrlOf(c))
     .map(original => ({ original, camera: { ...original, grab_url: original.snapshot_url,
       snapshot_url: null, hls_url: null, stream_kind: 'snapshot' } }))
   if (fallbacks.length) {
-    const frames = await grabMany(fallbacks.map(f => f.camera), { concurrency, perHost, hostLimits, ...opts })
+    const frames = await grabMany(fallbacks.map(f => f.camera), { concurrency, perHost, hostLimits, deadline, grab, ...opts })
     for (const f of fallbacks) out.set(f.original, frames.get(f.camera) ?? null)
   }
   return out

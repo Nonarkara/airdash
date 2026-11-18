@@ -11,13 +11,14 @@
 //
 // All coloring follows the AQI palette so the only saturated color band
 // on the page tells one consistent story.
-import { on, store, setLang } from '../state.js?v=2.4.135'
-import { tr } from '../i18n.js?v=2.4.135'
-import { openInsightsPane } from '../sensorHealth.js?v=2.4.135'
-import { riskCi } from '../confidence.js?v=2.4.135'
-import { getJson } from '../cache.js?v=2.4.135'
-import { flyToProvince } from '../map.js?v=2.4.135'
-import { showProvinceDetail } from './detail.js?v=2.4.135'
+import { on, store, setLang } from '../state.js?v=2.4.136'
+import { tr } from '../i18n.js?v=2.4.136'
+import { openInsightsPane } from '../sensorHealth.js?v=2.4.136'
+import { riskCi } from '../confidence.js?v=2.4.136'
+import { getJson } from '../cache.js?v=2.4.136'
+import { flyToProvince } from '../map.js?v=2.4.136'
+import { showProvinceDetail } from './detail.js?v=2.4.136'
+import { headlineReading } from '../headline.js?v=2.4.136'
 
 // AQI-derived 5-level palette — the same gradient the top stripe uses.
 // Watch (yellow) keeps dark text for contrast.
@@ -206,81 +207,56 @@ function renderStatus(snap) {
     note.textContent = store.lang === 'th' ? snap.risk.method_th : snap.risk.method_en
   }
 
-  // DANGER SCORE — paint the hero chip. When a focus city is selected
-  // (store.activeArea is set by focus.js), scope the chip to that city's
-  // province. When no city is selected (All Thailand), show the worst
-  // province nationally — the same headline answer readers expect from
-  // the top bar.
+  // THE HEADLINE — the measured PM2.5 of the worst province (or of the focused
+  // city's province), with its Thai AQI level name. See js/headline.js for why
+  // this is no longer the Danger composite; the composite is in the tooltip
+  // and one tap away in the province card.
   const dangerEl = document.getElementById('danger-hero')
   const dangerNum = document.getElementById('danger-num')
   const dangerBand = document.getElementById('danger-band')
   if (dangerEl && dangerNum && dangerBand) {
     const activeArea = store.activeArea
-    let scoped = null
-    if (activeArea && activeArea.id !== 'thailand' && activeArea.province_th) {
-      scoped = snap.risk.provinces.find((p) => p.province_th === activeArea.province_th) ?? null
-    }
-    // Worst case across all provinces — used when no city is focused, or
-    // when the user's selected city has no data (e.g. first load). Keep
-    // the whole province row (not just .danger) so the chip's click can
-    // open the matching breakdown panel.
-    let worstP = null
-    for (const p of snap.risk.provinces) {
-      const d = p.danger
-      if (!d || !Number.isFinite(d.score)) continue
-      if (!worstP || d.score > worstP.danger.score) worstP = p
-    }
-    const showP = (scoped?.danger ? scoped : null) ?? worstP
-    const show = showP?.danger ?? null
-    dangerProvince = showP ?? null
-    if (show) {
-      const isCityScoped = !!scoped?.danger
-      // Smooth transition between bands via a class, not an inline color
-      dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high', 'band-unknown')
-      dangerEl.classList.add(`band-${show.band}`)
-      dangerNum.textContent = show.score ?? '–'
-      const label = tr(show.label_th, show.label_en)
-      dangerBand.textContent = Number.isFinite(show.score) ? label : tr('ไม่มีข้อมูล', 'No data')
-      // Add a small "scoped" badge so readers can tell whether the number
-      // is national-worst or just-the-city. A tiny chip, not a redraw.
-      const cityBadge = isCityScoped
-        ? ` · ${tr(activeArea.name_th, activeArea.name_en)}`
-        : ''
-      // The scope is IN the chip, not tooltip-only: a phone user must be
-      // able to see that "62 Dangerous" means one worst province, not
-      // the whole country contradicting the calm hero verb next to it.
-      const scopeEl = document.getElementById('danger-scope')
+    const scopedCode = activeArea && activeArea.id !== 'thailand' && activeArea.province_th
+      ? snap.risk.provinces.find((p) => p.province_th === activeArea.province_th)?.province_code ?? null
+      : null
+    const h = headlineReading(snap.risk.provinces, scopedCode)
+    // The unit and "now" are one span so a phone can drop them and keep "PM2.5".
+    const kindRest = document.querySelector('#danger-kind .kind-rest')
+    if (kindRest) kindRest.textContent = ` µg/m³ ${tr('ตอนนี้', 'now')}`
+    const scopeEl = document.getElementById('danger-scope')
+    dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high', 'band-unknown')
+    dangerProvince = h?.province ?? null
+    if (h) {
+      const p = h.province
+      const placeName = tr(p.province_th, p.province_en)
+      const level = h.name ? tr(h.name.th, h.name.en) : tr('ไม่มีข้อมูล', 'No data')
+      dangerEl.classList.add(`band-${h.band}`)
+      dangerNum.textContent = Math.round(h.pm25)
+      dangerBand.textContent = level.charAt(0).toUpperCase() + level.slice(1)
       if (scopeEl) {
-        scopeEl.textContent = isCityScoped
-          ? tr(activeArea.name_th, activeArea.name_en)
-          : `${tr('สูงสุด', 'Highest')}: ${tr(showP.province_th, showP.province_en)}`
+        // "Highest:" is its own span so a narrow header can drop it before it
+        // drops the place or the level word (instrument-header.css).
+        const pre = document.createElement('span')
+        pre.className = 'scope-pre'
+        pre.textContent = h.scoped ? '' : `${tr('สูงสุด', 'Highest')}: `
+        scopeEl.replaceChildren(pre, placeName + (h.estimated ? ` · ${tr('ค่าประมาณ', 'estimate')}` : ''))
       }
-      // Build the audit-trail tooltip — every modifier, in one place.
-      // Lets a curious reader see what drove the number without leaving
-      // the top bar.
-      const parts = []
-      parts.push(`PM2.5 ${show.pm25_live != null ? show.pm25_live.toFixed(0) : '–'} µg/m³ (base ${show.pm_base})`)
-      if (show.temp_c != null) parts.push(`T ${show.temp_c.toFixed(0)}°C (heat amp ${(show.heat_amp * 100).toFixed(0)}%)`)
-      if (show.rh_pct != null) parts.push(`RH ${show.rh_pct.toFixed(0)}% (hygroscopic amp ${(show.hum_amp * 100).toFixed(0)}%)`)
-      if (show.noise_leq_db != null) {
-        const nStations = show.noise_stations > 1 ? ` · ${show.noise_stations} stn` : ''
-        parts.push(`noise ${show.noise_leq_db.toFixed(0)} dB${nStations} (amp ${(show.noise_amp * 100).toFixed(0)}%)`)
-      }
-      if (show.rain_relief > 0) parts.push(`rain relief ${(show.rain_relief * 100).toFixed(0)}% (${show.rain_source ?? 'forecast'})`)
-      parts.push(tr('คะแนนไม่ต่ำกว่าค่า PM ที่วัดได้ตอนนี้', 'score never below the measured PM baseline'))
-      const provinceName = tr(showP.province_th, showP.province_en)
-      dangerEl.setAttribute('aria-label', `${tr('ดัชนีวิจัย ไม่ใช่ดัชนีคลินิก', 'Research index, not clinical')}: ${show.score ?? '–'}/100 · ${scopeEl?.textContent ?? ''} · ${label}`)
-      dangerEl.title = `${label} · ${provinceName} (${show.score}/100)${cityBadge}\n${parts.join(' · ')}\n${tr('แตะเพื่อดูสูตรคำนวณ', 'tap for the formula breakdown')}`
+      const line = h.overStandard
+        ? tr('เกินมาตรฐาน 24 ชม. ของไทย (37.5)', 'above the Thai 24-hour standard (37.5)')
+        : tr('ยังไม่เกินมาตรฐาน 24 ชม. ของไทย (37.5)', 'below the Thai 24-hour standard (37.5)')
+      const d = p.danger
+      const research = d && Number.isFinite(d.score)
+        ? tr(`ดัชนีอันตรายเชิงวิจัย ${d.score}/100 (ไม่ใช่ดัชนีคลินิก: PM2.5 × ความร้อน × ความชื้น × เสียง − ฝน)`,
+             `Research danger index ${d.score}/100 (not clinical: PM2.5 × heat × humidity × noise − rain)`)
+        : ''
+      dangerEl.setAttribute('aria-label', `PM2.5 ${Math.round(h.pm25)} µg/m³ · ${level} · ${placeName} · ${line}`)
+      dangerEl.title = [`PM2.5 ${h.pm25.toFixed(1)} µg/m³ · ${level} (${tr('ระดับ AQI ไทย 2566', 'Thai AQI 2023 level')}) · ${placeName}`,
+        line, research, tr('แตะเพื่อเปิดจังหวัดนี้', 'tap to open this province')].filter(Boolean).join('\n')
     } else {
-      dangerEl.classList.remove('band-normal', 'band-watch', 'band-elevated', 'band-high', 'band-unknown')
       dangerEl.classList.add('band-unknown')
       dangerNum.textContent = '–'
-      // Subtle "waiting on data" state — just a short loading hint, not a
-      // full sentence that takes two rows in the chip. The national plate
-      // already says "กำลังโหลด/LOADING" so duplicating it here is noise.
       dangerBand.textContent = tr('รอข้อมูล', '…')
-      dangerEl.title = tr('กำลังโหลดข้อมูล Danger Score…', 'Loading Danger Score…')
-      const scopeEl = document.getElementById('danger-scope')
+      dangerEl.title = tr('กำลังโหลดค่าฝุ่น…', 'Loading PM2.5…')
       if (scopeEl) scopeEl.textContent = ''
     }
   }

@@ -12,7 +12,7 @@ import { readFrame } from './hazeRead.js'
 import { coverageReport, REACHABLE_KINDS } from './coverage.js'
 import { frameIdentity, assessHaze } from './hazeSignal.js'
 import { savePreview } from './frameStore.js'
-import { floodWallCameras, choosePanel, loadHealth, recordHealth, provinceOf } from './floodWall.js'
+import { floodWallCameras, choosePanel, loadHealth, recordHealth, panelHealthResults, provinceOf } from './floodWall.js'
 import { daylightInThailand } from './hazeSignal.js'
 
 /** Hard ceiling on ffmpeg spawns per cycle. Sampling is I/O bound, not CPU
@@ -21,6 +21,8 @@ import { daylightInThailand } from './hazeSignal.js'
  *  it we want to notice in the log, not silently sample a prefix of it. */
 const MAX_CAMS = 320 // ~76 rotating HLS/still cameras + the ≤231-camera flood-wall panel
 const PANEL_EVERY_MS = 55 * 60_000 // flood-wall panel ~hourly (polite to small hosts)
+const GRAB_BUDGET_MS = 6 * 60_000  // stop starting grabs here; scoring and storing need the rest of the 10 min
+
 
 /** Rotate through a list so consecutive cycles do not hammer the same few. */
 function stridePick(cams, n, tick) {
@@ -43,7 +45,7 @@ export default {
   // `dataVersion` — server/scheduler.js reads s.source.version. A source that
   // declares `dataVersion` is silently ignored by the guard and deferred
   // forever, which is exactly what happened to the first run of this source.
-  version: 7, // 7: restore the tint_hint write (see the INSERT below)
+  version: 8, // 8: grab deadline + honest panel health; 7: restore the tint_hint write (see the INSERT below)
 
   async run({ db }) {
     // The registry's health overlay reads an in-process map that is only
@@ -84,11 +86,12 @@ export default {
     // A station is useful context, never a prerequisite for seeing the sky.
     const stations = airStationsNow(db)
     const pick = [...stridePick(pairAir(candidates, stations), MAX_CAMS - panel.length, tick), ...pairAir(panel, stations)]
-    const frames = await grabMany(pick, { perHost: 2, hostLimits: { 'maholan.net': 1 } }) // hobbyist host: one at a time
+    // Grabbing stops starting new cameras at GRAB_BUDGET_MS so the run always
+    // finishes inside the scheduler's 10-minute ceiling (see grabMany).
+    const frames = await grabMany(pick, { perHost: 2, hostLimits: { 'maholan.net': 1 }, deadline: Date.now() + GRAB_BUDGET_MS }) // hobbyist host: one at a time
     if (panel.length) {
       const panelKeys = new Set(panel.map((c) => `${c.source}:${c.id}`))
-      recordHealth(db, pick.filter((c) => panelKeys.has(`${c.source}:${c.id}`))
-        .map((c) => ({ key: `${c.source}:${c.id}`, ok: frames.has(c) })))
+      recordHealth(db, panelHealthResults(pick, panelKeys, frames))
     }
     const nowIso = new Date().toISOString()
     const grabbedKeys = new Set()

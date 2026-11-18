@@ -99,6 +99,15 @@ export function choosePanel(cams, health, { perProvince = PER_PROVINCE, now = Da
   return out
 }
 
+/** Pure: health rows for panel cameras. Only cameras that were ATTEMPTED count;
+ *  a grab returns a buffer (ok) or null (failed). Until 2026-11-18 this used
+ *  frames.has(c), which is true for a failed grab too, so every panel camera
+ *  was recorded as healthy and the bench in floodWall.choosePanel never fired. */
+export function panelHealthResults(pick, panelKeys, frames) {
+  return pick.filter((c) => panelKeys.has(`${c.source}:${c.id}`) && frames.has(c))
+    .map((c) => ({ key: `${c.source}:${c.id}`, ok: !!frames.get(c) }))
+}
+
 /** Grab-health bookkeeping for panel cameras (survives restarts). */
 export function loadHealth(db) {
   const m = new Map()

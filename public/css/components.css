@@ -707,12 +707,9 @@
     background: none; border: 0;
     font-size: 12px; font-weight: 600;
   }
-  /* The caption this line used to carry ("research scores, not clinical
-     indices") is on the danger chip in the header on a phone — the same
-     words, one screen apart. The unit moved into the PM2.5 column header.
-     So on a phone the line has nothing left to say, and it cost 30px of
-     the opening screen. */
-  .rank-method { display: none; }
+  /* The line now says what Watch, Social and Index mean (2026-11-18), which
+     nothing else on a phone says, so it shows here too — smaller, not hidden. */
+  .rank-method { margin: 4px 10px; font-size: 11.5px; line-height: 1.4; }
 }
 
 /* ── Per-province action card (expandable inside each ranking row) ─────

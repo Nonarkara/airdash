@@ -1,11 +1,11 @@
 // Left rail: live province ranking — worst air first.
 // Sort mode: Worst air (default, by PM2.5) | Effective Harm (Watch × Social Load).
-import { on, store } from '../state.js?v=2.4.135'
-import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.135'
-import { fmtNum, el } from '../fmt.js?v=2.4.135'
-import { flyToProvince } from '../map.js?v=2.4.135'
-import { showProvinceDetail } from './detail.js?v=2.4.135'
-import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.135'
+import { on, store } from '../state.js?v=2.4.136'
+import { tr, BAND, pm25Level, LEVEL_NAME } from '../i18n.js?v=2.4.136'
+import { fmtNum, el } from '../fmt.js?v=2.4.136'
+import { flyToProvince } from '../map.js?v=2.4.136'
+import { showProvinceDetail } from './detail.js?v=2.4.136'
+import { causeChip, causesByProvince, causeEvidenceBlock } from './patterns-ui.js?v=2.4.136'
 
 const TREND_THRESHOLD = 3
 const VICON = { safe: '✓', watch: '!', prepare: '!!', danger: '!!!' }
@@ -332,8 +332,12 @@ function render(snap) {
     el('span', {}, tr('เฝ้าระวัง', 'Watch')),
     el('span', {}, tr('สังคม', 'Social')),
     el('span', {}, tr('ดัชนี', 'Index')))
+  // What each number means, in words, beside the numbers (2026-11-18). Four
+  // columns with one-word headings were unreadable without this; the
+  // headings cannot grow (the rail budget, test-rail-width.mjs), so the
+  // meaning lives in one line under them, on every width.
   const note = el('p', { class: 'rank-method' }, tr(
-    'คะแนนวิจัย ไม่ใช่ดัชนีคลินิก',
-    'Research scores, not clinical indices.'))
+    'เฝ้าระวัง: 0–100 จากฝุ่น แนวโน้ม พยากรณ์ อากาศนิ่ง · สังคม: ความเปราะบางของประชากร (ค่าคงที่) · ดัชนี: คะแนนอันตรายเชิงวิจัย — ไม่มีค่าใดเป็นดัชนีคลินิก',
+    'Watch: 0–100 from PM2.5, trend, forecast and still air · Social: how vulnerable the population is (fixed) · Index: research danger score. None is a clinical index.'))
   box.replaceChildren(...[modeToggle(), card, note, headings, ...rowEls].filter(Boolean))
 }

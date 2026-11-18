@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > it solved. If a feature is in the code but not in this log, it is in the
 > wrong place.
 
+## [2.4.136] — 2026-11-18 — one headline number, columns that say what they mean
+
+- **The top bar now leads with the measured PM2.5** of the worst province (or the focused city's province) and its Thai AQI 2023 level word: "PM2.5 µg/m³ now · 35 · Moderate · Nakhon Pathom". It used to lead with the Danger research composite, which on 18 Nov read "49 · Dangerous" for a province measuring 35 µg/m³, under the 37.5 standard, while the panel beside it said no station was above the health line. The top bar, the ranking's first row and "severe now" now agree by construction (`js/headline.js`). The composite is in the chip's tooltip and in the province card, labelled as research. On a phone the chip keeps PM2.5, the number, the level word and the place; the unit and "Highest:" are dropped first.
+- **The ranking says what Watch, Social and Index are** in one line under the headings, on every width including phones: Watch is the 0–100 signal from PM2.5, trend, forecast and still air; Social is population vulnerability (fixed); Index is the research danger score; none is clinical.
+- **Haze preparation list discriminates.** Once the burning season starts every province had the same label, "Upwind fires: keep watch". The list is now ordered by the smoke engine's distance-weighted upwind fire level and each line reads "Province · PM2.5 n · moderate fire upwind".
+- **Maintenance: the camera-haze job no longer loses whole runs.** On 15–17 Nov a slow volunteer camera host pushed the daylight run past the scheduler's 10-minute ceiling 4–5 times a day, discarding every frame. Grabbing now stops starting new cameras at 6 minutes (`grabMany` deadline) so the run always completes. Panel camera health was recorded as healthy even when the grab failed (`frames.has` is true for a failed grab), so failing cameras were never benched; fixed (`panelHealthResults`). Guards in `scripts/test-flood-wall.mjs` and the new `scripts/test-headline.mjs`.
+
+---
+
 ## [2.4.135] — 2026-11-04 — Correct the preprint's scientific and reproducibility claims
 
 - Corrected preprint v2 preserves v1 and withdraws unsupported Telegram hand-off/simulated end-to-end latency and daily alert hit rates with invalid missing-outcome denominators. The extraction now separates valid daily outcomes; historical corrected rates remain uncomputed.

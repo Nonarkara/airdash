@@ -1,8 +1,8 @@
 // Preparation aid: observed/estimated PM, model outlook and upwind-fire evidence
 // stay separate. No smoke arrival time or clean-air destination is invented.
-import { store } from '../state.js?v=2.4.135'
-import { escapeHtml as esc } from '../fmt.js?v=2.4.135'
-import { windBasisLabel, windRowText } from '../wind.js?v=2.4.135'
+import { store } from '../state.js?v=2.4.136'
+import { escapeHtml as esc } from '../fmt.js?v=2.4.136'
+import { windBasisLabel, windRowText } from '../wind.js?v=2.4.136'
 const tr = (th,en) => store.lang === 'th' ? th : en
 const num = v => Number.isFinite(v) ? v.toLocaleString('en-GB',{maximumFractionDigits:1}) : '—'
 export function planningState(pm, forecast, fires) {
@@ -15,6 +15,21 @@ export function planningState(pm, forecast, fires) {
 const labels = {
   protect:['ลดการรับฝุ่นตอนนี้','Reduce exposure now'], prepare:['เตรียมรับค่าฝุ่นสูงในแบบจำลอง','Prepare: modelled PM elevated'],
   watch:['มีไฟในแนวเหนือลม — ติดตาม','Upwind fires: keep watch'], unknown:['ข้อมูลยังไม่พอ','Incomplete evidence'], monitor:['ติดตามต่อ — ไม่ใช่การรับรองว่าปลอดภัย','Keep monitoring; not a safety clearance'],
+}
+// Upwind fire by the smoke engine's distance-weighted level (server/smoke.js).
+const fireLevel = {
+  high:['ไฟเหนือลมมาก','heavy fire upwind'], moderate:['ไฟเหนือลมปานกลาง','moderate fire upwind'],
+  low:['ไฟเหนือลมเล็กน้อย','a little fire upwind'], none:['ไฟเหนือลมไกลหรือน้อยมาก','faint or distant fire upwind'],
+}
+/** One option line: the place, the measured PM2.5 and the reason it is on the list. */
+export function optionLabel(row) {
+  const name = store.lang==='th' ? row.p.province_th : row.p.province_en
+  const pm = Number.isFinite(row.p.pm25) ? `PM2.5 ${Math.round(row.p.pm25)}` : tr('ไม่มีค่าฝุ่น','no PM2.5')
+  return `${name} · ${pm} · ${reasonText(row)}`
+}
+/** Why a province is on the list, in words that differ between provinces. */
+export function reasonText(row) {
+  return row.state==='watch' && fireLevel[row.s?.level] ? tr(...fireLevel[row.s.level]) : tr(...labels[row.state])
 }
 // Strict cache: failed refreshes never silently reuse old planning evidence.
 let evidence = null, evidenceAt = 0, pending = null
@@ -191,7 +206,11 @@ async function load(host,snapshot) {
     return {p,f,s,r:rn.get(p.province_code),max,state:planningState(p.pm25,max,s?.upwind_fires)}
   })
   const order={protect:0,prepare:1,watch:2,unknown:3,monitor:4}
-  rows.sort((a,b)=>order[a.state]-order[b.state] || (b.max??-1)-(a.max??-1))
+  // Within "watch" every province can carry the same state once the burning
+  // season starts (any upwind detection counts), so the list orders and labels
+  // them by HOW MUCH fire is upwind — the smoke engine's own distance-weighted
+  // level — instead of repeating one phrase forty times (2026-11-18).
+  rows.sort((a,b)=>order[a.state]-order[b.state] || (a.state==='watch' ? (b.s?.upwind_frp_mw??0)-(a.s?.upwind_frp_mw??0) : 0) || (b.max??-1)-(a.max??-1))
   if (!rows.some(r=>r.p.province_code===selected)) selected=rows[0]?.p.province_code??''
   // The map paints the wind field from the RISK payload — the bearing exists
   // for all 77 provinces whether or not anything is burning upwind. This event
@@ -210,10 +229,10 @@ async function load(host,snapshot) {
     // engines read the same Open-Meteo column for the same province, and the
     // agreement is asserted live (77/77) by scripts/test-wind-direction.mjs.
     const windTxt=windRowText(p)
-    const options=rows.map(row=>`<option value="${row.p.province_code}" ${selected===row.p.province_code?'selected':''}>${esc(store.lang==='th'?row.p.province_th:row.p.province_en)} · ${esc(tr(...labels[row.state]))}</option>`).join('')
+    const options=rows.map(row=>`<option value="${row.p.province_code}" ${selected===row.p.province_code?'selected':''}>${esc(optionLabel(row))}</option>`).join('')
     host.innerHTML=`<h3>${tr('เตรียมรับหมอกควัน · พื้นที่ไหนควรติดตาม','Haze preparation · areas to watch')}</h3>
       <label>${tr('เลือกจังหวัด (เรียงตามสัญญาณที่ควรติดตาม)','Province (ordered by preparation signals)')}<select data-plan-province>${options}</select></label>
-      <p class="haze-plan-verdict" data-state="${state}">${esc(name)} · ${esc(tr(...labels[state]))}</p>
+      <p class="haze-plan-verdict" data-state="${state}">${esc(name)} · ${esc(reasonText(row))}</p>
       <div class="haze-plan-grid">
       <article><h4>1 · ${tr('ฝุ่นที่มีอยู่','Pollution now')}</h4><strong>${num(p.pm25)} µg/m³</strong><p>${esc(source)} · ${tr('ค่าสูงสุดในจังหวัด ไม่ใช่ทุกจุด','Provincial maximum; not every location')}</p></article>
       <article><h4>2 · ${tr('แบบจำลองฝุ่น','PM model outlook')}</h4><strong>${num(f?.forecast?.pm25_d0)} → ${num(f?.forecast?.pm25_d1)} → ${num(f?.forecast?.pm25_d2)}</strong><p>µg/m³ · ${tr('วันนี้ / พรุ่งนี้ / มะรืน · CAMS ปรับอคติ','Today / tomorrow / following day · bias-adjusted CAMS')}</p><details><summary>${tr('ข้อมูลต้นทาง → ค่าที่ปรับแล้ว','Source model → adjusted outlook')}</summary><p>${tr('CAMS ต้นทาง','Source CAMS')}: ${num(f?.forecast?.cams_raw_d0)} → ${num(f?.forecast?.cams_raw_d1)} → ${num(f?.forecast?.cams_raw_d2)} µg/m³<br>${tr('ตัวคูณปรับอคติ','Bias multiplier')}: ${num(f?.forecast?.bias_ratio)} · ${esc(f?.forecast?.bias_scope??'—')}</p><p>${tr('ค่าต้นทางนี้ยังเป็นแบบจำลอง ไม่ใช่ค่าตรวจวัด การปรับด้วยสถานีไม่ได้ทำให้เป็นหลักฐานอิสระ','The source values are already modelled, not measurements. Station adjustment does not make an independent observation.')}</p></details></article>

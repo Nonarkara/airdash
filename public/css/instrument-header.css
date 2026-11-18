@@ -37,7 +37,7 @@ header .hd-data #danger-hero {
 header #danger-hero::before { display: none; }
 header #danger-hero .danger-label { display: block; margin: 0; padding: 0; }
 header #danger-hero .danger-label .th, header #danger-hero .danger-label .en { display: none; }
-header #danger-hero .danger-kind { display: block; font: 400 11px/1.4 var(--font-display); white-space: nowrap; color: var(--ink-mid); }
+header #danger-hero .danger-kind { display: block; font: 400 11px/1.4 var(--font-display); white-space: nowrap; color: var(--ink-mid); text-transform: none; } /* a unit must keep its case: uppercase turned µg/m³ into ΜG/M³ */
 header #danger-hero .danger-main { display: flex; align-items: baseline; gap: 5px; margin: 0; }
 header #danger-hero .danger-num { font: 600 26px/1 var(--font-num); }
 header #danger-hero .danger-band { font: 500 12px/1.4 var(--font-display); }
@@ -78,6 +78,8 @@ header #place-search-container {
 header #place-search-container .search-icon { display: none; }
 header #place-search-container #place-search { font: 400 16px/1.5 var(--font-display); min-width: 0; width: 100%; height: 44px; }
 header .data-freshness { display: none; } /* Persistent ticker retains source freshness. */
+/* On a phone the chip keeps PM2.5, the number, its level word and the place; the unit goes to the tooltip. */
+@media (max-width: 480px) { header #danger-hero .danger-kind .kind-rest { display: none; } }
 header :is(button, a, select, input):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 @media (max-width: 1100px) {
   header { gap: 6px; padding: 4px 8px; }
@@ -87,7 +89,9 @@ header :is(button, a, select, input):focus-visible { outline: 2px solid var(--in
   header .hd-data #danger-hero { gap: 6px; flex: 1 1 auto; }
   header #danger-hero .danger-kind { font-size: 10px; }
   header #danger-hero .danger-num { font-size: 22px; }
-  header #danger-hero .danger-band { display: none; }
+  /* The level word is the meaning of the number; it stays. "Highest:" goes first. */
+  header #danger-hero .danger-band { font-size: 11px; }
+  header #danger-hero .danger-scope .scope-pre { display: none; }
   header #danger-hero .danger-scope { font-size: 12px; }
   header .header-actions { gap: 0; }
   header .header-actions button { padding: 0 4px; font-size: 12px; }
