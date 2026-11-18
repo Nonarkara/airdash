@@ -1510,6 +1510,9 @@
   min-height: 32px; border-radius: 3px;
 }
 .citizen-tg-bind:hover:not(:disabled) { background: #1E96D1; }
+/* .citizen-tg-bind / -province set display, which beats the [hidden] attribute,
+   so "Link this province" showed before any chat was connected (2026-11-18). */
+.citizen-tg-subscribe [hidden] { display: none; }
 .citizen-tg-bind:disabled { background: #88C7E5; cursor: progress; }
 .citizen-tg-status { padding: 0 10px 8px; min-height: 14px; font-size: 10.5px; line-height: 1.4; }
 .citizen-tg-ok { color: #006A00; font-weight: 700; }

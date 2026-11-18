@@ -1,4 +1,4 @@
-import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.137'
+import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.138'
 // Citizen-mode panel — what ordinary people need to see in 30 seconds.
 // Surfaces the four questions that matter during a dust episode:
 //   1. Am I safe right now?          → JMA verb at the top
@@ -16,20 +16,21 @@ import { readPreference, writePreference, removePreference } from '../preference
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.137'
-import { tr, BAND } from '../i18n.js?v=2.4.137'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.137'
-import { getJson } from '../cache.js?v=2.4.137'
-import { flyToProvince } from '../map.js?v=2.4.137'
-import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.137'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.137'
+import { on, store, emit } from '../state.js?v=2.4.138'
+import { tr, BAND, pm25Level } from '../i18n.js?v=2.4.138'
+import { LEVEL_BAND } from '../headline.js?v=2.4.138'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.138'
+import { getJson } from '../cache.js?v=2.4.138'
+import { flyToProvince } from '../map.js?v=2.4.138'
+import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.138'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.138'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare, renderNoiseTrends,
-} from './citizenLife.js?v=2.4.137'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.137'
-import { windBadgeHtml, windCaveatText } from '../wind.js?v=2.4.137'
+} from './citizenLife.js?v=2.4.138'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.138'
+import { windBadgeHtml, windCaveatText } from '../wind.js?v=2.4.138'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -59,18 +60,24 @@ const HEALTH_ADVICE = {
 // All 77 provinces of Thailand (TH + EN) for the picker, populated from the
 // first risk snapshot so lat/lng + band data come attached.
 let PROVINCE_INDEX = []
+// The picker shows the same quantity as the top bar: measured PM2.5, coloured
+// by its Thai AQI level. The Watch score stays in the tooltip.
+const pmShort = (p) => Number.isFinite(p.pm25) ? `${Math.round(p.pm25)}` : '–'
+const pmBand = (p) => LEVEL_BAND[pm25Level(p.pm25)] ?? 'unknown'
+const pmTitle = (p) => `${Number.isFinite(p.pm25) ? `PM2.5 ${Math.round(p.pm25)} µg/m³` : tr('ไม่มีค่า PM2.5', 'no PM2.5')} · ${tr('คะแนนเฝ้าระวัง', 'Watch score')} ${p.score ?? '–'}/100`
 
 export function initCitizen() {
   const box = document.getElementById('citizen')
   if (!box) return
   // Province index gets populated on first snapshot
   on('snapshot', (s) => {
-    if (!PROVINCE_INDEX.length) {
-      PROVINCE_INDEX = (s?.risk?.provinces ?? []).map((p) => ({
-        th: p.province_th, en: p.province_en, code: p.province_code,
-        score: p.score, band: p.band, lat: p.lat, lng: p.lng,
-      }))
-    }
+    // Rebuilt on every snapshot (it used to be built once, so the picker's
+    // numbers froze at page load). pm25 is what the picker shows (2026-11-18).
+    const fresh = (s?.risk?.provinces ?? []).map((p) => ({
+      th: p.province_th, en: p.province_en, code: p.province_code,
+      score: p.score, band: p.band, lat: p.lat, lng: p.lng, pm25: p.pm25,
+    }))
+    if (fresh.length) PROVINCE_INDEX = fresh
     // URL ?city= deep link: someone shared a link to "your city's dashboard".
     // Pin that province on first snapshot arrival (not on init, because the
     // index isn't populated yet) so the citizen panel auto-loads with
@@ -86,7 +93,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.137').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.138').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -266,15 +273,15 @@ function renderQuickSelect() {
     const band = p.band ?? 'normal'
     const score = p.score ?? 0
     popRow.append(el('button', {
-      class: `citizen-quick-pill b-${band}`, type: 'button',
-      title: `${score}/100`,
+      class: `citizen-quick-pill b-${pmBand(p)}`, type: 'button',
+      title: pmTitle(p),
       onclick: () => {
         setMyProvince({ th: p.th, en: p.en, code: p.code, lat: p.lat, lng: p.lng, band, score })
         if (p.lat != null && p.lng != null) flyToProvince(p)
       },
     },
       el('span', { class: 'citizen-quick-pill-th' }, p.th),
-      el('span', { class: 'citizen-quick-pill-num' }, `${score}`),
+      el('span', { class: 'citizen-quick-pill-num' }, pmShort(p)),
     ))
   }
   wrap.append(popHead, popRow)
@@ -721,6 +728,17 @@ function lineButton(province, band, score, live = null) {
 //   A) idle: "Connect on Telegram" button with deeplink
 //   B) waiting: "Waiting for you to tap Start in the bot…"
 //   C) ready: province picker + Bind button
+// The binding session outlives the widget (2026-11-18). The citizen panel
+// repaints on every snapshot, and each repaint used to build a fresh form,
+// fetch a NEW code and drop the old one — so a reader who had tapped the bot
+// link with code A was then polled for code B, which no chat holds. Worse,
+// enterIdle() set state.code = null right after init() stored it, so the poll
+// always asked for an empty code and binding could never complete from the
+// dashboard. The code, the phase and the chat id now live here; the widget
+// is only a view of them. A code is reused for 30 minutes.
+const TG_CODE_TTL_MS = 30 * 60_000
+let tgSession = null   // { code, deeplink, chatId, phase: 'idle'|'waiting'|'ready', at }
+export function _tgSessionForTest() { return tgSession }
 function renderTelegramForm(province) {
   const status = el('div', { class: 'citizen-tg-status' })
   const actions = el('div', { class: 'citizen-tg-actions' })
@@ -769,7 +787,14 @@ function renderTelegramForm(province) {
     },
   }, tr('เชื่อมต่อจังหวัดนี้', 'Link this province'))
 
-  const state = { code: null, deeplink: null, chatId: null, pollTimer: null }
+  // `state` is the per-widget view; code/deeplink/chatId/phase read and write tgSession.
+  const state = {
+    pollTimer: null,
+    get code() { return tgSession?.code ?? null },
+    get deeplink() { return tgSession?.deeplink ?? null },
+    get chatId() { return tgSession?.chatId ?? null },
+    set chatId(v) { if (tgSession) tgSession.chatId = v },
+  }
   const openLink = el('a', {
     class: 'citizen-tg-open', target: '_blank', rel: 'noopener',
     onclick: () => { setTimeout(() => enterWaiting(), 600) },
@@ -777,14 +802,16 @@ function renderTelegramForm(province) {
   openLink.href = '#'
 
   const enterIdle = () => {
-    state.code = null
+    // Keep the code: it is what the bot link carries. Only the chat is forgotten.
     state.chatId = null
+    if (tgSession) tgSession.phase = 'idle'
     status.replaceChildren()
     actions.replaceChildren(openLink)
     provinceRow.hidden = true
     bindBtn.hidden = true
   }
   const enterWaiting = () => {
+    if (tgSession) tgSession.phase = 'waiting'
     actions.replaceChildren(
       el('span', { class: 'citizen-tg-waiting' },
         el('span', { class: 'citizen-tg-pulse' }),
@@ -793,6 +820,7 @@ function renderTelegramForm(province) {
   }
   const enterReady = (chatId) => {
     state.chatId = chatId
+    if (tgSession) tgSession.phase = 'ready'
     stopPolling()
     status.replaceChildren(el('span', { class: 'citizen-tg-ok' },
       tr('เห็นบอทแล้ว — เลือกจังหวัดเพื่อเริ่มรับแจ้งเตือน',
@@ -839,17 +867,22 @@ function renderTelegramForm(province) {
   // Initial: ask the server for a binding code.
   const init = async () => {
     try {
-      const r = await fetch('/api/telegram/binding-code', { cache: 'no-store' })
-      if (!r.ok) {
-        // Bot not configured → silent no-op (the section is hidden).
-        wrap.hidden = true
-        return
+      if (!tgSession || Date.now() - tgSession.at > TG_CODE_TTL_MS) {
+        const r = await fetch('/api/telegram/binding-code', { cache: 'no-store' })
+        if (!r.ok) {
+          // Bot not configured → silent no-op (the section is hidden).
+          wrap.hidden = true
+          return
+        }
+        const body = await r.json()
+        tgSession = { code: body.code, deeplink: body.deeplink, chatId: null, phase: 'idle', at: Date.now() }
       }
-      const body = await r.json()
-      state.code = body.code
-      state.deeplink = body.deeplink
-      openLink.href = body.deeplink
-      enterIdle()
+      openLink.href = tgSession.deeplink
+      wrap.hidden = false
+      // Resume where the reader was before the repaint.
+      if (tgSession.phase === 'ready' && tgSession.chatId) enterReady(tgSession.chatId)
+      else if (tgSession.phase === 'waiting') enterWaiting()
+      else enterIdle()
     } catch {
       wrap.hidden = true
     }
@@ -927,7 +960,7 @@ function populatePickerList(container, query) {
     const band = p.band ?? 'normal'
     const score = p.score ?? 0
     container.append(el('button', {
-      class: `citizen-pick-row b-${band}`, type: 'button',
+      class: `citizen-pick-row b-${pmBand(p)}`, type: 'button', title: pmTitle(p),
       onclick: () => {
         setMyProvince({ th: p.th, en: p.en, code: p.code, lat: p.lat, lng: p.lng, band, score })
         // Auto-fly to the province so the user immediately sees their area
@@ -937,7 +970,7 @@ function populatePickerList(container, query) {
       },
     },
       el('div', { class: 'citizen-pick-name' }, tr(p.th, p.en)),
-      el('div', { class: 'citizen-pick-meta' }, `${score}/100`),
+      el('div', { class: 'citizen-pick-meta' }, Number.isFinite(p.pm25) ? `PM2.5 ${pmShort(p)}` : '–'),
     ))
   }
 }

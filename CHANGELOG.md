@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > it solved. If a feature is in the code but not in this log, it is in the
 > wrong place.
 
+## [2.4.138] — 2026-11-18 — Telegram sign-up works from the dashboard; picker speaks PM2.5
+
+- **Telegram alerts sign-up was broken four ways, now fixed** (`renderTelegramForm`, citizen.js). (1) The section started `hidden` and nothing ever showed it, so it never appeared under "Get alerts". (2) `init()` stored the binding code, then `enterIdle()` set it to null, so the page polled the server for an empty code and could never see the reader's `/start`. (3) Every snapshot repaint built a new form with a new code, so a reader who had tapped the bot link with one code was polled for another. (4) CSS `display` rules beat the `hidden` attribute, so "Link this province" showed before any chat was connected. The binding session now lives outside the widget, is reused for 30 minutes and resumes the reader's step across repaints. Two chats had been bound in four months, both before this form. Guard: `scripts/test-telegram-form.mjs`. The bot's webhook was checked live (registered, no errors).
+- **Province picker and "Popular" chips show measured PM2.5** coloured by its Thai AQI level, the same quantity as the top bar; they showed an unlabelled Watch score ("Bangkok 21", "30/100"), which is now in the tooltip. The picker's values were also frozen at page load; they refresh with every snapshot.
+
+---
+
 ## [2.4.137] — 2026-11-18 — the research score stops issuing health verdicts
 
 - The Danger composite's band words were "Safe to be out / Be cautious / Dangerous / Very dangerous" — health verdicts that a not-clinical screening score cannot carry, and the source of the "49 Dangerous" headline for a province under the standard. They now describe the score itself: "Low / Raised / High / Very high score" (Thai: คะแนนต่ำ / คะแนนสูงขึ้น / คะแนนสูง / คะแนนสูงมาก). The province card and city dashboard title it "Research danger score · not clinical". The health verdict belongs to the measured PM2.5 and its Thai AQI level.
