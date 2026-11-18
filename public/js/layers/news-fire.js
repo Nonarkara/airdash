@@ -17,9 +17,9 @@
 // province-name substring match against the headline), so this only ever
 // shows a SUBSET of the news feed: headlines that name a single place. The
 // full, ungeotagged feed stays in the NEWS panel.
-import { tr } from '../i18n.js?v=2.4.136'
-import { ago, escapeHtml } from '../fmt.js?v=2.4.136'
-import { popupHtml, pm25Color } from '../paint.js?v=2.4.136'
+import { tr } from '../i18n.js?v=2.4.137'
+import { ago, escapeHtml } from '../fmt.js?v=2.4.137'
+import { popupHtml, pm25Color } from '../paint.js?v=2.4.137'
 
 export function createNewsFireLayer() {
   const group = L.layerGroup([], { pane: 'data' })
@@ -59,7 +59,9 @@ export function createNewsFireLayer() {
 
         const prov = pm25ByProvince.get(pin.province_code)
         const pm25 = prov?.pm25 ?? null
-        const icon = n.is_fire ? '🔥' : '⚠'
+        // A news pin, not an alert: the warning sign read as "warning 31" next
+        // to the PM2.5 badge (2026-11-18), so non-fire news uses a newspaper.
+        const icon = n.is_fire ? '🔥' : '📰'
         const badge = pm25 !== null
           ? `<span class="newsfire-pm" style="background:${pm25Color(pm25)}">${Math.round(pm25)}</span>`
           : ''
@@ -74,7 +76,7 @@ export function createNewsFireLayer() {
         const marker = L.marker([pin.lat, pin.lng], {
           icon: L.divIcon({
             className: '', iconSize: [30, 30], iconAnchor: [15, 15],
-            html: `<div class="newsfire-pin${n.is_fire ? ' is-fire' : ''}">${icon}${badge}</div>`,
+            html: `<div class="newsfire-pin${n.is_fire ? ' is-fire' : ''}" role="img" aria-label="${escapeHtml(`${n.is_fire ? tr('ข่าวไฟ', 'Fire news') : tr('ข่าวมลพิษ', 'Pollution news')} · ${named || where}${pm25 !== null ? ` · PM2.5 ${Math.round(pm25)} µg/m³` : ''}`)}">${icon}${badge}</div>`,
           }),
           zIndexOffset: 600,
           pane: 'data',

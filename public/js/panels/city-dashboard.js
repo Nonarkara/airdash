@@ -8,12 +8,12 @@
 // The panel is injected into the left rail (#rail-left) below the place card,
 // and auto-refreshes every 5 minutes. It degrades gracefully — if the city
 // detail fetch fails, it shows the blurb from the manifest and nothing else.
-import { store, on, emit } from '../state.js?v=2.4.136'
-import { tr } from '../i18n.js?v=2.4.136'
-import { getJson } from '../cache.js?v=2.4.136'
-import { fmtNum } from '../fmt.js?v=2.4.136'
-import { riskCi } from '../confidence.js?v=2.4.136'
-import { focusById } from './focus.js?v=2.4.136'
+import { store, on, emit } from '../state.js?v=2.4.137'
+import { tr } from '../i18n.js?v=2.4.137'
+import { getJson } from '../cache.js?v=2.4.137'
+import { fmtNum } from '../fmt.js?v=2.4.137'
+import { riskCi } from '../confidence.js?v=2.4.137'
+import { focusById } from './focus.js?v=2.4.137'
 
 const REFRESH_MS = 5 * 60_000
 const FETCH_TTL = 60_000 // city detail cache — 1 min (data moves on ingest cadence)
@@ -261,7 +261,7 @@ function cityScoreRow(data, L) {
     // Danger score
     d
       ? el('div', { class: 'cd-score-card' },
-          el('div', { class: 'cd-score-label' }, L('ดัชนีอันตราย', 'DANGER SCORE')),
+          el('div', { class: 'cd-score-label' }, L('ดัชนีอันตรายเชิงวิจัย', 'RESEARCH DANGER SCORE')),
           el('div', { class: 'cd-score-value mono', style: `color:${d.band_color}` },
             d.score == null ? '—' : `${d.score}/100`),
           el('div', { class: 'cd-score-sub' }, L(d.label_th, d.label_en)),

@@ -8,7 +8,7 @@
 //
 // /paper/manifest.json names the files and their sha256, written by
 // paper/publish.py; scripts/test-preprint.mjs proves it matches the bytes.
-import { store, on } from '../state.js?v=2.4.136'
+import { store, on } from '../state.js?v=2.4.137'
 
 const tr = (th, en) => (store.lang === 'th' ? th : en)
 const PDFJS = '/lib/pdfjs-4.10.38/pdf.min.mjs'

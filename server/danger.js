@@ -177,11 +177,18 @@ function band(score) {
   return 'normal'
 }
 
+// Band words for a RESEARCH composite (2026-11-18). They used to be
+// "Safe to be out / Be cautious / Dangerous / Very dangerous": health
+// verdicts a not-clinical screening score cannot carry. On 18 Nov the
+// composite said "Dangerous" for a province measuring 35 µg/m³, under the
+// 37.5 standard, while every measured surface said "Watch". The words now
+// describe the score's level and leave the health verdict to the measured
+// PM2.5 and its Thai AQI level, which the top bar shows.
 export const DANGER_LABELS = {
-  normal:   { th: 'ปลอดภัย',     en: 'Safe to be out' },
-  watch:    { th: 'ระวัง',       en: 'Be cautious' },
-  elevated: { th: 'อันตราย',     en: 'Dangerous' },
-  high:     { th: 'อันตรายมาก',  en: 'Very dangerous' },
+  normal:   { th: 'คะแนนต่ำ',       en: 'Low score' },
+  watch:    { th: 'คะแนนสูงขึ้น',    en: 'Raised score' },
+  elevated: { th: 'คะแนนสูง',       en: 'High score' },
+  high:     { th: 'คะแนนสูงมาก',    en: 'Very high score' },
 }
 
 export const DANGER_BG = {

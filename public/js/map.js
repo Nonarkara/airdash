@@ -1,25 +1,25 @@
-import { windArrowSvg, windArrowSize, windBasisLabel, windEncodingText, windRowText, windView, WIND_ARROW } from './wind.js?v=2.4.136'
-import { CHANGE_COLOR, HORIZONS, changeCaption, horizonLabel, outlookByProvince, stateLabel } from './horizon.js?v=2.4.136'
-import { escapeHtml } from './fmt.js?v=2.4.136'
-import { moveMap } from './mapView.js?v=2.4.136'
-import { readPreference, writePreference } from './preferences.js?v=2.4.136'
+import { windArrowSvg, windArrowSize, windBasisLabel, windEncodingText, windRowText, windView, WIND_ARROW } from './wind.js?v=2.4.137'
+import { CHANGE_COLOR, HORIZONS, changeCaption, horizonLabel, outlookByProvince, stateLabel } from './horizon.js?v=2.4.137'
+import { escapeHtml } from './fmt.js?v=2.4.137'
+import { moveMap } from './mapView.js?v=2.4.137'
+import { readPreference, writePreference } from './preferences.js?v=2.4.137'
 // Leaflet map: Carto basemap + JAXA/NASA satellite overlays + ground data.
 // Z-order (bottom→top): basemap · satellite · radar · vectors · station data.
-import { on, emit, store } from './state.js?v=2.4.136'
-import { tr, LEVEL_NAME, BAND, bandColor } from './i18n.js?v=2.4.136'
-import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.136'
-import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.136'
-import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.136'
-import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.136'
-import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.136'
-import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.136'
-import { createDroughtLayer } from './layers/drought.js?v=2.4.136'
-import { createCctvLayer } from './layers/cctv.js?v=2.4.136'
-import { createAeronetLayer } from './layers/aeronet.js?v=2.4.136'
-import { createCitizenLayer } from './layers/citizen.js?v=2.4.136'
-import { createVisibilityLayer } from './layers/visibility.js?v=2.4.136'
-import { openWindow } from './witness.js?v=2.4.136'
-import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.136'
+import { on, emit, store } from './state.js?v=2.4.137'
+import { tr, LEVEL_NAME, BAND, bandColor } from './i18n.js?v=2.4.137'
+import { createOsmBuildingsLayer } from './layers/osm-buildings.js?v=2.4.137'
+import { createProvinceBoundariesLayer } from './layers/province-boundaries.js?v=2.4.137'
+import { createSatelliteLayers, ensureMapPanes, LAYER_GROUPS, allLayerToggles, createBurnScarLayer } from './layers/satellite.js?v=2.4.137'
+import { createBasemaps, BASEMAP_META } from './layers/basemaps.js?v=2.4.137'
+import { createPm25HeatmapLayer } from './layers/pm25-heatmap.js?v=2.4.137'
+import { createNewsFireLayer } from './layers/news-fire.js?v=2.4.137'
+import { createDroughtLayer } from './layers/drought.js?v=2.4.137'
+import { createCctvLayer } from './layers/cctv.js?v=2.4.137'
+import { createAeronetLayer } from './layers/aeronet.js?v=2.4.137'
+import { createCitizenLayer } from './layers/citizen.js?v=2.4.137'
+import { createVisibilityLayer } from './layers/visibility.js?v=2.4.137'
+import { openWindow } from './witness.js?v=2.4.137'
+import { paintRisk, paintAir, paintRain, pm25Color } from './paint.js?v=2.4.137'
 
 const windToggle = {id:'hazeWind',th:'ทิศลมรายจังหวัด + จุดไฟเหนือลม',en:'Province wind field + upwind fire counts',on:true,
   note_th:'ลูกศรชี้ทิศที่ลมพัดไป ทิศหลักรายวัน ไม่ใช่ลม ณ เวลานี้',note_en:'Arrows point where the wind blows. Daily dominant forecast, not current wind.',
@@ -615,7 +615,7 @@ function addLegend() {
       <div class="lrow">📹 ${tr('ภาพสดที่ตรวจแล้ว · สีขอบ = PM2.5 ที่สถานีใกล้ที่สุด', 'verified live · ring colour = PM2.5 at the nearest station')}</div>
       <div class="eyebrow" style="margin-top:6px">${tr('ข่าวไฟป่า/มลพิษ', 'FIRE & POLLUTION NEWS')}</div>
       <div class="lrow"><span class="lsw round" style="background:#A51931"></span>🔥 ${tr('ข่าวไฟป่า/การเผา', 'wildfire / open-burning news')}</div>
-      <div class="lrow"><span class="lsw round" style="background:#A51931"></span>⚠ ${tr('ข่าวมลพิษอื่น + ค่าฝุ่นปัจจุบันของพื้นที่', 'other pollution news + current PM2.5 there')}</div>`
+      <div class="lrow"><span class="lsw round" style="background:#A51931"></span>📰 ${tr('ข่าวมลพิษอื่น + ค่าฝุ่นปัจจุบันของพื้นที่', 'other pollution news + current PM2.5 there')}</div>`
     // Close button at the BOTTOM of the body — the head is at the TOP of
     // the upward-growing panel, which a mobile user reported being unable
     // to reach to close the legend. Appended AFTER the innerHTML assignment

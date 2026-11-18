@@ -1,13 +1,13 @@
 // Left-rail drill-down: province detail (its AQ stations) or a single
 // station with a 72-hour chart from /api/series. Charts are zero-dep canvas
 // via /js/chart.js so they re-render cheaply when new snapshots arrive.
-import { on, store } from '../state.js?v=2.4.136'
-import { tr, pick } from '../i18n.js?v=2.4.136'
-import { fmtNum, fmtClock, el } from '../fmt.js?v=2.4.136'
-import { flyToStation } from '../map.js?v=2.4.136'
-import { drawSeriesChart } from '../chart.js?v=2.4.136'
-import { provinceHealth } from '../sensorHealth.js?v=2.4.136'
-import { causeChip, causesByProvince, causeEvidenceBlock, provincePatternsBlock } from './patterns-ui.js?v=2.4.136'
+import { on, store } from '../state.js?v=2.4.137'
+import { tr, pick } from '../i18n.js?v=2.4.137'
+import { fmtNum, fmtClock, el } from '../fmt.js?v=2.4.137'
+import { flyToStation } from '../map.js?v=2.4.137'
+import { drawSeriesChart } from '../chart.js?v=2.4.137'
+import { provinceHealth } from '../sensorHealth.js?v=2.4.137'
+import { causeChip, causesByProvince, causeEvidenceBlock, provincePatternsBlock } from './patterns-ui.js?v=2.4.137'
 
 let current = null // {type:'province', p} | {type:'station', source, station, metric}
 let lastSeries = null // last fetched points so we can re-paint on lang/snapshot
@@ -97,7 +97,7 @@ export function showProvinceDetail(p) {
   // paper Section 2 has the full citation trail.
   const d = p.danger
   const dangerBlock = d ? el('div', { class: 'detail-block detail-danger' },
-    el('div', { class: 'eyebrow' }, tr('ดัชนีอันตราย · Danger Score', 'DANGER SCORE · COMPOSITE')),
+    el('div', { class: 'eyebrow' }, tr('ดัชนีอันตรายเชิงวิจัย · ไม่ใช่ดัชนีคลินิก', 'RESEARCH DANGER SCORE · NOT CLINICAL')),
     el('div', { class: 'danger-big-row' },
       el('div', { class: `danger-big b-${d.band}` },
         el('span', { class: 'db-num' }, String(d.score ?? '–')),

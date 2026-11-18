@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > it solved. If a feature is in the code but not in this log, it is in the
 > wrong place.
 
+## [2.4.137] — 2026-11-18 — the research score stops issuing health verdicts
+
+- The Danger composite's band words were "Safe to be out / Be cautious / Dangerous / Very dangerous" — health verdicts that a not-clinical screening score cannot carry, and the source of the "49 Dangerous" headline for a province under the standard. They now describe the score itself: "Low / Raised / High / Very high score" (Thai: คะแนนต่ำ / คะแนนสูงขึ้น / คะแนนสูง / คะแนนสูงมาก). The province card and city dashboard title it "Research danger score · not clinical". The health verdict belongs to the measured PM2.5 and its Thai AQI level.
+- Map news pins: non-fire pollution news used a warning sign beside the PM2.5 badge, which read as "warning 31"; it is now a newspaper glyph, legend updated, and each pin has an accessible label ("Pollution news · Bangkok · PM2.5 31 µg/m³").
+
+---
+
 ## [2.4.136] — 2026-11-18 — one headline number, columns that say what they mean
 
 - **The top bar now leads with the measured PM2.5** of the worst province (or the focused city's province) and its Thai AQI 2023 level word: "PM2.5 µg/m³ now · 35 · Moderate · Nakhon Pathom". It used to lead with the Danger research composite, which on 18 Nov read "49 · Dangerous" for a province measuring 35 µg/m³, under the 37.5 standard, while the panel beside it said no station was above the health line. The top bar, the ranking's first row and "severe now" now agree by construction (`js/headline.js`). The composite is in the chip's tooltip and in the province card, labelled as research. On a phone the chip keeps PM2.5, the number, the level word and the place; the unit and "Highest:" are dropped first.
