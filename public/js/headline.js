@@ -10,7 +10,7 @@
 // with its Thai AQI 2023 level name, so the top bar, the ranking and "severe
 // now" agree by construction. The composite stays one tap away (tooltip and
 // the province card), labelled as research.
-import { pm25Level, LEVEL_NAME } from './i18n.js?v=2.4.138'
+import { pm25Level, LEVEL_NAME } from './i18n.js?v=2.4.139'
 
 // Thai AQI level → the band classes the chip already knows how to colour.
 export const LEVEL_BAND = { 1: 'normal', 2: 'normal', 3: 'watch', 4: 'elevated', 5: 'high' }

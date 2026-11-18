@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > it solved. If a feature is in the code but not in this log, it is in the
 > wrong place.
 
+## [2.4.139] — 2026-11-18 — My Area leads with the measured PM2.5
+
+- The My Area card showed its verdict with a bare Watch score ("ALL CLEAR · 7/100") and no PM2.5 anywhere in that row. It now shows the province's measured PM2.5 ("ALL CLEAR · PM2.5 8 µg/m³"), the same quantity as the top bar and the picker; the Watch score is in the tooltip.
+
+---
+
 ## [2.4.138] — 2026-11-18 — Telegram sign-up works from the dashboard; picker speaks PM2.5
 
 - **Telegram alerts sign-up was broken four ways, now fixed** (`renderTelegramForm`, citizen.js). (1) The section started `hidden` and nothing ever showed it, so it never appeared under "Get alerts". (2) `init()` stored the binding code, then `enterIdle()` set it to null, so the page polled the server for an empty code and could never see the reader's `/start`. (3) Every snapshot repaint built a new form with a new code, so a reader who had tapped the bot link with one code was polled for another. (4) CSS `display` rules beat the `hidden` attribute, so "Link this province" showed before any chat was connected. The binding session now lives outside the widget, is reused for 30 minutes and resumes the reader's step across repaints. Two chats had been bound in four months, both before this form. Guard: `scripts/test-telegram-form.mjs`. The bot's webhook was checked live (registered, no errors).

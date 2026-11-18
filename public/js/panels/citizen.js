@@ -1,4 +1,4 @@
-import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.138'
+import { readPreference, writePreference, removePreference } from '../preferences.js?v=2.4.139'
 // Citizen-mode panel — what ordinary people need to see in 30 seconds.
 // Surfaces the four questions that matter during a dust episode:
 //   1. Am I safe right now?          → JMA verb at the top
@@ -16,21 +16,21 @@ import { readPreference, writePreference, removePreference } from '../preference
 // guide, symptom checker, time-of-day forecast, and migrant worker
 // safety phrases). All of them are bilingual (TH + EN) and degrade
 // gracefully when the science/forecast API hasn't loaded yet.
-import { on, store, emit } from '../state.js?v=2.4.138'
-import { tr, BAND, pm25Level } from '../i18n.js?v=2.4.138'
-import { LEVEL_BAND } from '../headline.js?v=2.4.138'
-import { el, fmtNum, ago } from '../fmt.js?v=2.4.138'
-import { getJson } from '../cache.js?v=2.4.138'
-import { flyToProvince } from '../map.js?v=2.4.138'
-import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.138'
-import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.138'
+import { on, store, emit } from '../state.js?v=2.4.139'
+import { tr, BAND, pm25Level } from '../i18n.js?v=2.4.139'
+import { LEVEL_BAND } from '../headline.js?v=2.4.139'
+import { el, fmtNum, ago } from '../fmt.js?v=2.4.139'
+import { getJson } from '../cache.js?v=2.4.139'
+import { flyToProvince } from '../map.js?v=2.4.139'
+import { sharePlace, copyText, shareFeedback } from '../share.js?v=2.4.139'
+import { reliefEtaLine, worseBeforeBetterChip } from './patterns-ui.js?v=2.4.139'
 import {
   renderPersonaSection, renderActionTimeline, renderMaskGuide,
   renderSymptomChecker, renderMigrantPhrases, renderTimeOfDay,
   renderTomorrowOutlook, renderTellFamily, renderPetCare, renderNoiseTrends,
-} from './citizenLife.js?v=2.4.138'
-import { weatherStripHtml } from '../weatherStrip.js?v=2.4.138'
-import { windBadgeHtml, windCaveatText } from '../wind.js?v=2.4.138'
+} from './citizenLife.js?v=2.4.139'
+import { weatherStripHtml } from '../weatherStrip.js?v=2.4.139'
+import { windBadgeHtml, windCaveatText } from '../wind.js?v=2.4.139'
 
 const MY_PROVINCE_KEY = 'ad_my_province'
 
@@ -93,7 +93,7 @@ export function initCitizen() {
           tab?.click()
           // Also auto-fly the map to that province.
           if (match.lat != null && match.lng != null) {
-            import('../map.js?v=2.4.138').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
+            import('../map.js?v=2.4.139').then(({ flyToProvince }) => flyToProvince(match)).catch(() => {})
           }
         } catch {}
       }
@@ -379,7 +379,11 @@ function renderForProvince(province) {
     ),
     el('div', { class: `citizen-band b-${band}` },
       el('div', { class: 'citizen-band-verb' }, tr(verb.th, verb.en)),
-      el('div', { class: 'citizen-band-score' }, `${score}/100`),
+      // The measured PM2.5 is the number a resident can check and act on, and
+      // the same quantity the top bar shows; the Watch score moves to the
+      // tooltip (2026-11-18 — the card said "7/100" with no PM2.5 at all).
+      el('div', { class: 'citizen-band-score', title: pmTitle({ pm25: live?.pm25, score }) },
+        Number.isFinite(live?.pm25) ? `PM2.5 ${Math.round(live.pm25)} µg/m³` : `${score}/100`),
     ),
   )
 
